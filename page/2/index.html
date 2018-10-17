@@ -160,6 +160,113 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-第一行代码（第二版）-第七章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2018/06/21/第一行代码（第二版）-第七章/">第一行代码（第二版）——第7章： 数据存储全方案——跨程序共享数据：探究内容提供器</a>
+    </h1>
+  
+
+        
+        <a href="/2018/06/21/第一行代码（第二版）-第七章/" class="archive-article-date">
+  	<time datetime="2018-06-21T00:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-06-21</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>可能你会有些疑惑，为什么要将我们程序中的数据共享给其他程序呢？当然，这是视情况而定的，比如账号密码之类的隐私数据显然是不能共享给其他程序的，不过一些可以让其他程序进行二次开发的基础性数据，我们还是可以选择共享。例如联系人程序、短信程序、多媒体库等，它们的数据库中保存了很多基础数据，如果不允许其他应用进行访问，则方便性就会大打折扣。</p>
+<h3 id="运行时权限"><a href="#运行时权限" class="headerlink" title="运行时权限"></a>运行时权限</h3><p>Android的权限机制在一开始就存在，但是在6.0以前保护隐私方面比较有限，因为像微信这种大家都离不开的软件，容易“店大欺客”，不同意它所有的权限只能不安装，这并不合理。</p>
+<h4 id="权限机制详解"><a href="#权限机制详解" class="headerlink" title="权限机制详解"></a>权限机制详解</h4><p>开发者在AndroidManifest.xml中声明权限，一种情况是，用户如果在低于6.0的系统上安装该程序，会在安装时列出该应用所需要的权限，从而决定是否要安装这个程序，并且在用户安装成功之后，还能在<strong>设置</strong>中查看程序所申请的权限，但是对于那些离不开的程序（比如微信）来说，要么全部同意它申请的权限，要么不安装，这不太合理；如果在6.0及以上的系统中安装，则用户不必在安装时一次性授权所有申请的权限，而是在软件使用的过程中再对<strong>危险权限</strong>进行授权，就算拒绝了这个权限，仍然可以使用应用的其他功能，而不是以前那样直接无法安装。</p>
+<p>Android 6.0 及以上将所有权限分为两类，<strong>普通权限和危险权限</strong>，普通权限是指不会直接威胁用户的安全和隐私的权限，这部分权限系统自动帮我们授权，避免用户不停地手动授权；危险权限则表示会触及用户隐私或者设备安全性的权限，如获取联系人、定位设备位置等，必须由程序员动态申请，由用户手动点击授权才可以，否则无法使用相应功能。目前为止，Android中的危险权限有9组共24个权限，如下列表所示（图片来自<a href="https://developer.android.google.cn/guide/topics/security/permissions#normal-dangerous" target="_blank" rel="noopener">官网</a>）：</p>
+<p><img src="/assets/Book-Notes/第一行代码/chapter-7/图1.png" alt="危险权限列表"></p>
+<p>这张表格无需记住，在使用的时候作为参照，如果权限在这张表中，则进行运行时处理就好。<strong>另外注意一下，表格中每个危险权限都属于一个权限组，我们在进行运行时权限处理时使用的是权限名，但是用户一旦同意授权了，那么该权限对应的权限组中所有的其他权限也会同时被授权</strong>。</p>
+<h3 id="在程序运行时申请权限"><a href="#在程序运行时申请权限" class="headerlink" title="在程序运行时申请权限"></a>在程序运行时申请权限</h3><p>以拨打电话的权限为例来说明权限的申请，点击一个按钮，就拨打指定的号码，在6.0以前可能是这样实现的：</p>
+<ol>
+<li><p>在AndroidManifest.xml中申请权限：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.CALL_PHONE"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>在代码中实现：</p>
+</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">btnCall.setOnclickListener(<span class="keyword">new</span> View.OnclickListener()&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span></span>&#123;</span><br><span class="line">		Intent intent = <span class="keyword">new</span> Intent(Intent.ACTION_CALL);</span><br><span class="line">		intent.setData(Uri.parse(<span class="string">"tel:10086"</span>));</span><br><span class="line">		startActivity(Intent);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>在6.0以下系统上能正常拨打电话，但是在6.0或者以上系统运行，会报错<strong>Permission Denial</strong>，可以看出是由于权限被禁止导致的，因此我们应该尝试使用以下方式来申请权限：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">btnCall.setOnclickListener(<span class="keyword">new</span> View.OnclickListener()&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span></span>&#123;</span><br><span class="line">		</span><br><span class="line">		<span class="keyword">if</span>(ContextCompat.checkSelfPermission(MainActivity.<span class="keyword">this</span>,Manifest.permission.CALL_PHONE) !=   </span><br><span class="line">		PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">			ActivityCompat.requestPermission(MainActivity.<span class="keyword">this</span>,<span class="keyword">new</span> </span><br><span class="line">			String[]&#123;Manifest.permission.CALL_PHONE&#125;,<span class="number">1</span>);</span><br><span class="line">		&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">			call();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">call</span><span class="params">()</span></span>&#123;</span><br><span class="line">	Intent intent = <span class="keyword">new</span> Intent(Intent.ACTION_CALL);</span><br><span class="line">	intent.setData(Uri.parse(<span class="string">"tel:10086"</span>));</span><br><span class="line">	startActivity(Intent);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onRequestPermissionResult</span><span class="params">(<span class="keyword">int</span> requestCode,String[] permissions,<span class="keyword">int</span>[] grantResults)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span>(requestCode)&#123;</span><br><span class="line">		<span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">			<span class="keyword">if</span>(grantResults.lenght &gt; <span class="number">0</span> &amp;&amp; grantResults(<span class="number">0</span>) == PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">				call();</span><br><span class="line">			&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">				Toast.makeText(<span class="keyword">this</span>,<span class="string">"You denied the permission"</span>,Toast.LEGHTH_SHORT).show();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述第一步先判断用户是不是已经给我们授权了，使用的是<strong>ContextCompat.checkSelfPermission</strong>，如果已经授权，直接拨打电话，否则调用<strong>ActivityCompat.requestPermission</strong>方法向用户申请授权，这时候用户可以选择同意或者拒绝我们的申请，不论哪种结果，都会通过回调<strong>onRequestPermissionResult</strong>告知，在回调中根据不同的结果做不同的处理。<strong>记住，在动态声明权限后，AndroidManifest中还得添加<uses-permission android:name="android.permission.CALL_PHONE"> 声明</uses-permission></strong>。</p>
+<h3 id="访问其他程序中的数据"><a href="#访问其他程序中的数据" class="headerlink" title="访问其他程序中的数据"></a>访问其他程序中的数据</h3><p>内容提供器的用法一般有两种，一是使用现有的内容提供器来读取和操作响应程序中的数据，另一种是创建自己的内容提供器给我们的数据提供外部访问接口。</p>
+<h4 id="ContentResolver的基本使用"><a href="#ContentResolver的基本使用" class="headerlink" title="ContentResolver的基本使用"></a>ContentResolver的基本使用</h4><p>如果想要访问内容提供器共享的数据，就一定要借助ContentResolver类，可以通过Context中的getContentResolver方法获取到该类的实例。可以对内容进行CRUD操作，不同于SQLiteDatabase，ContentResolver增删改查不接收表名参数，而是使用Uri参数代替，该Uri主要由两部分组成：<strong>authority和path</strong>，前者用于对不同的应用程序做区分，一般采用程序包名形式，如某个程序的包名是com.example.app，那么对应的authority就可以命名为com.example.app.provider；path则是对同一应用程序中不同表做区分的，通常会添加到authority后面，所以内容Uri的形式一般如下所示(带协议声明)：</p>
+<blockquote>
+<p>content://com.example.app.provicer/table1<br>content://com.example.app.provicer/table2</p>
+</blockquote>
+<p>正式查询的时候，将Uri作为参数传入，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Uri uri = Uri.parse(<span class="string">"content://com.example.app.provicer/table1"</span>);</span><br><span class="line">Cuisor cursor = getContentResolver().query(uri,projection,selection,selectionArgs,sortOrder);</span><br></pre></td></tr></table></figure>
+<p>其中，query方法中各个参数对应的含义如下所示：</p>
+<p><img src="/assets/Book-Notes/第一行代码/chapter-7/图2.png" alt="参数对应的含义"></p>
+<p>接下来便可以进行相应的增删改查操作，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//查</span></span><br><span class="line"><span class="keyword">if</span>(cursor != <span class="keyword">null</span>)&#123;</span><br><span class="line">	<span class="keyword">while</span>(cursor.moveToNext())&#123;</span><br><span class="line">		String colomn1 = cursor.getString(cursor.getColumnIndex(<span class="string">"column1"</span>));</span><br><span class="line">		<span class="keyword">int</span> colomn2 = cursor.getInt(cursor.getColumnIndex(<span class="string">"column2"</span>));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//增</span></span><br><span class="line">ContentValues values = <span class="keyword">new</span> ContentValues();</span><br><span class="line">values.put(<span class="string">"column1"</span>,<span class="string">"text"</span>);</span><br><span class="line">values.put(<span class="string">"column2"</span>,<span class="number">1</span>);</span><br><span class="line">getContentResolver().insert(uri,values);</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//改，把column1的值清空</span></span><br><span class="line">ContentValues values = <span class="keyword">new</span> ContentValues();</span><br><span class="line">values.put(<span class="string">"column1"</span>,<span class="string">""</span>);</span><br><span class="line">getContentResolver().update(uri,values,<span class="string">"column1 = ? and column2 = ?"</span>,<span class="keyword">new</span> String[]&#123;<span class="string">"text"</span>,<span class="string">"1"</span>&#125;);</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//删除</span></span><br><span class="line">getContentResolver().delete(uri,<span class="string">"column2 = ?"</span>,<span class="keyword">new</span> String[]&#123;<span class="string">"1"</span>&#125;);</span><br></pre></td></tr></table></figure>
+<p>其实整体就相当于sql语句，因此并不太难。</p>
+<h3 id="创建自己的内容提供器"><a href="#创建自己的内容提供器" class="headerlink" title="创建自己的内容提供器"></a>创建自己的内容提供器</h3><p>因为基本上没有这样的需求，暂时略后续补上</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">读书笔记-第一行代码（第二版）</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2018/06/21/第一行代码（第二版）-第七章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-第一行代码（第二版）-第六章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1235,107 +1342,6 @@ public View getView(final int i, View view, ViewGroup viewGroup) {
 
 
   
-    <article id="post-第一行代码（第二版）-第一章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2018/05/31/第一行代码（第二版）-第一章/">第一行代码（第二版）——第1章：开启启程</a>
-    </h1>
-  
-
-        
-        <a href="/2018/05/31/第一行代码（第二版）-第一章/" class="archive-article-date">
-  	<time datetime="2018-05-31T10:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-05-31</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h4 id="Android系统架构"><a href="#Android系统架构" class="headerlink" title="Android系统架构"></a>Android系统架构</h4><ol>
-<li><p>最底层是Linux内核层。</p>
-<blockquote>
-<p>为Android设备各种硬件提供了底层驱动，如显示驱动，音频驱动等。</p>
-</blockquote>
-</li>
-<li><p>系统运行库层。</p>
-<blockquote>
-<p>这层通过一些C/C++库来为Android系统提供主要的特性支持。如Sqlite库提供了数据库支持，OpenGL|ES提供提供3D绘图等。</p>
-</blockquote>
-</li>
-<li><p>应用框架层。</p>
-<blockquote>
-<p>主要提供了构建应用程序可能用到的各种API。</p>
-</blockquote>
-</li>
-<li><p>应用层。</p>
-<blockquote>
-<p>所有安装在手机上的应用程序都属于这一层。比如系统自带的联系人、短信等程序，自己开发的应用。</p>
-</blockquote>
-</li>
-</ol>
-<p><img src="/assets/Book-Notes/第一行代码/chapter-1/图1.png" alt="Android系统层次"></p>
-<h3 id="Android应用开发特色"><a href="#Android应用开发特色" class="headerlink" title="Android应用开发特色"></a>Android应用开发特色</h3><h4 id="四大组件"><a href="#四大组件" class="headerlink" title="四大组件"></a>四大组件</h4><p>四大组件分别是活动（Activity）、服务（Service）、广播接收器（Broadcast Receiver）和内容提供器（Content Provider）</p>
-<p>build.gradle 文件中，<strong>compileSdkVersion</strong>用于指定项目的编译版本；<strong>buildToolsVersion</strong>用于指定项目构建工具的版本；<strong>applicationId</strong>用于指定项目的包名，并且它的优先级高于在 AndroidManifest.xml<br>中指定的包名；<strong>minSdkVersion</strong>用于指定项目最低兼容的Android版本;<strong>targetSdkVersion</strong>表明你在该目标版本上做过了充分的测试，系统将为你的应用程序启用一些最新的功能和特性。比如说Android6.0 系统中引入了运行时权限这个功能，如果你将targetSdkVersion指定成23或者更高，那么系统就会为你的程序启用运行时权限功能；否则就不会启用运行时权限功能。</p>
-<p>而在build.gradle的<strong>dependencies</strong>闭包中，声明了当前项目所有的依赖关系，Android studio 项目一共有3中依赖方式，本地依赖、库依赖和远程依赖，本地依赖可以对本地的jar包或者目录添加依赖关系，形式如：<strong>compile fileTree(dir: ‘libs’, include: [‘*.jar’])</strong>；库依赖可以对项目中的库模块添加依赖关系，如<strong>compile(name: ‘testsdk’, ext: ‘aar’)</strong>；远程依赖则可以对jcenter库上的开源项目添加依赖关系，如<strong>compile ‘com.android.support.constraint:constraint-layout:1.0.2’</strong>，其中，com.android.support.constraint是域名，用于和其他公司的库作区分，constraint-layout是组名称，用于和同一个公司其他库作区分。</p>
-<p><strong>关于日志：</strong>不用System.out.println()，因为Log系统可以对日志分级，可以展示打印时间，可以添加过滤器等等。<strong>Log快捷键：如果要打Log.d，则输入logd，按tab键即可，同理Log.i只需要logi之后按Tab键，以此类推，四种级别的日志都能快捷打出来。还有，如果在oncreate方法外面输入logt，然后按下Tab键，就会以当前的类名作为值自动生成一个类似下面的TAG常量：</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HelloWorldActivity</span> <span class="keyword">extends</span> <span class="title">AppCompatActivity</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String TAG = <span class="string">"HelloWorldActivity"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">读书笔记-第一行代码（第二版）</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2018/05/31/第一行代码（第二版）-第一章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
   
     <nav id="page-nav">
       <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/">Next &raquo;</a>
@@ -1454,6 +1460,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color1">读书笔记-第一季kotlin崛起(次时代Android开发)</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color2">读书笔记-从小工到专家</a>
               </li>
             
             <div class="clearfix"></div>
