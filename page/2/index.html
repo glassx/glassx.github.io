@@ -160,6 +160,132 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-第4章：操作系统基础" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/03/09/第4章：操作系统基础/">第4章：操作系统基础</a>
+    </h1>
+  
+
+        
+        <a href="/2019/03/09/第4章：操作系统基础/" class="archive-article-date">
+  	<time datetime="2019-03-09T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-09</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="进程间通信的经典实现"><a href="#进程间通信的经典实现" class="headerlink" title="进程间通信的经典实现"></a>进程间通信的经典实现</h2><h3 id="共享内存"><a href="#共享内存" class="headerlink" title="共享内存"></a>共享内存</h3><p>共享内存的工作流程：</p>
+<ol>
+<li>创建共享区。进程1从内存中申请一块内存作为共享区域，并且将该区域与某个Key绑定  </li>
+<li>映射共享区。创建共享区之后，需要将其映射到进程1的空间中才能操作。  </li>
+<li>访问共享区。进程2利用第一步得到的Key，访问到共享区，之后将这块内存映射到进程2的空间中。  </li>
+<li>进程间通信。各进程实现了对共享内存的映射后，便可以利用该区域进行信息交换。（注意：整个内存过程都没有实现同步机制，需要进程间自己实现）  </li>
+</ol>
+<h3 id="管道"><a href="#管道" class="headerlink" title="管道"></a>管道</h3><ul>
+<li>进程A和B分立管道两端，进行数据传输通信</li>
+<li>管道是单向的，如果进程既要“读”也要“写”，就需要两根管道这点很像水管的特性  </li>
+<li>管道同时具有“读取”(read end)端和“写入”(write end)端，比如进程A从 write end 写入，进程 B 就可以从 read end 端读取到数据  </li>
+<li>管道容量有限制，当pipe满了后，写操作将阻塞；反之，pipe空了之后，读操作将会阻塞  </li>
+<li>普通的管道是<strong>匿名的</strong>，这种匿名的管道只适合有斧子关系的进程通信，如果要实现没有任何关系的管道间的通信，就需要<strong>命名管道(Named pipe)</strong></li>
+</ul>
+<h3 id="UNIX-DOMAIN-SOCKET"><a href="#UNIX-DOMAIN-SOCKET" class="headerlink" title="UNIX DOMAIN SOCKET"></a>UNIX DOMAIN SOCKET</h3><ul>
+<li>简称UDS,也可以说是IPC Socket，与普通的Socket不一样，专门针对单机进程间通信提出来的。  </li>
+<li>大家熟知的 Network Socket 是以 TCP/IP 协议栈作为基础的，需要分包、重组 等一系列操作，而 UDS 因为是本机内的“安全可靠操作”，实现机制上并不依赖于这些协议。  </li>
+<li>Android 中使用最多的一种IPC就是Binder，其次就是 UDS 。  </li>
+</ul>
+<h3 id="RPC（REMOTE-PROCEDURE-CALLS）"><a href="#RPC（REMOTE-PROCEDURE-CALLS）" class="headerlink" title="RPC（REMOTE PROCEDURE CALLS）"></a>RPC（REMOTE PROCEDURE CALLS）</h3><p>RPC 涉及通信双方通常运行于两台不同的机器中。</p>
+<h2 id="同步机制的经典实现"><a href="#同步机制的经典实现" class="headerlink" title="同步机制的经典实现"></a>同步机制的经典实现</h2><p>###信号量（SEMAPHORE）</p>
+<p>信号量与PV原语是分不开的，也是最为广泛的互斥方法之一，主要包括以下几个元素：</p>
+<ul>
+<li>Semaphore S（信号量，用于指示共享资源的可用数量）  </li>
+<li>Operation P （可以减小S计数）  </li>
+<li>Operation V （可以增加S计数）  </li>
+</ul>
+<blockquote>
+<p>P执行：S = S -1，此时判断若 S&gt;=0 ，说明资源此时允许访问，开始操作共享资源；否则，加入等待队列，待别人释放资源后唤醒。<br>V执行：S=S+1，如果此时S&gt;0，说明当前没有希望访问资源的等待者；否则，唤醒等待队列中的相关对象。<br><strong>其中，PV源于都属于原子操作，意味着他们执行过程是不允许被中断的。</strong></p>
+</blockquote>
+<h3 id="互斥体（MUTEX）"><a href="#互斥体（MUTEX）" class="headerlink" title="互斥体（MUTEX）"></a>互斥体（MUTEX）</h3><p>Mutex 是 Mutual Exclusion 的缩写，释义为 互斥体。如果资源允许多个对象同时访问，成为 Counting Semaphores；而如果只允许取值0或1（lock/unlocked）的Semaphore，则叫做 Binary Semaphore。Binary Semaphore 与Mutex有相同性质，Mutex通常是对某一排他资源的共享控制——要么这个资源被占用（locked），要么是可以访问的（unlocked）。</p>
+<h3 id="管程（MONITOR）"><a href="#管程（MONITOR）" class="headerlink" title="管程（MONITOR）"></a>管程（MONITOR）</h3><p>针对信号量机制的程序易读性较差，并且信号量管理分散在各个参与对象中，很难维护等缺点，管程被提出来了。管程是可以被多个进程/线程安全访问的对象或者模块，管程中的方法在同一时刻只允许一个范文这使用它们（方法受 mutual exclusion 保护的）。</p>
+<h2 id="操作系统内存基础"><a href="#操作系统内存基础" class="headerlink" title="操作系统内存基础"></a>操作系统内存基础</h2><p>操作系统中任何操作都与内存息息相关，内存管理的底层原理主要注意几个核心：</p>
+<ul>
+<li>虚拟内存</li>
+</ul>
+<blockquote>
+<p>内存总是“不够大”的，随着应用的增加，总会填满，虚拟内存为运行更多的程序提供了可能，其基本思想是：1.将硬盘上一部分空间作为内存的扩展；2.出现资源不足时，按照一定算法挑出优先级较低的数据块移动到第1步划出的空间；3.需要用到硬盘中的数据块时，系统将产生“缺页”，之后把硬盘中的数据交换回内存中。</p>
+</blockquote>
+<ul>
+<li>内存分配与回收</li>
+</ul>
+<blockquote>
+<p>分配、native层回收，java层回收</p>
+</blockquote>
+<ul>
+<li>内存保护</li>
+</ul>
+<blockquote>
+<p>内存分页或者分段式管理。进程的逻辑地址不是直接对应物理地址的，因此没办法访问它范围外的内存空间。</p>
+</blockquote>
+<p><strong>顺带一提，mmap函数（Memory Map）正如其名，可以将某个设备或者文件映射到应用进程的内存空间中，这样访问这块内存就相当于对设备/文件进行读写；可见，理论上mmap可以用于进程间通信，即通过映射同一块物理内存来共享内存，这种方式因为减少了复制次数，在一定程度上提高了进程间通信效率。</strong></p>
+<h2 id="Android-匿名共享内存（Ashmem）"><a href="#Android-匿名共享内存（Ashmem）" class="headerlink" title="Android 匿名共享内存（Ashmem）"></a>Android 匿名共享内存（Ashmem）</h2><p>Ashmem 全称 Anony Shared Memory，是Android 特有的内存共享机制，它可以将指定的物理内存分别映射到各个进程的地址空间，从而便捷地实现进程间的内存共享。Ashmem 是一个 misc 设备，其实现依托于 /dev/ashmem 。</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">深入理解Android内核设计思想-林学森</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/03/09/第4章：操作系统基础/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-针对简历的问题" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1054,108 +1180,6 @@
 
 
   
-    <article id="post-趣味烧脑题" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/01/趣味烧脑题/">趣味烧脑题</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/01/趣味烧脑题/" class="archive-article-date">
-  	<time datetime="2019-03-01T12:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-01</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p><strong>1、给100盏灯编号 1~100，开始时所有灯都是关着的<br>第1次：把所有编号是1的倍数的灯的开关状态改变一次；<br>第2次：把所有编号是2的倍数的灯的开关状态改变一次；<br>第3次，把所有编号是3的倍数的灯的开关状态改变一次；<br>…<br>第100次，把所有编号是100的倍数的灯的开关状态改变一次；<br>问：最后开着的灯的编号是哪些？</strong></p>
-<blockquote>
-<p>分析：最开始灯是灭的，因此只有经过<strong>奇数</strong>次开关状态改变，灯才会是亮的。从题意可知一个数字有多少约数就会状态改变多少次，因此这道题可以转换为：<strong>1~100数字中约数个数是奇数的有哪些</strong>。并且我们知道约数是成对出现的，如8的约数：（1，8）、（2，4），因此如果要出现约数的个数是奇数个，除非它是个平方数，如36的约数：（1，36）、（2，18）、（3，12）、（4，9）、（6），因此，这题又可以转换为<strong>1~100数字中的平方数有哪些</strong>，这操作。。。。666吧，这就是分析问题的乐趣吧</p>
-</blockquote>
-<p><strong>2、烧一根不均匀的绳子，从头烧到尾总共需要1小时，现在有若干条这样的绳子，问如何用烧绳子的方法来计时1小时15分钟呢</strong></p>
-<blockquote>
-<p>从题目知道，绳子不均匀，不能根据燃烧半根来计量半小时。但是还可以推断，从两头烧，只要半小时。因此可以使用3根绳子来计时：1）第1根绳子点燃两端，第2根绳子点燃一端，第三根绳子先不点燃； 2）第1根绳子烧完计时30分钟，接着第2根绳子另一端也点燃 3）第2根绳子烧完计时15分钟，此时已经计时45分钟了，剩下的半小时只需要将第3条绳子两端点燃就能计算出。</p>
-</blockquote>
-<p><strong>3、有12个外观一样的小球，但有一个与其他小球重量略微不同，用手感觉不出来，用一个天平，能称3次就能找到那个小球吗</strong></p>
-<blockquote>
-<p>把小球编号 1~12，然后分为3组（想想为什么是3组）：1~4分为A组，5~8分为B组，9~12分为C组。首先A组和B组称量比较：<br>1、天平平衡。则目标小球在C组。将C分为两组：9、10、11分为一组C1，12分为一组C2，再从B中随意拿出3个球分组为B1，C1和B1比较：<br>    1）若平衡，则12号球就是目标球。<br>    2）若不平衡，则目标球在C1内，并且根据天平倾斜，可以判断目标球比普通球重还是轻（若是天平显示B1重，则目标球比较轻；反之目标球比较重），此时随意取 C1 中的2个球放在天平上即可知道结果（如果平衡，则目标球是另一个，如果不平衡，根据轻重可知目标球）。<br>2、天平不平衡。则目标球在A或者B中。<br>    1）若A &gt; B,取（1，2，3，5）为一组X,(4,9,10,11)为一组Y，（6，7，8）为一组Z，比较X和Y，若X&gt;Y，可知不同小球在1，2，3中，且目标球重于普通球，此时再将编号 1，2，3 任取2个放上天平即可知道目标球。若X&lt;Y,则说明4号是目标球；若X=Y，则目标球在Z中（6，7，8），并且目标球轻于普通球，此时只需要将编号 其中任意两个球放上天平即可找出目标球。<br>    2）若 A &lt; B，同样按照上述分为X、Y、Z三组，同理，若X&lt;Y，则目标球在1，2，3中，且目标球轻于普通球，此时再将编号 1，2，3 任取2个放上天平即可知道目标球；若X&gt;Y,说明4号为目标球，若X=Y，则目标球在Z中（6，7，8），并且目标球重于普通球，此时再将编号 6，7，8 任取2个放上天平即可知道目标球。</p>
-</blockquote>
-<p><strong>3、一笔画出经过9个点的4条直线</strong></p>
-<blockquote>
-<p>主要是要突破点，不要局限于点上，不说了，直接上图：<br>9点4线</p>
-</blockquote>
-<p><img src="/assets/趣味/9point-4line.png" alt="9点4线"></p>
-<p><strong>4、有1块钱1瓶的契税，喝完后2个空瓶换一瓶汽水，问有20块钱，可以喝几瓶汽水？</strong></p>
-<blockquote>
-<p>总共40瓶（不要浪费最后那个空瓶，找老板借1个，凑2瓶子再喝一瓶，最后这空瓶还给老板。。。）</p>
-</blockquote>
-<p><strong>5、时针分针秒针重合的次数</strong></p>
-<blockquote>
-<p>只有2次，一次是 00:00:00 一次是 12：00：00</p>
-</blockquote>
-<p><strong>假设排列100个球，两个人轮流一拿球装入口袋，能拿到第100个球为胜，条件是每次拿球至少拿1个，最多拿5个，加入你是最先拿球的人，你该拿几个，以后怎么保证拿到最后一个球？</strong></p>
-<blockquote>
-<p>怎样保证拿到最后一个球呢？最简单的方法是最后剩下6个，并且轮到对方来拿，这样无论对方拿几个，都能保证自己拿到最后一个。<br>（1）首先，要控制每一轮拿出的个数，但是对方拿的个数是不受控制的，假设对方拿n个，自己就拿6-n个（为什么是控制总数是6个，是因为对手最多拿5个，自己最少能拿1个，和值就是6，自己不能把和值控制得更低；而对手至少拿1个，自己最多拿5个，同样自己不能把和值控制得更高。因此只有6才是一个可控的值）。<br>（2）其次，假设第一次拿x个球，以后每次自己和对方拿的和是6，最多可以拿到15轮（除去第一轮的x个，最后留这肯定少于10个了），还剩 10-x个，为了达到之前定的目标最后留6个，所以x应该是4.<br>（3）总结而言就是第一次拿4个，以后每次对方拿了n个后，自己拿 6-n 个。</p>
-</blockquote>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">趣味题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/01/趣味烧脑题/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
   
     <nav id="page-nav">
       <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/3/">Next &raquo;</a>
@@ -1306,6 +1330,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">随时翻阅的工具</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color2">读书笔记-Android进阶之光</a>
               </li>
             
             <div class="clearfix"></div>
