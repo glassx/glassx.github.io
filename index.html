@@ -185,7 +185,7 @@
 <blockquote>
 <p>例如，可以等到运行时再指定其实际的实现类：用户可以通过Java预定义和自定义的类加载器，让一个本地的应用程序可以在运行时从网络或者其他地方加载一个二进制流作为程序代码的一部分。</p>
 </blockquote>
-<h2 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h2><p>类从被夹在到虚拟机内存中开始，到写在出内存为止，整个生命周期如下图所示：</p>
+<h2 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h2><p>类从被加载到虚拟机内存中开始，到卸载出内存为止，整个生命周期如下图所示：</p>
 <p><img src="/assets/Book-Notes/深入理解Java虚拟机-第2版/第6章/类的生命周期.png" alt="类的生命周期"></p>
 <p>总共有7个阶段，其中验证、准备、解析 这3个部分统称为<strong>连接(Linking)</strong>，并且加载、验证、准备、初始化和卸载这5个阶段的顺序是确定的，类的加载按照上述顺序按部就班地开始（不是“进行”，也不是“完成”，只是按部就班地“开始”，因为这些阶段通常都是相互交叉地混合式进行）。</p>
 <p>虚拟机规范中<strong>严格规定</strong>了<strong>有且只有5种</strong>情况必须立即对类进行初始化（而加载、验证、准备自然需要在此之前开始）：</p>
@@ -214,11 +214,11 @@
 </blockquote>
 <h2 id="类加载过程"><a href="#类加载过程" class="headerlink" title="类加载过程"></a>类加载过程</h2><h3 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h3><p>“加载”是“类加载(Class Loading)”过程的一部分，不要混淆。在加载阶段，虚拟机需要完成以下3件事情：</p>
 <ol>
-<li>通过累的全限定名获取类的二进制字节流</li>
+<li>通过类的全限定名获取类的二进制字节流</li>
 <li>将字节流所代表的静态存储结构转化为方法区的运行时数据结构</li>
 <li>在内存中生成一个代表这个类的 java.lang.Class 对象，作为方法区这个类的各种数据的访问入口。</li>
 </ol>
-<p>这3点规范并不算具体，例如第一条，并没有指明要从哪里获取，怎么获取，因此充满创造力的开发人员玩出了¬各种花样：</p>
+<p>这3点规范并不算具体，例如第一条，并没有指明要从哪里获取，怎么获取，因此充满创造力的开发人员玩出了各种花样：</p>
 <ul>
 <li>从 zip 包中读取，最终成为日后 jar、ear、war 格式的基础</li>
 <li>从网络中获取，比如Applet</li>
@@ -227,15 +227,15 @@
 <h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>验证是连接阶段的第一步，这个阶段是否严谨，直接决定了Java虚拟机是否能承受恶意代码的攻击。从整体来看，验证阶段大致上会完成下面4个阶段的检验动作：</p>
 <p><strong>文件格式验证</strong>  </p>
 <blockquote>
-<p>魔数0xCAFEBABE开头、主次版本是否在虚拟机处理范围内等</p>
+<p>魔数0xCAFEBABE开头、主次版本是否在虚拟机处理范围内等。</p>
 </blockquote>
 <p><strong>元数据验证</strong>  </p>
 <blockquote>
-<p>是否有父类-除Object外，都有父类、父类是否继承了不允许被继承的类-final修饰，是否实现了父类或者接口要求实现的所有方法</p>
+<p>是否有父类-除Object外，所有类都有父类、父类是否继承了不允许被继承的类-final修饰，是否实现了父类或者接口要求实现的所有方法。</p>
 </blockquote>
 <p><strong>字节码验证</strong>  </p>
 <blockquote>
-<p>通过数据流和控制流分析，确定程序语义是否合法、复合逻辑的。如果一个类方法体的字节码没有通过字节码验证，那肯定是有问题的；如果一个方法体通过了字节码验证，也不能说明其一定就是安全的。</p>
+<p>通过数据流和控制流分析，确定程序语义是否合法、符合逻辑的。如果一个类方法体的字节码没有通过字节码验证，那肯定是有问题的；如果一个方法体通过了字节码验证，也不能说明其一定就是安全的。</p>
 </blockquote>
 <p><strong>符号引用验证</strong>  </p>
 <blockquote>
@@ -250,22 +250,22 @@
 <h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>解析阶段是虚拟机将常量池内的符号引用替换成直接引用的过程。</p>
 <p><strong>符号引用(Symbolic References)：</strong>符号引用以一组符号来描述所引用的目标，符号可以是任何形式的字面量，只要使用时能无歧义地定位到目标即可。</p>
 <p><strong>直接引用(Symbolic References)：</strong>直接引用可以是直接指向目标的指针、相对偏移量或是一个能间接定位到目标的句柄。</p>
-<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>到了初始化阶段，才真正开始执行类中定义的Java程序代码(或者说是字节码)。在准备阶段，变量已经赋过一次系统要求的初始值，而在初始化阶段，则根据程序员通过程序自定的主观计划去初始化类变量和其他资源。换一个角度来表达就是：<strong>初始化阶段是执行类构造器\<clinit>()方法的过程</clinit></strong>。以下介绍下\<clinit>()方法执行过程中一些可能会影响程序运行行为的特点和细节：</clinit></p>
+<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>到了初始化阶段，才真正开始执行类中定义的Java程序代码(或者说是字节码)。在准备阶段，变量已经赋过一次系统要求的初始值，而在初始化阶段，则根据程序员通过程序自定的主观计划去初始化类变量和其他资源。换一个角度来表达就是：<strong>初始化阶段是执行类构造器<clinit>()方法的过程</clinit></strong>。以下介绍下<clinit>()方法执行过程中一些可能会影响程序运行行为的特点和细节：</clinit></p>
 <ul>
-<li>\<clinit>()方法由编译器自动收集类中的所有类变量的赋值动作和静态语句块(static{}块)中的语句合并产生的，编译器收集的顺序是由语句<strong>在源文件中出现的顺序决定</strong>的，静态语句块中<strong>只能访问到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但不能访问</strong>。一个例子说明：</clinit></li>
+<li><clinit>()方法由编译器自动收集类中的所有类变量的赋值动作和静态语句块(static{}块)中的语句合并产生的，编译器收集的顺序是由语句<strong>在源文件中出现的顺序决定</strong>的，静态语句块中<strong>只能访问到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但不能访问</strong>。一个例子说明：</clinit></li>
 </ul>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i =<span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        Systemt.out.print(i);<span class="comment">//正常使用</span></span><br><span class="line">        </span><br><span class="line">        j = <span class="number">0</span>;<span class="comment">//给变量赋值可以正常编译</span></span><br><span class="line">        Systemt.out.print(j);<span class="comment">//这句提示“非法向前引用”</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> j =<span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
-<li>\<clinit>()方法与类的构造函数（实例构造器\<init>()）不同,它不需要显式地调用父类构造器，虚拟机会保证在子类的 \<clinit>() 执行之前，父类的\<clinit>()已经执行完毕。因此，在虚拟机中第一个被执行\<clinit>()方法的类肯定是 java.lang.Object。<strong>这其实也意味着，父类定义的静态语句块要优先于子类变量赋值操作</strong>。一个例子说明：</clinit></clinit></clinit></init></clinit></li>
+<li><clinit>()方法与类的构造函数（实例构造器<init>()）不同,它不需要显式地调用父类构造器，虚拟机会保证在子类的 <clinit>() 执行之前，父类的<clinit>()已经执行完毕。因此，在虚拟机中第一个被执行<clinit>()方法的类肯定是 java.lang.Object。<strong>这其实也意味着，父类定义的静态语句块要优先于子类变量赋值操作</strong>。一个例子说明：</clinit></clinit></clinit></init></clinit></li>
 </ul>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Parent</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> A = <span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        A = <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sub</span> <span class="title">extentds</span> <span class="title">Parent</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> B = A;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span></span>&#123;</span><br><span class="line">    Systemt.out.println(Sub.B)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>以上代码将打印出 2 而不是 1。</p>
 <ul>
-<li><p>\<clinit>()方法对于类或者接口不是必需的，如果勒种没有静态语句块，也没有对变量的赋值，那么编译器可以不为这个类生成\<clinit>()方法。</clinit></clinit></p>
+<li><p><clinit>()方法对于类或者接口不是必需的，如果类中没有静态语句块，也没有对变量的赋值，那么编译器可以不为这个类生成<clinit>()方法。</clinit></clinit></p>
 </li>
-<li><p>接口中不能使用静态语句块，但是可以有变量初始化的赋值操作，因此接口与类一样都会生成 \<clinit>()方法 。但接口的 \<clinit>()方法 无须先执行父接口的\<clinit>()方法，只有父接口中定义的变量使用时，父接口才会初始化（接口的实现类在初始化时也不会执行接口的\<clinit>()方法）。</clinit></clinit></clinit></clinit></p>
+<li><p>接口中不能使用静态语句块，但是可以有变量初始化的赋值操作，因此接口与类一样都会生成 <clinit>()方法 。但接口的 <clinit>()方法 无须先执行父接口的<clinit>()方法，只有父接口中定义的变量使用时，父接口才会初始化（接口的实现类在初始化时也不会执行接口的<clinit>()方法）。</clinit></clinit></clinit></clinit></p>
 </li>
-<li><p>虚拟机会保证一个类的 \<clinit>()方法 在多线程环境中会被正确地加锁、同步，所以，多线程同时去初始化一个类，那么只会有一个县城执行这个类的\<clinit>()方法，其他的线程都会阻塞等待。举个例子：</clinit></clinit></p>
+<li><p>虚拟机会保证一个类的 <clinit>()方法 在多线程环境中会被正确地加锁、同步，所以，多线程同时去初始化一个类，那么只会有一个县城执行这个类的\<clinit>()方法，其他的线程都会阻塞等待。举个例子：</clinit></clinit></p>
 </li>
 </ul>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">DeadLoopClass</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        <span class="comment">//如果不加上这个if语句，编译器将报错，并拒绝编译</span></span><br><span class="line">        <span class="keyword">if</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            System.out.println(Thread.currentThread() + <span class="string">"init DeadLoopClass"</span>);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Runnable script = <span class="keyword">new</span> Runnable()&#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"start"</span>);</span><br><span class="line">                DeadLoopClass dlc = <span class="keyword">new</span> DeadLoopClass();</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"run over"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">           </span><br><span class="line">        &#125;;</span><br><span class="line">        </span><br><span class="line">        Thread thread1 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        Thread thread2 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        thread1.start();</span><br><span class="line">        thread2.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -273,7 +273,16 @@
 <blockquote>
 <p>Thread[Thread-0,5,main]start<br>Thread[Thread-1,5,main]start<br>Thread[Thread-0,5,main]init DeadLoopClass</p>
 </blockquote>
-
+<h2 id="类加载器"><a href="#类加载器" class="headerlink" title="类加载器"></a>类加载器</h2><p>虚拟机设计团队把类加载阶段中的“通过一个类的全限定名来获取描述此类的二进制字节流”这个动作放到Java虚拟机外部去实现，以便让应用程序自己决定如何去获取所需要的类。</p>
+<h3 id="类与类加载器"><a href="#类与类加载器" class="headerlink" title="类与类加载器"></a>类与类加载器</h3><p>对于任意一个类，都需要由加载它的类加载器和这个类本身一同确立其在Java虚拟机中的唯一性，每一个类加载器，都拥有一个独立的类名称空间。通俗地说，比较两个类是否“相等”，只有在这两个类都是由同一个类加载器加载的前提下才有意义，否则，即使这两个类来源于同一个Class文件，都被同一个虚拟机加载，只要加载它们的类加载器不同，那这两个类就必定不相等。</p>
+<p>这里的“相等”，包括代表类的Class对象的 equals() 、isAssignableFrom()、isInstance() 方法返回的结果，也包括使用 instanceof 关键字做对象所属关系判定等情况。以下代码演示了不同类加载器对instanceof关键字运算的结果的影响：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClassLoaderTest</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>&#123;</span><br><span class="line">        ClassLoader myLoader = <span class="keyword">new</span> ClassLoader()&#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException&#123;</span><br><span class="line">                <span class="keyword">try</span>&#123;</span><br><span class="line">                    String fileName = name.substring(name.lastIndexOf(<span class="string">"."</span>) + <span class="number">1</span>);</span><br><span class="line">                    InputStream is = getClass().getResourceAsStream(fileName);</span><br><span class="line">                    <span class="keyword">if</span>(is == <span class="keyword">null</span>)&#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">super</span>.loadClass(name);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">byte</span>[] b = <span class="keyword">new</span> <span class="keyword">byte</span>[is.available()];</span><br><span class="line">                    is.read(b);</span><br><span class="line">                    <span class="keyword">return</span> defineClass(name,b,<span class="number">0</span>,b.length);</span><br><span class="line">                &#125;<span class="keyword">catch</span>()&#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ClassNotFoundException();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        Object obj = myLoader.loadClass(<span class="string">"org.example.classloading. ClassLoaderTest"</span>);</span><br><span class="line">        </span><br><span class="line">        Systemt.out.println(obj.getClass());</span><br><span class="line">        System.out.println(obj <span class="keyword">instanceof</span> org.example.classloading. ClassLoaderTest);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>返回结果：   </p>
+<blockquote>
+<p>class org.example.classloading. ClassLoaderTest<br>false </p>
+</blockquote>
+<p>从结果可以看出，对象确实是类 “org.example.classloading. ClassLoaderTest” 的类，并实例化了这个类的对象。但这个对象与类 org.example.classloading. ClassLoaderTest 做所属类型检查的时候却返回了false，这是因为虚拟机中存在了两个 ClassLoaderTest 类，一个由系统应用程序类加载器加载的，另外一个是由我们自定义的类加载器加载的，虽然都来自同一个Class文件，但依然是两个独立的类。</p>
+<h3 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h3>
       
 
       
