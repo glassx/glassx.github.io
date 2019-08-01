@@ -160,6 +160,153 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-深入理解Java虚拟机-第3章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/04/03/深入理解Java虚拟机-第3章/">第3章：垃圾收集器与内存分配策略</a>
+    </h1>
+  
+
+        
+        <a href="/2019/04/03/深入理解Java虚拟机-第3章/" class="archive-article-date">
+  	<time datetime="2019-04-03T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-04-03</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="对象已死吗"><a href="#对象已死吗" class="headerlink" title="对象已死吗"></a>对象已死吗</h2><h3 id="引用计数法"><a href="#引用计数法" class="headerlink" title="引用计数法"></a>引用计数法</h3><p>很多教科书判断对象是否存活的算法是这样的：给对象中添加一个引用计数器，每当一个地方引用它时，计数器值就加1；当引用失效时，计数器值就减1；任何时刻计数器为0的对象就是不可能再被使用的。客观地说，引用计数法的实现简单，但它很难解决对象之间相互循环引用的问题，所以，主流实现中，并不使用这种方式。</p>
+<h3 id="可达性分析"><a href="#可达性分析" class="headerlink" title="可达性分析"></a>可达性分析</h3><p>在主流实现中，都是通过可达性分析来判定对象是否存活。这个算法的基本思路就是通过<strong>一系列称为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索走过的路径称为“引用链”，当一个对象到GC Roots 没有任何引用链相连时，则证明此对象是不可用的</strong>。在Java语言中，可以作为 GC Roots 的对象包括下面几种：</p>
+<ul>
+<li>虚拟机栈（栈帧中的本地变量表）中引用的对象。  </li>
+<li>本地方法栈中JNI引用的对象。  </li>
+<li>方法区中类静态属性引用的对象。  </li>
+<li>方法区中常量引用的对象。  </li>
+</ul>
+<h3 id="再谈引用"><a href="#再谈引用" class="headerlink" title="再谈引用"></a>再谈引用</h3><p>JDK 1.2 以前，对象只有引用和被引用两种状态，未能描述那些“食之无味，弃之可惜”的对象，我们希望描述这样一类对象：当内存还足够时，则能保留在内存之中；如果内存空间在GC后还是非常紧张，则可以抛弃这些对象。因此，JDK 1.2以后对引用的概念进行扩充，分为：</p>
+<ul>
+<li><p>强引用。代码中普遍存在的，类似于 Object obj = new Object() ，只要强引用还在，垃圾收集器永远不会回收被引用的对象。</p>
+</li>
+<li><p>软引用。是用来描述一些还有用，但是并非必需的对象，在系统将要发生内存溢出的异常之前，将会把这些对象列进回收范围之中进行第二次回收，如果这次回收还没有足够的内存，才会抛出内存溢出异常。</p>
+</li>
+<li><p>弱引用。是用来描述非必需对象的，但是强度比软引用更弱一些，被弱引用关联的对象只能生存到下一次GC发生之前。当GC工作时，无论当前内存是否足够，都会回收掉只被弱引用关联的对象。</p>
+</li>
+<li><p>虚引用。是最弱的一种引用关系，不会对对象的生存时间构成影响，也无法通过虚引用获得对象实例。为对象设置虚引用的唯一目的就是能在这个对象被收集器回收时收到一个系统通知。</p>
+</li>
+</ul>
+<h3 id="生存还是死亡"><a href="#生存还是死亡" class="headerlink" title="生存还是死亡"></a>生存还是死亡</h3><p>即使在可达性分析算法中不可达的对象，也并非“非死不可”的。要真正宣告一个对象的死亡，至少要经历两次标记过程：如果对象在可达性分析后发现没有与GC Roots 相连接的引用链，那么它会被第一次标记，并进行筛选，筛选的条件是此对象是否有必要执行 finalize() 方法，当对象没有覆写 finalize() 方法，或者 finalize() 方法已经被虚拟机调用过，则都没有必要执行；</p>
+<p>如果对象判定有必要执行 finalize() 方法，则对象会被放入F-Queue队列中，稍后由低优先级的线程去触发 执行finalize() 方法，但不会承诺等待它运行结束。这样做的原因是防止 finalize 方法过于缓慢或者死循环。finalize() 方法是对象套多死亡命运的最后一次机会，因为稍后GC将对F-Queue中的对象进行第二次标记，如果对象要在finalize 中拯救自己————只要重新与某个引用链上的任意一个对象关联即可，那么在第二次标记的时候它将被移除出“即将回收”的集合；如果这时候对象还没逃脱，那它就会真的被回收了。</p>
+<p>说明这一过程的示例代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FinalizeEscapeGC</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> FinalizeEscapeGC SAVE_HOOK = <span class="keyword">null</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">isAlive</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"yes,i am still alive"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> finalize（） <span class="keyword">throws</span> Throwable&#123;</span><br><span class="line">        <span class="keyword">super</span>.finalize();</span><br><span class="line">        System.out.println(<span class="string">"finalize method executed"</span>);</span><br><span class="line">        FinalizeEscapeGc. SAVE_HOOK = <span class="keyword">this</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Throwable</span>&#123;</span><br><span class="line">        SAVE_HOOK = <span class="keyword">new</span> FinalizeEscapeGC();</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//对象第一次成功拯救自己</span></span><br><span class="line">        SAVE_HOOK = <span class="keyword">null</span>;</span><br><span class="line">        System.gc();</span><br><span class="line">        <span class="comment">//因为finalize方法优先级很低，所以暂停0.5秒等待它</span></span><br><span class="line">        Thread.sleep(<span class="number">500</span>);</span><br><span class="line">        <span class="keyword">if</span>(SAVE_HOOK != <span class="keyword">null</span>)&#123;</span><br><span class="line">            SAVE_HOOK.isAlive();</span><br><span class="line">        &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">            System.out.println(<span class="string">"no,i am dead"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        </span><br><span class="line">        <span class="comment">//下面这段代码与上面的完全相同，但是这次自救却失败了</span></span><br><span class="line">        SAVE_HOOK = <span class="keyword">null</span>;</span><br><span class="line">        System.gc();</span><br><span class="line">        <span class="comment">//因为finalize方法优先级很低，所以暂停0.5秒等待它</span></span><br><span class="line">        Thread.sleep(<span class="number">500</span>);</span><br><span class="line">        <span class="keyword">if</span>(SAVE_HOOK != <span class="keyword">null</span>)&#123;</span><br><span class="line">            SAVE_HOOK.isAlive();</span><br><span class="line">        &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">            System.out.println(<span class="string">"no,i am dead"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行结果：</p>
+<blockquote>
+<p>finalize method executed<br>yes,i am still alive<br>no,i am dead  </p>
+</blockquote>
+<p>从结果可以看出，SAVE_HOOK 对象的 finalize 方法确实被GC收集器触发过，并且收集前成功逃脱。但两段完全一样的代码，第二次却被回收了，因为finalize 方法只会被自动调用一次，因此第二次不执行了，所以自救失败。</p>
+<p>有些教材上认为 finalize 中适合做“关闭外部资源”之类的工作，在了解以上机制之后，可以认为这完全是一种自我安慰，finalize 能做的，try-finally 或其他方法能做得更好，更及时，所以完全可以忘记这个方法存在（它也仅仅只是Java诞生时讨好C/C++程序员的一个妥协）。</p>
+<h2 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h2><h3 id="标记-清除算法"><a href="#标记-清除算法" class="headerlink" title="标记-清除算法"></a>标记-清除算法</h3><p>最基础的收集算法是 标记-清除(Mark-Sweep) 算法，它分为“标记”和“清除”两个阶段：首先标记出需要回收的对象，在标记完成后统一回收被标记的对象。它的主要不足有两个：一是效率问题，标记和清除效率都不高；二是清除后会产生大量不连续的内存碎片。</p>
+<h3 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h3><p>为了解决效率问题，复制算法出现了。它将可用内存分为大小相等的两块，每次只使用其中一块，当这块内存用完了，就将还存活的对象复制到另一块上，然后把当前内存空间一次清理掉。这样每次都是对整个半区回收，内存分配也不会存在碎片。缺点是可用内存缩小了一半，代价太高。</p>
+<blockquote>
+<p>现在商业虚拟机采用这种方式回收新生代。一般将内存分为较大的 Eden 和两块较小的 Survivor 空间（HotSpot中 Eden 与 Survivor大小比例为 8：1），每次使用Eden 和其中一块 Survivor，当内存回收时，将Eden和Survivor中还存活的对象一次性复制到另一块Survivor，最后清理Eden和刚才用过的Survivor空间，因此，每次只有10%的内存“被浪费”。当然这是基于统计新生代的对象生命周期都很短，差不多只有10%的对象会存活，此外，如果超出10%的存活对象，Survivor空间不够时，需要依赖老年代的空间提供担保（Survivor空间存不下的对象直接通过担保机制进入老年代），这是该分配方式能够运行下去的保障。</p>
+</blockquote>
+<p>复制收集算法在对象存活率较高时要进行较多的复制操作，效率将会变低，更关键的是，如果不想浪费50%的空间，就需要有额外的空间进行担保，防止对象100%存活的极端情况。</p>
+<h3 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h3><p>根据老年代特点，有人提出另外一种<strong>标记-整理(Mark-Compact)算法</strong>，标记过程仍与“标记-清除”算法一样，但后续不是直接清理可回收对象，而是所有存活的对象都向一端移动，然后直接清理掉端边界以外的内存。标记整理算法的示意图如下：</p>
+<p><img src="/assets/Book-Notes/深入理解Java虚拟机-第2版/标记-整理算法.png" alt="标记-整理算法"></p>
+<p>关于怎么个移动法，书上没有说明，这里个人做个推测：</p>
+<blockquote>
+<p>1、整个老年代的内存划分为 A 和 B 两个区域，区域 A 的大小是所有还存活对象的总大小，区域 B 大小是是剩余空间。<br>2、按顺序在 A 中找到第一个还存活对象，将它移动到 A 空间的最前端，接下来找第二个还存活的对象，将其移动到第一个对象的后面<br>3、以此类推，即使存活的对象在 B 中也一样顺序复制到A中，直至最后填满A空间，之后清除 B 空间。</p>
+</blockquote>
+<h3 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h3><p>商业虚拟机都采用“分代收集”，根据各个年代的特点分别采用适当的收集算法：</p>
+<ul>
+<li>在新生代中，每次垃圾收集时都会发现有大批对象死去，只有少量存活（前面提到的统计数据，大部分时候只有 10% 存活），那就选用复制算法。  </li>
+<li>而老年代中因对象存活率高，没有额外空间对它进行担保，就必须使用“标记-清理”或者“标记-整理”算法进行回收。</li>
+</ul>
+<h3 id="CMS-收集器"><a href="#CMS-收集器" class="headerlink" title="CMS 收集器"></a>CMS 收集器</h3><p>这是自己添加的这个标题，书中的结构并不是如此，因为 Android ART 虚拟机使用的也是CMS收集方式，所以这里特意抽出来理解，方便理解Android的虚拟机。 CMS (Concurrent Mark Sweep) 收集器，并发的“标记-清除”方式实现的收集器。它是一种以获取最短回收停顿时间为目标的收集器。它的整个过程分为4个步骤：</p>
+<ul>
+<li>初始标记  </li>
+<li>并发标记  </li>
+<li>重新标记  </li>
+<li>并发清除  </li>
+</ul>
+<p>其中，初始标记、重新标记 这两个步骤仍然需要“Stop The World”，初始标记仅仅只是标记一下 GC Roots 能直接关联到的对象，速度很快；并发标记就是进行 GC Roots Tracing 的过程（根据初始标记过程中标识出来的直接关联对象，并发标记存活的对象）；重新标记阶段则是为了修正并发标记期间因用户程序继续运行而导致标记产生变动的那一部分对象的标记记录；</p>
+<p>由于整个过程中好事最长的 <strong>并发标记 和 并发清除</strong> 过程收集器线程都可以与用户线程一起工作，所以，从总体上来讲，CMS收集器的内存回收过程是与用户线程一起并发执行的。</p>
+<p>CMS 是优秀的收集器，但是它也有3个明显的缺点：</p>
+<ul>
+<li><p>CMS 收集器对 CPU 资源非常敏感。与其他并发设计的程序一样，CMS收集器对 CPU 同样敏感，它虽然不会导致用户线程停顿，但是会因为占用了一部分线程而导致应用变慢。 </p>
+</li>
+<li><p>CMS 无法处理浮动垃圾(Floating Garbage,个人认为简而言之就是GC过程中用户线程产生的垃圾，类比于你妈妈在打扫房间卫生的时候，你还在继续撕的纸)。  </p>
+</li>
+<li><p>还有最后一个缺点，就是CMS本质还是“标记-清除”算法实现的，这种收集方式在结束后会产生大量的碎片化的空间。</p>
+</li>
+</ul>
+<h2 id="内存分配与回收策略"><a href="#内存分配与回收策略" class="headerlink" title="内存分配与回收策略"></a>内存分配与回收策略</h2><p>以下是几条最普遍的内存分配规则，可以通过代码去验证这些规则：</p>
+<h3 id="对象优先在-Eden-上分配"><a href="#对象优先在-Eden-上分配" class="headerlink" title="对象优先在 Eden 上分配"></a>对象优先在 Eden 上分配</h3><p>大多数情况下，对象在新生代 Eden 区中分配，当 Eden 区没有足够空间时，虚拟机将发起一次 Minor GC （新生代GC）。可以采用以下方式验证：</p>
+<p>通过 -Xms20M、-Xmx20M、-Xmn10M 三个参数限制Java 虚拟机堆大小 20MB，不可扩展，并且其中 10M 分配给新生代，剩下的 10MB 分配给老年代，-XX:SurvivorRatio=8决定新生代中 Edun 区与 一个 Survivor区的比例是 8：1，即 Eden 大小 8192K，两个 survivor 空间分别 1024K，所以新生代总共可用空间是 9216K （Eden 区 + 1个Survivor区）。<br>执行 testAllocation()尝试分配 3个 2M 的大小和1个 4MB 大小的对象。<br>代码执行完成后，可以发现 新生代Eden区被占用了 4M，而老年代被占用了 6M。<br>解释：分配前3个对象时，没有压力，均分配在Eden区域，当分配第4个对象时，内存已经不够了（可用空间是 9216K，而 2M*3 + 4M = 10），因此触发一次Minor GC，此时发现这3个对象都存活，并且 survivor 区间不够容纳存活的对象，因此这3个对象被直接通过担保机制提前转移到老年代中；这次GC结束后，第4个对象就可以顺利分配到Eden空间中。</p>
+<blockquote>
+<p>新生代GC(Minor GC):发生在新生代的垃圾收集，因为Java对象大多朝生夕死，所以Minor GC非常频繁，一般回收速度也比较快<br>老年代GC(Major GC/Full GC)：指的是老年代的GC，对于许多收集器而言，这时候都会伴随至少一次的 Minor GC，老年代的GC一般会比 Minor GC 慢10倍以上。</p>
+</blockquote>
+<h3 id="大对象直接进入老年代"><a href="#大对象直接进入老年代" class="headerlink" title="大对象直接进入老年代"></a>大对象直接进入老年代</h3><p>所谓大对象是指需要大量连续内存空间的Java对象，最典型的就是很长的字符串以及数组。当然，比大对象更糟糕的是遇到一群朝生夕死的“短命大对象”，这种应当避免。经常出现大对象容易导致内存还有不少空间就提前触发垃圾收集器以获得足够的<strong>连续空间</strong>来安置它们。</p>
+<h3 id="长期存活的对象进入老年代"><a href="#长期存活的对象进入老年代" class="headerlink" title="长期存活的对象进入老年代"></a>长期存活的对象进入老年代</h3><p>如果对象在Eden出生并经历过第一次Minor GC 后仍然存活并且能被 Survivor 容纳的话，将被移动到Survivor 中，并且年龄设置为 1，此后，每熬过一次 Minor GC ，对象的年龄就加1，当达到某个阈值（系统一般默认 15），就会被晋升到老年代中。</p>
+<h3 id="动态对象年龄判定"><a href="#动态对象年龄判定" class="headerlink" title="动态对象年龄判定"></a>动态对象年龄判定</h3><p>为了更好地适应不同程序内存状况，并不总是要求对象必须达到某个年龄才进入老年代。如果 Survivor 中同龄对象达到某个阈值（一般是一半）时，大于或者等于这个年龄的对象就会移动到老年代。</p>
+<h3 id="空间分配担保"><a href="#空间分配担保" class="headerlink" title="空间分配担保"></a>空间分配担保</h3><p>发生Minor GC 前，虚拟机会检查老年代最大可用的连续空间是否大于新生代所有对象总空间，如果条件成立，则 Minor GC 可以确保是安全的，如果不成立，则会判断是否允许担保失败，如果允许担保失败，则最终可能会触发一次Full GC。虽然绕了一圈还是有可能触发 Full GC，但是这种情况相对较少。</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/04/03/深入理解Java虚拟机-第3章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-深入理解Java虚拟机-第2章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -984,175 +1131,6 @@
       
         <p class="article-more-link">
           <a class="article-more-a" href="/2019/03/04/常用的有意思的算法(三)/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-Android进程通信——Binder理解" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/03/Android进程通信——Binder理解/">Android进程通信——Binder理解</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/03/Android进程通信——Binder理解/" class="archive-article-date">
-  	<time datetime="2019-03-03T13:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-03</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。</p>
-<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和TCP/IP网络有很多相似之处：</p>
-<ul>
-<li>Binder 驱动 -&gt; 路由器</li>
-<li>Service Manager（本质也是个服务器） -&gt; DNS（本质也是个服务器）</li>
-<li>Binder Client -&gt; 客户端</li>
-<li>Binder Server -&gt; 服务器</li>
-</ul>
-<p>TCP/IP中一个典型的服务连接过程如下图所示：</p>
-<p><img src="/assets/专题/Binder/binder-tcpip.png" alt="TCP/IP连接"></p>
-<p>client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；而在DNS返回查询结果给Clietn时，Client的地址对于DNS也是必须的，不过这些信息会封装在TCP/IP包中。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
-<p>而对于Binder来说，Binder的DNS也不是必须的——前提是客户端能记住它要访问的进程的Binder标志（IP地址），尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取。因此，Service Manager这个DNS的还是挺有必要的。</p>
-<blockquote>
-<p>既然Service Manager是DNS，那么它的IP地址是多少呢？Binder机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
-</blockquote>
-<h3 id="Parcel"><a href="#Parcel" class="headerlink" title="Parcel"></a>Parcel</h3><p>进程间传递数据是Binder机制中的重要一环，而数据传递的方式是 Parcel，直译过来就是“打包”。之前已经说过，直接传送对象内存地址的做法行不通，那么把对象在进程A中占据的内存相关数据打包起来，然后寄送到进程B中，由B在自己的进程空间中“复现”这个对象，是否可行呢？Parcel就具有这种打包重组能力。所有遵循 Parcelable 协议的对象可以通过 Parcel 来存取，如开发人员经常用到的Bundle 就是继承 Parcelable 的。</p>
-<h3 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h3><p>Android 是linux内核的，因而Binder驱动也是标准的linux驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备，Binder驱动运行于内核态。</p>
-<p>假设有连个进程A和B，其中进程B通过 open() 和 mmap()与Binder驱动建立了联系，如下图：</p>
-<p><img src="/assets/专题/Binder/B-mmap.png" alt="进程B连接Binder"></p>
-<blockquote>
-<p>可以看到 ：</p>
-</blockquote>
-<blockquote>
-<ol>
-<li>对于进程B而言，通过mmap()返回值得到一个内存地址（当然是虚拟地址），这个地址最终会指向物理内存的某个位置（通过虚拟内存转换）。</li>
-</ol>
-</blockquote>
-<blockquote>
-<ol start="2">
-<li>对于Binder驱动而言，它也有个指针（binder_proc-&gt;buffer）指向某个虚拟内存地址，这个地址转换后，与进程B指向的物理内存地址位于同一个位置。</li>
-</ol>
-</blockquote>
-<p>这样，Binder和进程B就拥有了公共的物理内存块，它们对着各自内存地址的操作，实际是在同一块内存中执行，这时候我们再把A进程加入进来，如下图：</p>
-<p><img src="/assets/专题/Binder/A复制数据.png" alt="进程A复制数据"></p>
-<p>这时候，左半部分没有变化，右半部分Binder驱动通过copy_from_user()，把A进程中某段数据复制到其binder_proc-&gt;buffer所指向的内存空间，这时候我们惊喜发现，binder_proc-&gt;buffer在物理内存中的位置和进程B是共享的，进而，B进程可以直接访问到这段数据，<strong>也就是说，Binder驱动只用了一次复制，就实现了进程A和B之间的数据共享。</strong></p>
-<h3 id="Service-Manager"><a href="#Service-Manager" class="headerlink" title="Service Manager"></a>Service Manager</h3><p>也就是“DNS”服务器，既然是DNS，那么在用户可以浏览网页之前就必须就位，Service Manager也是，在有人使用Binder之前就处于正常工作状态。Service Manager的主要工作：</p>
-<ul>
-<li>从Binder驱动读取消息</li>
-<li>处理解析消息</li>
-<li>不断循环，而且永远不会主动退出，除非出现致命错误</li>
-</ul>
-<p>它提供的服务应该至少包括以下几种：</p>
-<ul>
-<li>注册——当一个Binder Server 创建后，它们要将自己的相关信息告知ServiceManager备案</li>
-<li>查询——应用程序可以向 Service Manager 发起查询请求，已获知某个 Binder Server 对应的句柄。</li>
-</ul>
-<p>实际上，我们获取 Service Manager 也很简单，只需要以下几步：</p>
-<ol>
-<li>打开Binder设备</li>
-<li>执行mmap</li>
-<li>通过Binder驱动向 Service Manager 发送请求（Service Manager 的 handle是 0）</li>
-<li>获得结果</li>
-</ol>
-<h3 id="Binder-客户端"><a href="#Binder-客户端" class="headerlink" title="Binder 客户端"></a>Binder 客户端</h3><p>Binder 的最大消费者是Java层的应用程序，但是在各种上层的应用场景中切换“过于丝滑”，因此我们很少能感觉到Binder的存在，但是我们能够通过Android的四大组件的行为看出蛛丝马迹：</p>
-<ul>
-<li>Activity：通过 startActivity 可以启动目标进程，不论它是不是属于这个应用。</li>
-<li>Service：任何应用程序都可以通过startService 或者 bindService 来启动特定的服务，而不论后者是不是跨进程的。</li>
-<li>BroadCast：任何应用都可以通过 sendBroadcast 来发送一个广播，且无论广播接收者是不是在同一个进程中。</li>
-</ul>
-<p>组件的上述操作中，多数并不会特别指明要由哪个目标应用程序来响应请求，它们只需要通过Intent表达意愿，然后由系统找出最匹配的应用进程完成工作。为了更明确地说明个中的进程间通信，这里以binderService举例说明：</p>
-<ol>
-<li>首先Application1 填写Intent，调用 bindService 发出请求</li>
-<li>在Application1的运行空间中收到 bindService 请求，这时候会与 ActivityManagerService(AMS)，这就需要得到AMS的Binder句柄，就涉及到进程间通信了（需要ServiceManage.getService）,拿到句柄后，程序才能真正向它发起请求。</li>
-<li>AMS基于“最优匹配策略”，从其存储的所有服务组件中找到最符合Intent的一个，然后向它发送Service绑定请求（这也是进程间通信），如果目标进程还不存在的话，AMS还要负责将其启动</li>
-<li>“被绑定”的服务进程需要响应绑定，并在完成任务后通知AMS，然后由后者回调发起请求的Application1（回调接口是ServiceConnection）。</li>
-</ol>
-<h3 id="Server-服务端"><a href="#Server-服务端" class="headerlink" title="Server 服务端"></a>Server 服务端</h3><p>在建立服务之后，可以有两种方式向外面提供服务：</p>
-<ul>
-<li>Server在ServiceManager中注册，这样，调用者只需要通过 ServiceManager.getService(NAME)就可以获得句柄，随后与之通信。</li>
-<li>所谓的“匿名Server”，并不需要在ServiceManager中注册，那么Client是如何访问的呢？其实它通过其他Server作为中介，没错，就是通过一个“第三方”实名的Server，调用者首先通过ServiceManager获取这个实名的server，在由它提供匿名者的 Binder 句柄。</li>
-</ul>
-<h3 id="Binder-优点"><a href="#Binder-优点" class="headerlink" title="Binder 优点"></a>Binder 优点</h3><p>基于自己的理解而言，Binder具有以下优点：</p>
-<ul>
-<li>性能较好</li>
-</ul>
-<blockquote>
-<p>Binder只需要拷贝一次数据，仅次于共享内存（一次都不要），消息队列和管道采用存储-转发方式，即数据先从发送方缓存区拷贝到内核开辟的缓存区中，然后再从内核缓存区拷贝到接收方缓存区，至少有两次拷贝过程。</p>
-</blockquote>
-<ul>
-<li>稳定性好</li>
-</ul>
-<blockquote>
-<p>基于C/S架构在逻辑上更清晰，client有需求，Server完成。共享内存实现起来复杂，各方没有客户端与服务端之别，要考虑并发问题以及可能出现的死锁。</p>
-</blockquote>
-<ul>
-<li>安全性好</li>
-</ul>
-<blockquote>
-<p>传统 Linux IPC 的接收方要么无法获得对方进程可靠的 UID/PID ，从而无法鉴别对方身份；要么只能由用户在数据包里填入UID/PID。Android 为每个应用分配了自己的UID，前面提到 C/S 架构，Server 会根据权限控制策略判断 Client 的请求是否满足权限。并且Binder机制还有匿名 Binder ，压根无法直接获取句柄，安全性更好。</p>
-</blockquote>
-<ul>
-<li>使用简单。</li>
-</ul>
-<blockquote>
-<p>获得句柄之后，就像调用本地方法一样方便。并且Linux的IPC方式使用C语言，而Android应用层主要使用Java，这可能也是个因素。</p>
-</blockquote>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">专题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/03/Android进程通信——Binder理解/">展开全文 >></a>
         </p>
       
 
