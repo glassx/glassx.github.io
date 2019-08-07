@@ -6,22 +6,23 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="//glassx.github.io">
-  <title>第8章: 虚拟机字节码执行引擎 | glassx小黑屋</title>
+  <title>第5章：Android 进程/线程管理 | glassx小黑屋</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="概述在Java虚拟机规范中制定了虚拟机字节码执行引擎的概念模型，所有的虚拟机执行引擎都是一致的：输入的是字节码文件，处理过程是字节码解析的等效过程，输出的是执行结果。 运行时栈帧结构栈帧(Stack Frame)是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈（Virtual Machine Stack）的栈元素。栈帧存储了方法的局部变量表、操作数栈、方法返回地">
-<meta name="keywords" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
+  <meta name="description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。 对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。 很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程">
+<meta name="keywords" content="深入理解Android内核设计思想-林学森">
 <meta property="og:type" content="article">
-<meta property="og:title" content="第8章: 虚拟机字节码执行引擎">
-<meta property="og:url" content="//glassx.github.io/2019/08/01/深入理解Java虚拟机-第8章/index.html">
+<meta property="og:title" content="第5章：Android 进程&#x2F;线程管理">
+<meta property="og:url" content="//glassx.github.io/2019/08/06/深入理解Android内核设计思想-第5章/index.html">
 <meta property="og:site_name" content="glassx小黑屋">
-<meta property="og:description" content="概述在Java虚拟机规范中制定了虚拟机字节码执行引擎的概念模型，所有的虚拟机执行引擎都是一致的：输入的是字节码文件，处理过程是字节码解析的等效过程，输出的是执行结果。 运行时栈帧结构栈帧(Stack Frame)是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈（Virtual Machine Stack）的栈元素。栈帧存储了方法的局部变量表、操作数栈、方法返回地">
+<meta property="og:description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。 对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。 很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Java虚拟机-第2版/第8章/栈帧概念结构.png">
-<meta property="og:updated_time" content="2019-08-04T08:08:57.759Z">
+<meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第5章/activity启动.png">
+<meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第5章/运行的thread图.png">
+<meta property="og:updated_time" content="2019-08-07T14:41:25.497Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="第8章: 虚拟机字节码执行引擎">
-<meta name="twitter:description" content="概述在Java虚拟机规范中制定了虚拟机字节码执行引擎的概念模型，所有的虚拟机执行引擎都是一致的：输入的是字节码文件，处理过程是字节码解析的等效过程，输出的是执行结果。 运行时栈帧结构栈帧(Stack Frame)是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈（Virtual Machine Stack）的栈元素。栈帧存储了方法的局部变量表、操作数栈、方法返回地">
-<meta name="twitter:image" content="//glassx.github.io/assets/Book-Notes/深入理解Java虚拟机-第2版/第8章/栈帧概念结构.png">
+<meta name="twitter:title" content="第5章：Android 进程&#x2F;线程管理">
+<meta name="twitter:description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。 对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。 很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程">
+<meta name="twitter:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第5章/activity启动.png">
   
     <link rel="alternative" href="/atom.xml" title="glassx小黑屋" type="application/atom+xml">
   
@@ -161,50 +162,57 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            <article id="post-深入理解Java虚拟机-第8章" class="article article-type-post " itemscope itemprop="blogPost">
+            <article id="post-深入理解Android内核设计思想-第5章" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 class="article-title" itemprop="name">
-      第8章: 虚拟机字节码执行引擎
+      第5章：Android 进程/线程管理
     </h1>
   
 
         
-        <a href="/2019/08/01/深入理解Java虚拟机-第8章/" class="archive-article-date">
-  	<time datetime="2019-08-01T13:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-08-01</time>
+        <a href="/2019/08/06/深入理解Android内核设计思想-第5章/" class="archive-article-date">
+  	<time datetime="2019-08-06T13:40:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-08-06</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在Java虚拟机规范中制定了虚拟机字节码执行引擎的概念模型，所有的虚拟机执行引擎都是一致的：输入的是字节码文件，处理过程是字节码解析的等效过程，输出的是执行结果。</p>
-<h2 id="运行时栈帧结构"><a href="#运行时栈帧结构" class="headerlink" title="运行时栈帧结构"></a>运行时栈帧结构</h2><p>栈帧(Stack Frame)是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈（Virtual Machine Stack）的栈元素。栈帧存储了方法的局部变量表、操作数栈、方法返回地址等信息。<strong>每一个方法从调用开始到执行完成的过程，对应着一个栈帧在虚拟机栈里面从入栈到出栈的过程。</strong></p>
-<p>在编译代码的时候，栈帧中需要多大的局部变量表，多深的操作数栈都已经完全确定了，因此一个栈帧需要分配多少内存，不会受到程序运行期变量数据的影响。典型的栈帧结构如下图：</p>
-<p><img src="/assets/Book-Notes/深入理解Java虚拟机-第2版/第8章/栈帧概念结构.png" alt="类的生命周期"></p>
-<p>一个线程中的方法调用链可能会很长，在活动线程中，只有位于栈顶的栈帧才是有效的。</p>
-<h3 id="局部变量表"><a href="#局部变量表" class="headerlink" title="局部变量表"></a>局部变量表</h3><p>局部变量表示一组变量值存储空间，<strong>用于存放 方法参数 和 方法内部蒂尼的局部变量。</strong>在方法执行时，虚拟机是使用局部变量表完成参数值到参数变量列表的传递过程的，如果执行的是实例方法(非static方法)，那局部变量表中<strong>第0位索引默认用于传递方法所属实例的引用，在方法中可以通过”this”关键字来访问这个隐含参数</strong>。剩下的参数则按照参数表顺序排列，参数表分配完毕后，再分配方法体内部定义的变量。</p>
-<p>为了节省栈帧内存，局部变量表的空间是可以重用的，方法体中定义的变量，其作用域不一定会覆盖整个方法体，当超出作用范围时，它的空间就可能交给其他变量使用，不过这样的设计出了节省栈帧空间外，还会伴随额外的副作用，比如导致垃圾不能及时回收，以下举例说明()：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args)</span></span>&#123;</span><br><span class="line">    <span class="keyword">byte</span>[] placeholder = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">64</span> * <span class="number">1024</span> * <span class="number">1024</span>];</span><br><span class="line">    System.gc();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>代码中向内存中填充了64MB数据，然后通知虚拟机进行垃圾收集，但是我们可以发现结果并没有回收。不过，这里没有回收placeholder所占的内存还说得过去，<strong>因为在执行gc时，placeholder还处于作用域之呢，虚拟机自然不会回收</strong>，下面把代码改下（代码8-2）：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">byte</span>[] placeholder = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">64</span> * <span class="number">1024</span> * <span class="number">1024</span>];</span><br><span class="line">    &#125;</span><br><span class="line">   </span><br><span class="line">    System.gc();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>加入花括号之后，placeholder的作用域被限制在花括号之内，从代码逻辑上讲，gc的时候，placeholder就已经不可能再被访问了，但是执行以下，发现还是没有被回收。在解释之前，再次修改下代码试试（代码8-3）：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">byte</span>[] placeholder = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">64</span> * <span class="number">1024</span> * <span class="number">1024</span>];</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">int</span> a = <span class="number">0</span>;<span class="comment">//添加这句</span></span><br><span class="line">    System.gc();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>再次运行，发现内存被正确地回收了，看起来很莫名其妙。placeholder 能否被回收的根本原因是：局部变量表中是否还存有关于placeholder数组的引用。第一次修改中，代码虽然已经离开了placeholder的作用域，但在此之后，没有任何对局部变量表的读写操作，placeholder原本所占的空间还没有被其他变量复用，所以作为GC Roots一部分的局部变量表仍然保持着对它的引用。这种关联没有被及时打断，在绝大部分情况下影响都很轻微。</p>
-<p>但是如果遇到一个方法，其后面的代码有一些耗时很长的操作，而前面又定义了占用了大量内存、实际上已经不会再使用的变量，手动将其设置为null值（代替上面例子中的 int a = 0，把变量对应的局部变量表中的空间清理掉）便不见得是一个绝对无意义的操作，这种操作可以作为一种在极特殊情形（对象占用内存大、此方法的栈帧长时间不能被回收、方法调用次数达不到JIT的编译条件）下的“奇技”来使用。</p>
-<p>上述例子说明了在某些情况下赋null值操作确实是有用的，但是不应对这种操作有过多依赖，更没必要当做普遍的编码规则来推广，原因有两点：一是从编码角度讲，以恰当的变量作用域来控制变量的回收时间才是最优雅的解决方案。二是从执行角度讲，使用赋null值操作来优化内存回收是建立在对字节码执行引擎概念模型的理解之上的，赋null值的方式在经过JIT编译优化之后就会被消除掉，这时候将变量设置为null是没有意义的。以前面的例子来说，代码8-2 的形式经过JIT编译后，System.gc() 执行时，就可以正确地回收内存了，无需再写成代码 8-3 的样子。</p>
-<p>还有一点需要注意，类变量有两次赋初始值的过程，一次在准备阶段，赋予系统初始值；一次在初始化阶段，赋予程序员定义的初始值，因此，即使在初始化阶段没有为类变量赋值也没有关系，类变量仍然具有一个确定的初始值。但局部变量不一样，它并不存在“准备阶段”，因此如果定义了局部变量但是没有赋初始值是不能使用的。</p>
-<blockquote>
-<p>这段做的笔记有点多，这是因为个人以前在一些书籍上看到有观点说，推荐及时将不使用的对象手动置为null，但是解释语焉不详，在这里从虚拟机角度看到了解释，故详细记下来</p>
-</blockquote>
-<h3 id="操作数栈"><a href="#操作数栈" class="headerlink" title="操作数栈"></a>操作数栈</h3><p>操作数栈(operand stack)是一个后入先出的栈，痛局部变量表一样，操作数栈的最大深度也在编译时写入到Code属性中了。当一个方法刚刚开始执行的时候，这个方法的操作数栈是空的，在方法执行的过程中，会有各种字节码指令往操作数栈中写入和提取内容。</p>
-<p>举个例子，整数加法的字节码指令iadd在运行的时候操作数栈中最接近栈顶的两个元素已经存入了两个int型的数值，当执行这个指令是，会将这两个int值出栈并相加，然后将相加的结果入栈。</p>
-<h2 id="方法调用"><a href="#方法调用" class="headerlink" title="方法调用"></a>方法调用</h2><p>方法调用并不等同于方法执行，方法调用唯一的任务就是确定被调用方法的版本（即调用哪一个方法），还不设计方法内部的具体运行。前面已经讲过，Class文件的编译过程不包含传统编译中的连接步骤，一切方法调用在Class文件里面都只是符号引用，而不是方法在时机运行时内存布局中的入口地址（相当于之前说的直接引用）。</p>
-<h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>前面提到，所有方法调用中的目标方法在Class文件中都是一个<strong>常量池中的符号引用</strong>，在类加载的解析阶段，会将其中一部分符号引用转化为直接引用。这种解析能成立的前提是：“编译期可知，运行期不可变”，这类方法的调用就称为“解析(Resolution)”。符合这种特性的方法，主要包括静态方法和私有方法两大类，前者与类型直接关联，后者在外部不可被访问，这两种方法各自的特点决定了它们都不可能通过继承或别的方式重写其他版本，因此它们都适合在类加载阶段进行解析。</p>
-
+        <h2 id="Android-进程和线程"><a href="#Android-进程和线程" class="headerlink" title="Android 进程和线程"></a>Android 进程和线程</h2><p>进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。</p>
+<p>对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。</p>
+<p>很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程的组成部分，从 AndroidManifest.xml 中也可以得到一点提示（这个xml是对应用程序的声明和描述）：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">application</span> <span class="attr">android:label</span>=<span class="string">"launch performance"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">"SimpleActivity"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+<p>可以看到，Activity的外围有一个名为 <application> 的标签，换句话说，四大组件都只是 “application”的零件。通过例子来分析让读者有个更全面的认识，通过Activity A启动Activity B，在 B 的onCreate(Bundle savedInstanceState) 打断点，查看断点详情可以看到如下图所示的内容：</application></p>
+<p><img src="/assets/Book-Notes/深入理解Android内核设计思想/第5章/activity启动.png" alt="activity启动"></p>
+<p>从这个实验中还解决了一个重要问题，即主线程到底怎么产生的，从上图的函数堆栈可以知道：主线程由ZygoteInit启动，经由一系列调用后最终才执行Activity的onCreate函数，并且，Zygote为Activity创建的主线程是 ActivityThread。以下是源码展示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    CloseGuard.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//只有主线程才能调用这个函数，普通线程应该使用prepare()，具体见对 Looper 的讲解</span></span><br><span class="line">    Looper.prepareMainLooper();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主线程对应的handler</span></span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span>) &#123;</span><br><span class="line">        sMainThreadHandler = thread.getHandler();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//这个main()是static的，因此这里需要创建一个实例</span></span><br><span class="line">    ActivityThread thread = <span class="keyword">new</span> ActivityThread();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//Activity是由界面显示的，这个函数将与WindowManagerService 建立联系</span></span><br><span class="line">    thread.attach(<span class="keyword">false</span>, startSeq);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主循环开始</span></span><br><span class="line">    Looper.loop();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//如果程序运行到了这里，说明退出了上面的Looper循环</span></span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其实，启动Activity后，除了main thread 外还有多个binder线程，如下图所示（用于Binder的那些线程是在什么时候创建的，这个问题留到后面Binder章节详细解答）：</p>
+<p><img src="/assets/Book-Notes/深入理解Android内核设计思想/第5章/运行的thread图.png" alt="运行的thread图"></p>
+<p>图中可以看到，B 被启动之后，主线程也始终只有一个，此时A退出了运行，但没有被杀掉，只是被压入了栈中。同样，如果我们启动一个Service，并把断点打在Service的onCreate方法的中，我们会发现，Service也是寄存于ActivityThread之中的，并且启动流程和Activity基本上一致，并且启动Service时，同样有Binder线程支持。限于篇幅，这里不做截图和代码。</p>
+<p>按照Android系统设计：”By default，all componets of the same application run in the same process and thread(called the “main” thread)”，这可以理解为，对于同一个AndroidManifest中定义的四大组件，除非有特别的声明，否则它们都运行在同一个进程中(并且均由主线程处理事件)。如何证明呢？根据前面操作系统的基础知识，<strong>如果两个对象处于同一个进程空间，那么内存区域应该是可共享访问的</strong>，利用这个原理我们可以论证下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//第1个activity</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainActivity</span> <span class="keyword">extends</span> <span class="title">BaseActivity</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> ConstTemp = -<span class="number">1</span>;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        setContentView(R.layout.activity_main);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//在启动SecondActivity 前，将ConstTemp值改为2，如果他们不是处于同一个进程，那么在 </span></span><br><span class="line">        <span class="comment">// SecondActivity中是无法获得更新后的值 2 的，只可能是 -1</span></span><br><span class="line">        ConstTemp = <span class="number">2</span>;</span><br><span class="line">        startActivity(<span class="keyword">new</span> Intent(<span class="keyword">this</span>,SecondActivity.class));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//第2个acitivity</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SecondActivity</span> <span class="keyword">extends</span> <span class="title">BaseActivity</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        setContentView(R.layout.activity_second);</span><br><span class="line">        </span><br><span class="line">        Log.e(<span class="string">"SecondActivity"</span>,<span class="string">"ConstTemp = "</span> + MainActivity. ConstTemp);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终输出的结果是2，说明都是在同一个进程中，当然，我们还可以通过查看二者的 PID 和 TID 的方法证明这两个Activity默认确实在同一个进程中。当然，Android还提供了特殊方式让不是同一个包的组件也可以运行于相同的进程中，这样做的优势是，它们可以方便地资源共享，而不用大费周章地进程间通信。这可以分为两种情况：</p>
+<ol>
+<li>在AndroidManifest中的四大组件标签中加入 android:process 来表明这一组件想要运行在哪个进程空间。</li>
+<li>针对整个程序包，可以直接在 <application> 标签中，加入 android:process 属性来指明想要依存的进程环境。</application></li>
+</ol>
+<h2 id="Handler、MessageQueue、Runable与Looper"><a href="#Handler、MessageQueue、Runable与Looper" class="headerlink" title="Handler、MessageQueue、Runable与Looper"></a>Handler、MessageQueue、Runable与Looper</h2><p>参考专题里面的内容（现在还没放上去）<br>略</p>
+<h2 id="UI主线程-ActivityThread"><a href="#UI主线程-ActivityThread" class="headerlink" title="UI主线程-ActivityThread"></a>UI主线程-ActivityThread</h2><p>前面提到Activity的部分源码，这里精简下再贴出来：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">   </span><br><span class="line">    Looper.prepareMainLooper();</span><br><span class="line">    ActivityThread thread = <span class="keyword">new</span> ActivityThread();</span><br><span class="line">    thread.attach(<span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span>) &#123;</span><br><span class="line">        sMainThreadHandler = thread.getHandler();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    Looper.loop();</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>普通线程使用Looper的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LooperThread</span> <span class="keyword">extends</span> <span class="title">Thread</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> Handler mHandler;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">        Looper.prepare();</span><br><span class="line">        mHandler = <span class="keyword">new</span> Handler()&#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span></span>&#123;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        Looper.loop();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>比较二者的代码可知其中的区别主要体现在：</p>
+<ul>
+<li><p>prepareMainLooper 和 prepare，普通线程prepare就可以了，而主线程使用  prepareMainLooper ，主要是多了一步给sMainLooper 赋值的操作，这样，我们就能从主线程中通过 getMainLooper() 方式获得主线程的 Looper。</p>
+</li>
+<li><p>Handler不同，普通线程申城一个与Looper绑定的Handler，而主线程是从当前线程中获取的Handler，也就是说，ActivityThread 提供了一个“事件管家”，以处理主线程中各种消息。</p>
+</li>
+</ul>
+<h2 id="Thread-类"><a href="#Thread-类" class="headerlink" title="Thread 类"></a>Thread 类</h2>
       
 
       
@@ -238,7 +246,7 @@
 		<ul class="article-tag-list">
 			 
         		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)</a>
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">深入理解Android内核设计思想-林学森</a>
         		</li>
       		
 		</ul>
@@ -294,7 +302,7 @@
     <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
     <p>扫一扫，分享到微信</p>
     <div class="wx-qrcode">
-      <img src="//pan.baidu.com/share/qrcode?url=http://glassx.github.io/2019/08/01/深入理解Java虚拟机-第8章/" alt="微信分享二维码">
+      <img src="//pan.baidu.com/share/qrcode?url=http://glassx.github.io/2019/08/06/深入理解Android内核设计思想-第5章/" alt="微信分享二维码">
     </div>
 </div>
 
@@ -308,18 +316,9 @@
   
 <nav id="article-nav">
   
-    <a href="/2019/08/06/深入理解Android内核设计思想-第5章/" id="article-nav-newer" class="article-nav-link-wrap">
-      <i class="icon-circle-left"></i>
-      <div class="article-nav-title">
-        
-          第5章：Android 进程/线程管理
-        
-      </div>
-    </a>
   
-  
-    <a href="/2019/07/28/深入理解Java虚拟机-第7章/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">第7章: 虚拟机类加载机制</div>
+    <a href="/2019/08/01/深入理解Java虚拟机-第8章/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">第8章: 虚拟机字节码执行引擎</div>
       <i class="icon-circle-right"></i>
     </a>
   
