@@ -160,6 +160,105 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-Android 开发艺术探索-第3章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/05/12/Android 开发艺术探索-第3章/">第3章——View的事件体系</a>
+    </h1>
+  
+
+        
+        <a href="/2019/05/12/Android 开发艺术探索-第3章/" class="archive-article-date">
+  	<time datetime="2019-05-12T14:42:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-05-12</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="View-基础知识"><a href="#View-基础知识" class="headerlink" title="View 基础知识"></a>View 基础知识</h2><h3 id="1、-MotionEvent-和-TouchSlop"><a href="#1、-MotionEvent-和-TouchSlop" class="headerlink" title="1、 MotionEvent 和 TouchSlop"></a>1、 MotionEvent 和 TouchSlop</h3><h4 id="MotionEvent"><a href="#MotionEvent" class="headerlink" title="MotionEvent"></a>MotionEvent</h4><p>这里只需要注意一点，通过MotionEvent 可以获得点击事件发生的x和y坐标，系统提供了两组方法，getX/getY 和 getRawX/getRawY ，他们的区别很简单，前者返回的是相对于当前View的左上角的 x 和 y 坐标，后者返回的是相对于手机屏幕左上角的 x和y 坐标。</p>
+<h4 id="TouchSlop"><a href="#TouchSlop" class="headerlink" title="TouchSlop"></a>TouchSlop</h4><p>TouchSlop 是系统所能识别出的被认为是滑动的最小距离，小于这个值就不认为是滑动操作。TouchSlop 是一个常量，和设备有关，在不同的设备上这个值可能是不同的。通过如下方式可以获取这个常量：</p>
+<blockquote>
+<p>ViewConfiguration.get(context).getScaledTouchSlop()</p>
+</blockquote>
+<h3 id="2、VelocityTracker、GestureDetector-和-Scroller"><a href="#2、VelocityTracker、GestureDetector-和-Scroller" class="headerlink" title="2、VelocityTracker、GestureDetector 和 Scroller"></a>2、VelocityTracker、GestureDetector 和 Scroller</h3><h4 id="VelocityTracker"><a href="#VelocityTracker" class="headerlink" title="VelocityTracker"></a>VelocityTracker</h4><p>用于追踪手指在滑动过程中的速度，包括水平和竖直方向的速度。它的使用过程很简单，首先在 View 的 onTouchEvent 方法中追踪当前单击事件的速度：</p>
+<blockquote>
+<p>VelocityTracker velocityTracker = VelocityTracker.obtain();<br>velocityTracker.addMovement(event);</p>
+</blockquote>
+<p>接着，当我们想知道当前的滑动速度时，可以采用如下方法获得：</p>
+<blockquote>
+<p>velocityTracker.computeCurrentVelocity(1000);<br>int xVelocity = (int)velocityTracker.getXVelocity();<br>int yVelocity = (int)velocityTracker.getYVelocity();</p>
+</blockquote>
+<p>这里需要注意的是： 一、获取速度之前必须先计算速度；二、这里的速度是指一段时间内手指所划过的像素数，比如将时间间隔设置为 1000ms，在 1s 内水平从左至右滑过100像素，那么水平速度就是100 。如果将时间间隔设置为100ms，在这100ms 内滑过10像素，则水平速度会变成 10 。此外，这个速度是可以为负值的，当水平方向从右往左滑动时，水平方向的速度即为负值。</p>
+<h4 id="GestureDetector"><a href="#GestureDetector" class="headerlink" title="GestureDetector"></a>GestureDetector</h4><p>手势检测，用于辅助检测用户的单击、滑动、长按、双击等行为。比如要监听双击行为，代码如下：</p>
+<blockquote>
+<p>GestureDetector mGestureDetector = new GestureDetector(listener);<br>//再加上这行可以解决长按屏幕后无法拖动的现象<br>mGestureDetector.setIsLongpressEnabled(false);</p>
+</blockquote>
+<p>接着，接管目标View的onTouchEvent方法，在待监听View的 onTouchEvent 方法中如下实现：</p>
+<blockquote>
+<p>boolean consume = mGestureDetector.onTouchEvent(event);<br>return consume;</p>
+</blockquote>
+<p>OnGestureListener 与 OnDoubleTapListener 里面的方法有很多，常用的有：onSingleTapUp（单击）、onScroll（拖动）、onLongPress（长按）、onFling（快速滑动）、onScroll（拖动）、onDoubleTap（双击）。</p>
+<h4 id="Scroller"><a href="#Scroller" class="headerlink" title="Scroller"></a>Scroller</h4><p>弹性滑动对象，用于实现View的弹性滑动，我们知道，当使用View的scrollTo/scrollBy方法来进行滑动时，其过程是瞬间完成的，这时候就可以使用 Scroller 来实现有过渡效果的滑动，它需要和View的conputeScroll方法配合使用才能共同完成这个功能，典型的使用如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Scroller mScroller = newScroller(context);</span><br><span class="line"></span><br><span class="line"><span class="comment">//缓慢滑动到指定位置</span></span><br><span class="line"><span class="function">privte <span class="keyword">void</span> <span class="title">smoothScrollTo</span><span class="params">(<span class="keyword">int</span> destX,<span class="keyword">int</span> destY)</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> scrollX = getScrollX();</span><br><span class="line">    <span class="keyword">int</span> delta = destX - scrollX;</span><br><span class="line">    <span class="comment">//1000ms内滑向destX就是，效果就是慢慢滑动</span></span><br><span class="line">    mScroller.startScroll(scrollX,<span class="number">0</span>,delta,<span class="number">0</span>,<span class="number">1000</span>);</span><br><span class="line">    invalidate();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">computeScroll</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(mScroller.computeScrollOffset())&#123;</span><br><span class="line">        scrollTo(mScroller.getCurrX(), mScroller.getCurrY());</span><br><span class="line">        postInvalidate()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="View-的滑动"><a href="#View-的滑动" class="headerlink" title="View 的滑动"></a>View 的滑动</h2><p>未完待续。。。</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">Android开发艺术探索</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/05/12/Android 开发艺术探索-第3章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-Android 开发艺术探索-第2章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1020,155 +1119,6 @@
       
         <p class="article-more-link">
           <a class="article-more-a" href="/2019/03/08/针对简历的问题/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-内存泄漏" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/07/内存泄漏/">内存泄漏</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/07/内存泄漏/" class="archive-article-date">
-  	<time datetime="2019-03-07T14:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-07</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="常见内存泄漏场景："><a href="#常见内存泄漏场景：" class="headerlink" title="常见内存泄漏场景："></a>常见内存泄漏场景：</h2><ul>
-<li>资源性对象未关闭</li>
-</ul>
-<blockquote>
-<p>如 File、Cursor、stream等资源，他们的缓存不只存在java虚拟机内，还存在虚拟机外，仅仅把对象置为null而不关闭，就会引起内存泄漏</p>
-</blockquote>
-<ul>
-<li>注册对象未注销</li>
-</ul>
-<blockquote>
-<p>观察者模式的注册，在不使用的时候未注销，就会导致，如在Activity中监听电话服务，定义PhoneStateListener注册到TelphoneManager服务中，如果忘记注销，会导致Activity无法被Gc回收。</p>
-</blockquote>
-<ul>
-<li><p>非静态内部类创建静态实例</p>
-</li>
-<li><p>Handler造成的内存泄漏。</p>
-</li>
-</ul>
-<blockquote>
-<p>非静态Handler默认持有外部Activity的引用，退出Activity时，如果Looper中还有Message，就会导致Activity无法回收，可以（1）将Handler设置为静态，并且弱引用持有的对象 （2）Activity 的onDestroy的时候，一处消息队列的消息 来解决内存泄漏。</p>
-</blockquote>
-<ul>
-<li>容器中的对象没有清理</li>
-</ul>
-<blockquote>
-<p>容器里的对象在不需要的时候，要及时移除，使其正确及时地被回收。</p>
-</blockquote>
-<h2 id="优化内存空间"><a href="#优化内存空间" class="headerlink" title="优化内存空间"></a>优化内存空间</h2><p>总体来说即是开源节流</p>
-<ul>
-<li>开源</li>
-</ul>
-<blockquote>
-<p>large heap</p>
-</blockquote>
-<ul>
-<li>对象引用入手</li>
-</ul>
-<blockquote>
-<p>强引用、软引用、弱引用。</p>
-</blockquote>
-<ul>
-<li>减少不必要的装箱机制</li>
-</ul>
-<blockquote>
-<p>sparseArray，类似的还有 SparseLongArray，LongSpaseArray等。</p>
-</blockquote>
-<ul>
-<li>使用最优数据类型</li>
-</ul>
-<blockquote>
-<p>（1）需要限制输入参数的时候，使用注解而不是枚举 （2）谨慎选择 HashMap 、ArrayMap 以及 SparseArray。</p>
-</blockquote>
-<h2 id="顺带一提UI绘制优化"><a href="#顺带一提UI绘制优化" class="headerlink" title="顺带一提UI绘制优化"></a>顺带一提UI绘制优化</h2><ul>
-<li>减少布局层级</li>
-</ul>
-<blockquote>
-<p>（1） 合理使用 merge （2）合理使用 ConstranLayout</p>
-</blockquote>
-<ul>
-<li>提高显示速度</li>
-</ul>
-<blockquote>
-<p>使用 viewstub 延后显示。</p>
-</blockquote>
-<ul>
-<li>减少wrap_content</li>
-</ul>
-<blockquote>
-<p>尽量使用match_parent 或者 确定的宽高度</p>
-</blockquote>
-<ul>
-<li>避免过度绘制</li>
-</ul>
-<blockquote>
-<p>（1）移除布局中非必须的背景 （2）可能的话，移除window的默认背景 （3）自定义view，要注意重叠部分，可以通过canvas.clipRect()帮助系统识别可见的区域，减少过度绘制</p>
-</blockquote>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">专题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/07/内存泄漏/">展开全文 >></a>
         </p>
       
 
