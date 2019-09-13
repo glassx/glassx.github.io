@@ -6,19 +6,20 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="//glassx.github.io">
-  <title>glassx小黑屋</title>
+  <title>第13章: 线程安全与锁优化 | glassx小黑屋</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Android开发，兴趣范围包括大前端、后台、数据分析">
-<meta name="keywords" content="前端,开发者,程序猿,极客,编程,代码,开源,IT,Developer,Programmer,Coder,Geek,Android">
-<meta property="og:type" content="website">
-<meta property="og:title" content="glassx小黑屋">
-<meta property="og:url" content="//glassx.github.io/page/3/index.html">
+  <meta name="description" content="概述并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。 线程安全线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。 Java 线程安全为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假">
+<meta name="keywords" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第13章: 线程安全与锁优化">
+<meta property="og:url" content="//glassx.github.io/2019/09/08/深入理解Java虚拟机-第13章/index.html">
 <meta property="og:site_name" content="glassx小黑屋">
-<meta property="og:description" content="Android开发，兴趣范围包括大前端、后台、数据分析">
+<meta property="og:description" content="概述并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。 线程安全线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。 Java 线程安全为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假">
 <meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-13T14:34:34.714Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="glassx小黑屋">
-<meta name="twitter:description" content="Android开发，兴趣范围包括大前端、后台、数据分析">
+<meta name="twitter:title" content="第13章: 线程安全与锁优化">
+<meta name="twitter:description" content="概述并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。 线程安全线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。 Java 线程安全为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假">
   
     <link rel="alternative" href="/atom.xml" title="glassx小黑屋" type="application/atom+xml">
   
@@ -158,351 +159,128 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-    <article id="post-深入理解Android内核设计思想-第4章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+            <article id="post-深入理解Java虚拟机-第13章" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/09/深入理解Android内核设计思想-第4章/">第4章：操作系统基础</a>
+    <h1 class="article-title" itemprop="name">
+      第13章: 线程安全与锁优化
     </h1>
   
 
         
-        <a href="/2019/03/09/深入理解Android内核设计思想-第4章/" class="archive-article-date">
-  	<time datetime="2019-03-09T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-09</time>
+        <a href="/2019/09/08/深入理解Java虚拟机-第13章/" class="archive-article-date">
+  	<time datetime="2019-09-08T08:24:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-09-08</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="进程间通信的经典实现"><a href="#进程间通信的经典实现" class="headerlink" title="进程间通信的经典实现"></a>进程间通信的经典实现</h2><h3 id="共享内存"><a href="#共享内存" class="headerlink" title="共享内存"></a>共享内存</h3><p>共享内存的工作流程：</p>
-<ol>
-<li>创建共享区。进程1从内存中申请一块内存作为共享区域，并且将该区域与某个Key绑定  </li>
-<li>映射共享区。创建共享区之后，需要将其映射到进程1的空间中才能操作。  </li>
-<li>访问共享区。进程2利用第一步得到的Key，访问到共享区，之后将这块内存映射到进程2的空间中。  </li>
-<li>进程间通信。各进程实现了对共享内存的映射后，便可以利用该区域进行信息交换。（注意：整个内存过程都没有实现同步机制，需要进程间自己实现）  </li>
-</ol>
-<h3 id="管道"><a href="#管道" class="headerlink" title="管道"></a>管道</h3><ul>
-<li>进程A和B分立管道两端，进行数据传输通信</li>
-<li>管道是单向的，如果进程既要“读”也要“写”，就需要两根管道这点很像水管的特性  </li>
-<li>管道同时具有“读取”(read end)端和“写入”(write end)端，比如进程A从 write end 写入，进程 B 就可以从 read end 端读取到数据  </li>
-<li>管道容量有限制，当pipe满了后，写操作将阻塞；反之，pipe空了之后，读操作将会阻塞  </li>
-<li>普通的管道是<strong>匿名的</strong>，这种匿名的管道只适合有斧子关系的进程通信，如果要实现没有任何关系的管道间的通信，就需要<strong>命名管道(Named pipe)</strong></li>
-</ul>
-<h3 id="UNIX-DOMAIN-SOCKET"><a href="#UNIX-DOMAIN-SOCKET" class="headerlink" title="UNIX DOMAIN SOCKET"></a>UNIX DOMAIN SOCKET</h3><ul>
-<li>简称UDS,也可以说是IPC Socket，与普通的Socket不一样，专门针对单机进程间通信提出来的。  </li>
-<li>大家熟知的 Network Socket 是以 TCP/IP 协议栈作为基础的，需要分包、重组 等一系列操作，而 UDS 因为是本机内的“安全可靠操作”，实现机制上并不依赖于这些协议。  </li>
-<li>Android 中使用最多的一种IPC就是Binder，其次就是 UDS 。  </li>
-</ul>
-<h3 id="RPC（REMOTE-PROCEDURE-CALLS）"><a href="#RPC（REMOTE-PROCEDURE-CALLS）" class="headerlink" title="RPC（REMOTE PROCEDURE CALLS）"></a>RPC（REMOTE PROCEDURE CALLS）</h3><p>RPC 涉及通信双方通常运行于两台不同的机器中。</p>
-<h2 id="同步机制的经典实现"><a href="#同步机制的经典实现" class="headerlink" title="同步机制的经典实现"></a>同步机制的经典实现</h2><p>###信号量（SEMAPHORE）</p>
-<p>信号量与PV原语是分不开的，也是最为广泛的互斥方法之一，主要包括以下几个元素：</p>
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。</p>
+<h2 id="线程安全"><a href="#线程安全" class="headerlink" title="线程安全"></a>线程安全</h2><p>线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。</p>
+<h2 id="Java-线程安全"><a href="#Java-线程安全" class="headerlink" title="Java 线程安全"></a>Java 线程安全</h2><p>为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假的二元排他选项来看待。按照线程安全的“安全程度”由强至弱来排序，我们可以将Java语言各种操作共享的<strong>数据</strong>分为：不可变、绝对线程安全、相对线程安全、线程兼容和线程对立。</p>
+<h3 id="不可变"><a href="#不可变" class="headerlink" title="不可变"></a>不可变</h3><p>不可变(Immutable) 的对象一定是线程安全的，只要一个不可变对象被正确地创建构建出来(没有发生this引用逃逸的情况)，那其外部的可见状态永远也不会改变，永远也不会看到它在多个线程之中处于不一致的状态。</p>
+<p>Java 语言中，如果共享数据是一个基本数据类型，只要在定义时使用final关键字就可以保证它是不可变的；如果共享数据是一个对象，那就需要保证对象的行为不会对其状态产生任何影响，有很多途径去实现这个目的，最简单的就是把对象中带有状态的变量都声明为final，这样，在构造函数结束之后，它就是不可变的。</p>
+<blockquote>
+<p>Java API 中复合不可变要求的类型，有String、枚举类型、Long、Double以及BigInteger、BigDecimal等大数据类型，但同为Number的子类型的原子类 AtomicInteger 和 AtomicLong 则并非不可变的。</p>
+</blockquote>
+<h3 id="绝对线程安全"><a href="#绝对线程安全" class="headerlink" title="绝对线程安全"></a>绝对线程安全</h3><p>绝对线程安全通常需要付出很大的，甚至有时候是不切实际的代价。<strong>在Java API 中标注自己是线程安全的类，大多数都不是绝对的线程安全</strong>。我们可以通过一个不是“绝对线程安全”的线程安全类来看看这里的“绝对”是什么意思。</p>
+<p>Java程序员基本上都认为 java.util.Vector 是一个线程安全的容器，因为它的add、get、size等方法都被 synchronized 修饰的，尽管这样效率很低，但确实是安全的。但是，即使所有方法都被修饰成同步，也并不意味着调用它的时候永远不需要同步手段了，看如下测试代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Vector&lt;Integer&gt; vector = <span class="keyword">new</span> Vector&lt;Integer&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">                vector.add(i);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            Thread removeThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) &#123;</span><br><span class="line">                        vector.remove(i);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line"></span><br><span class="line">            Thread prindThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) &#123;</span><br><span class="line">                        System.out.println(vector.get(i));</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line"></span><br><span class="line">            removeThread.start();</span><br><span class="line">            prindThread.start();</span><br><span class="line"></span><br><span class="line">            <span class="comment">//不要同时产生过多线程，否则导致操作系统假死</span></span><br><span class="line">            <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">20</span>) ;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>这段代码运行过程中会出现 ArrayIndexOutOfBoundsException，但是在我自己写代码验证的时候，感觉这个错误还是很容易被忽略的，运行了好长时间都还在一直输出，但其实早就报错了，但不知道怎么程序还是正常运行。这点在自己验证的时候要注意一下，我的运行环境是：Android studio 3.5 + jre 1.8 。</p>
+<p>虽然我个人认为作者说的是有道理的，因为如果remove线程恰好在一个错误的时间里删除了一个元素，导致序号i已经不再可用的话，再用vector.get(i) 访问就会抛出 ArrayIndexOutOfBoundsException。如果要保证这段代码的正确运行，书上给出的方案是把两个thread改成如下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">Thread removeThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                    <span class="keyword">synchronized</span> (vector)&#123;</span><br><span class="line">                        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) &#123;</span><br><span class="line">                            vector.remove(i);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line"></span><br><span class="line">            Thread prindThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                    <span class="keyword">synchronized</span> (vector)&#123;</span><br><span class="line">                        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) &#123;</span><br><span class="line">                            System.out.println(vector.get(i));</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br></pre></td></tr></table></figure>
+<h3 id="相对线程安全"><a href="#相对线程安全" class="headerlink" title="相对线程安全"></a>相对线程安全</h3><p>相对线程安全就是我们通常意义上所讲的线程安全，它需要保证这个对象单独的操作是线程安全的，我们在调用的时候无需做额外的保障措施，但是对于一些特定顺序的连续调用，就可能需要在调用端使用额外的同步手段来保证调用的正确性。Java语言中，Vector、HashTable、Collections的synchronizeCollection() 方法包装的集合等。</p>
+<h3 id="线程兼容"><a href="#线程兼容" class="headerlink" title="线程兼容"></a>线程兼容</h3><p>线程兼容指对象本身并不是线程安全的，但是可以通过在调用端正确地使用同步手段来保证对象在并发环境中可以安全地使用。Java API 中大部分类都是属于线程兼容的，如 ArrayList 和 HashMap 等。</p>
+<h3 id="线程对立"><a href="#线程对立" class="headerlink" title="线程对立"></a>线程对立</h3><p>线程对立是指无论调用端是否采取同步措施，都无法再多线程环境并发使用，如 Thread 类的suspend() 和 resume() 方法，如果两个线程同时持有一个线程对象，一个尝试去中断线程，另一个尝试去恢复线程，如果并发的话，无论是否进行了同步，都会存在死锁风险(这两个方法在jdk中已经被声明放弃了)。这类代码很少出现，我们也应该避免。</p>
+<h2 id="线程安全的实现方法"><a href="#线程安全的实现方法" class="headerlink" title="线程安全的实现方法"></a>线程安全的实现方法</h2><p>这听起来是代码编写的问题，但虚拟机提供的同步和锁机制也起到了非常重要的作用。只要读者了解了虚拟机线程安全手段的运作过程，自己去思考代码如何编写并不是一件困难的事情。</p>
+<h3 id="互斥同步"><a href="#互斥同步" class="headerlink" title="互斥同步"></a>互斥同步</h3><p>同步是指在多个线程并发访问共享数据时，保证共享数据在同一时刻只能被一个(或者是一些，使用信号量的时候)线程使用，而互斥是实现同步的一种手段。互斥是因，同步是果；互斥是方法，同步是目的。</p>
+<p>Java中最基本的互斥同步手段是 synchronize 关键字，经过编译后，会在同步快的前后分别形成 monitorenter 和 monitorexit 两个字节指令，<strong>这两个字节码都需要 reference 类型的参数来指明要锁定和解锁的对象</strong>。如果Java程序中的synchronize 指明了对象参数，那就是这个对象的 reference ；<strong>如果没有明确指定，那就根据 synchronize 修饰的是实例方法还是类方法，去取对应的对象实例或 Class 对象来作为锁对象。</strong></p>
+<p>根据虚拟机规范，执行 monitorenter 时首先尝试获取对象的锁，如果没有被锁定，或者当前线程已经拥有这个锁，就把锁的计数器 +1 ，相应地，monitorexit 时减 1 。如果获取对象锁失败，那当前线程就要阻塞等待，直到锁被释放。</p>
+<p><strong>这里有2点是要注意的：synchronize 同步块对同一条线程来说是可重入的，不会出现自己把自己锁死的问题；其次，同步块在已进入的线程执行完之前，会阻塞后面的线程，前面提到过，Java的线程是映射到操作系统的原生线程上的，如果要阻塞或者唤醒一个线程，都需要操作系统来帮忙完成，这就需要从用户态转到核心态中，因此状态转换需要耗费很多的处理器时间。对于代码简单的同步块(如被synchronize修饰的getter() 或 setter() 方法)，状态转换消费的时间可能比代码执行时间还要长，所以 synchronize 是 Java 语言中一个重量级(Heavyweight)操作。</strong></p>
+<p>还可以使用 ReetrantLock 来实现同步，它的基本用法与 synchronize 相似，<strong>都具备线程重入性</strong>，只是 ReetrantLock 表现为API语法层面的互斥锁(lock 和 unlock 方法配合 try/finally 语句块来完成)，synchronize 表现为原生语法层面的互斥锁。不过，ReetrantLock 增加了一些高级功能，主要有以下3项：</p>
 <ul>
-<li>Semaphore S（信号量，用于指示共享资源的可用数量）  </li>
-<li>Operation P （可以减小S计数）  </li>
-<li>Operation V （可以增加S计数）  </li>
+<li>等待可中断：指当持有锁的线程长期不释放锁的时候，正在等待的线程可以选择放弃等待。    </li>
+<li>公平锁：多个线程在等待同一个锁时，必须按照申请锁的时间顺序来依次获得锁：而非公平锁则不保证这一点，在锁被释放时，任何一个等待锁的线程都有机会获得锁。synchronize 是非公平的，ReetrantLock 默认也是非公平的。    </li>
+<li>锁绑定多个条件是指一个 ReetrantLock 对象同时可以绑定多个 Condition 对象。而synchronize 中，锁对象的 wait 、notify或者 notifyAll 方法可以实现一个隐含的条件是：如果要和多于一个的条件关联的时候，就要额外地添加一个锁。而 ReetrantLock 无需这样做，只需要多次调用 newCondition 方法即可。</li>
 </ul>
+<p>在JDK 1.6以前，synchronize 的吞吐量会随着竞争的激烈程度增加而急剧下降，但 ReetrantLock 却基本保持在平稳水平。<strong>但随着后面的优化，二者的性能基本上持平了，并且虚拟机在未来的性能改进中更倾向于原生的 synchronize ，所以还是提倡在 synchronize 能实现需求的情况下，优先考虑使用 synchronize 来同步</strong>。</p>
+<h3 id="非阻塞同步"><a href="#非阻塞同步" class="headerlink" title="非阻塞同步"></a>非阻塞同步</h3><p>互斥同步最主要的问题就是线程阻塞和唤醒带来的性能问题，因此也称为阻塞同步，这是一种悲观的并发策略，总认为不去做正确的同步措施，就肯定会出问题。随着硬件指令集的发展（因为我们需要操作和冲突检测这两个步骤具备原子性，只能靠硬件来保证，如果使用互斥同步就失去意义了），我们有了另一个选择：基于冲突检测的乐观并发策略，通俗讲就是先操作，如果没有其他线程竞争，操作就成功了；如果有竞争产生了冲突，再采取其他补偿措施（常见的措施就是不断重试，直到成功）。这种策略无需把线程挂起，因此称为非阻塞同步。</p>
 <blockquote>
-<p>P执行：S = S -1，此时判断若 S&gt;=0 ，说明资源此时允许访问，开始操作共享资源；否则，加入等待队列，待别人释放资源后唤醒。<br>V执行：S=S+1，如果此时S&gt;0，说明当前没有希望访问资源的等待者；否则，唤醒等待队列中的相关对象。<br><strong>其中，PV源于都属于原子操作，意味着他们执行过程是不允许被中断的。</strong></p>
+<p>指令集发展后，可以确保一个从语义上看起来需要多次操作的行为只需要一条处理器指令就能完成，其中最重要的指令为 ：比较并交换(Compare-and-Swap) ，下文简称 CAS，它的语义是：内存地址V，旧的预期值 A,新值 B，当且仅当 V 符合旧预期值 A 是，处理器就用新值 B 更新 V，否则就不更新。</p>
 </blockquote>
-<h3 id="互斥体（MUTEX）"><a href="#互斥体（MUTEX）" class="headerlink" title="互斥体（MUTEX）"></a>互斥体（MUTEX）</h3><p>Mutex 是 Mutual Exclusion 的缩写，释义为 互斥体。如果资源允许多个对象同时访问，成为 Counting Semaphores；而如果只允许取值0或1（lock/unlocked）的Semaphore，则叫做 Binary Semaphore。Binary Semaphore 与Mutex有相同性质，Mutex通常是对某一排他资源的共享控制——要么这个资源被占用（locked），要么是可以访问的（unlocked）。</p>
-<h3 id="管程（MONITOR）"><a href="#管程（MONITOR）" class="headerlink" title="管程（MONITOR）"></a>管程（MONITOR）</h3><p>针对信号量机制的程序易读性较差，并且信号量管理分散在各个参与对象中，很难维护等缺点，管程被提出来了。管程是可以被多个进程/线程安全访问的对象或者模块，管程中的方法在同一时刻只允许一个范文这使用它们（方法受 mutual exclusion 保护的）。</p>
-<h2 id="操作系统内存基础"><a href="#操作系统内存基础" class="headerlink" title="操作系统内存基础"></a>操作系统内存基础</h2><p>操作系统中任何操作都与内存息息相关，内存管理的底层原理主要注意几个核心：</p>
+<p>不妨拿一段在第 12 章中没有解决的问题代码来看看如何使用CAS操作来避免阻塞同步，我们曾通过这段20个线程自增 10000 此的代码来证明 volatile 变量不具备原子性，那如何才能让它具备原子性？把 “race ++ “ 操作或 increase() 方法用同步块包裹起来当然是一个办法，但如果改成如下代码，效率会提高很多：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> AtomicInteger race = <span class="keyword">new</span> AtomicInteger(<span class="number">0</span>);</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> THREADS_COUNT = <span class="number">20</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span></span>&#123;</span><br><span class="line">        race.incrementAndGet();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">       Thread[] threads = <span class="keyword">new</span> Thread[THREADS_COUNT];</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; THREADS_COUNT;i++)&#123;</span><br><span class="line">        threads[i] = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; <span class="number">10000</span>;i++)&#123;</span><br><span class="line">                    increase();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">        threads[i].start();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">1</span>)&#123;</span><br><span class="line">        Thread.yield();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    System.out.println(race);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>运算结果： 200000</p>
+<p>使用AtomicInteger代替int后，程序输出了正确地结果，一切要归功于incrementAndGet 方法的原子性，它的实现非常简单：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">incrementAndGet</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">for</span>(;;)&#123;</span><br><span class="line">        <span class="keyword">int</span> current = get();</span><br><span class="line">        <span class="keyword">int</span> next = current + <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">if</span>(compareAndSet(current,next))&#123;</span><br><span class="line">            <span class="keyword">return</span> next;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>incrementAndGet 方法在一个无限循环中，不断尝试将一个比自己当前值大1的新值赋给自己，如果失败了，那说明在执行“获取-设置”操作的时候值已经有了修改，于是再次循环进行下一次操作，直到设置成功为止（设置成功才return 跳出循环）。</p>
+<blockquote>
+<p>如果一个变量V初次读取的时候是A值，并且在准备赋值的时候检查到它仍然为A，这就有可能是这段期间它的值曾经被改成了B，后来又被改成了A，那 CAS 操作就会误认为它从来没被改变过，这称为 “ABA” 问题。如果需要解决 “ABA” 问题，改用传统的互斥同步会比原子类更高效。</p>
+</blockquote>
+<h3 id="无同步方案"><a href="#无同步方案" class="headerlink" title="无同步方案"></a>无同步方案</h3><p>如果一个方法本来就不涉及共享数据，那它自然无需任何同步措施。这种代码是天生线程安全的，这里简单介绍其中两类：</p>
 <ul>
-<li>虚拟内存</li>
-</ul>
-<blockquote>
-<p>内存总是“不够大”的，随着应用的增加，总会填满，虚拟内存为运行更多的程序提供了可能，其基本思想是：1.将硬盘上一部分空间作为内存的扩展；2.出现资源不足时，按照一定算法挑出优先级较低的数据块移动到第1步划出的空间；3.需要用到硬盘中的数据块时，系统将产生“缺页”，之后把硬盘中的数据交换回内存中。</p>
-</blockquote>
-<ul>
-<li>内存分配与回收</li>
-</ul>
-<blockquote>
-<p>分配、native层回收，java层回收</p>
-</blockquote>
-<ul>
-<li>内存保护</li>
-</ul>
-<blockquote>
-<p>内存分页或者分段式管理。进程的逻辑地址不是直接对应物理地址的，因此没办法访问它范围外的内存空间。</p>
-</blockquote>
-<p><strong>顺带一提，mmap函数（Memory Map）正如其名，可以将某个设备或者文件映射到应用进程的内存空间中，这样访问这块内存就相当于对设备/文件进行读写；可见，理论上mmap可以用于进程间通信，即通过映射同一块物理内存来共享内存，这种方式因为减少了复制次数，在一定程度上提高了进程间通信效率。</strong></p>
-<h2 id="Android-匿名共享内存（Ashmem）"><a href="#Android-匿名共享内存（Ashmem）" class="headerlink" title="Android 匿名共享内存（Ashmem）"></a>Android 匿名共享内存（Ashmem）</h2><p>Ashmem 全称 Anony Shared Memory，是Android 特有的内存共享机制，它可以将指定的物理内存分别映射到各个进程的地址空间，从而便捷地实现进程间的内存共享。Ashmem 是一个 misc 设备，其实现依托于 /dev/ashmem 。</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">深入理解Android内核设计思想-林学森</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/09/深入理解Android内核设计思想-第4章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-针对简历的问题" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/08/针对简历的问题/">针对简历的问题</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/08/针对简历的问题/" class="archive-article-date">
-  	<time datetime="2019-03-08T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-08</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>1、了解哪些设计模式？写个单例模式？</p>
-<blockquote>
-<p>单例<br>建造者模式<br>工厂模式<br>适配器模式<br>装饰模式<br>观察者模式  </p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//线程安全的单例模式代码</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>&#123;</span><br><span class="line">    <span class="comment">//注意 volatitle 关键字</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> volatitle Singleton instance = <span class="keyword">null</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//构造函数私有</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">()</span></span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="keyword">synchronized</span>(Singleton.class)&#123;</span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="keyword">null</span>)&#123;</span><br><span class="line">                    instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>2、安全隐患</p>
-<blockquote>
-<p>okhttp ssl校验<br>native层keystore校验<br>本地广播<br>LeakCanary防止内存泄漏<br>SharedPreference加密<br>allowBackUp = false<br>某些key生成在native代码中做  </p>
-</blockquote>
-<p>3、怎么DNS加速？怎么防止劫持？</p>
-<blockquote>
-<p>114、119 获取ip，而不是用host直接访问，避免后续的dns请求，节省时间<br>114、119 防止运营商流氓<br>接管webview的网络请求，同上  </p>
-</blockquote>
-<p>5、怎样结构重构？</p>
-<blockquote>
-<p>确定rxjava+fresco+okhttp 结构<br>引入MVP模式<br>kotlin语言  </p>
-</blockquote>
-<p>6、bug率下降怎么做到的？</p>
-<blockquote>
-<p>合并代码前检查<br>重要功能过代码，作者讲思路，看代码<br>TalkingData Bug线上监测<br>减少内存使用<br>图片url后面带上图片尺寸  </p>
-</blockquote>
-<p>7、如何稳定性？流畅性？如何页面秒开？对App进行优化吗？从哪些方面优化？</p>
-<blockquote>
-<p>进入App的流畅性：提前加载数据，提前绘制完成后进入，但在flash页面会卡顿<br>布局优化：基本上要求使用 ConstranLayout，减少布局层次<br>排除App中使用的容器，尽量使用SpaseArray、ArrayMap<br>loadCache 使用异步  </p>
-</blockquote>
-<p>8、如何文档归档</p>
-<blockquote>
-<p>使用wiki<br>wiki内容 包括后端接口，包括前端支持的协议以及支持的格式<br>其他部门只需要看wiki就行，不用问技术人员  </p>
-</blockquote>
-<p>10、举例技术推进项目精进</p>
-<blockquote>
-<p>推动使用Fresco<br>推动使用RxJava<br>做过两次性能优化<br>引入TalkingData监测App<br>开发者模式<br>建议图片请求带上尺寸<br>推动使用ConstranLayout  </p>
-</blockquote>
-<p>11、提出什么产品建议？</p>
-<blockquote>
-<p>大神推单<br>彩种排列方案（周边带阴影的）</p>
-</blockquote>
-<p>12、MVP怎么改进</p>
-<blockquote>
-<p>Presenter 中再额外分出来一层，与业务无关的层次，比如登录页面的更新用户数据的操作</p>
-</blockquote>
-<p>14、开发者选项有啥？</p>
-<blockquote>
-<p>启用哪个webview<br>是否对网络请求校验</p>
-</blockquote>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">面试</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/08/针对简历的问题/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-内存泄漏" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/07/内存泄漏/">内存泄漏</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/07/内存泄漏/" class="archive-article-date">
-  	<time datetime="2019-03-07T14:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-07</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="常见内存泄漏场景："><a href="#常见内存泄漏场景：" class="headerlink" title="常见内存泄漏场景："></a>常见内存泄漏场景：</h2><ul>
-<li>资源性对象未关闭</li>
-</ul>
-<blockquote>
-<p>如 File、Cursor、stream等资源，他们的缓存不只存在java虚拟机内，还存在虚拟机外，仅仅把对象置为null而不关闭，就会引起内存泄漏</p>
-</blockquote>
-<ul>
-<li>注册对象未注销</li>
-</ul>
-<blockquote>
-<p>观察者模式的注册，在不使用的时候未注销，就会导致，如在Activity中监听电话服务，定义PhoneStateListener注册到TelphoneManager服务中，如果忘记注销，会导致Activity无法被Gc回收。</p>
-</blockquote>
-<ul>
-<li><p>非静态内部类创建静态实例</p>
+<li><p>可重入代码：这种代码可以在任何时刻中断它，转而去执行另外一段代码，而在控制权返回后，原来的程序不会出现任何错误。可重入代码有一些共同特征，如 不依赖存储在堆上的数据和公用的系统资源，用到的状态量都是由参数中传入、不调用 非可重入的方法等。   </p>
 </li>
-<li><p>Handler造成的内存泄漏。</p>
+<li><p>线程本地存储：如果一段代码中所需要的数据必须与其他代码共享，那就看这些共享数据代码是否能保证在同一个线程中执行，如果能保证，我们就可以把共享数据的可见范围限制在同一个线程之内。</p>
 </li>
 </ul>
 <blockquote>
-<p>非静态Handler默认持有外部Activity的引用，退出Activity时，如果Looper中还有Message，就会导致Activity无法回收，可以（1）将Handler设置为静态，并且弱引用持有的对象 （2）Activity 的onDestroy的时候，一处消息队列的消息 来解决内存泄漏。</p>
+<p>符合这种特点的应用并不少见。一个应用实例就是web交互模型中“一个请求对应一个服务器线程”的处理方式</p>
 </blockquote>
-<ul>
-<li>容器中的对象没有清理</li>
-</ul>
+<h2 id="锁优化"><a href="#锁优化" class="headerlink" title="锁优化"></a>锁优化</h2><p>JDK 1.6 实现了各种锁优化技术，如适应性自旋、锁消除、锁粗化、轻量级锁 和 偏向锁 等，这些技术都是为了在线程之间更高效地共享数据。</p>
+<h3 id="自旋锁与自适应自旋"><a href="#自旋锁与自适应自旋" class="headerlink" title="自旋锁与自适应自旋"></a>自旋锁与自适应自旋</h3><p>在讨论互斥同步的时候，提到了阻塞对性能影响最大。虚拟机开发团队注意到在许多应用上，共享数据锁定状态只会持续很短时间，为这段时间去挂起和恢复线程不值得。我们可以让后面的请求锁的线程“稍等一下”，但不放弃处理器的执行时间，看锁是否被很快释放。为了让线程等待，我们只需让线程执行一个忙循环（自旋），这项技术就是所谓<strong>自旋锁</strong>。</p>
 <blockquote>
-<p>容器里的对象在不需要的时候，要及时移除，使其正确及时地被回收。</p>
+<p>自旋本身避免了挂起和恢复过程，但是它占用cpu时间，如果锁被占用的时间很短，这是值得的；反之，如果锁被占用的时间过长，则白白消耗处理器资源，因此需要有一定限度，限定自旋次数。</p>
 </blockquote>
-<h2 id="优化内存空间"><a href="#优化内存空间" class="headerlink" title="优化内存空间"></a>优化内存空间</h2><p>总体来说即是开源节流</p>
-<ul>
-<li>开源</li>
-</ul>
+<h3 id="锁消除"><a href="#锁消除" class="headerlink" title="锁消除"></a>锁消除</h3><p>如果代码上要求同步，但是被检测到不可能存在共享数据竞争，就可以对锁进行消除，锁消除的主要判定依据来源于逃逸分析的数据支持。也许读者会有疑问，变量逃逸，对于虚拟机来说需要使用数据流分析来确定，但是程序员自己应该很清楚，怎么会在明知道不存在数据竞争的情况下要求同步呢？答案是：有许多同步措施并不是程序员自己加入的，同步的代码在Java程序中普遍存在，来看看下面例子：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">concatString</span><span class="params">(String s1,String s2,String s3)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> s1 + s2 + s3;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们知道，String 是个不可变的类，对字符串的连接操作总是通过生成新的String来进行。JDK 1.5 前，String 连接会转化为 StringBuffer对象的连续 append 操作，1.5 及以后的版本会转化为 StringBuilder 对象的连续 append，即上述代码可能会变成以下的样子：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">concatString</span><span class="params">(String s1,String s2,String s3)</span></span>&#123;</span><br><span class="line">    StringBuffer sb = <span class="keyword">new</span> StringBuffer();</span><br><span class="line">    sb.append(s1);</span><br><span class="line">    sb.append(s2);</span><br><span class="line">    sb.append(s3);</span><br><span class="line">    <span class="keyword">return</span> sb.toString();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>现在大家还认为这段代码没有涉及同步吗？每个 StringBuffer.append 方法中都有一个同步块，锁就是sb对象。虚拟机很快会发现它的动态作用域被限制在 concatString 方法内部，永远不会被逃逸到方法外，因此，虽然这里有锁，也可以被安全地消除。</p>
+<h3 id="锁粗化"><a href="#锁粗化" class="headerlink" title="锁粗化"></a>锁粗化</h3><p>原则上，编写代码的时候，总是推荐将同步块的作用范围限制得尽量小，<strong>这是为了使需要同步的操作数量尽可能变小，让等待的线程尽快拿到锁。</strong>大部分情况下这原则是正确的。</p>
+<p>但是，如果一系列连续操作都是对同一个对象反复加锁和解锁，甚至加锁操作是在循环体中，频繁地进行互斥同步操作会导致不必要的性能消耗。上述代码中连续的 append 方法就属于此类范围，虚拟机会把加锁同步的范围扩展(粗化)到整个操作序列的外部，就是扩展到第一个 append() 操作之前直至最后一个 append() 操作之后，这样只需要加锁一次就可以了。</p>
+<h3 id="轻量级锁"><a href="#轻量级锁" class="headerlink" title="轻量级锁"></a>轻量级锁</h3><p>轻量级锁是相对于传统的锁机制而言的，首先强调的一点是，<strong>轻量级锁并不是用来代替重量级锁的，它的本意是在没有多线程竞争的前提下，减少传统的重量级锁使用操作系统互斥量产生的性能消耗。</strong></p>
+<p>要理解轻量级锁，必须从HotSpot虚拟机的对象（对象头部分）的内存布局开始介绍。HotSpot虚拟机的对象头分为两部分：第一部分用于存储对象自身的运行时数据，如哈希码、GC分代年龄等，官方称为 “Mark Word”，它是实现轻量级锁和偏向锁的关键。第二部分用于存储指向方法区对象类型数据的指针。</p>
+<p>在代码进入同步块的时候，如果此同步对象没有被锁定——Mark Word 中锁标记位为 “01”，则虚拟机首先将在当前线程的栈帧中建立一个名为<strong>锁记录(Lock Record)</strong>的空间，用于存储锁对象目前的 Mark Word 的拷贝，然后，虚拟机将使用 CAS 操作尝试将对象的 Mark Word 更新为指向 Lock Record 的指针，如果这个更新动作成功了，那么这个县城就拥有了该对象的锁，并且将对象的 Mark Word 的锁标志位转变为 “00” ，表示对象处于轻量级锁定状态。</p>
+<p>如果这个更新操作失败了，虚拟机首先会检查对象的 Mark Word 是否指向当前线程的栈帧，如果只说明当前线程已经拥有了这个对象的锁，那就可以直接进入同步块继续执行，否则说明这个锁对象已经被其他线程抢占了。如果有两条以上的线程争用同一个锁，那轻量级锁就不再有效，要膨胀为重量级锁，锁标志位变为 “10” ，后面等待锁的线程也要进入阻塞状态。</p>
+<p>上面描述的是加锁过程，解锁过程也是通过CAS 操作来进行的，如果对象的 Mark Word 仍然指向线程的锁记录，那就用 CAS 操作把当前对象的的 Mark Word 和 线程中复制的 Mark Word 替换，如果替换成功，整个同步过程完成。如果替换失败，说明其他线程尝试过获取该锁，那么在释放锁的同时，唤醒被挂起的线程。</p>
 <blockquote>
-<p>large heap</p>
+<p>轻量锁的依据是“绝大部分锁，在整个同步周期内都是不存在竞争的”，这是经验数据，如果没有竞争，轻量级锁使用CAS 操作避免了使用互斥量的开销；如果存在锁竞争，除了互斥量的开销外，还额外发生了 CAS 操作，因此会比传统重量级锁更慢。</p>
 </blockquote>
-<ul>
-<li>对象引用入手</li>
-</ul>
+<h3 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h3><p>如果说轻量级锁是在无竞争情况下使用CAS操作去消除同步使用的互斥量，那偏向锁就是在无竞争的情况下把整个同步都消除掉，连CAS操作都不做了。</p>
+<p>假设当前虚拟机启用了偏向锁，那么当锁对象第一次被线程获取的时候，虚拟机会把对象头中的标志位设置为 “01”，即偏向模式。同时，使用CAS操作把获取到这个锁的线程ID记录在对象的 Mark Word 之中，如果 CAS 操作成功，持有偏向锁的线程以后每次进入这个锁相关的同步块时，虚拟机都可以不再进行任何同步操作。</p>
+<p>当另外一个线程去尝试获取这个锁时，偏向模式就结束。根据锁对象目前是否处于被锁定状态，撤销偏向后恢复到 未锁定(标志位 01) 或 轻量级锁定(标志位 00)的状态，后续的同步操作就如上面介绍的轻量级锁执行。</p>
 <blockquote>
-<p>强引用、软引用、弱引用。</p>
-</blockquote>
-<ul>
-<li>减少不必要的装箱机制</li>
-</ul>
-<blockquote>
-<p>sparseArray，类似的还有 SparseLongArray，LongSpaseArray等。</p>
-</blockquote>
-<ul>
-<li>使用最优数据类型</li>
-</ul>
-<blockquote>
-<p>（1）需要限制输入参数的时候，使用注解而不是枚举 （2）谨慎选择 HashMap 、ArrayMap 以及 SparseArray。</p>
-</blockquote>
-<h2 id="顺带一提UI绘制优化"><a href="#顺带一提UI绘制优化" class="headerlink" title="顺带一提UI绘制优化"></a>顺带一提UI绘制优化</h2><ul>
-<li>减少布局层级</li>
-</ul>
-<blockquote>
-<p>（1） 合理使用 merge （2）合理使用 ConstranLayout</p>
-</blockquote>
-<ul>
-<li>提高显示速度</li>
-</ul>
-<blockquote>
-<p>使用 viewstub 延后显示。</p>
-</blockquote>
-<ul>
-<li>减少wrap_content</li>
-</ul>
-<blockquote>
-<p>尽量使用match_parent 或者 确定的宽高度</p>
-</blockquote>
-<ul>
-<li>避免过度绘制</li>
-</ul>
-<blockquote>
-<p>（1）移除布局中非必须的背景 （2）可能的话，移除window的默认背景 （3）自定义view，要注意重叠部分，可以通过canvas.clipRect()帮助系统识别可见的区域，减少过度绘制</p>
+<p>偏向锁可以提高带有同步但无竞争的程序的性能，它不一定总是对程序运行有利。如果程序中大多数的锁总是被多个不同的线程访问，那偏向模式就是多余的。因此，有时候禁止使用偏向锁反而可以提升性能。</p>
 </blockquote>
 
       
 
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你，感受到你的温暖了，这个打赏功能是假的<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
+        </div>
       
     </div>
     <div class="article-info article-info-index">
@@ -513,7 +291,7 @@
 		<ul class="article-tag-list">
 			 
         		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">专题</a>
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)</a>
         		</li>
       		
 		</ul>
@@ -522,16 +300,84 @@
       
 
       
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/07/内存泄漏/">展开全文 >></a>
-        </p>
-      
 
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
+        </div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=http://glassx.github.io/2019/09/08/深入理解Java虚拟机-第13章/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
       
       <div class="clearfix"></div>
     </div>
   </div>
 </article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2019/09/13/深入理解Java虚拟机-第10章/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          第10章：早期（编译期）优化
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2019/09/08/深入理解Java虚拟机-第11章/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">第11章: 晚期（运行期）优化</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
 
 <aside class="wrap-side-operation">
     <div class="mod-side-operation">
@@ -551,639 +397,14 @@
 
 
 
-
-  
-    <article id="post-可能的面试题" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/06/可能的面试题/">可能的面试题</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/06/可能的面试题/" class="archive-article-date">
-  	<time datetime="2019-03-06T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-06</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p><strong>1、简述Android事件分发机制</strong></p>
-<p>之前写过专题，直接<a href="https://glassx.github.io/2019/02/25/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/" target="_blank" rel="noopener">参考这里</a></p>
-<p>2、TCP/IP 三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）<br>3次握手的示意图如下：</p>
-<p><img src="/assets/面试/三次握手.png" alt="三次握手"></p>
-<p>三次握手过程：TCP发起的一方A，由操作系统生成一个序列号 n，以这个n为原点，对自己每个将要发送的数据进行编号，连接的另一方 B 会对A每次发送的数据进行确认，如果A收到B的确认编号2001，则可以认为 n~2000编号已经全部到达B。</p>
-<blockquote>
-<p>所以我们可以说，TCP连接的是啥，就是告知双方数据原点的序列号，并且这可以确认双方的收发功能正常：第一次握手告知原始序列号，服务端确认client具有发送功能，第二次握手可以确定server具有正常的收发功能，第三次握手可以确认client具有正常收发功能，所以 一定要3次，少了哪次都不行。</p>
-</blockquote>
-<p>4次挥手示意图：</p>
-<p><img src="/assets/面试/四次挥手.png" alt="四次挥手"></p>
-<p>由上图看出，由client端发起挥手，server给client的2次回复中，一次是确认信息ack，一次是数据的传送，那可不可以只要3次挥手呢？答案是可能的，TCP是全双工的，Client在没有数据需要发送给Server后，就发送FIN告知server，然后终止对server发送消息，但这个时候server还以发送数据给client，这时候需要4次；但是如果server收到client的FIN后再也没有数据要发给client了，那么 对client的ack包和server自己的FIN包就能合并成一个包发送过去，四次挥手变成3次。</p>
-<p>了解完挥手完成后，可能还想更深入了解 TIME_WAIT，可以查看<a href="https://glassx.github.io/2018/05/21/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/" target="_blank" rel="noopener">之前写的这篇</a>。</p>
-<p><strong>3、IP地址分类（A/B/C/D类）</strong></p>
-<p>IP地址由四段组成，每个字段是一个字节，即4个字节、 每个字节有8位，最大值是255，IP地址 = 网络号+主机号。分为A、B、C三类及特殊地址D、E。全0和全1的都保留不用。</p>
-<p><img src="/assets/面试/ip地址分类.png" alt="ip地址分类"></p>
-<p>由图可知：</p>
-<blockquote>
-<p>A类：前1个字节(8位)为网络号，后3个字节(24位)为主机号。A类第1位必须是0<br>B类：前2个字节(16位)为网络号，后2个字节(16位)为主机号。B类前两位固定为10<br>C类：前3个字节(24位)为网络号，后1个字节(8位)为主机号。C类前3位固定为110<br>D类： 是多播地址，一般用于多路广播用户。该类IP地址的最前面为1110<br>E类： 是保留地址。该类IP地址的最前面为1111</p>
-</blockquote>
-<p><strong>4、TCP与UDP区别</strong></p>
-<blockquote>
-<p>1、UDP发送数据前无需简历连接，TCP需要握手建立连接。<br>2、UDP不保证可靠交付，只尽最大努力交付；TCP提供可靠交付。<br>3、UDP面向保温，对应用程序交下来的报文，在添加首部之后就交付给Ip层，不会对报文拆分；TCP面向字节流，会对应用程序的报文进行拆分。<br>4、UDP支持一对一、一对多、多对一和多对一的通信；TCP只能点对点通信，它提供全双工通信，允许通信双方在任何时候均能通信。<br>5、UDP首部开销小，TCP开销大（UDP 8个字节，TCP20个字节）。<br>6、UDP没有拥塞控制，在网络条件差的情况下发送端也不会降低发送速率；TCP有拥塞控制</p>
-</blockquote>
-<p><strong>3、谈谈对RxJava的理解/okhttp的理解/fresco的理解（或者问看过哪些源码）</strong></p>
-<p>5、<a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&amp;mid=2247484662&amp;idx=1&amp;sn=7b8a8831b37975936a9ea95c7a54d52a&amp;chksm=96cda5bba1ba2cad32081316ad0771aab42fa64782f7b2c726acc2bb5809fb04f4ef7088ab29&amp;scene=21#wechat_redirect" target="_blank" rel="noopener">怎么处理滑动冲突</a></p>
-<p>6、<a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&amp;mid=2247483903&amp;idx=1&amp;sn=c20d3172052bd7db9a1ad6a95f112bc9&amp;chksm=96cda0b2a1ba29a4cc9912cb1bf8a955f97ee45a7b8db48e384f1694ddbabbd4d5e7fa90f880&amp;scene=21#wechat_redirect" target="_blank" rel="noopener">如何理解Java类加载机制</a></p>
-<p>7、聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</p>
-<blockquote>
-<p>Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。<br>当然，如果在子线程中new Handler ，基本上会提示 您还未执行Looper.prepare();<br>Looper.prepare() 会判断当前 sThreadLocal.get()是否已经存在了，如果已经存在了，就会提示 “一个线程只能有一个Looper”（<strong>注意，就是在这里保证了一个线程只有一个Looper</strong>）。Looper.prepare() 只是执行了sThreadLocal.set(new Looper())，在这里给线程设置了Looper。<br>而在主线程中，ActivityThread 的main 方法中会执行 Looper.prepareMainLooper（）来设置Looper，故我们可以直接new Handler，而在子线程中要手动Looper.prepare()才行，并且还要Looper.loop()，让消息循环。<br>接下来就是 handler 的 sendMessage 和post 方法，其实两个方法都是调用 sendMessageDelay 方法，只不过post方法首先将 Runnable封装成Message，变成Message的CallBack。<br>在最终send的时候，Message会持有handler的引用，叫做target，之后，message被丢到handler所持有的MessageQueue中。<br>之后，在主线程中，Looper一直在循环，取出queue中的Message，然后执行message.target.dispatchMessage，在这个方法中，最终会调用到我们写handler时候覆写的 handleMessage 方法。至此，整个流程走完。</p>
-</blockquote>
-<p><strong>8、手写算法题。猫扑素数；1到n，求1的个数；单词反转。</strong></p>
-<p><strong>9、 Activity的加载模式。</strong></p>
-<blockquote>
-<p>standard标准启动。<br>singleTop在当前栈顶就复用，否则新建。<br>singleTask：在当前栈存在有实例，如果在栈顶，直接使用；如果不在栈顶，将该实例之上的Activity全部出栈。<br>singleInstance：只要有这个实例，不管在哪个栈，都复用之；否则，在新的栈创建实例。</p>
-</blockquote>
-<p><strong>10、ANR异常发生条件？1)5s内没有响应用户输入事件2)10s内广播接收器没有处理完毕3)20s内服务没有处理完毕</strong></p>
-<p><strong>5.1 如何分析ANR？（log+trace.txt）</strong></p>
-<p>11、<a href="https://www.jianshu.com/p/7c708a66ff42" target="_blank" rel="noopener">简述下GC，垃圾回收算法</a>，gc什么时候回收？同时看看 <a href="https://zhuanlan.zhihu.com/p/28258571" target="_blank" rel="noopener">这个链接</a></p>
-<p><strong>12、Dalvik和Art区别？(Just In Time和Ahead Of Time)</strong></p>
-<blockquote>
-<p>Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。<br>（<strong>关于回收，还有待看官网之后回来review</strong>）Dalvik 在Gc时，会有2次虚拟机暂停（遍历阶段和标记阶段分别暂停一次；除了GC线程外，其余线程都挂起，stop the world），而Art在Gc开始时，首先锁住java堆，扫描并标记，完成后，挂起所有线程，之后挥手垃圾，最后回复所有线程现场，即Art只有一次暂停。<br>运行时堆得区域划分不同，Dalvic 每次GC完毕后，基本上都千疮百孔，空间碎片化严重；而ART多了两个空间，即 ImageSpace 和Large Object space，前者用于预加载类，后者用于存放大对象，这样可以大大减少碎片化。<br>ART支持64位系统</p>
-</blockquote>
-<p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
-<p><strong>13、说说四大引用？强，软，弱，虚，并说明下合适GC</strong></p>
-<blockquote>
-<p>强引用是使用最普遍的引用。如果一个对象具有强引用，那垃圾回收器绝不会回收它。</p>
-</blockquote>
-<blockquote>
-<p>软引用是用来描述一些有用但并不是必需的对象。对于软引用关联着的对象，只有在内存不足的时候 JVM 才会回收该对象。这一点可以很好地用来解决 OOM 的问题，并且这个特性很适合用来实现缓存：比如网页缓存、图片缓存等。</p>
-</blockquote>
-<blockquote>
-<p>弱引用与软引用的区别在于：只具有弱引用的对象拥有更短暂的生命周期。在垃圾回收器线程扫描它所管辖的内存区域的过程中，一旦发现了只具有弱引用的对象，不管当前内存空间足够与否，都会回收它的内存。</p>
-</blockquote>
-<blockquote>
-<p>“虚引用”顾名思义，就是形同虚设，与其他几种引用都不同，虚引用并不会决定对象的生命周期。如果一个对象仅持有虚引用，那么它就和没有任何引用一样，在任何时候都可能被垃圾回收器回收。要注意的是，虚引用必须和引用队列关联使用.</p>
-</blockquote>
-<p><strong>14、Android动画种类，各自特征</strong></p>
-<p><strong>15、Http和Https的区别？</strong></p>
-<blockquote>
-<p>Https是ssl加密传输，Http是明文传输<br>Https是使用端口443，而Http使用80<br>HttpsSSL+HTTP协议构建的可进行加密传输、身份认证的网络协议要比Http协议安全<br>Https协议需要到CA申请证书</p>
-</blockquote>
-<p><strong>16、最有成就感的项目？最棘手的问题？</strong></p>
-<p><strong>18、有了解热修复技术吗？</strong></p>
-<p><strong>20、TCP/IP 流量控制，拥塞避免，可以结合<a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&amp;mid=2247486825&amp;idx=1&amp;sn=db596ed4b69bd9220f6a8ad79ef308db" target="_blank" rel="noopener">这篇文章</a></strong></p>
-<p>21、HashMap 、 HashTable 和 ConcurrentHashMap 的区别？</p>
-<blockquote>
-<p>HashTable 是 HashMap 的线程安全实现，但是 HashTable在竞争激烈时效率低下，因为访问所有 HashTable 的线程都竞争同一把锁。ConcurrentHashMap 采用锁分段技术，将数据一段段存储，每段一把锁，当两个线程访问不同段数据时不受干扰，当然，contentValue和size等方法需要了解整体数据的情况下，还需要锁住整个表。</p>
-</blockquote>
-<p><strong>22、两个对象的 hashcode 相同，是否对象相同？equal() 相同呢？</strong></p>
-<blockquote>
-<ol>
-<li>hashCode是所有java对象的固有方法，默认返回的是该对象在jvm的堆上的内存地址，不同对象的内存地址肯定不同，所以这个hashCode也就肯定不同了。如果重载了的话，由于采用的算法的问题，有可能导致两个不同对象的hashCode相同。</li>
-<li>hashCode和equals两个方法是有语义关联的，它们需要满足：<br>A.equals(B)==true –&gt; A.hashCode()==B.hashCode()，但是反之不能说hashcode相等就equals<br>因此重载其中一个方法时也需要将另一个也重载。</li>
-<li>此外，请注意：hashCode的重载实现最好依赖于对象中的final属性，从而在对象初始化构造后就不再变化。一方面是jvm便于代码优化，可以缓存这个hashCode；另一方面，在使用hashMap或hashSet的场景中，如果使用的key的hashCode会变化，将会导致bug，比如放进去时key.hashCode()=1，等到要取出来时key.hashCode()=2，就取不出来数据了。<br>综上所述，hashCode相同或者equals相同并不能说明对象相同。</li>
-</ol>
-</blockquote>
-<p><strong>23、Session 和 Cookie 的区别？</strong></p>
-<blockquote>
-<p>HTTP是一种无状态的协议，为了分辨链接是谁发起的，Session和Cookie就是为解决这个问题而提出来的两个机制。<br><strong>Cookies是服务器下发，存储到本地机器上的一段文本，并随每一个请求发回服务器，是在客户端保持状态的方案。</strong><br>浏览器第一次发送请求时，服务器自动生成了一HashTable和一个Session ID来唯一标识这个HashTable，并将其通过响应发送回浏览器。Session的实现方式和Cookie有一定关系，一般会把session id存在Cookie中（<strong>也可以依赖于url重写</strong>），每次访问的时候将Session id带过去，服务器就根据id查找hashtable就可以识别当前用户状态了。<br>所以可以总结，cookie存在本地，session存在服务器；父路径不能享用子路径的cookies，而同一个session的窗口可以共享session；cookie没有session可靠。</p>
-</blockquote>
-<p><strong>24、线程同步，你了解哪几种方式？</strong></p>
-<blockquote>
-<ol>
-<li>数据同步：可以使用Android 提供的同步容器。如： CopyOnWriteArrayList（当某个线程要修改list的元素时，首先copy一份出来，然后在修改前加锁，防止多个线程同时修改而copy多个副本，读的时候无需加锁，读的是副本）、concurrentHashMap（分段锁）、BlockingQueue（队列满了，在调用put，会阻塞，直到不再是满的；同理，取也是一样）。</li>
-<li>用锁。同步锁：synchronize（无论synchronized关键字加在方法上还是对象上，他锁的都是对象，而不是把一段代码或函数当作锁）、ReentrantLock</li>
-</ol>
-</blockquote>
-<p><strong>25、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？</strong></p>
-<blockquote>
-<p><strong>介绍：</strong>synchronized：无论synchronized关键字加在方法上还是对象上，他锁的都是对象，而不是把一段代码或函数当作锁。<br>Lock：一般使用ReentrantLock类做为锁，需要显式指出加锁与释放锁的位置，在加锁和解锁处通过lock()和unlock()显示指出，所以一般会在finally块中写unlock()以防死锁。  </p>
-</blockquote>
-<blockquote>
-<p><strong>区别：</strong>  </p>
-<ul>
-<li>synchronized 是个关键字，而 Lock 是个接口  </li>
-<li>synchronized 使用简单，会自动释放；Lock需要显式加锁与释放，要防止死锁  </li>
-<li>synchronized是悲观锁，其他线程只能阻塞来等待线程释放锁；Lock是乐观锁。  </li>
-<li>lock可以使我们多线程交互变得方便，而使用synchronized则无法做到这点。如：某个线程在等待锁的过程中需要中断、或者获知某个线程有没有获取到锁、或者需要指定notify哪个线程</li>
-</ul>
-</blockquote>
-<p><strong>26、讲下 Volatile 吧？他是怎样做到同步的？Volatile 为什么不支持原子性？notify、wait</strong></p>
-<p><strong>27、网络状态码？以 2、3、4、5 开头的代表什么意思。</strong></p>
-<p><strong>28、算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别</strong></p>
-<p><strong>29、<a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/01.%E8%B0%88%E8%B0%88%E4%BD%A0%E5%AF%B9Application%E7%B1%BB%E7%9A%84%E7%90%86%E8%A7%A3.md" target="_blank" rel="noopener">谈谈你对Application类的理解</a></strong></p>
-<p><strong>30、<a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/02.Android%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E8%AE%BE%E8%AE%A1%E5%87%BABundle%E8%80%8C%E4%B8%8D%E6%98%AF%E7%9B%B4%E6%8E%A5%E4%BD%BF%E7%94%A8HashMap%E6%9D%A5%E8%BF%9B%E8%A1%8C%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92.md" target="_blank" rel="noopener">Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</a></strong></p>
-<p><strong>31、<a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/04.Android%E4%B8%ADIPC%E9%80%9A%E4%BF%A1%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9C%89%E5%93%AA%E4%BA%9B%EF%BC%9F%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F.md" target="_blank" rel="noopener">Android中IPC通信的方式有哪些？使用场景是什么</a></strong></p>
-<p><strong>32、<a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/09.SharedPreference%E5%9C%A8%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%9C%89%E4%BB%80%E4%B9%88%E6%B3%A8%E6%84%8F%E7%82%B9%EF%BC%9F.md" target="_blank" rel="noopener">SharedPreference在使用过程中有什么注意点？</a></strong></p>
-<p>33、[内存泄露检测工具,anr检测工具]</p>
-<p>34、了解协程吗</p>
-<p>35、Android应用启动过程，Android应用打包过程</p>
-<p>36、如何判断一个单链表是否有环</p>
-<p>37、android 5.0, 6.0, 7.0, 8.0新特性</p>
-<p>38、<a href="https://yq.aliyun.com/articles/3009?spm=a2c4e.11153940.blogcont70277.24.6387f9c9hDGhAk#" target="_blank" rel="noopener">内存泄漏场景</a></p>
-<p>40、volatitle 关键字的作用</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">面试</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/06/可能的面试题/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-常用的有意思的算法(三)" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/04/常用的有意思的算法(三)/">常用的有意思的算法(三)</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/04/常用的有意思的算法(三)/" class="archive-article-date">
-  	<time datetime="2019-03-04T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-04</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="冒泡排序算法"><a href="#冒泡排序算法" class="headerlink" title="冒泡排序算法"></a>冒泡排序算法</h2><p>思路：依次比较相邻的两个数，将小数放在前面，大数放在后面。<strong>即第一趟：首先比较第1个和第2个数，将小数放前，大数放后。然后比较第2个数和第3个数，将小数放前，大数放后，如此继续，直至比较最后两个数，将小数放前，大数放后。之后便是重复第一趟步骤，直至全部排序完成</strong>。</p>
-<blockquote>
-<p>第一趟比较完成后，最后一个数一定是数组中最大的一个数，所以第二趟比较的时候最后一个数不参与比较；第二趟比较完成后，倒数第二个数也一定是数组中第二大的数，所以第三趟比较的时候最后两个数不参与比较；依次类推，每一趟比较次数-1;</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">bubbleSort1</span><span class="params">(<span class="keyword">int</span>[] ints)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> len = ints.length;</span><br><span class="line">    <span class="keyword">boolean</span> flag = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">while</span> (flag) &#123;</span><br><span class="line">        flag = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; len; i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (ints[i - <span class="number">1</span>] &gt; ints[i]) &#123;</span><br><span class="line">                <span class="keyword">int</span> temp = ints[i];</span><br><span class="line">                ints[i] = ints[i-<span class="number">1</span>];</span><br><span class="line">                ints[i-<span class="number">1</span>] = temp;</span><br><span class="line">                flag = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        len -- ;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    foreach(<span class="keyword">int</span> i : ints)&#123;</span><br><span class="line">        print(i);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="选择排序"><a href="#选择排序" class="headerlink" title="选择排序"></a>选择排序</h2><p>选择排序的基本思想：给定数组：int[] arr={里面n个数据}；第1趟排序，在待排序数据arr[1]~arr[n]中选出最小的数据，将它与arrr[1]交换；第2趟，在待排序数据arr[2]~arr[n]中选出最小的数据，将它与r[2]交换；以此类推，第i趟在待排序数据arr[i]~arr[n]中选出最小的数据，将它与r[i]交换，直到全部排序完成。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">selectSort</span><span class="params">(<span class="keyword">int</span>[] a)</span></span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i&lt; a.length - <span class="number">1</span>; i++)&#123;</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">int</span> index = i;<span class="comment">//当前趟最小的数所在index</span></span><br><span class="line">        </span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> j=i+<span class="number">1</span>; j &lt; a.length; j++)&#123;</span><br><span class="line">            <span class="keyword">if</span> (a[j] &lt; a[index])&#123;</span><br><span class="line">                index = j;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (index != i)&#123;</span><br><span class="line">            <span class="keyword">int</span> temp = a[i];</span><br><span class="line">            a[i] = a[index];</span><br><span class="line">            a[index] = temp;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//排序结束</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> h = <span class="number">0</span>; h &lt; a.length; h++)&#123;</span><br><span class="line">        System.out.print(<span class="string">""</span> + a[h]);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="插入排序"><a href="#插入排序" class="headerlink" title="插入排序"></a>插入排序</h2><ol>
-<li>以数组的某一位作为分隔位，比如 index = 1 ，假设左面的都是有序的。</li>
-<li>将 index 位的数据拿出来，放到临时变量里，这时index位置就空出来了。</li>
-<li>从 leftindex = index-1 开始将左面的数据与当前 index 位的数据（即temp）进行比较，如果 array[leftindex] &gt; temp ，则将 array[leftindex] 后移一位，即 array[leftindex+1] = array[leftindex] ,此时 leftindex 就空出来了。</li>
-<li>再用 index-2 (即leftindex=leftindex-1)位的数据和temp比，重复步骤3，直到找到 &lt;=temp 的数据或者比到了最左面（说明temp最小），停止比较，将temp放在当前空的位置上。</li>
-<li>index 向后挪1，即 index=index+1 ，temp=array[index] ，重复步骤2~4，直到index=array.length，排序结束，此时数组中的数据即为从小到大的顺序。</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doInsertSort</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> index = <span class="number">1</span>; index&lt;length; index++)&#123;<span class="comment">//外层向右的index，即作为比较对象的数据的index</span></span><br><span class="line">        <span class="keyword">int</span> temp = array[index];<span class="comment">//用作比较的数据</span></span><br><span class="line">        <span class="keyword">int</span> leftindex = index-<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">while</span>(leftindex&gt;=<span class="number">0</span> &amp;&amp; array[leftindex]&gt;temp)&#123;<span class="comment">//当比到最左边或者遇到比temp小的数据时，结束循环</span></span><br><span class="line">            array[leftindex+<span class="number">1</span>] = array[leftindex];</span><br><span class="line">            leftindex--;</span><br><span class="line">        &#125;</span><br><span class="line">        array[leftindex+<span class="number">1</span>] = temp;<span class="comment">//把temp放到空位上</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="shell排序"><a href="#shell排序" class="headerlink" title="shell排序"></a>shell排序</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 思路：三层循环</span></span><br><span class="line"><span class="comment"> * 第一层循环：控制增量-增量随着程序的进行依次递减一半</span></span><br><span class="line"><span class="comment"> * 第二层循环：遍历数组</span></span><br><span class="line"><span class="comment"> * 第三层循环：比较元素，交换元素。</span></span><br><span class="line"><span class="comment"> * 这里需要注意的是：比较的两个元素和交换的两个元素是不同的。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="title">shellSort</span><span class="params">(<span class="keyword">int</span>[] data)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> div = data.length/<span class="number">2</span>; div&gt;<span class="number">0</span>; div/=<span class="number">2</span>) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> j = div; j &lt; data.length; j++) &#123;</span><br><span class="line">            <span class="keyword">int</span> temp = data[j];</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> k=j; k&gt;=div &amp;&amp; temp&lt;data[k-div] ; k-=div) &#123;</span><br><span class="line">                data[k] = data[k-div];</span><br><span class="line">            &#125;</span><br><span class="line">            data[k] = temp;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="快速排序"><a href="#快速排序" class="headerlink" title="快速排序"></a>快速排序</h2><p>假设我们现在对“6 1 2 7 9 3 4 5 10 8”这个10个数进行排序。首先在这个序列中随便找一个数作为基准数，为了方便，就让第一个数6作为基准数吧。接下来，需要将这个序列中所有比基准数大的数放在6的右边，比基准数小的数放在6的左边。得到一个一个以6为中心的序列，再以6为界限，将左右两边都看成数组，分别按照刚才的方法排序。上个图会比较直观：</p>
-<p><img src="/assets/趣味/算法/快速排序.png" alt="快速排序"></p>
-<p>代码如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">quickSort</span><span class="params">(<span class="keyword">int</span>[] arr,<span class="keyword">int</span> low,<span class="keyword">int</span> high)</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> i,j,temp,t;</span><br><span class="line">    <span class="keyword">if</span>(low&gt;high)&#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    i=low;</span><br><span class="line">    j=high;</span><br><span class="line">    <span class="comment">//temp就是基准位</span></span><br><span class="line">    temp = arr[low];</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">while</span> (i&lt;j) &#123;</span><br><span class="line">        <span class="comment">//先看右边，依次往左递减</span></span><br><span class="line">        <span class="keyword">while</span> (temp&lt;=arr[j]&amp;&amp;i&lt;j) &#123;</span><br><span class="line">            j--;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//再看左边，依次往右递增</span></span><br><span class="line">        <span class="keyword">while</span> (temp&gt;=arr[i]&amp;&amp;i&lt;j) &#123;</span><br><span class="line">            i++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//如果满足条件则交换</span></span><br><span class="line">        <span class="keyword">if</span> (i&lt;j) &#123;</span><br><span class="line">            t = arr[j];</span><br><span class="line">            arr[j] = arr[i];</span><br><span class="line">            arr[i] = t;</span><br><span class="line">        &#125;</span><br><span class="line"> </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//最后将基准为与i和j相等位置的数字交换</span></span><br><span class="line">     arr[low] = arr[i];</span><br><span class="line">     arr[i] = temp;</span><br><span class="line">    <span class="comment">//递归调用左半数组</span></span><br><span class="line">    quickSort(arr, low, j-<span class="number">1</span>);</span><br><span class="line">    <span class="comment">//递归调用右半数组</span></span><br><span class="line">    quickSort(arr, j+<span class="number">1</span>, high);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="堆排序"><a href="#堆排序" class="headerlink" title="堆排序"></a>堆排序</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">//非递归算法实现二路归并排序，length代表数组长度，即数组最大下标是 legth - 1</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">mergeSort</span><span class="params">(<span class="keyword">int</span> List[],<span class="keyword">int</span> length)</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> size = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">int</span> low;</span><br><span class="line">    <span class="keyword">int</span> mid;</span><br><span class="line">    <span class="keyword">int</span> high;</span><br><span class="line">    <span class="comment">//size 是标记当前各个归并序列的high-low，从1，2，4，8，……，2*size</span></span><br><span class="line">    <span class="keyword">while</span>(size &lt;= length - <span class="number">1</span>)&#123;</span><br><span class="line">        <span class="comment">//从第一个元素开始扫描，low代表第一个分割的序列的第一个元素</span></span><br><span class="line">        low = <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//当前的归并算法结束的条件</span></span><br><span class="line">        <span class="keyword">while</span>(low + size &lt;= length - <span class="number">1</span>)&#123;</span><br><span class="line">            <span class="comment">//mid代表第一个分割的序列的最后一个元素</span></span><br><span class="line">            mid = low + size - <span class="number">1</span>;</span><br><span class="line">            <span class="comment">//high 代表第二个分割的序列的最后一个元素</span></span><br><span class="line">            high = mid + size;</span><br><span class="line">            <span class="comment">//判断一下：如果第二个序列个数不足size个</span></span><br><span class="line">            <span class="keyword">if</span>(high &gt; length - <span class="number">1</span>)&#123;</span><br><span class="line">                <span class="comment">//调整 high 为最后一个元素的下标即可</span></span><br><span class="line">                high = length - <span class="number">1</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//调用归并函数，进行分割的序列的分段排序</span></span><br><span class="line">            merge(List, low, mid, high);</span><br><span class="line">            <span class="comment">//打印出每次归并的区间</span></span><br><span class="line">            cout &lt;&lt; <span class="string">"low:"</span> &lt;&lt; low &lt;&lt; <span class="string">" mid:"</span> &lt;&lt; mid &lt;&lt; <span class="string">" high:"</span> &lt;&lt; high &lt;&lt; endl;</span><br><span class="line">            <span class="comment">//下一次归并时第一序列的第一个元素位置</span></span><br><span class="line">            low = high + <span class="number">1</span>;</span><br><span class="line">        &#125;<span class="comment">// end of while</span></span><br><span class="line">        <span class="comment">//范围扩大一倍，二路归并的过程</span></span><br><span class="line">        size *= <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>归并的思想主要用于外部排序：<br>外部排序可分两步<br>①待排序记录分批读入内存，用某种方法在内存排序，组成有序的子文件，再按某种策略存入外存。<br>②子文件多路归并，成为较长有序子文件，再记入外存，如此反复，直到整个待排序文件有序。</p>
-</blockquote>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>上述排序，稳定的排序有：冒泡、插入、合并 ，不稳定排序：选择、shell、快排、堆排</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">趣味题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/04/常用的有意思的算法(三)/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-Android进程通信——Binder理解" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/03/Android进程通信——Binder理解/">Android进程通信——Binder理解</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/03/Android进程通信——Binder理解/" class="archive-article-date">
-  	<time datetime="2019-03-03T13:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-03</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。</p>
-<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和TCP/IP网络有很多相似之处：</p>
-<ul>
-<li>Binder 驱动 -&gt; 路由器</li>
-<li>Service Manager（本质也是个服务器） -&gt; DNS（本质也是个服务器）</li>
-<li>Binder Client -&gt; 客户端</li>
-<li>Binder Server -&gt; 服务器</li>
-</ul>
-<p>TCP/IP中一个典型的服务连接过程如下图所示：</p>
-<p><img src="/assets/专题/Binder/binder-tcpip.png" alt="TCP/IP连接"></p>
-<p>client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；而在DNS返回查询结果给Clietn时，Client的地址对于DNS也是必须的，不过这些信息会封装在TCP/IP包中。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
-<p>而对于Binder来说，Binder的DNS也不是必须的——前提是客户端能记住它要访问的进程的Binder标志（IP地址），尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取。因此，Service Manager这个DNS的还是挺有必要的。</p>
-<blockquote>
-<p>既然Service Manager是DNS，那么它的IP地址是多少呢？Binder机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
-</blockquote>
-<h3 id="Parcel"><a href="#Parcel" class="headerlink" title="Parcel"></a>Parcel</h3><p>进程间传递数据是Binder机制中的重要一环，而数据传递的方式是 Parcel，直译过来就是“打包”。之前已经说过，直接传送对象内存地址的做法行不通，那么把对象在进程A中占据的内存相关数据打包起来，然后寄送到进程B中，由B在自己的进程空间中“复现”这个对象，是否可行呢？Parcel就具有这种打包重组能力。所有遵循 Parcelable 协议的对象可以通过 Parcel 来存取，如开发人员经常用到的Bundle 就是继承 Parcelable 的。</p>
-<h3 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h3><p>Android 是linux内核的，因而Binder驱动也是标准的linux驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备，Binder驱动运行于内核态。</p>
-<p>假设有连个进程A和B，其中进程B通过 open() 和 mmap()与Binder驱动建立了联系，如下图：</p>
-<p><img src="/assets/专题/Binder/B-mmap.png" alt="进程B连接Binder"></p>
-<blockquote>
-<p>可以看到 ：</p>
-</blockquote>
-<blockquote>
-<ol>
-<li>对于进程B而言，通过mmap()返回值得到一个内存地址（当然是虚拟地址），这个地址最终会指向物理内存的某个位置（通过虚拟内存转换）。</li>
-</ol>
-</blockquote>
-<blockquote>
-<ol start="2">
-<li>对于Binder驱动而言，它也有个指针（binder_proc-&gt;buffer）指向某个虚拟内存地址，这个地址转换后，与进程B指向的物理内存地址位于同一个位置。</li>
-</ol>
-</blockquote>
-<p>这样，Binder和进程B就拥有了公共的物理内存块，它们对着各自内存地址的操作，实际是在同一块内存中执行，这时候我们再把A进程加入进来，如下图：</p>
-<p><img src="/assets/专题/Binder/A复制数据.png" alt="进程A复制数据"></p>
-<p>这时候，左半部分没有变化，右半部分Binder驱动通过copy_from_user()，把A进程中某段数据复制到其binder_proc-&gt;buffer所指向的内存空间，这时候我们惊喜发现，binder_proc-&gt;buffer在物理内存中的位置和进程B是共享的，进而，B进程可以直接访问到这段数据，<strong>也就是说，Binder驱动只用了一次复制，就实现了进程A和B之间的数据共享。</strong></p>
-<h3 id="Service-Manager"><a href="#Service-Manager" class="headerlink" title="Service Manager"></a>Service Manager</h3><p>也就是“DNS”服务器，既然是DNS，那么在用户可以浏览网页之前就必须就位，Service Manager也是，在有人使用Binder之前就处于正常工作状态。Service Manager的主要工作：</p>
-<ul>
-<li>从Binder驱动读取消息</li>
-<li>处理解析消息</li>
-<li>不断循环，而且永远不会主动退出，除非出现致命错误</li>
-</ul>
-<p>它提供的服务应该至少包括以下几种：</p>
-<ul>
-<li>注册——当一个Binder Server 创建后，它们要将自己的相关信息告知ServiceManager备案</li>
-<li>查询——应用程序可以向 Service Manager 发起查询请求，已获知某个 Binder Server 对应的句柄。</li>
-</ul>
-<p>实际上，我们获取 Service Manager 也很简单，只需要以下几步：</p>
-<ol>
-<li>打开Binder设备</li>
-<li>执行mmap</li>
-<li>通过Binder驱动向 Service Manager 发送请求（Service Manager 的 handle是 0）</li>
-<li>获得结果</li>
-</ol>
-<h3 id="Binder-客户端"><a href="#Binder-客户端" class="headerlink" title="Binder 客户端"></a>Binder 客户端</h3><p>Binder 的最大消费者是Java层的应用程序，但是在各种上层的应用场景中切换“过于丝滑”，因此我们很少能感觉到Binder的存在，但是我们能够通过Android的四大组件的行为看出蛛丝马迹：</p>
-<ul>
-<li>Activity：通过 startActivity 可以启动目标进程，不论它是不是属于这个应用。</li>
-<li>Service：任何应用程序都可以通过startService 或者 bindService 来启动特定的服务，而不论后者是不是跨进程的。</li>
-<li>BroadCast：任何应用都可以通过 sendBroadcast 来发送一个广播，且无论广播接收者是不是在同一个进程中。</li>
-</ul>
-<p>组件的上述操作中，多数并不会特别指明要由哪个目标应用程序来响应请求，它们只需要通过Intent表达意愿，然后由系统找出最匹配的应用进程完成工作。为了更明确地说明个中的进程间通信，这里以binderService举例说明：</p>
-<ol>
-<li>首先Application1 填写Intent，调用 bindService 发出请求</li>
-<li>在Application1的运行空间中收到 bindService 请求，这时候会与 ActivityManagerService(AMS)，这就需要得到AMS的Binder句柄，就涉及到进程间通信了（需要ServiceManage.getService）,拿到句柄后，程序才能真正向它发起请求。</li>
-<li>AMS基于“最优匹配策略”，从其存储的所有服务组件中找到最符合Intent的一个，然后向它发送Service绑定请求（这也是进程间通信），如果目标进程还不存在的话，AMS还要负责将其启动</li>
-<li>“被绑定”的服务进程需要响应绑定，并在完成任务后通知AMS，然后由后者回调发起请求的Application1（回调接口是ServiceConnection）。</li>
-</ol>
-<h3 id="Server-服务端"><a href="#Server-服务端" class="headerlink" title="Server 服务端"></a>Server 服务端</h3><p>在建立服务之后，可以有两种方式向外面提供服务：</p>
-<ul>
-<li>Server在ServiceManager中注册，这样，调用者只需要通过 ServiceManager.getService(NAME)就可以获得句柄，随后与之通信。</li>
-<li>所谓的“匿名Server”，并不需要在ServiceManager中注册，那么Client是如何访问的呢？其实它通过其他Server作为中介，没错，就是通过一个“第三方”实名的Server，调用者首先通过ServiceManager获取这个实名的server，在由它提供匿名者的 Binder 句柄。</li>
-</ul>
-<h3 id="Binder-优点"><a href="#Binder-优点" class="headerlink" title="Binder 优点"></a>Binder 优点</h3><p>基于自己的理解而言，Binder具有以下优点：</p>
-<ul>
-<li>性能较好</li>
-</ul>
-<blockquote>
-<p>Binder只需要拷贝一次数据，仅次于共享内存（一次都不要），消息队列和管道采用存储-转发方式，即数据先从发送方缓存区拷贝到内核开辟的缓存区中，然后再从内核缓存区拷贝到接收方缓存区，至少有两次拷贝过程。</p>
-</blockquote>
-<ul>
-<li>稳定性好</li>
-</ul>
-<blockquote>
-<p>基于C/S架构在逻辑上更清晰，client有需求，Server完成。共享内存实现起来复杂，各方没有客户端与服务端之别，要考虑并发问题以及可能出现的死锁。</p>
-</blockquote>
-<ul>
-<li>安全性好</li>
-</ul>
-<blockquote>
-<p>传统 Linux IPC 的接收方要么无法获得对方进程可靠的 UID/PID ，从而无法鉴别对方身份；要么只能由用户在数据包里填入UID/PID。Android 为每个应用分配了自己的UID，前面提到 C/S 架构，Server 会根据权限控制策略判断 Client 的请求是否满足权限。并且Binder机制还有匿名 Binder ，压根无法直接获取句柄，安全性更好。</p>
-</blockquote>
-<ul>
-<li>使用简单。</li>
-</ul>
-<blockquote>
-<p>获得句柄之后，就像调用本地方法一样方便。并且Linux的IPC方式使用C语言，而Android应用层主要使用Java，这可能也是个因素。</p>
-</blockquote>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">专题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/03/Android进程通信——Binder理解/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-常用的有意思的算法(二)" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/03/常用的有意思的算法(二)/">常用的有意思的算法(二)</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/03/常用的有意思的算法(二)/" class="archive-article-date">
-  	<time datetime="2019-03-03T12:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-03</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="1、字符串匹配"><a href="#1、字符串匹配" class="headerlink" title="1、字符串匹配"></a>1、字符串匹配</h2><p>主要是利用KMP算法，这个很令人头大，这里贴出算法代码，如果需要详细了解，可以去查看<a href="https://blog.csdn.net/v_july_v/article/details/7041827" target="_blank" rel="noopener">July大神的这篇文章</a>。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">kmp</span><span class="params">(String str, String dest,<span class="keyword">int</span>[] next)</span></span>&#123;<span class="comment">//str文本串  dest 模式串</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>, j = <span class="number">0</span>; i &lt; str.length(); i++)&#123;</span><br><span class="line">            <span class="keyword">while</span>(j &gt; <span class="number">0</span> &amp;&amp; str.charAt(i) != dest.charAt(j))&#123;</span><br><span class="line">                j = next[j - <span class="number">1</span>];</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span>(str.charAt(i) == dest.charAt(j))&#123;</span><br><span class="line">                j++;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span>(j == dest.length())&#123;</span><br><span class="line">                <span class="keyword">return</span> i-j+<span class="number">1</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span>[] kmpnext(String dest)&#123;</span><br><span class="line">        <span class="keyword">int</span>[] next = <span class="keyword">new</span> <span class="keyword">int</span>[dest.length()];</span><br><span class="line">        next[<span class="number">0</span>] = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>,j = <span class="number">0</span>; i &lt; dest.length(); i++)&#123;</span><br><span class="line">            <span class="keyword">while</span>(j &gt; <span class="number">0</span> &amp;&amp; dest.charAt(j) != dest.charAt(i))&#123;</span><br><span class="line">                j = next[j - <span class="number">1</span>];</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span>(dest.charAt(i) == dest.charAt(j))&#123;</span><br><span class="line">                j++;</span><br><span class="line">            &#125;</span><br><span class="line">            next[i] = j;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> next;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-<p>next数组的计算主要跟模式串有关，与文本串并没有关系，因为，模式串前后公共最长子序列。这样才会让我们跳过大量的重复计算</p>
-<h2 id="数字排列"><a href="#数字排列" class="headerlink" title="数字排列"></a>数字排列</h2><p>题目：用1，2，2，3，4，5 这6个数字，写一个方法，打印出所有不同的排列，如 512234、412235等，要求4不能再第三位，3与5不能相连。</p>
-<blockquote>
-<p>思路：问题可以归结为<strong>图的遍历</strong>，实际上6个数字就是6个结点，把6个结点连成无向连通图，对于每个结点求这个图形的遍历路径，所有结点的遍历路径就是最后对这6个数字的排列组合结果集。当然，这样获取的结果集未达到题目要求：<br>（1）3与5不能相连，这个可以在构造图的时候就满足条件；<br>（2）不能重复，有两个2，明显会存在重复结果，得最后去重（可以放在treeSet中）；<br>（3）4不能排在第三位，这个仍旧在结果集中排除即可。</p>
-</blockquote>
-<p>具体代码略。</p>
-<h2 id="二叉树遍历"><a href="#二叉树遍历" class="headerlink" title="二叉树遍历"></a>二叉树遍历</h2><h3 id="先序遍历"><a href="#先序遍历" class="headerlink" title="先序遍历"></a>先序遍历</h3><p><img src="/assets/趣味/算法/先序遍历.png" alt="先序遍历"></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//手算的思想，先变访问边找，找到最左下方的，然后向上再向访问右边的</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePreOrder</span><span class="params">(TreeNode p)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty() || p != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">while</span> (p != <span class="keyword">null</span>) &#123;</span><br><span class="line">            visit(p);</span><br><span class="line">            stack.push(p);</span><br><span class="line">            p = p.left;</span><br><span class="line">        &#125;</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        p = p.right;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//栈的思想，按层次倒着进栈，利用后进先出解决顺序问题</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePreOrder_2</span><span class="params">(TreeNode p)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    stack.push(p);</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty()) &#123;</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        visit(p);</span><br><span class="line">        <span class="keyword">if</span> (p.right != <span class="keyword">null</span>) stack.push(p.right);</span><br><span class="line">        <span class="keyword">if</span> (p.left != <span class="keyword">null</span>) stack.push(p.left);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="中序遍历"><a href="#中序遍历" class="headerlink" title="中序遍历"></a>中序遍历</h3><p><img src="/assets/趣味/算法/中序遍历.png" alt="中序遍历"></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativeInOrder</span><span class="params">(TreeNode p)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty() || p != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">while</span> (p != <span class="keyword">null</span>) &#123;</span><br><span class="line">            stack.push(p);</span><br><span class="line">            p = p.left;</span><br><span class="line">        &#125;</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        visit(p);</span><br><span class="line">        p = p.right;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="后序遍历"><a href="#后序遍历" class="headerlink" title="后序遍历"></a>后序遍历</h3><p><img src="/assets/趣味/算法/后序遍历.png" alt="后序遍历"></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//双栈法，易于理解</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePostOrder_3</span><span class="params">(TreeNode p)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    Stack&lt;TreeNode&gt; result = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty() || p != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">while</span> (p != <span class="keyword">null</span>) &#123;</span><br><span class="line">            stack.push(p);</span><br><span class="line">            result.push(p);</span><br><span class="line">            p = p.right;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!stack.empty()) p = stack.pop().left;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">while</span> (!result.empty()) &#123;</span><br><span class="line">        p = result.pop();</span><br><span class="line">        visit(p);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="层次遍历"><a href="#层次遍历" class="headerlink" title="层次遍历"></a>层次遍历</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativeLevelOrder</span><span class="params">(TreeNode p)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    LinkedList&lt;TreeNode&gt; queue = <span class="keyword">new</span> LinkedList&lt;TreeNode&gt;();</span><br><span class="line">    queue.offer(p);</span><br><span class="line">    <span class="keyword">while</span> (!queue.isEmpty()) &#123;</span><br><span class="line">        p = queue.poll();</span><br><span class="line">        <span class="keyword">if</span> (p.left != <span class="keyword">null</span>) queue.offer(p.left);</span><br><span class="line">        <span class="keyword">if</span> (p.right != <span class="keyword">null</span>) queue.offer(p.right);</span><br><span class="line">        visit(p);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">趣味题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/03/常用的有意思的算法(二)/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-常用的有意思的算法(一)" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/02/常用的有意思的算法(一)/">常用的有意思的算法(一)</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/02/常用的有意思的算法(一)/" class="archive-article-date">
-  	<time datetime="2019-03-02T12:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-02</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="扑克洗牌算法"><a href="#扑克洗牌算法" class="headerlink" title="扑克洗牌算法"></a>扑克洗牌算法</h2><p>打乱一个已有顺序有多种实现方式，但是要高效地实现，还需要斟酌，以下是目前能想到的最有的解决方案：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//生成一副牌</span></span><br><span class="line">Card[<span class="number">52</span>] oneCard = generateOneCard;</span><br><span class="line"></span><br><span class="line"><span class="comment">//顺序与 随机位置交换</span></span><br><span class="line">Random r = <span class="keyword">new</span> Random();</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; oneCard.size(); i ++)&#123;</span><br><span class="line">    <span class="keyword">int</span> j = r.nextInt(<span class="number">52</span>);</span><br><span class="line">    Card tempCard = oneCard[i];</span><br><span class="line">    oneCard[i] = onCard[j];</span><br><span class="line">    onCard[j] = tempCard;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="判断链表中是否有环"><a href="#判断链表中是否有环" class="headerlink" title="判断链表中是否有环"></a>判断链表中是否有环</h2><p><strong>快慢指针法：</strong>创建两个指针1和2同时指向这个链表的头节点，然后两个指针分别向后移动，其中指针1每次向后移动一个节点，指针2每次向后移动两个节点，每移动一次就比较两个指针指向的节点是否相同，如果相同说明出链表有环；如果不同，则继续循环，直到有环结束或者到达尾部结束。</p>
-<blockquote>
-<p>原理：两个人在环形跑道上同一位置开始跑，一人速度快，一人速度慢，如此持续跑一段时间，速度快的那个肯定会从速度慢的身后再次追上以及超越，这中间必然有个交汇点。如果是跑直线的话，到终点就结束了，不会再碰面。</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//判断是否有环</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function"><span class="keyword">boolean</span> <span class="title">isLoopList</span><span class="params">(ListNode&lt;T&gt; head)</span></span>&#123;</span><br><span class="line">    ListNode&lt;T&gt; slowPointer, fastPointer;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//使用快慢指针，慢指针每次向前一步，快指针每次两步</span></span><br><span class="line">    slowPointer = fastPointer = head;</span><br><span class="line">    <span class="keyword">while</span>(fastPointer != <span class="keyword">null</span> &amp;&amp; fastPointer.next != <span class="keyword">null</span>)&#123;</span><br><span class="line">        slowPointer = slowPointer.next;</span><br><span class="line">        fastPointer = fastPointer.next.next;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//两指针相遇则有环</span></span><br><span class="line">        <span class="keyword">if</span>(slowPointer == fastPointer)&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="引申：如何判断环的入口"><a href="#引申：如何判断环的入口" class="headerlink" title="引申：如何判断环的入口"></a>引申：如何判断环的入口</h2><p>我们假定链表头到环入口的距离是len，环入口到slow和fast交汇点的距离为x，环的长度为R。slow和fast第一次交汇时，设slow走的长度为：d = len + x，而fast走的长度为：2d = len + nR + x，(n &gt;= 1)，从而我们可以得知：2len + 2x = len + nR + x，即len = nR - x，(n &gt;= 1)。所以，要找出环入口，也要两个指针，一个指针A指向相遇时候的节点，一个指针B指向链表头，两个指针每次都走一步，A指针在遍历过程中可能多次(n &gt;= 1)经过环入口节点，但当B指针第一次达到入口节点时，A指针此时必然也指向入口节点。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//判断是否有环，有环就返回入口</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">ListNode&lt;T&gt; <span class="title">findEntranceInLoopList</span><span class="params">(ListNode&lt;T&gt; head)</span></span>&#123;</span><br><span class="line">    ListNode&lt;T&gt; slowPointer, fastPointer;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//使用快慢指针，慢指针每次向前一步，快指针每次两步</span></span><br><span class="line">    <span class="keyword">boolean</span> isLoop = <span class="keyword">false</span>;</span><br><span class="line">    slowPointer = fastPointer = head;</span><br><span class="line">    <span class="keyword">while</span>(fastPointer != <span class="keyword">null</span> &amp;&amp; fastPointer.next != <span class="keyword">null</span>)&#123;</span><br><span class="line">        slowPointer = slowPointer.next;</span><br><span class="line">        fastPointer = fastPointer.next.next;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//两指针相遇则有环</span></span><br><span class="line">        <span class="keyword">if</span>(slowPointer == fastPointer)&#123;</span><br><span class="line">            isLoop = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//一个指针从链表头开始，一个从相遇点开始，每次一步，再次相遇的点即是入口节点</span></span><br><span class="line">    <span class="keyword">if</span>(isLoop)&#123;</span><br><span class="line">        slowPointer = head;</span><br><span class="line">        <span class="keyword">while</span>(fastPointer != <span class="keyword">null</span> &amp;&amp; fastPointer.next != <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="comment">//两指针相遇的点即是入口节点</span></span><br><span class="line">            <span class="keyword">if</span>(slowPointer == fastPointer)&#123;</span><br><span class="line">                <span class="keyword">return</span> slowPointer;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            slowPointer = slowPointer.next;</span><br><span class="line">            fastPointer = fastPointer.next;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="再引申，两个单链表是否相交"><a href="#再引申，两个单链表是否相交" class="headerlink" title="再引申，两个单链表是否相交"></a>再引申，两个单链表是否相交</h2><p>两个<strong>没有环的链表</strong>在某一节点相交，那么在这个节点之后的所有结点都是两个链表所共有的。如果它们相交，则最后一个结点一定是共有的，因此问题转化为：两个链表最后一个结点是否相同（时间复杂度为O(len1+len2)）。要找出相交的第一个结点，可以首先获得两个链表的长度，然后获得两个链表长度差值 K，之后长的链表指向第K个结点，短的链表从头开始，每次向后移动一个结点，再比较当前结点是否相等，第一次相等的那个结点点就是相交节点。</p>
-<blockquote>
-<p>代码略</p>
-</blockquote>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">趣味题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/02/常用的有意思的算法(一)/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
   
   
-    <nav id="page-nav">
-      <a class="extend prev" rel="prev" href="/page/2/">&laquo; Prev</a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><a class="page-number" href="/page/5/">5</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/4/">Next &raquo;</a>
-    </nav>
+  
+
+  
+
+  
+
   
 
 
@@ -1206,8 +427,8 @@
     <script>
 	var yiliaConfig = {
 		mathjax: false,
-		isHome: true,
-		isPost: false,
+		isHome: false,
+		isPost: true,
 		isArchive: false,
 		isTag: false,
 		isCategory: false,
