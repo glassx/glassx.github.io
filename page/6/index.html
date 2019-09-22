@@ -160,6 +160,327 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-第一行代码（第二版）-第五章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2018/06/10/第一行代码（第二版）-第五章/">第5章： 全局大喇叭：详解广播机制</a>
+    </h1>
+  
+
+        
+        <a href="/2018/06/10/第一行代码（第二版）-第五章/" class="archive-article-date">
+  	<time datetime="2018-06-10T00:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-06-10</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="广播机制介绍"><a href="#广播机制介绍" class="headerlink" title="广播机制介绍"></a>广播机制介绍</h3><p>Android中广播分为<strong>标准广播</strong>和<strong>有序广播</strong>，标准广播是一种完全异步执行的广播，广播发出后，所有广播接收器机会会在同一时刻接收到广播，但同时意味着它也是无法被截断的。有序广播是一种同步执行的广播，同一时刻只有一个广播接收器能收到这条消息，当这个广播接收器的逻辑执行完毕之后才会继续传递，优先级高的广播接收器可以先收到广播，并且还可以阶段正在传递的广播，这样后面的广播接收器就收不到这条广播消息。</p>
+<h4 id="动态注册和静态注册广播"><a href="#动态注册和静态注册广播" class="headerlink" title="动态注册和静态注册广播"></a>动态注册和静态注册广播</h4><p>动态注册一般在Activity的onCreate方法中写上类似于：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">IntentFilter filter = <span class="keyword">new</span> IntentFilter();</span><br><span class="line">filter.addAction(<span class="string">"com.example.MyReceiver"</span>);</span><br><span class="line">receiver = <span class="keyword">new</span> MyReceiver();</span><br><span class="line">registerReceiver(receiver,filter);</span><br></pre></td></tr></table></figure>
+<p>并且在onDestroy方法中注销广播：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&gt; unregisterReceiver(receiver);</span><br></pre></td></tr></table></figure></p>
+<p>然后，完善一般是内部类的MyReceiver：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyReceiver</span> <span class="keyword">extends</span> <span class="title">BroadcastReceiver</span></span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceive</span><span class="params">(Context context,Intent intent)</span></span>&#123;</span><br><span class="line">		Toast.makeText(context,<span class="string">"receive the broadcast"</span>,Toast.LENGTH_SHORT).show();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>最后得在适当的时候发送广播：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent(<span class="string">"com.example.MyReceiver"</span>);</span><br><span class="line">sendBroadcast(intent);</span><br></pre></td></tr></table></figure>
+<p><strong>当然，如果你是用广播在APP中实现强制退出登录（如QQ账号在另一台设备上登录了），那你只需要在当前Activity上弹一个窗提示已经被强制下线即可，因此有必要将广播在BaseActivity中注册，并且在BaseActivity的onPause方法（注意不是onDestroy方法了，因为我们只需要栈顶的Activity能够响应就行）中注销广播即可。如果是接收系统级广播，可能还得在AndroidManife.xml中声明相关权限</strong>。APP中实现强制退出登录时的广播接收器可以这样写：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ForceOfflineReceiver</span> <span class="keyword">extends</span> <span class="title">BroadcastReceiver</span></span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceive</span><span class="params">(<span class="keyword">final</span> Context context,Intent intent)</span></span>&#123;</span><br><span class="line">		AltertDialog.Builder builder = <span class="keyword">new</span> AlertDialog.Builder(context);</span><br><span class="line">		builder.setTitle(<span class="string">"warning"</span>);</span><br><span class="line">		builder.setMessage(<span class="string">"force offline"</span>);</span><br><span class="line">		builder.setCancelable(<span class="keyword">false</span>);</span><br><span class="line">		builder.setPositiveButton(<span class="string">"ok"</span>,<span class="keyword">new</span> DialogInterface.OnclickListener()&#123;</span><br><span class="line">			<span class="meta">@Override</span></span><br><span class="line">			<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onclick</span><span class="params">(DialogInterface dialog,<span class="keyword">int</span> which)</span></span>&#123;</span><br><span class="line">				ActivityCollector.finishAll();<span class="comment">//销毁所有活动</span></span><br><span class="line">				Intent intent = <span class="keyword">new</span> Intent(context,LoginActivity.class);</span><br><span class="line">				context.startActivity(intent);</span><br><span class="line"></span><br><span class="line">			&#125;</span><br><span class="line">		&#125;);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>静态注册广播是在AndroidManife.xml中做如下的声明，<strong>其中MyReceiver类一般不是内部类，因为即使app未启动也能接收广播</strong>：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">application</span></span></span><br><span class="line"><span class="tag"> <span class="attr">android:icon</span>=<span class="string">"@mipmap/ic_launcher"</span></span></span><br><span class="line"><span class="tag"> <span class="attr">android:label</span>=<span class="string">"@string/appname"</span>&gt;</span></span><br><span class="line"> ...</span><br><span class="line"> <span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">  <span class="attr">android:name</span>=<span class="string">".MyReceiver"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">android:enabled</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">android:exported</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.example.MyReceiver"</span></span></span><br><span class="line"> &lt;/receiver&gt;</span><br><span class="line"> <span class="tag">&lt;/<span class="name">application</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>如果要发送有序广播，只需要将以上发送广播的代码<strong>sendBroadcast(intent)</strong>替换成<strong>sendOrderedBroadcast(intent,null);</strong>即可。设置广播的优先级只需要设置intentFilter的priority属性即可（AndroidManifest文件中是intent-filter属性）。</p>
+<h3 id="使用本地广播"><a href="#使用本地广播" class="headerlink" title="使用本地广播"></a>使用本地广播</h3><p>前面发送的广播属于系统全局广播，发出的广播可以被任何应用接收到，并且我们也可以接受来自其它任何应用发出的广播，这容易引起安全性问题，比如关键数据广播被其他应用截获，或者其他应用发送各种垃圾广播。本地广播的发送有些不同：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">LocalBroadcastManager manager = LocalBroadcastManager.getInstance(<span class="keyword">this</span>);</span><br><span class="line">Intent intent = <span class="keyword">new</span> Intent(<span class="string">"com.example.MyReceiver"</span>);</span><br><span class="line">manager.sendBroadcast(intent);</span><br></pre></td></tr></table></figure></p>
+<p>注册：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">IntentFilter filter = <span class="keyword">new</span> IntentFilter();</span><br><span class="line">filter.addAction(<span class="string">"com.example.MyReceiver"</span>);</span><br><span class="line">localReceiver = <span class="keyword">new</span> LocalReceiver();</span><br><span class="line">manager.registerReceiver(localReceiver,filter);</span><br></pre></td></tr></table></figure></p>
+<p>同样注销广播：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">manager.unregisterReceiver(localReceiver);</span><br></pre></td></tr></table></figure>
+<p>本地广播的几点优势：</p>
+<ul>
+<li>可以明确地知道正在发送的广播不会离开我们的程序，因此不必担心机密数据泄露。</li>
+<li>其他的程序无法将广播发送到我们程序内部，因此不用担心会有安全漏洞隐患。</li>
+<li>发送本地广播比发送系统全局广播更加高效。</li>
+</ul>
+<p><strong>另有一点需要说明：本地广播是无法通过静态注册方式来接收的，其实这也完全可以理解，因为静态注册主要就是为了让程序在未启动的情况下也能接收广播，而发送本地广播时，我们的程序肯定是已经启动了；此外，不要再onReceive方法中添加过多的逻辑或者进行任何耗时的操作，因为广播接收器中是不允许开启线程的，当onReceive方法运行了较长时间而没有结束时，程序就会报错。因此它更多的知识扮演一种打开程序其他组件的角色，如弹一条通知，或者启动一个服务等。</strong></p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">读书笔记-第一行代码（第二版）</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2018/06/10/第一行代码（第二版）-第五章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-第一行代码（第二版）-第四章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2018/06/09/第一行代码（第二版）-第四章/">第4章：手机平板要兼顾：探究fragment</a>
+    </h1>
+  
+
+        
+        <a href="/2018/06/09/第一行代码（第二版）-第四章/" class="archive-article-date">
+  	<time datetime="2018-06-09T08:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-06-09</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>这一章前面部分主要讲解Fragment的基本使用，这点我觉得官方文档关于fragment的知识可能会更好一些，以下是官方的阐述：</p>
+<p>主要是平时使用Fragment时，对其使用方法有疑惑，以下或许能解释部分：</p>
+<h3 id="为什么使用Fragment"><a href="#为什么使用Fragment" class="headerlink" title="为什么使用Fragment"></a>为什么使用Fragment</h3><p><strong>参考自官方</strong>：主要是为了在大屏幕手机（如平板电脑）上更加零落的UI设计，可以更方便地组合和交换UI组件。</p>
+<h3 id="Fragment的创建"><a href="#Fragment的创建" class="headerlink" title="Fragment的创建"></a>Fragment的创建</h3><p>想为Fragment提供布局，则必须实现onCreateView()回调，可以通过xml定义布局资源，为此，onCreateView()提供了一个LayoutInflater对象：</p>
+<pre><code>public static class ExampleFragment extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.example_fragment, container, false);
+    }
+}
+</code></pre><h3 id="向Activity中添加Fragment"><a href="#向Activity中添加Fragment" class="headerlink" title="向Activity中添加Fragment"></a>向Activity中添加Fragment</h3><h4 id="1、在Activity的布局文件中声明："><a href="#1、在Activity的布局文件中声明：" class="headerlink" title="1、在Activity的布局文件中声明："></a>1、在Activity的布局文件中声明：</h4><pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;&gt;
+&lt;LinearLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+    android:orientation=&quot;horizontal&quot;
+    android:layout_width=&quot;match_parent&quot;
+    android:layout_height=&quot;match_parent&quot;&gt;
+
+    &lt;fragment android:name=&quot;com.example.ListFragment&quot;
+            android:id=&quot;@+id/list&quot;
+            android:layout_weight=&quot;1&quot;
+            android:layout_width=&quot;0dp&quot;
+            android:layout_height=&quot;match_parent&quot; /&gt;
+
+    &lt;fragment android:name=&quot;com.example.AticleFragment&quot;
+            android:id=&quot;@+id/viewer&quot;
+            android:layout_weight=&quot;2&quot;
+            android:layout_width=&quot;0dp&quot;
+            android:layout_height=&quot;match_parent&quot; /&gt;
+&lt;/LinearLayout&gt;
+</code></pre><blockquote>
+<p><strong>官方解释</strong>:Activity初始化布局时，会实例化布局中指定的每个fragment，并为每个Fragment调用onCreateView()方法，系统会直接插入Fragment返回的View来替代<fragment>元素。</fragment></p>
+</blockquote>
+<h4 id="2、通过编程方式将Fragment添加到某个现有的ViewGroup："><a href="#2、通过编程方式将Fragment添加到某个现有的ViewGroup：" class="headerlink" title="2、通过编程方式将Fragment添加到某个现有的ViewGroup："></a>2、通过编程方式将Fragment添加到某个现有的ViewGroup：</h4><p>可以在Activity运行期间将Fragment添加进去，你只需要指定Fragment要放入哪个ViewGroup，这需要使用FragmentTransaction：</p>
+<pre><code>FragmentManager fragmentManager = getFragmentManager();
+FragmentTransaction transaction = fragmentManager.beginTransaction();
+</code></pre><p>然后，你可以使用add()方法添加一个fragment：</p>
+<pre><code>ExampleFragment fragment = new ExampleFragment();
+transaction.add(R.id.fragment_container,fragment);
+transaction.commit();
+</code></pre><blockquote>
+<p>一旦通过FragmentTransaction做出了更改，就必须commit以使更改生效。</p>
+</blockquote>
+<h4 id="3、添加没有UI的Fragment："><a href="#3、添加没有UI的Fragment：" class="headerlink" title="3、添加没有UI的Fragment："></a>3、添加没有UI的Fragment：</h4><p>你可以使用Fragment为Activity提供后台行为，而不显示额外的UI。使用函数：</p>
+<pre><code>add(Fragment,String)
+</code></pre><p>String类型参数为Fragment提供一个唯一的字符串标记，由于Fragment没有雨Activity中的视图关联，因此不会收到onCreate()调用，因此你可以不实现这个方法。如果你稍后想从Activity中获取到这个Fragment，可以使用findFragmentByTag()。</p>
+<blockquote>
+<p>可以在SDK的sample中查看具体用法：&lt;sdk_root&gt;/APIDemos/app/src/main/java/com/example/android/apis/app/FragmentRetainInstance.java </p>
+</blockquote>
+<h3 id="执行Fragment事务"><a href="#执行Fragment事务" class="headerlink" title="执行Fragment事务"></a>执行Fragment事务</h3><p>需要使用FragmentTransaction，可以使用：</p>
+<pre><code>add() 、remove() 、replace()
+</code></pre><p>等方法设置想要执行的更改，然后commit生效。</p>
+<p>不过在commit之前你可能想调用 addToBackStack()将其添加到Fragment事务返回栈，允许用户按返回键返回上一Fragment状态。</p>
+<p>来个例子：</p>
+<pre><code>/**create new fragment and transaction**/
+
+Fragment newFragment = new ExampleFragment();
+FragmentTransaction transaction = getFragment().beginTransaction();
+
+/**Replace whatever is in the fragment_container view with this fragment
+and add the transaction to the back stack**/
+
+transaction.replace(R.id.fragment_container,newFragment);
+transaction.addToBackStack(null);
+
+//commit the transaction
+transaction.commit();
+</code></pre><p>向FragmentTransaction添加更改的顺序无关紧要，但有一些注意事项：</p>
+<blockquote>
+<p>commit操作不会立即执行，而是等主线程认为可以执行的时候再运行，不过，如果有必要，你也可以从主线程调用executePendingTransactions() 以立即执行commit。</p>
+</blockquote>
+<blockquote>
+<p>最后必须调用commit，而且只能在用户离开Activity之前commit，否则会引发异常，如果对于需要commit的更改无关紧要，可以使用commitAllowingStateLoss()。</p>
+</blockquote>
+<blockquote>
+<p>可以向同一个容器中添加多个fragment，你添加的顺序决定他们在视图层次结构中出现的顺序。</p>
+</blockquote>
+<h3 id="管理Fragment"><a href="#管理Fragment" class="headerlink" title="管理Fragment"></a>管理Fragment</h3><p>需要使用FragmentManager，你可以使用它执行以下操作：</p>
+<ul>
+<li><p>findFragmentById() （<strong>对于在Activity布局中提供UI的Fragment</strong>）或者findFragmentByTag()（<strong>对于提供或者不提供UI的Fragment都可</strong>）。</p>
+</li>
+<li><p>popBackStack() (<strong>模拟用户发出的返回命令</strong>)，将Fragment从返回栈中弹出。</p>
+</li>
+<li><p>addOnBackStackChangedListener() 监听返回栈变化</p>
+</li>
+</ul>
+<h3 id="与Activity通信"><a href="#与Activity通信" class="headerlink" title="与Activity通信"></a>与Activity通信</h3><p>Fragment可以通过getActivity()访问Activity实例，并轻松执行诸如在Activity布局中查找视图等任务：</p>
+<pre><code>View listView = getActivity().findViewById(R.id.list);
+</code></pre><p>同样，Activity也可以使用findFragmentById 或者 findFragmentByTag,通过从FragmentManager获取Fragment的引用来调用Fragment中的方法：</p>
+<pre><code>ExampleFragment fragment = (ExampleFragment) getFragmentManager().findFragmentById(R.id.example_fragment);
+</code></pre><h3 id="一个应用场景例子"><a href="#一个应用场景例子" class="headerlink" title="一个应用场景例子"></a>一个应用场景例子</h3><p>一个新闻应用中Activity两个Fragment，Fragment A放列表list，Fragment B 放对应内容，那么A在列表项选定后，告诉Activity，以便Activity通知B显示该新闻。其方案可以这样设计：</p>
+<p>在A中声明接口OnArticleSelectedListener ：</p>
+<pre><code>public static class FragmentA extends ListFragment {
+    ...
+    // Container Activity must implement this interface
+    public interface OnArticleSelectedListener {
+        public void onArticleSelected(Uri articleUri);
+    }
+    ...
+}
+</code></pre><p>同事在Activity中实现接口OnArticleSelectedListener，在A的onAttach方法时判断Activity是否这样做了：</p>
+<pre><code>public static class FragmentA extends ListFragment {
+    OnArticleSelectedListener mListener;
+    ...
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        try {
+            mListener = (OnArticleSelectedListener) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString() + &quot; must implement OnArticleSelectedListener&quot;);
+        }
+    }
+    ...
+}
+</code></pre><p>当有点击事件的时候，A看起来是这样子的：</p>
+<pre><code>public static class FragmentA extends ListFragment {
+    OnArticleSelectedListener mListener;
+    ...
+    @Override
+    public void onListItemClick(ListView l, View v, int position, long id) {
+        // Append the clicked item&apos;s row ID with the content provider Uri
+        Uri noteUri = ContentUris.withAppendedId(ArticleColumns.CONTENT_URI, id);
+        // Send the event and Uri to the host activity
+        mListener.onArticleSelected(noteUri);
+    }
+    ...
+}
+</code></pre><p>Fragment的生命周期如下图：</p>
+<p><img src="/assets/Book-Notes/第一行代码/chapter-4/fragment生命周期.png" alt="fragment生命周期"></p>
+<p>其中将fragment进行至fragment的resume状态（即可以跟用户交互）的核心序列如下：</p>
+<ul>
+<li>onAttach(Activity) ：activity与fragment关联的时候调用.</li>
+<li>onCreate(Bundle) ：fragment初始化的时候调用.</li>
+<li>onCreateView(LayoutInflater, ViewGroup, Bundle) ：为fragment创建返回view界面.</li>
+<li>onActivityCreated(Bundle): 通知fragment它绑定的那个Activity已经执行完了onCreate()操作.</li>
+<li>onViewStateRestored(Bundle)： 通知fragment它保存的view state已经被恢复了.</li>
+<li>onStart()： fragment对用户可见 (还要取决于包含这个fragment的activity是否已经启动了).</li>
+<li><p>onResume()： 使fragment可以和用户交互了 (还要取决于包含这个fragment的activity是否已经resume了).<br>如果一个fragment不再使用了，它会执行一系列相反的过程:</p>
+</li>
+<li><p>onPause()： fragment不能与用户交互（可能是由于activity的pause）。 </p>
+</li>
+<li>onStop()： fragment不可见了（可能是由于activitystop了）。</li>
+<li>onDestroyView()：通知fragment清理与它相关的view资源。</li>
+<li>onDestroy()：在完全清理fragment的状态时调用。</li>
+<li>onDetach()：当fragment与activity解除绑定时调用。</li>
+</ul>
+<h3 id="动态加载布局的技巧"><a href="#动态加载布局的技巧" class="headerlink" title="动态加载布局的技巧"></a>动态加载布局的技巧</h3><h4 id="使用限定符"><a href="#使用限定符" class="headerlink" title="使用限定符"></a>使用限定符</h4><p>如果使用平板就会发现里面的应用基本上是双页模式，但是在手机上限于屏幕大小，都是单页模式。如果判断该使用双页模式还是单页模式，这就要借助<strong>限定符（qualifiers）</strong>来实现了，我们可以有两个布局文件，一个 layout_single.xml 单页模式布局放在layout目录，一个 layout_double.xml 双页模式布局放在 layout-large 目录，其中的large是个限定符。Android中常用限定符如下：<br><img src="/assets/Book-Notes/第一行代码/chapter-4/限定符1.png" alt="android限定符1"><br><img src="/assets/Book-Notes/第一行代码/chapter-4/限定符2.png" alt="android限定符2"></p>
+<h4 id="使用最小限定符"><a href="#使用最小限定符" class="headerlink" title="使用最小限定符"></a>使用最小限定符</h4><p>前面解决了单页双页模式，但是到底怎么才算large，我们需要更精确地控制的话，需要最小限定符。我们新建layout-600dp文件夹，将双页布局文件放入其中，这样就会意味着，当程序运行在宽度小于600dp的设备上时，显示的是单页布局，否则使用的是双页布局。</p>
+<p>以上两种技巧可以将手机版和pad版都使用同一个app，避免维护多个app，一处改动，需要在两个app中同步改动。注意在代码中区别目前是双页模式还是单页模式，可以用以下方式：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(findViewById(R.id.anotherpageid) == <span class="keyword">null</span>)&#123;</span><br><span class="line">    <span class="comment">//单页</span></span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    <span class="comment">//双页</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中R.id.anotherpageid是在单页中所没有的那个布局的id。</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">读书笔记-第一行代码（第二版）</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2018/06/09/第一行代码（第二版）-第四章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-第一行代码（第二版）-第三章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1075,453 +1396,6 @@ public View getView(final int i, View view, ViewGroup viewGroup) {
 
 
   
-    <article id="post-现代操作系统（第三版）-第2章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2018/05/29/现代操作系统（第三版）-第2章/">第2章：进程与线程</a>
-    </h1>
-  
-
-        
-        <a href="/2018/05/29/现代操作系统（第三版）-第2章/" class="archive-article-date">
-  	<time datetime="2018-05-29T10:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-05-29</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>进程是操作系统提供的最古老也是最重要的抽象概念之一。即使CPU只有一个，但他们也支持（伪）并发操作的能力。他们将一个单独的CPU变换成多个虚拟的CPU，没有进程的抽象，现代计算将不复存在。</p>
-<h2 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h2><p>在任何多道程序设计系统中，CPU由一个进程快速切换到另一个进程，使每个进程各运行几十或者几百个毫秒，严格地来说，在某一个瞬间，CPU只能运行一个进程，但在1秒钟期间，它可能运行多个进程，这样就能产生并行的错觉，这就是伪并行。伪并行概念用来区分<strong>多处理器系统</strong>（系统有两个或者更多CPU并共享同一个物理内存）的真正硬件并行。</p>
-<h3 id="进程模型"><a href="#进程模型" class="headerlink" title="进程模型"></a>进程模型</h3><p>一个进程就是一个正在执行的程序的实例，包括程序计数器、寄存器和变量当前值。从概念上讲，每个进程拥有它自己的CPU，当然，真正的CPU在各进程间来回切换，这种快速的切换称作<strong>多道程序设计</strong>。在多道程序计算机内存中有若干道程序，这些程序被抽象为若干个各自拥有自己控制流程（即每个程序自己的逻辑程序计数器）的进程，并且每个程序都独立地运行。当然，实际上只有一个物理程序计数器，所以程序运行时，它的逻辑程序计数器被装入实际的程序计数器，当该程序结束（或暂停）执行时，物理程序计数器被保存在内存中该进程的逻辑程序计数器中。</p>
-<p>由于CPU在各进程之间来回快速切换，所以每个进程执行器运算的速度是不确定的，并且当同一进程再次运行时，器运算速度通常也不可再现。例如，考虑一个 I/O 进程，它执行一个10000次的空循环以等待磁带机达到正常速度，然后发出命令读取第一个记录。如果CPU决定在空循环期间切换到其他进程，则磁带机进程可能在第一条记录通过磁头之后还未被再次执行。</p>
-<p>进程和程序间的却别是微妙的，但是非常重要。想象以为父亲正在为他的女儿烘制生日蛋糕，则做蛋糕的食谱就是程序（即用适当形式描述的算法），这位父亲是处理器（CPU），而做蛋糕各种原料（面粉、糖、鸡蛋等）就是输入的数据，<strong>进程就是他阅读食谱、取各种原料以及烘制蛋糕等一系列动作的总和</strong>。现假设他的儿子被蜜蜂蛰了哭着跑进来，父亲于是就记录下当前照着食谱做到哪里了（保存进程当前状态），拿出急救手册，为儿子处理蜇伤，我们看到处理机从一个进程（做蛋糕）切换到另一个优先级高的进程（医疗救治），每个进程有各自的程序（食谱和急救手册）。当急救完成之后，父亲又继续做蛋糕，从离开时的那一步继续做下去。值得注意的是，我们可能经常两次去启动同一个字处理软件，即一个程序运行了两遍，这也要算作两个进程。</p>
-<h3 id="创建进程"><a href="#创建进程" class="headerlink" title="创建进程"></a>创建进程</h3><p>有4中主要事件导致进程创建：</p>
-<ul>
-<li><p>系统初始化</p>
-<blockquote>
-<p>启动操作系统时，通常会创建若干进程，这些进程中有些是前台进程，用于同用户（人类）交互。其他的是后台进程，后台进程一般具有某些专门的功能，例如，设计一个后台进程接收发来的电子邮件，这个进程在一天的大部分时间都在睡眠，但是当电子邮件达到时就被唤醒了。停留在后台处理诸如电子邮件、web页面、新闻、打印之类的活动的进程称为<strong>守护进程（daemon）</strong>。</p>
-</blockquote>
-</li>
-<li><p>正在运行的进程进行系统调用创建</p>
-<blockquote>
-<p>正在运行的进程发出系统调用，以便创建一个或者多个线程协助其工作。</p>
-</blockquote>
-</li>
-<li><p>用户请求创建一个新的进程。</p>
-<blockquote>
-<p>用户双击图标或者输入命令行，启动一个新的程序。</p>
-</blockquote>
-</li>
-<li><p>一个批处理作业的初始化</p>
-<blockquote>
-<p>仅在大型机的批处理系统中应用，用户在这种系统中提交批处理作业，在操作系统认为有资源科运行另一个作业时，它创建一个新的进程，并运行其输入队列中的下一个作业。</p>
-</blockquote>
-</li>
-</ul>
-<p>在Unix系统中，只有一个系统调用可以创建新的进程：<strong>fork</strong>。它会创建一个与调用进程相同的副本，这两个进程（父进程和子进程）拥有相同的存储镜像、同样的环境字符串和同样的打开文件，这就是全部情形。通常，子进程接着执行execve或者一个类似的系统调用，以修改器存储镜像并运行一个新的程序。例如，当一个用户在shell中输入sort时，shell就创建一个子进程，然后这个子进程执行sort。在Windows中，情形正相反，一个win32函数调用 CreateProcess既处理进程的创建，也负责把正确的程序装入新的进程。不论在Unix还是Windows中，进程创建后，父进程和子进程有各自不同的地址空间。</p>
-<h3 id="进程的终止"><a href="#进程的终止" class="headerlink" title="进程的终止"></a>进程的终止</h3><p>进程终止，通常由下列条件引起：</p>
-<ul>
-<li><p>正常退出（自愿）</p>
-<blockquote>
-<p>进程完成了自己的工作，调用系统调用，通知工作已经完成。</p>
-</blockquote>
-</li>
-<li><p>出错退出（自愿）</p>
-<blockquote>
-<p>进程发现了严重错误，如要编译某个文件，但是该文件不存在，于是编译器就会退出。再给出了错误参数时，面向屏幕的交互式进程通常不退出，相反，这些程序会弹出一个对话框，并要求用户再试一次。</p>
-</blockquote>
-</li>
-<li><p>严重错误（非自愿）</p>
-<blockquote>
-<p>进程引起的错误，通常是由于程序中的错误导致，例如执行了非法指令，引用不存在的内存等。在这类错误中，进程会收到信号（被中断），而不是在这类错误出现时终止。</p>
-</blockquote>
-</li>
-<li><p>被其他进程杀死（非自愿）</p>
-</li>
-</ul>
-<h3 id="进程的状态"><a href="#进程的状态" class="headerlink" title="进程的状态"></a>进程的状态</h3><p>尽管每个进程是一个独立的实体，有其自己的程序计数器和内部状态，但进城之间经常需要相互作用，一个进程的输出结果可能作为另一个进程的输入，在shell命令：</p>
-<blockquote>
-<p>cat chapter1 chapter2 chapter3 | grep tree</p>
-</blockquote>
-<p>中，第一个进程运行cat，将三个文件链接并输出，第二个进程运行grep，它从输入中选择所有包含单词tree的那些行。根据这两个进程的相对速度，可能发生这种情况：grep准备就绪可以运行，但输入还没有完成，于是必须阻塞grep；还有可能是：一个概念上能够运行的进程被迫停止，因为操作系统调度另一个进程占用了CPU。下图可以看到显示进程的三种状态的状态图：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图1.png" alt="进程三种状态"></p>
-<p>运行态和就绪态在逻辑上是类似的，二者都可以运行，只是后者还没有CPU分配给它，阻塞态就完全不同，处于该状态的进程不能运行，即使CPU空闲也不行。在操作系统发现进程不能继续运行下去时，发生转换1；转换2和3是由于进程调度引起的；当进程等待的一个外部事件发生时（如一些输入到达），则发生转换4。</p>
-<h3 id="进程的实现"><a href="#进程的实现" class="headerlink" title="进程的实现"></a>进程的实现</h3><p>操作系统维护者一张表格，即进程表（process table）。每个进程占用一个进程表项，该表项包含了进程状态的重要信息，诸如程序计数器、堆栈指针，内存分配状况、所打开的文件的状态、账号和调度信息等。下图展示了典型系统中的关键字段：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图2.png" alt="典型的进程表项字段"></p>
-<h3 id="多道程序设计模型"><a href="#多道程序设计模型" class="headerlink" title="多道程序设计模型"></a>多道程序设计模型</h3><p>采用多道程序设计可以提高CPU利用率，从概率的角度来看cpu的利用率是比较好。假设一个进程等待I/O操作的时间与其停留在内存中的时间比是<em>p</em>,当内存中有n个进程时，则所有n个进程都在等待I/O（此时CPU空转）的概率是p的n次方，CPU的利用率由一下公式给出：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图3.png" alt="CPU利用率公式"></p>
-<p>从完全精确的角度考虑，应该指出此概率模型只是描述了一个大致的状况。它假设所有n个进程都是独立的，即内存中的5个进程中，3个运行，2个等待是完全可以接受的，但在单cpu中，不能同时运行3个进程，所以当CPU忙时，已就绪的进程必须等待CPU，因而，进程不是独立的，更精确的模型应该使用排队论构造，但它仍然是具有参考意义的，下图以n为变量的函数表示CPU的利用率，n称为多道程序设计的<strong>道数（degree of multiprogramming）</strong>。</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图4.png" alt="CPU利用率-道数的关系"></p>
-<p>从图中可以看到，如果进程花费80%的时间等待I/O，为使CPU的浪费低于10%，至少要有10个进程同时在内存中。当读者认识到一个等待用户从终端输入的交互式进程是处于I/O等待状态时，很明显，80%甚至更多的I/O等待时间是普遍的，即使是在服务器中，做大量磁盘I/O操作的进程也会花费同样或更多的等待时间。虽然图中的模型很粗略，但它依然对预测CPU的性能很有效。例如，假设计算机有512MB内存，操作系统占128MB，每个用户程序占128MB，那么这些内存允许3个用户程序同时驻留内存，若80%时间用于I/O等待，则CPU利用率大约是1-0.8<em>0.8</em>0.8 ，大约49%，在增加512MB内存后，CPU利用率可以提高到79%，换而言之，第二个512M内存提高了30%的吞吐量。但是增加第三个512MB内存只能讲CPU利用率提高到91%，吞吐量仅提高12%，因此可以确定第一次增加内存是合算的投资，第二个则不是。</p>
-<h2 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h2><h3 id="线程的使用"><a href="#线程的使用" class="headerlink" title="线程的使用"></a>线程的使用</h3><p>人们认为需要使用线程的理由如下：</p>
-<ul>
-<li><p>并行的线程可以共享同一个地址空间和所有可用数据的。</p>
-<blockquote>
-<p>对于某些应用而言，这是必需的，二者正式多进程模型（它们具有不同的地址空间）所无法表达的。</p>
-</blockquote>
-</li>
-<li><p>线程比进程更轻量级，更快捷地创建和撤销。</p>
-<blockquote>
-<p>在许多系统中，创建一个线程较一个进程要快10~100倍。在有大量线程需要动态和快速修改时，这一特性很有用。</p>
-</blockquote>
-</li>
-<li><p>若多个线程都是CPU密集型的，那么并不能获得性能上的增强，但是如果存在着大量的计算和大量的I/O处理，拥有多个线程允许这些活动彼此重叠进行，从而加快应用程序执行速度。</p>
-</li>
-<li><p>在多CPU系统中，多线程是有益的，在这样的系统中，真正的并行有了实现的可能。</p>
-</li>
-</ul>
-<p>假如字处理软件被编写成含有3个线程的程序，一个与用户交互，另一个在后台重新进行格式处理，一旦有某一句语句被删掉，交互线程就通知格式化线程对整个文档重新进行处理，同时交互线程继续监控键盘和鼠标，并相应诸如滚动到第一页之类的简单命令。剩下那个每隔一段时间进行磁盘备份，防止程序崩溃或者系统崩溃。拥有三个线程的情形如下图所示：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图5.png" alt="三个线程协同"></p>
-<p>如果程序是单线程的，那么在进行磁盘备份时，来自键盘和鼠标的命令就会被忽略，直到备份工作完成为止。并且，很显然在这里三个不同的进程是不能工作的，这是因为三个线程都需要在同一个文件上进行操作，通过让三个线程代替三个进程，三个线程共享公共内存，于是它们都可以访问同一个正在编辑的文件。</p>
-<p>现在考虑另一个多线程发挥作用的例子，一个web服务器，某些页面较其它页面相比，有更多的访问，比如对主页的访问比其它更深层次的页面访问次数更多。利用这一事实，web服务器可以把获得大量访问的页面集合保存在内存中，这样的一种页面集合称为<strong>高速缓存（cache）</strong>，高速缓存也应用在其它很多场合。一种组织web服务器的方式如下图所示：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图6.png" alt="多线程web服务器"></p>
-<p>上图中，一个称为分派程序（dispatcher）的线程从网络中读入工作请求，在检查请求之后，分派现成挑选一个空转的（即被阻塞的）工作线程（worker thread）提交该请求。接着分派现成唤醒该工作线程，将它由阻塞状态转变为就绪状态。工作线程被唤醒后，它检查有关的请求是否在web页面的cache中，这个高速缓存是所有线程都可以访问的，如果没有，该线程开始执行从磁盘中调入页面的I/O操作，并且进入阻塞直到磁盘操作完成。当上述工作线程阻塞在磁盘操作时，为了完成更多操作，分派线程可能挑选另一个工作线程运行，也可以把另一个已经就绪的工作线程投入运行。</p>
-<p>这种模型允许把服务器编写为一个集合，在分派线程的程序中包含一个无限循环，该循环用来获得工作请求并把工作请求派给工作线程。每个工作线程的代码包含一个从分派线程接收请求的无限循环，收到请求后，如果页面存在，则返回给客户机，接着该工作线程阻塞，等待一个新的请求到来。</p>
-<p>在没有多线程的情况下，编写web服务器。一种可能的方式是：web服务器的主循环获得请求，检查请求，并在取下一个请求之前完成整个工作。在等待磁盘操作时，服务器空转，不处理任何到来的其他请求。课件线程较好地改善了web服务器的性能。如果对于这种性能的降低不可接受，那如果使用read系统调用，则还有一种可能的方式。在请求到来时，这个唯一的线程对请求进行考察，如果请求能在高速缓存中得到满足，那么一切都好，否则，就启动一个非阻塞的磁盘操作。服务器在表格中记录当前请求的状态，然后去处理下一个事件。下一个事件可能是一个新工作的请求，或是磁盘对先前操作的回答。如果是新工作的请求，就开始该工作；如果是磁盘的回答，就从表格中取出对应的信息，并处理该回答。对于非阻塞磁盘I/O而言，这种回答多数会以信号或者中断的形式出现。<strong>注意，这种情况下，“顺序进程”模型消失了，每次服务器从为某个请求工作的状态切换到另一个状态时，都必须显式地保存或者重新装入相应的计算状态。</strong>这里，每个计算都有一个被保存的状态，存在一个会发生且使得相关状态发生改变的事件集合，我们把这类设计称为<strong>有限状态机（finite-state machine）</strong>。</p>
-<p>现在很清楚多线程必须提供的是什么了，多线程使得“顺序进程”的思想得以保留下来，这种顺序进程阻塞了系统调用（如磁盘I/O），但是仍旧实现了并行性。</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图7.png" alt="构造服务器三种方法"></p>
-<h3 id="经典线程模型"><a href="#经典线程模型" class="headerlink" title="经典线程模型"></a>经典线程模型</h3><p>进程用于把资源集中到一起，而线程是在CPU上被调度执行的实体。在同一个进程环境中，多个线程共享一个地址空间和其他资源，这意味着线程间共享同样的全局变量，一个线程也可以读、写甚至清除另一个线程的堆栈，线程间是没有保护的，因为这是没有必要的，因为同一个进程中的多个线程是合作而不是竞争关系。线程之间对于资源的持有如下图所示：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图8.png" alt="线程与资源"></p>
-<p>和传统进程一样（即只有一个线程的进程），线程可以处于若干种状态的任何一个：运行、阻塞、就绪或者终止。认识到每个线程有其自己的堆栈很重要，下图展示这一状况：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图9.png" alt="每个线程有自己的堆栈"></p>
-<p>每个线程的堆栈有一帧，供各个被调用但是还没有从中返回的过程使用。例如，如果过程X调用过程Y，而Y又调用Z，那么当Z执行时，供X、Y和Z使用的帧会全部存在堆栈中。通常每个线程会调用不同的过程，从而有一个各自不同的执行历史，这就是为什么每个线程需要有自己的堆栈的原因。这里还可以了解线程的<strong>join</strong>操作和<strong>yield</strong>操作。</p>
-<h3 id="POSIX-线程"><a href="#POSIX-线程" class="headerlink" title="POSIX 线程"></a>POSIX 线程</h3><p>POSIX线程是线程的POSIX（Portable Operating System Interface of UNIX，可移植操作系统接口）标准。它定义的线程包叫做Pthread。有两种主要的方法实现线程包：<strong>在用户空间中和在内核中</strong>。这两种方法互有利弊，不过混合实现方式也是可能的。</p>
-<h3 id="在用户空间中实现线程"><a href="#在用户空间中实现线程" class="headerlink" title="在用户空间中实现线程"></a>在用户空间中实现线程</h3><p>这种方法是把整个线程包放在用户空间，内核对线程包一无所知，从内核角度考虑，就是按单线程进程方式管理。这种方法的优点：</p>
-<ul>
-<li>最明显的优点是：用户级线程包可以在不支持线程的操作系统上实现。<blockquote>
-<p>线程在一个运行时系统的顶部运行，这个运行时系统是一个管理线程的过程的集合。在用户空间管理线程时，每个进程需要有其专用的<strong>线程表（thread table）</strong>，用来跟踪该进程中的线程。这些表和内核中的进程表类似，不过它仅仅记录各个线程的属性，如每个线程的程序计数器、堆栈指针、寄存器等。该线程表由运行时系统管理，当一个线程转换到就绪态或者阻塞态时，需要在线程表中存放重新启动该线程所需的信息。如下图可以对比不同方式实现的线程包：</p>
-</blockquote>
-</li>
-</ul>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图10.png" alt="用户级和内核级线程包"></p>
-<ul>
-<li><p>可以方便地在进程内调度切换到另一个线程，并且线程切换非常快捷。</p>
-<blockquote>
-<p>在线程运行完成，例如，线程调用thread_yield ，就可以把线程的信息保存在线程表中，进而，线程调度程序来选择另一个要运行的线程。保存该线程状态的过程和调度程序都只是本地过程，所以启动它们比进行内核调用效率更高。</p>
-</blockquote>
-</li>
-<li><p>允许进程有自己定制的调度算法。</p>
-<blockquote>
-<p>例如，那些有垃圾收集线程的应用程序就不用担心线程会在不合适的时刻停止。</p>
-</blockquote>
-</li>
-</ul>
-<p>尽管用户级线程具有上述的优点，但是它的缺点也明显：</p>
-<ul>
-<li><p>第一个问题是如何实现阻塞系统调用。</p>
-<blockquote>
-<p>假设在还没有任何按键动作之前，一个线程读取键盘，让该线程时机进行该系统调用时不可接受的，因为这会停止所有的线程。使用线程的一个主要目标是：首先要允许每个线程使用阻塞调用，但是还要避免被阻塞的线程影响其他的线程。有了阻塞系统的调用，这个目标不太容易实现。</p>
-</blockquote>
-</li>
-<li><p>页面故障问题。</p>
-<blockquote>
-<p>如果某个程序调用或者跳转到了一条不在内存的指令上，而操作系统将到磁盘上取回这个丢失的指令（和该指令的“邻居们”），这就称为<strong>页面故障</strong>。如果有一个线程引起页面故障，内核甚至不知道有线程存在，通常会把整个进程阻塞，直到磁盘I/O完成为止，尽管其他线程是可以运行的。</p>
-</blockquote>
-</li>
-<li><p>如果一个线程开始运行，那么在该进程中的其他线程就不能运行，除非第一个线程自动放弃CPU。</p>
-<blockquote>
-<p>在一个单独的进程内部，没有时间中断，所以不可能用轮转调度（轮流）的方式调度进程。</p>
-</blockquote>
-</li>
-<li><p>可能反对用户级线程的最大负面意见是，程序员通常在经常发生线程阻塞的应用中才希望使用多个线程。</p>
-</li>
-</ul>
-<h3 id="在内核中实现线程"><a href="#在内核中实现线程" class="headerlink" title="在内核中实现线程"></a>在内核中实现线程</h3><p>由上面在用户空间实现的线程和在内核空间实现的线程对比图可以看出，在内核中实现线程不在需要运行时系统，另外，每个进程中也没有线程表。所有能够阻塞线程的调用都以系统调用的形式实现，这与运行时系统过程相比，代价是相当可观的。当一个线程阻塞时，内核根据其选择，可以运行同一个进程中的另一个线程或者运行另一个进程中的线程。而在用户级线程中，运行时始终运行自己进程的线程，直到内核剥夺它的CPU。如果某个进程中的线程引起页面故障，内核可以很方便地检查该进程是否还有其他可运行的线程，如果有，在等待所需要的页面从磁盘读入时，就选择一个线程运行。</p>
-<p>在内核中实现线程有以下缺点：</p>
-<ul>
-<li><p>但是内核中创建、撤销、切换线程操作代价都比较大。</p>
-<blockquote>
-<p>在内核中尽量减少创建和撤销线程，最好能实现复用（在执行完成后，标记为不可运行，当要创建新线程时，再将其启用）。</p>
-</blockquote>
-</li>
-<li><p>信号是发给进程而不是线程，当信号达到时要考虑将信号交给哪个线程处理。</p>
-<blockquote>
-<p>即使线程可以注册感兴趣的信号，但是多个线程注册同一个信号如何处理也是个问题。</p>
-</blockquote>
-</li>
-</ul>
-<h3 id="混合实现"><a href="#混合实现" class="headerlink" title="混合实现"></a>混合实现</h3><p>有试图将用户级线程的优点与内核级线程的优点结合起来的方法，一种方法是使用内核级线程，然后将用户级线程与某些内核线程多路复用起来，如下图所示：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图11.png" alt="用户级和内核级线程混合实现"></p>
-<h2 id="进程间通信"><a href="#进程间通信" class="headerlink" title="进程间通信"></a>进程间通信</h2><p><em>这个部分看了两次都不甚明白，先跳过。</em></p>
-<h2 id="调度"><a href="#调度" class="headerlink" title="调度"></a>调度</h2><h3 id="进程行为"><a href="#进程行为" class="headerlink" title="进程行为"></a>进程行为</h3><p>几乎所有进程的（磁盘）I/O请求或计算都是交替突发的。如下图所示，CPU不停顿地运行一段时间，然后发出一个系统调用以便读写文件。如下图所示：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图12.png" alt="突发进行"></p>
-<p>图中有一件事值得注意，某些进程花了大多数时间在计算上，称为计算密集型；有些在等待I/O上花了大多数啊时间，称为I/O密集型。有必要指出，随着CPU越来越快，更多的进程倾向于I/O密集型，这里的基本思想是，如果需要运行I/O密集型进程，那么就应该让它尽快得到机会，以便发出磁盘请求并保持磁盘始终忙碌。</p>
-<h3 id="何时调度"><a href="#何时调度" class="headerlink" title="何时调度"></a>何时调度</h3><ul>
-<li>创建新进程后，决定运行父进程还是子进程。</li>
-<li>在一个进程退出时必须做出调度决策。</li>
-<li>一个进程阻塞时，必须选择另一个进程运行。</li>
-<li>发生I/O中断时，做出调度决策。</li>
-</ul>
-<h3 id="调度算法的目标"><a href="#调度算法的目标" class="headerlink" title="调度算法的目标"></a>调度算法的目标</h3><p>在讨论目标前，有必要了解我们会处于那些环境中，在不同的应用领域有不同的环境，可以将其分为三类：</p>
-<ul>
-<li>批处理</li>
-<li>交互式</li>
-<li>实时</li>
-</ul>
-<p>下图针对所有环境列出不同的目标：</p>
-<p><img src="/assets/Book-Notes/现代操作系统/chapter-2/图13.png" alt="不同环境不同目标"></p>
-<p><strong>批处理系统的调度算法</strong></p>
-<blockquote>
-<p>先来先服务<br>最短作业优先<br>最短剩余时间优先</p>
-</blockquote>
-<p><strong>交互式系统调度算法</strong></p>
-<blockquote>
-<p>轮转调度<br>优先级调度<br>多级队列调度：<br>最短进程优先<br>保证调度<br>彩票调度<br>公平分享调度</p>
-</blockquote>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">读书笔记-现代操作系统（第三版）</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2018/05/29/现代操作系统（第三版）-第2章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-HTTP 权威指南-第14章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2018/05/25/HTTP 权威指南-第14章/">第14章：安全HTTP</a>
-    </h1>
-  
-
-        
-        <a href="/2018/05/25/HTTP 权威指南-第14章/" class="archive-article-date">
-  	<time datetime="2018-05-25T00:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-05-25</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>前面讨论的基本认证方式和摘要认证以及报文完整性检查都是轻量级的方法，但对于重要的如银行业务处理，大规模网上购物来说，这还不够，我们需要一种能够提供下列功能的HTTP安全技术：</p>
-<ul>
-<li>服务器验证，客户端验证服务器是真的还是伪造的</li>
-<li>客户端认证，服务器验证客户端是真的还是伪造的</li>
-<li>完整性，客户端和服务器的数据不被修改</li>
-<li>加密，无需担心会话被窃听</li>
-<li>效率，算法的运行要求足够快</li>
-<li>普适性，基本上所有的客户端和服务器都支持这种协议</li>
-<li>其他</li>
-</ul>
-<h3 id="https"><a href="#https" class="headerlink" title="https"></a>https</h3><p>https是最流行的HTTP安全形式，它的URL以<strong> https:// </strong> 而不是  http:// 开头。所有的HTTP请求和响应数据在发送到网络之前都要进行加密，HTTPS在HTTP下面提供了一个安全层，可以使用SSL，也可以使用其后继者TSL（Transport Layer Security，传输层安全），由于二者十分类似，所以一般不太严格地用SSL来表示SSL和TSL。</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/layer-with-https.png" alt="http与https的层次"></p>
-<h4 id="数字加密"><a href="#数字加密" class="headerlink" title="数字加密"></a>数字加密</h4><p>概念</p>
-<ul>
-<li><p>密码：对文本进行编码的算法。</p>
-</li>
-<li><p>密钥：改变密码行为的数字化参数</p>
-</li>
-<li><p>对称密钥加密系统：编/解码使用相同密钥的算法</p>
-</li>
-<li><p>不对称密钥加密系统：编/解码使用不同密钥的算法</p>
-</li>
-<li><p>公开密钥加密算法：一种能够使数百万计算机便捷地发送机密报文的系统</p>
-</li>
-<li><p>数字签名：用来验证报文是否被改动的校验和。</p>
-</li>
-<li><p>数字证书：由可信的组织验证和签发的识别信息</p>
-</li>
-</ul>
-<p>假如使用rot3（循环移位3字符）方式对报文加密，则 明文 meet 加密后为 phhw，示意图如下：</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/N=3-example.png" alt="循环移位3字符"></p>
-<p>那在概念中，<strong>密码</strong>就是 “循环移位N字符” ，N的值是由<strong>密钥</strong>控制的，在这里N的值是3。 改变密钥的值就能产生不同的密文。编码算法和编码机器都可能落入敌人手中，但是只要没有正确的号盘设置（密钥值），也无法实现解码。这种属于使用了密钥的密码。</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/same-pass-diff-key.png" alt="相同密码不同密钥"></p>
-<p><strong>数字密码：</strong>数字密码只是一些数字，这些数字密钥值是编码/解码算法的输入，编码算法就是一些函数，这些函数会读取一块数据，并根据算法和密钥的值对其进行编码/解码。给定一段明文P、一个编码函数E和一个数字编码密钥e，就可以生成一段经过编码的密文C，通过解码函数D和解码密钥d，就可以将密文C解码为原始的明文P，当然，编码/解码函数互为反函数。</p>
-<h4 id="对称密钥加密技术"><a href="#对称密钥加密技术" class="headerlink" title="对称密钥加密技术"></a>对称密钥加密技术</h4><p><strong>对称密钥加密</strong>在编码时候使用的密钥值和解码时候的密钥值一样的。保持密钥的机密很重要，在很多情况下，编码解码算法都是众所周知的，因此密钥是唯一保密的东西了。可用密钥的数量取决于密钥中的位数，以及可能的密钥中有多少是有效的。就对称加密而言，通常所有的密钥值都是有效的（知名的非对称密钥加密系统RSA中，有效密钥必须以某种方式与质数相关，因此并非所有的密钥都有效）。8位的密钥只有256个可能，40位的密钥可以有2的40次方个可能的密钥值等等。</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/key-len-with-crack-time.png" alt="密钥长度与破解难度"></p>
-<blockquote>
-<p>流行的对称密钥加密算法有:DES/Triple-DES、RC2、RC4</p>
-</blockquote>
-<p><strong>缺点：</strong>发送者和接收者在对话前一定要有一个共享的保密密钥，服务器与每个客户端都需要有一个独立的密钥，以致如果客户端数量过多的情况下，服务器保存的密钥数量可观。如果N个节点，每个节点都要和其他所有N-1个节点通信，总共大概会保存N的平方个密钥，这将是一个管理噩梦。</p>
-<h4 id="公开密钥加密技术"><a href="#公开密钥加密技术" class="headerlink" title="公开密钥加密技术"></a>公开密钥加密技术</h4><p>公开密钥加密技术使用了两个非对称密钥，一个用来对报文编码，一个用来对报文解码。编码密钥是可以公之于众的，每个<strong>不同的客户端</strong>可以用<strong>相同的编码密钥</strong>进行加密，但是只有主机自己才知道私有的解密密钥，只有解密密钥才能解码。</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/diff-encry-method.png" alt="对称加密与公开密钥技术"></p>
-<p>在引入公钥加密机制之前，可以先看两个问题：</p>
-<blockquote>
-<p>问题1:314159265358979 × 314159265358979 的结果是多少？<br>问题2： 3912571506419387090594828508241 的平方根是多少？</p>
-</blockquote>
-<p>如果不用计算器，第一个问题，相信大多数人花上一两个小时用纸笔能够计算出来，而第二个问题，即使花上一两天，估计也基本上没人能解出来。虽然平方和开方互为逆运算，但是它们的复杂度差异却很大，这种不对称性构成了公钥密码体系的基础。一种叫做RSA的公钥机制表明，对计算机来说，大数的乘法比对大数进行因式分解要容易得多。所有公开密钥非对称加密系统的要求是，即便拥有以下线索：</p>
-<ul>
-<li>公开密钥（共有的，每个人都可以获得）</li>
-<li>一小片拦截下来的密文（可以网络嗅探获得）</li>
-<li>一条报文以及与之相关的密文（对一段文本使用公钥加密就可以得到）</li>
-</ul>
-<p>也无法计算出保密的私有密钥。</p>
-<p>RSA 就是满足这些条件的流行的公开机密要加密系统。RSA的算法是公开的，源代码也可以获得，破解的难度与一个极大的数字进行质因数分解的难度一样。</p>
-<h4 id="混合加密系统和会话密钥"><a href="#混合加密系统和会话密钥" class="headerlink" title="混合加密系统和会话密钥"></a>混合加密系统和会话密钥</h4><p>任何人只要知道了公开密钥，就可以向一台公共服务器发送安全报文，所以非对称的公开密钥加密系统是很好用的，两个节点无须为了进行安全的通信而先交换私有密钥。但公开密钥加密算法的计算可能会很慢，比较常见的做法是在两个节点之间通过便捷的公开密钥加密技术建立起安全通信，然后再利用那条安全通道产生并发送临时的随机对称密钥，通过更快的对称加密技术对其余的数据进行加密。</p>
-<h4 id="数字签名"><a href="#数字签名" class="headerlink" title="数字签名"></a>数字签名</h4><p>除了加密/解密报文之外，还可以用加密系统对报文进行<strong>签名（sign）</strong>，以说明是谁编写的报文，同时证明报文未被篡改过，这种技术被称为<strong>数字签名（digital signing）</strong>。签名是加了密的校验和，使用数字签名有以下两个好处：</p>
-<ul>
-<li><p>签名可以证明是作者编写了这条报文。</p>
-<blockquote>
-<p>只有作者才有最机密的私有密钥，因此只有作者才能计算出这些校验和。</p>
-</blockquote>
-</li>
-<li><p>签名可以防止报文被篡改。</p>
-<blockquote>
-<p>如果恶意攻击者在传输过程中修改了报文，则校验和就不再匹配了，攻击者没有私钥，无法为篡改的报文伪造正确的验证码。</p>
-</blockquote>
-</li>
-</ul>
-<p>以下例子说明了节点A是如何向节点B发送一条报文，并对其进行签名：</p>
-<ol>
-<li>节点A将变长报文提取为定长摘要。</li>
-<li>节点A对摘要应用一个“签名”函数，这个函数会将用户的私有秘钥作为参数。因为只有A知道私有密钥，所以正确的签名函数会说明签名者就是所有者。在下图中，由于解码函数D中包含了用户的私有密码，所以我们将其作为签名函数使用。</li>
-<li>一旦计算出签名，节点A就将其附加在报文末尾，并将报文和签名都发给B</li>
-<li>在接收端，如果B需要确定报文确实是A写的，而且没有被篡改过，节点B就可以对签名进行检查。节点B接收经过私有秘钥扰码的签名，并应用了使用公开密钥的反函数，如果拆包后的摘要与节点B自己的摘要版本不匹配，就说明要么被篡改了，要么发送者不是A。</li>
-</ol>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/msg-sign-example.png" alt="报文签名例子"></p>
-<h4 id="数字证书"><a href="#数字证书" class="headerlink" title="数字证书"></a>数字证书</h4><p>数字证书都是由可信任的颁发机构颁发，它通常包括 对象的名称、过期时间，证书颁发者，来自证书发布者的数字签名、通常还包括对象的公开密钥以及对象使用签名算法的描述性信息。典型的数字签名格式如下：</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/typical-digital-signing.png" alt="典型的数字签名"></p>
-<p>数字证书没有单一的全球标准，但现在大多数证书都以一种标准格式 ——X.509 v3 描述。</p>
-<h4 id="用证书对服务器进行认证"><a href="#用证书对服务器进行认证" class="headerlink" title="用证书对服务器进行认证"></a>用证书对服务器进行认证</h4><p>通过https建立一个安全的web事务之后，现代的浏览器会自动获取所连接服务器的数字证书，如果如武器没有证书，安全连接就会失败，服务器证书中包含很多字段，包括：</p>
-<ul>
-<li>web站点的名称和主机名；</li>
-<li>web站点的公开密钥；</li>
-<li>颁发机构的名称；</li>
-<li>颁发机构的签名。</li>
-</ul>
-<p>浏览器收到证书时会对签名颁发机构进行检查，如果这个机构是很权威的公司，那浏览器一般已经知道其公开密钥了（浏览器会预先安装很多签名颁发机构的证书），就能像之前那样验证签名了。如果对签名颁发机构一无所知，浏览器就无法确定是否应该信任这个签名颁发机构，它通常会向用户展示一个对话框，看用户是否相信这个签名发布者，因为发布者可能是本地IT部门。以下展示了验证签名的过程：</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/verify-the-sign.png" alt="验证签名"></p>
-<h3 id="HTTPS-细节介绍"><a href="#HTTPS-细节介绍" class="headerlink" title="HTTPS-细节介绍"></a>HTTPS-细节介绍</h3><p>https就是在安全的传输层上发送的http，它在将http报文发送给TCP之前，先将其发送给一个安全层，对其进行加密。对web服务器发起请求时，我们需要一种方式来告知web服务器去执行http的安全协议版本，这是在URL的方案中实现的，对web资源执行某事务时，它会检查URL方案：</p>
-<ol>
-<li>如果URL方案是http，客户端会打开一条到服务器端口80的连接（默认情况下），并发送http命令。</li>
-<li>如果URL的方案是https，客户端就会打开一条到服务器端口443（默认情况）的连接，然后与服务器握手，以二进制格式与服务器交换一些SSL安全参数，附上加密的http命令。</li>
-</ol>
-<p>在https中，客户端首先打开一条到web服务器端口443（默认情况）的连接，一旦建立了TCP连接，客户端和服务器就会初始化SSL层，对加密参数进行沟通，并交换密钥，握手完成后，SSL就初始化完成了，客户端就可以将请求报文发送给安全层了，在将这些报文发送给TCP之前，要先对其进行加密。http和https的对比：</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/http-with-https.png" alt="验证签名"></p>
-<h4 id="SSL握手"><a href="#SSL握手" class="headerlink" title="SSL握手"></a>SSL握手</h4><p>在发送已加密的HTTP报文之前，客户端和服务端要进行一次SSL握手，主要完成以下工作：</p>
-<ul>
-<li>交换协议版本号</li>
-<li>选择一个两端都了解的密码</li>
-<li>对两端身份进行验证</li>
-<li>生成临时会话密钥，以便加密信道</li>
-</ul>
-<p>SSL握手简化版示意图如下：</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/simple-SSL-handshake.png" alt="SSL简化版握手"></p>
-<p>在一个web服务器上执行安全事务，比如提交银行卡信息时，总是希望在于你所认为的那个组织对话，因此https事务总是要求使用服务器证书的。站点证书有效性检查步骤如下：</p>
-<ol>
-<li><strong>日期检测</strong>。检查证书的起始日期和结束日期。</li>
-<li><strong>签名颁发者可信度检测</strong>。每个证书是由某个证书颁发机构（CA）签发的，它们负责位服务器担保，证书有不同的等级，每种证书都要求不同级别的背景验证。比如申请某个电子商务服务证书，通常要求提供一个营业的合法证明。</li>
-<li><strong>签名检测</strong>。一旦判定签名授权是可信的，浏览器就要对签名使用颁发机构的公开密钥，并将其与校验码比较，以查看证书的完整性。</li>
-<li><strong>站点身份检测</strong>。为防止服务器复制其他人的证书，或拦截他人流量，大部分浏览器都会试着去验证证书中的域名与它们所对话的服务器的域名是否匹配。</li>
-</ol>
-<h4 id="虚拟主机与证书"><a href="#虚拟主机与证书" class="headerlink" title="虚拟主机与证书"></a>虚拟主机与证书</h4><p>对于虚拟主机（一台服务器上有多个主机名），有些流行的web服务器程序只支持一个证书，如果用户请求的是虚拟主机名，与证书名称并不完全匹配，浏览器就会显示警告框。比如cajun-shop.com网站，站点的托管服务提供商提供的官方名称位 cajun-shop.securesites.com。 用户进入<a href="http://www.cajun-shop.com时，服务器证书中列出的官方主机名（*.securesites.com）与用户浏览的虚拟主机名（www.cajun-shop.com）不匹配，以至于出现警告。" target="_blank" rel="noopener">http://www.cajun-shop.com时，服务器证书中列出的官方主机名（*.securesites.com）与用户浏览的虚拟主机名（www.cajun-shop.com）不匹配，以至于出现警告。</a></p>
-<p>为了防止出现这个问题，cajun-shop.com的所有者会在开始处理安全事务时，将所有用户都重定向到cajun-shop.securesites.com。</p>
-<h4 id="通多代理以隧道形式传输安全流量"><a href="#通多代理以隧道形式传输安全流量" class="headerlink" title="通多代理以隧道形式传输安全流量"></a>通多代理以隧道形式传输安全流量</h4><p>很多公司都会在公司网络和公共因特网的安全边界上放置一个代理，代理是防火墙路由器唯一允许进行http流量交换的设备，它可能会进行病毒检测或者其他的内容控制工作。</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/server-agent.png" alt="公司的代理"></p>
-<p>但只要客户端开始用服务器的公开密钥对发往服务器的数据进行加密，代理就再也不能读取http首部了！代理不能读取首部，意味着无法知道应该将请求转向何处。</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/cannot-transmit.png" alt="代理不能转发"></p>
-<p>这种情况一种常用的技术就是https SSL 隧道协议，客户端首先要告知代理，他想要连接的安全主机和端口，这是在开始加密之前以明文形式告知的，所以代理可以理解这条信息。</p>
-<blockquote>
-<p>http通过新的名为connect的扩展方法来发送明文形式的端点信息，connect方法会告诉代理，打开一条到期望主机和端口号的连接，这项工作完成之后，直接在客户端和服务器之间以隧道形式传输数据。</p>
-</blockquote>
-<p>以下示意了一个connet：</p>
-<p><img src="/assets/Book-Notes/http权威指南/chapter-14/connect-sample.png" alt="connect实例"></p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">读书笔记-HTTP 权威指南</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2018/05/25/HTTP 权威指南-第14章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
   
     <nav id="page-nav">
       <a class="extend prev" rel="prev" href="/page/5/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/4/">4</a><a class="page-number" href="/page/5/">5</a><span class="page-number current">6</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/7/">Next &raquo;</a>
@@ -1676,6 +1550,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color2">读书笔记-Android进阶之光</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color3">深Android系统源代码情景分析(第三版)</a>
               </li>
             
             <div class="clearfix"></div>

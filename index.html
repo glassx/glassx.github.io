@@ -160,6 +160,244 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-深入理解Java虚拟机-第12章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <hr>
+<p>layout: post<br>title: “第13章: Java内存模型与线程”<br>date: 2019-09-23 07:46<br>comments: true<br>tags: </p>
+<pre><code>- 深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)
+</code></pre><hr>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I/O 、网络通信或者数据库访问上。</p>
+<h2 id="硬件的效率与一致性"><a href="#硬件的效率与一致性" class="headerlink" title="硬件的效率与一致性"></a>硬件的效率与一致性</h2><p>高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存，而它们又共享同一主存(Main memory)，当多个处理器的运算任务都涉及同一块主内存区域时，可能导致各自的缓存数据不一致，此时，同步回到主存时以谁的缓存数据为准呢？</p>
+<p>除高速缓存外，为了使处理器内部运算单元尽量被充分利用，处理器可能会对输入代码进行乱序执行(Out-Of-Execution)优化，处理器会在计算之后将乱序执行的结果重组，保证该结果与顺序执行的结果是一致的，但是并不保证程序中各个语句计算的先后顺序与输入代码中的顺序一致。因此，如果某个计算任务依赖另一个计算任务的中间结果，那么其顺序性不能依靠代码的先后顺序来保证。</p>
+<h2 id="Java-内存模型"><a href="#Java-内存模型" class="headerlink" title="Java 内存模型"></a>Java 内存模型</h2><p>Java 内存模型(Java Memory Model, JMM) 是用来屏蔽各种硬件和操作系统的内存访问差异。</p>
+<h3 id="主内存与工作内存"><a href="#主内存与工作内存" class="headerlink" title="主内存与工作内存"></a>主内存与工作内存</h3><p>Java 内存模型的主要目标是定义程序中各个变量的访问规则，此处的变量(Variables) 包括 <strong>实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不存在竞争。</strong></p>
+<blockquote>
+<p>注意区别：如果局部变量是个refrence类型，它引用的对象在Java堆中可能被各个线程共享，但refrence本身在Java栈的局部变量表中，是线程私有的。</p>
+</blockquote>
+<p>Java内存模型规定所有的变量都存储在主内存(Main Memory)，每条线程还有自己的工作内存(Working Memory)，这两个分别可以类比物理模型中的主内存以及处理器的高速缓存。线程的工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作（读取、赋值等）都必须在工作内存中进行，而不能直接读写主内存中的变量。</p>
+<blockquote>
+<p>关于副本拷贝，假设线程访问一个10MB 的对象，那会不会也拷贝出来呢？虚拟机基本上不会这么实现，只有对象的引用、对象中某个在线程中访问到的字段是可能存在拷贝的。还有，**这里所讲的主内存、工作内存 与 前面讲的Java堆、栈、方法区等并不是同一个层次的内存划分，二者并没有关系。</p>
+</blockquote>
+<h3 id="内存间交互操作"><a href="#内存间交互操作" class="headerlink" title="内存间交互操作"></a>内存间交互操作</h3><p>Java 内存模型中定义了以下8中操作来完成从主内存拷贝到工作内存，以及从工作内存同步回主内存：</p>
+<ul>
+<li>lock（锁定）：对主内存变量标识为某一条线程独占。    </li>
+<li>unlock（锁定）：对主内存变量标识为解锁。    </li>
+<li>read（读取）：作用于主内存变量，把一个变量值从主内存传输到线程的工作内存，以便后面的load操作。    </li>
+<li>load（载入）：作用于工作内存变量，把read操作从主内存得到的变量值放入工作内存的变量拷贝中。    </li>
+<li>use（使用）：作用于工作内存变量。把工作内存中一个变量的值传递给执行引擎。当虚拟机遇到一个需要使用到变量的值的字节码指令时执行这个操作。    </li>
+<li>assign（赋值）：作用于工作内存变量。把一个从执行引擎接收道德值赋值给工作内存的变量。当虚拟机遇到一个给变量赋值的字节码指令时执行这个操作。    </li>
+<li>store（存储）：作用于工作内存变量。把工作内存中一个变量的值传送到主内存中，以便随后的write操作。    </li>
+<li>write（写入）：作用于主内存变量。把store操作从工作内存中得到的变量的值放入主内存的变量中。    </li>
+</ul>
+<p>如果要把一个变量从主内存复制到工作内存，那就要顺序地执行 read 和 load 操作（<strong>只是顺序地执行，不保证连续执行，中间是可以插入其他指令的</strong>），如果要把变量从工作内存同步回主内存，就要顺序地执行 store 和 write 操作。并且，Java 内存模型要求执行上述操作必须满足下列条件：</p>
+<ul>
+<li>read 和 load、store 和 write  必须成对出现，不许单独出现。    </li>
+<li>变量在工作内存中改变了之后，必须要同步回主内存，即不允许丢弃它最近的 assign 操作；并且如果没有发生assign，则不允许同步回主内存。     </li>
+<li>对一个变量 use、store 之前，必须先执行过了 assign 和 load 。     </li>
+<li>一个变量在同一时刻只允许一条线程执行 lock 操作，但 lock 操作可以被同一条线程重复执行多次，多次 lock 后，只有执行相同次数的 unlock 操作后变量才能被解锁。     </li>
+<li>如果对一个变量执行 lock 操作，那会清空工作内存中此变量的值，在执行引擎使用这个变量迁，需要重新执行 load 或 assign 操作初始化变量值。     </li>
+<li>如果变量没有被 lock 锁定，那就不允许对它执行 unlock ，也不允许 unlock 一个被其他线程 lock 住的变量。     </li>
+<li>对变量执行 unlock 之前，必须把此变量同步回主内存中（执行 store、write 操作）。    </li>
+</ul>
+<h3 id="对于-volatile-型变量的特殊规则"><a href="#对于-volatile-型变量的特殊规则" class="headerlink" title="对于 volatile 型变量的特殊规则"></a>对于 volatile 型变量的特殊规则</h3><p>volatile 可以说是Java虚拟机提供的最轻量级的同步机制。这里首先以不正式但通俗易懂的语言来介绍这个关键字的作用，当一个变量定义为 volatile 后，它将具备两种特性：</p>
+<ul>
+<li>第一是保证此变量对所有线程的可见性，这里的“可见性”是指当一条线程修改了这个变量的值，新值对其他线程来说是可以立即得知的。而普通变量是做不到这一点的。     </li>
+<li>第二个语义是禁止指令重排序优化。    </li>
+</ul>
+<p>关于volatile 变量的可见性，经常会有开发人员误解，认为 “volatile 变量在各个线程中是一致的，所以基于 volatile 变量的运算在并发下是安全的”，<strong>因为事实上我们不能得出“基于 volatile 变量的运算在并发下是安全的” 这样的结论，因为虽然volatile变量在各个线程的工作内存中不存在一致性问题(由于每次使用之前都要先刷新，所以执行引擎看不到一致的情况，所以可以认为不存在一致性问题)，但Java里面的运算并非原子操作，所以导致 volatile 变量的运算在并发下一样是不安全的。</strong>通过以下简单代码可以演示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> race = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> THREADS_COUNT = <span class="number">20</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        race++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        Thread[] threads = <span class="keyword">new</span> Thread[THREADS_COUNT];</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; THREADS_COUNT; i++) &#123;</span><br><span class="line">            threads[i] = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10000</span>; i++) &#123;</span><br><span class="line">                        increase();</span><br><span class="line">                        <span class="comment">//System.out.println(race);</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line"></span><br><span class="line">            threads[i].start();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="comment">//等待所有累加线程都结束</span></span><br><span class="line">        <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">1</span>) &#123;</span><br><span class="line">            Thread.yield();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        System.out.println(race);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p><strong>注意：我个人运行这段代码的时候，并不能正常打印，因为while循环中的 Thread.activeCount()  一直是2，只有把 for 循环中的 System.out.println(race) 放开才能打印，我的环境是： Android Studio 3.5 + jre1.8 。</strong>,如果并发正确的话，最终输出结果应该是 200000，但实际运行的结果大概率会是一个小于 200000 的数字。为什么呢？问题出在 increase() 方法中的 race++ 操作上，我们可以<strong>使用javap命令反编译</strong>这个函数的代码得到如下的字节码：</p>
+<p><img src="/assets/" alt="increase方法字节码"></p>
+<p>发现只有一行代码的increase方法在class文件中是由4条字节码指令构成的(return 不是由 race++ 产生的)，所以很容易分析出并发失败的原因了：当getstatic 指令把 race 的值取到操作栈顶时，volatile 可以保证 race 的值是正确的、最新的，但在执行 iconst_1、iadd 这些指令的时候，其他线程可能已经把 race 的值增大了，所以最后执行 putstatic 指令后可能把较小的 race 值同步回了主内存中。</p>
+<blockquote>
+<p>客观地说，此处用字节码来分析问题仍然是不严谨的，因为即使编译出来只有一条字节码指令，也并不意味着这条指令就是一个原子操作，一条字节码在执行时，解释器往往要运行多行代码才能实现它的语义。如果是编译执行，一条字节码可能会转化成若干条本地机器码指令。但考虑阅读方便，并且字节码已经够说明问题，所以此处选用字节码分析。</p>
+</blockquote>
+<p>以上代码说明volatile 在并发运行中可能出现的问题，但是如下代码场景就很适合使用 volatile 变量来控制并发，当shutdown 方法调用时，能保证所有线程中执行的 doWork() 方法都能停下来：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">volatile</span> <span class="keyword">boolean</span> stopThread;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">shutdown</span><span class="params">()</span></span>&#123;</span><br><span class="line">    stopThread = <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doWork</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(!stopThread)&#123;</span><br><span class="line">        <span class="comment">//do stuff</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>volatile 禁止指令重排序优化仍然不太容易理解，通过以下伪代码来看看为何指令重排序会干扰程序的并发执行：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Map configOptions;</span><br><span class="line"><span class="keyword">char</span>[] configText;</span><br><span class="line"><span class="comment">//此变量必须定义为 volatile</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//假设以下代码在线程 A 中执行，模拟读取配置信息，读取</span></span><br><span class="line"><span class="comment">//完成后，将 initialized 设置为 true 以通知其他线程</span></span><br><span class="line">configOptions = <span class="keyword">new</span> HashMap();</span><br><span class="line">configText = readConfigFile(fileName);</span><br><span class="line">processConfigOptions(configText,configOptions);</span><br><span class="line">initialized = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//假设以下代码在线程 B 中执行，等待 initialized 为 true ，</span></span><br><span class="line"><span class="comment">//代表线程 A 已经把配置信息初始化完成</span></span><br><span class="line"><span class="keyword">while</span>(!initialized)&#123;</span><br><span class="line">    sleep();</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//使用线程 A 中初始化好的配置信息</span></span><br><span class="line">doSomethingWithConfig();</span><br></pre></td></tr></table></figure>
+<p>这个场景十分常见，只是我们在处理配置文件时一般不会出现并发而已。如果 initialized 没有使用 volatile 修饰，就可能由于指令重排序优化，导致 initialized = true 被提前执行(指令重排序优化是机器级的优化操作，这里说的提前执行是指对应的汇编代码提前执行)，这样线程 B 中使用配置信息的代码就可能出现错误，而volatile 可以避免此类情况发生。以下再举个例子来说明 volatile 关键字是如何禁止指令重排序优化的：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> SingleTon instance;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(instance == <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="keyword">synchronized</span>(Singleton.class)&#123;</span><br><span class="line">                <span class="keyword">if</span>(instance == <span class="keyword">null</span>)&#123;</span><br><span class="line">                    instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span>&#123;</span><br><span class="line">        Singleton.getInstance();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译后，这段代码对instance变量赋值部分如下代码所示：</p>
+<p><img src="/assets/" alt="单例编译后代码清单"></p>
+<p>可以对比 instance 有被volatile修饰和没有被修饰的编译后的代码，会发现，关键变化在于有 volatile 修饰的变量，在赋值(mov %eax,0x150(%esi) 这句就是赋值操作)，之后<strong>会多执行一个 lock 操作，这个操作是一个内存屏障，令重排序时不能把后面的指令重排序到内存屏障之前的位置</strong>。只有一个cpu访问内存时，并不需要内存屏障；但如果有两个或更多cpu访问同一块内存，且其中有一个在观测另一个，就需要内存屏障来保证一致性。这操作也相当于做了一次 store 和 write 操作，引起其他cpu（或内核）对于这个变量的无效化，因此保证了 volatile 变量的修改对其他cpu立即可见。</p>
+<blockquote>
+<p>在某些情况下，volatile 的同步机制的性能确实要优于锁，但是虚拟机对锁实行许多消除和优化，所以我们很难量化地认为 volatile 的同步机制比锁快多少。但是可以肯定的是：volatile 变量的读操作与普通变量几乎没差别，但写操作可能会慢一些，因为它需要需要在本地代码中插入内存屏障保证处理器不乱序执行。</p>
+</blockquote>
+<h3 id="long-和-double-型变量的特殊规则"><a href="#long-和-double-型变量的特殊规则" class="headerlink" title="long 和 double 型变量的特殊规则"></a>long 和 double 型变量的特殊规则</h3><p>long 和double 都是64未数据类型，内存模型允许虚拟机将没有被 volatile 修饰的64位数据类型的读写操作分为两次32位操作来进行，可能会导致某些线程读到”半个变量”的数据，不过这种情况十分罕见(目前商用Java虚拟机不会出现)，所以了解这回事即可。</p>
+<h3 id="原子性、可见性-与-有序性"><a href="#原子性、可见性-与-有序性" class="headerlink" title="原子性、可见性 与 有序性"></a>原子性、可见性 与 有序性</h3><p>整体回顾一下Java内存模型，Java内存模型是围绕着在并发过程中如何处理原子性、可见性和有序性3个特征来建立的。</p>
+<ul>
+<li><p>原子性(Atomicity)：read、load、assign、use、store 和 write 操作是保证原子性的，基本数据类型的访问读写也是具有原子性的。如果要保证更大范围的原子性，Java 内存模型还提供了 lock 和 unlock 来满足这种需求。</p>
+</li>
+<li><p>可见性。可见性指一个线程修改了共享变量的值，其他线程能立即得知这个修改。除了volatile 之外，Java还有两个关键字能实现可见性，即 synchronize 和 final 。同步块的可见性是由 “对一个变量执行unlock操作前，必须把此变量同步回主内存中” 获得的。<strong>而final修饰的字段在构造器中一旦初始化完成，并且构造器没有把 “this”的引用传递出去(this引用逃逸是很危险的，其他线程可能通过这个引用访问到”初始化了一半”的对象)，那在其他线程中就能看到 final 字段的值。</strong></p>
+</li>
+<li><p>有序性。Java 程序中有序性可以总结为：如果在本线程内观察，所有操作都是有序的；如果从一个线程观察另一个线程，所有操作都是无序的。前者指“线程内表现为串行语义” ，后者指“指令重排序”和“工作内存与主内存同步延迟” 现象。Java 语言提供了 volatile 和 synchronized 来保证线程之间操作的有序性，前者本身包含了指令重排序的语义；后者通过 “一个变量在同一个时刻只允许一条线成对其进行lock操作”决定了持有同一个锁的两个同步块只能串行进入。</p>
+</li>
+</ul>
+<h3 id="先行发生原则"><a href="#先行发生原则" class="headerlink" title="先行发生原则"></a>先行发生原则</h3><p>这块理论性的总结性的内容，个人觉得就先不写了。</p>
+<h2 id="Java-线程"><a href="#Java-线程" class="headerlink" title="Java 线程"></a>Java 线程</h2><h3 id="线程的实现"><a href="#线程的实现" class="headerlink" title="线程的实现"></a>线程的实现</h3><p>这块的内容在<a href="https://glassx.github.io/2018/05/29/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC2%E7%AB%A0/" target="_blank" rel="noopener">操作系统的内容</a>中有描述：</p>
+<ol>
+<li>使用内核线程实现（每个内核线程对应一个轻量级进程）；    </li>
+<li>使用用户线程实现（创建销毁开销小，没有内核支援，处理诸如阻塞等问题异常困难）；    </li>
+<li>使用用户线程+轻量级进程混合实现（即内核线程和用户线程一起使用，n: m 的关系）。    </li>
+</ol>
+<h3 id="Java-线程调度"><a href="#Java-线程调度" class="headerlink" title="Java 线程调度"></a>Java 线程调度</h3><p>线程调度的方式主要有两种： 协同式线程调度(Cooperative Threads-Scheduling) 和 抢占式线程调度(Preemptive Threads-Scheduling)。前者靠线程自觉，线程执行时间由线程自己控制，后者每个线程由系统分配时间，Java 使用后者。</p>
+<p>虽然Java线程调度是系统自动完成的，但是我们可以给线程设置优先级来“建议”系统给某些线程多一些时间。但给线程设置优先级还是不靠谱的，原因如下：</p>
+<ol>
+<li><p>Java 线程是通过映射到系统的原生线程上来实现的，不同的系统上的优先级与Java的线程优先级等级基本上对应不上。可能你在Java中指定的2个优先级，在某操作系统上映射成同一个优先级。</p>
+</li>
+<li><p>优先级可能会被系统自行改变。</p>
+</li>
+</ol>
+<h3 id="状态转换"><a href="#状态转换" class="headerlink" title="状态转换"></a>状态转换</h3><p>Java 语言定义了5种线程状态，在任一时间点，一个线程只能有且只有其中的一种状态：</p>
+<ul>
+<li>新建(New)：创建后尚未启动。    </li>
+<li>运行(Runnable)：可能在执行，也有可能在等待 CPU 分配时间。    </li>
+<li>无限期等待(Waiting)：这种状态下不会被 CPU 分配时间，要等其他线程显式地唤醒。     </li>
+</ul>
+<blockquote>
+<p>以下方法会让线程陷入无限期等待：<br>没有设置 Timeout 参数的 Object.wait() 方法。<br>没有设置 Timeout 参数的 Thread.join() 方法。<br>LockSupport.park() 方法。     </p>
+</blockquote>
+<ul>
+<li>限期等待(Timed Waiting)：这种状态下不会被 CPU 分配时间，不过无需等待其他线程显式唤醒，在一定时间后由系统自动唤醒。</li>
+</ul>
+<blockquote>
+<p>以下方法会让线程进入限期等待：<br>Thread.sleep() 方法。<br>设置了 Timeout 参数的 Object.wait() 方法。<br>设置了 Timeout 参数的 Thread.join() 方法。<br>LockSupport.parkNanos() 方法。<br>LockSupport.parkUtil() 方法。     </p>
+</blockquote>
+<ul>
+<li><p>阻塞(Blocked)：阻塞状态是在等待获取一个排他锁。</p>
+</li>
+<li><p>结束(Terminated)：线程已经执行结束。</p>
+</li>
+</ul>
+<p>线程状态转换图如下：</p>
+<p><img src="/assert/" alt="线程状态转换图"></p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/09/23/深入理解Java虚拟机-第12章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-Android系统源代码情景分析-第5章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/09/15/Android系统源代码情景分析-第5章/">第5章：Binder进程间通信系统</a>
+    </h1>
+  
+
+        
+        <a href="/2019/09/15/Android系统源代码情景分析-第5章/" class="archive-article-date">
+  	<time datetime="2019-09-15T07:48:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-09-15</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Android 应用程序由 Activity、Service、Broadcast Receiver 和 Content Provider 四中组件构成，它们可能运行在不同的进程中。此外，各种系统组件也运行在独立的进程中，如 Activity 管理服务 ActivityManagerService 和 package 管理服务 PackageManagerService 都运行在系统进程 System 中。</p>
+<p>Android 是基于 Linux 内核开发的，Linux 内核提供了丰富的进程间通信机制：管道(Pipe)、信号(Signal)、消息队列(Message)、共享内存(Share Memory) 和 套接字(Socket) 等。但Android 系统并没有采用这些传统的进程间通信机制，而是使用了新的机制——Binder。与传统的进程间通信机制相比，<strong>Binder 进程间通信机制在进程间传输数据时，只需要执行一次复制操作，不仅提高了效率，并且节省了内存空间。</strong></p>
+<blockquote>
+<p>使用共享内存在进程间传输数据的时候，虽然也只需要进行一次复制操作，但是它一般要结合其他的进程间通信机制来同步信息。</p>
+</blockquote>
+<p>Binder 进程间通信机制采用 C/S 通信方式，提供服务的进程称为 Server 进程，而访问服务的进程称为 Client 进程，同一个 Server 进程可以同时运行多个组件来向 Client 提供服务；而同一个 Client 进程也可以同时向多个 Service 组件请求服务。Service 组件启动时，会将自己注册到一个 Service Manager 组件中，以便 Client 组件可以通过 Service Manager 组件找到它。Binder 进程间通信机制中涉及了 Client、Service、Service Manager 和 Binder 驱动程序四个角色的关系如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android系统源代码情景分析(第三版" alt="Binder通信机制">/第5章/Binder通信机制.png)</p>
+<p>Client、Service 和 Service Manager 都运行在用户控件，而Binder 驱动程序运行在内核控件。Client、Service 和 Service Manager 均是通过系统调用 open(打开)、mmap(内存映射)、ioctl(在用户空间，使用ioctl系统调用来控制设备) 来访问设备文件 /dev/binder ，从而实现与Binder驱动的程序的交互，而交互的目的就是为了能够间接执行进程间通信。</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">深Android系统源代码情景分析(第三版)</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/09/15/Android系统源代码情景分析-第5章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-深入理解Java虚拟机-第13章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1000,298 +1238,6 @@
 
 
   
-    <article id="post-深入理解Java虚拟机-第7章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/07/28/深入理解Java虚拟机-第7章/">第7章: 虚拟机类加载机制</a>
-    </h1>
-  
-
-        
-        <a href="/2019/07/28/深入理解Java虚拟机-第7章/" class="archive-article-date">
-  	<time datetime="2019-07-28T03:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-07-28</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？</p>
-<p>虚拟机把描述类的数据从Class文件加载到内存，<strong>并对数据进行校验、转换解析和初始化</strong>，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能开销，但是会为Java应用程序提供高度的灵活性。</p>
-<blockquote>
-<p>例如，可以等到运行时再指定其实际的实现类：用户可以通过Java预定义和自定义的类加载器，让一个本地的应用程序可以在运行时从网络或者其他地方加载一个二进制流作为程序代码的一部分。</p>
-</blockquote>
-<h2 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h2><p>类从被加载到虚拟机内存中开始，到卸载出内存为止，整个生命周期如下图所示：</p>
-<p><img src="/assets/Book-Notes/深入理解Java虚拟机-第2版/第7章/类的生命周期.png" alt="类的生命周期"></p>
-<p>总共有7个阶段，其中验证、准备、解析 这3个部分统称为<strong>连接(Linking)</strong>，并且加载、验证、准备、初始化和卸载这5个阶段的顺序是确定的，类的加载按照上述顺序按部就班地开始（不是“进行”，也不是“完成”，只是按部就班地“开始”，因为这些阶段通常都是相互交叉地混合式进行）。</p>
-<p>虚拟机规范中<strong>严格规定</strong>了<strong>有且只有5种</strong>情况必须立即对类进行初始化（而加载、验证、准备自然需要在此之前开始）：</p>
-<ol>
-<li>遇到new、getstatic、putstatic或invokestatic这4条字节码指令时，如果类没有进行过初始化，则需要先触发其初始化。</li>
-</ol>
-<blockquote>
-<p>这4条指令的最常见的Java代码中的场景是：使用new关键字实例化对象、读取或者设置一个类的静态字段（被final修饰、已在编译器把结果放入常量池的静态字段除外）、以及调用一个类的静态方法。</p>
-</blockquote>
-<ol start="2">
-<li>使用java.lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则先触发其初始化。</li>
-<li>当初始化一个类，如果发现其父类还没有进行过初始化，则需要先触发其父类初始化。</li>
-<li>虚拟机启动时，虚拟机会先初始化用户指定的主类（包含main()方法的那个类）</li>
-<li>当使用JDK 1.7的动态语言支持时，如果一个java.lang.invoke.MethodHandle实例最后的解析结果REF_getStatic、REF_putStatic、REF_invokeStatic 的方法句柄，并且这个方法句柄所对应的类没有进行过初始化，则需要先触发其初始化。</li>
-</ol>
-<p>以上5种场景中的行为称为对一个类进行主动引用，<strong>除此之外，所有引用类的方式都不会触发初始化，称为被动引用</strong>。以下举3个例子来说明何为被动引用。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示一：</span></span><br><span class="line"><span class="comment">//通过子类引用父类的静态字段，不会导致子类初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SuperClass</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        Systemt.out.printlin(<span class="string">"SuperClass init!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> value = <span class="number">123</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SubClass</span> <span class="keyword">extends</span> <span class="title">SuperClass</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        Systemt.out.printlin(<span class="string">"SubClass init!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//非主动使用类字段演示</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        System.out.printlin(Subclass.value);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上述代码运行后，只会输出 “SuperClass init!” ，对于静态字段，只有直接定义这个字段的类才会被初始化，因此通过其子类来引用父类中定义的静态字段，只会触发父类的初始化而不会触发子类的初始化。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示二：</span></span><br><span class="line"><span class="comment">//通过数组定义来引用类，不会触发此类的初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        SuperClass[] sca = <span class="keyword">new</span> SuperClass[<span class="number">10</span>];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这里复用了上面的 SuperClass ，运行之后，发现没有输出 “SuperClass init!” ，说明没有触发 SuperClass 的初始化阶段。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示二：</span></span><br><span class="line"><span class="comment">//常量在便一阶段会存入调用类的常量池中，本质上并没有直接引用到定义常量的类，因此不会触发定义常量的类的初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConstClass</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        Systemt.out.printlin(<span class="string">"ConstClass init!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String HELLOWORLD = <span class="string">"hello world"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Systemt.out.printlin(ConstClass. HELLOWORLD);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上述代码运行之后，也没有输出 “ConstClass init!” ，虽然在 Java 源码中引用了 ConstClass 中的常量 HELLOWORLD ，但其实在编译阶段通过常量传播优化，已经将此常量值 “hello world” 存储到了 NotInitialization 类的常量池中，以后 NotInitialization 对常量 ConstClass. HELLOWORLD 的引用时机都被转化为 NotInitialization 对自身常量池的引用了。也就是说，实际上 NotInitialization 的 Class 文件之中并没有 ConstClass 类的符号引用入口，这两个类在编译成 Class 之后就不存在任何联系了。</p>
-<p>接口的加载过程与类加载过程稍有一些不同，接口与类真正有所区别的是前面讲述的5种“有且仅有”需要开始初始化场景中的第3种：当一个类在初始化时，要求其父类全部都已经初始化过了，但是一个接口在初始化时，并不要求其父接口全部都完成了初始化，只有在真正使用到父接口的时候（如引用接口中定义的常量）才会初始化。</p>
-<blockquote>
-<p>顺带说明一下，上面的代码都是用静态语句块 “static{}”来输出初始化信息的，但接口中不能使用 “static{}”语句块。</p>
-</blockquote>
-<h2 id="类加载过程"><a href="#类加载过程" class="headerlink" title="类加载过程"></a>类加载过程</h2><h3 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h3><p>“加载”是“类加载(Class Loading)”过程的一部分，不要混淆。在加载阶段，虚拟机需要完成以下3件事情：</p>
-<ol>
-<li>通过类的全限定名获取类的二进制字节流</li>
-<li>将字节流所代表的静态存储结构转化为方法区的运行时数据结构</li>
-<li>在内存中生成一个代表这个类的 java.lang.Class 对象，作为方法区这个类的各种数据的访问入口。</li>
-</ol>
-<p>这3点规范并不算具体，例如第一条，并没有指明要从哪里获取，怎么获取，因此充满创造力的开发人员玩出了各种花样：</p>
-<ul>
-<li>从 zip 包中读取，最终成为日后 jar、ear、war 格式的基础</li>
-<li>从网络中获取，比如Applet</li>
-<li>运行时计算生成，这种场景用得最多的就是动态代理技术。</li>
-</ul>
-<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>验证是连接阶段的第一步，这个阶段是否严谨，直接决定了Java虚拟机是否能承受恶意代码的攻击。从整体来看，验证阶段大致上会完成下面4个阶段的检验动作：</p>
-<p><strong>文件格式验证</strong>  </p>
-<blockquote>
-<p>魔数0xCAFEBABE开头、主次版本是否在虚拟机处理范围内等。</p>
-</blockquote>
-<p><strong>元数据验证</strong>  </p>
-<blockquote>
-<p>是否有父类-除Object外，所有类都有父类、父类是否继承了不允许被继承的类-final修饰，是否实现了父类或者接口要求实现的所有方法。</p>
-</blockquote>
-<p><strong>字节码验证</strong>  </p>
-<blockquote>
-<p>通过数据流和控制流分析，确定程序语义是否合法、符合逻辑的。如果一个类方法体的字节码没有通过字节码验证，那肯定是有问题的；如果一个方法体通过了字节码验证，也不能说明其一定就是安全的。</p>
-</blockquote>
-<p><strong>符号引用验证</strong>  </p>
-<blockquote>
-<p>这个校验发生在虚拟机将符号引用转化为直接引用的时候，这个转化动作将在解析阶段发生。通常校验：通过全限定名是否能找到对应的类、符号引用中的类、字段、方法的访问性(private、protected、public、default)是否可以被当前类访问 等等。</p>
-</blockquote>
-<h3 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h3><p>准备阶段正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。</p>
-<p>这里两个容易产生的混淆的概念强调一下：首先，这时候进行内存分配的仅仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时一起分配在java堆中。其次，这里说的初始值“通常情况”下是数据类型的零值，假设一个类变量定义为： </p>
-<blockquote>
-<p>public static int value = 123;</p>
-</blockquote>
-<p>那变量value在准备阶段过后的初始值为 0 而不是 123。<strong>把value赋值为123的动作将在初始化阶段才会执行</strong>。</p>
-<h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>解析阶段是虚拟机将常量池内的符号引用替换成直接引用的过程。</p>
-<p><strong>符号引用(Symbolic References)：</strong>符号引用以一组符号来描述所引用的目标，符号可以是任何形式的字面量，只要使用时能无歧义地定位到目标即可。</p>
-<p><strong>直接引用(Symbolic References)：</strong>直接引用可以是直接指向目标的指针、相对偏移量或是一个能间接定位到目标的句柄。</p>
-<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>到了初始化阶段，才真正开始执行类中定义的Java程序代码(或者说是字节码)。在准备阶段，变量已经赋过一次系统要求的初始值，而在初始化阶段，则根据程序员通过程序自定的主观计划去初始化类变量和其他资源。换一个角度来表达就是：<strong>初始化阶段是执行类构造器<clinit>()方法的过程</clinit></strong>。以下介绍下<clinit>()方法执行过程中一些可能会影响程序运行行为的特点和细节：</clinit></p>
-<ul>
-<li><clinit>()方法由编译器自动收集类中的所有类变量的赋值动作和静态语句块(static{}块)中的语句合并产生的，编译器收集的顺序是由语句<strong>在源文件中出现的顺序决定</strong>的，静态语句块中<strong>只能访问到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但不能访问</strong>。一个例子说明：</clinit></li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i =<span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        Systemt.out.print(i);<span class="comment">//正常使用</span></span><br><span class="line">        </span><br><span class="line">        j = <span class="number">0</span>;<span class="comment">//给变量赋值可以正常编译</span></span><br><span class="line">        Systemt.out.print(j);<span class="comment">//这句提示“非法向前引用”</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> j =<span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><clinit>()方法与类的构造函数（实例构造器<init>()）不同,它不需要显式地调用父类构造器，虚拟机会保证在子类的 <clinit>() 执行之前，父类的<clinit>()已经执行完毕。因此，在虚拟机中第一个被执行<clinit>()方法的类肯定是 java.lang.Object。<strong>这其实也意味着，父类定义的静态语句块要优先于子类变量赋值操作</strong>。一个例子说明：</clinit></clinit></clinit></init></clinit></li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Parent</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> A = <span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        A = <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sub</span> <span class="title">extentds</span> <span class="title">Parent</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> B = A;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span></span>&#123;</span><br><span class="line">    Systemt.out.println(Sub.B)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>以上代码将打印出 2 而不是 1。</p>
-<ul>
-<li><p><clinit>()方法对于类或者接口不是必需的，如果类中没有静态语句块，也没有对变量的赋值，那么编译器可以不为这个类生成<clinit>()方法。</clinit></clinit></p>
-</li>
-<li><p>接口中不能使用静态语句块，但是可以有变量初始化的赋值操作，因此接口与类一样都会生成 <clinit>()方法 。但接口的 <clinit>()方法 无须先执行父接口的<clinit>()方法，只有父接口中定义的变量使用时，父接口才会初始化（接口的实现类在初始化时也不会执行接口的<clinit>()方法）。</clinit></clinit></clinit></clinit></p>
-</li>
-<li><p>虚拟机会保证一个类的 <clinit>()方法 在多线程环境中会被正确地加锁、同步，所以，多线程同时去初始化一个类，那么只会有一个县城执行这个类的\<clinit>()方法，其他的线程都会阻塞等待。举个例子：</clinit></clinit></p>
-</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">DeadLoopClass</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        <span class="comment">//如果不加上这个if语句，编译器将报错，并拒绝编译</span></span><br><span class="line">        <span class="keyword">if</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            System.out.println(Thread.currentThread() + <span class="string">"init DeadLoopClass"</span>);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Runnable script = <span class="keyword">new</span> Runnable()&#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"start"</span>);</span><br><span class="line">                DeadLoopClass dlc = <span class="keyword">new</span> DeadLoopClass();</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"run over"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">           </span><br><span class="line">        &#125;;</span><br><span class="line">        </span><br><span class="line">        Thread thread1 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        Thread thread2 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        thread1.start();</span><br><span class="line">        thread2.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上述代码在死循环以模拟长时间操作，另外一条线程在阻塞等待，将打印以下结果：</p>
-<blockquote>
-<p>Thread[Thread-0,5,main]start<br>Thread[Thread-1,5,main]start<br>Thread[Thread-0,5,main]init DeadLoopClass</p>
-</blockquote>
-<h2 id="类加载器"><a href="#类加载器" class="headerlink" title="类加载器"></a>类加载器</h2><p>虚拟机设计团队把类加载阶段中的“通过一个类的全限定名来获取描述此类的二进制字节流”这个动作放到Java虚拟机外部去实现，以便让应用程序自己决定如何去获取所需要的类。</p>
-<h3 id="类与类加载器"><a href="#类与类加载器" class="headerlink" title="类与类加载器"></a>类与类加载器</h3><p>对于任意一个类，都需要由加载它的类加载器和这个类本身一同确立其在Java虚拟机中的唯一性，每一个类加载器，都拥有一个独立的类名称空间。通俗地说，比较两个类是否“相等”，只有在这两个类都是由同一个类加载器加载的前提下才有意义，否则，即使这两个类来源于同一个Class文件，都被同一个虚拟机加载，只要加载它们的类加载器不同，那这两个类就必定不相等。</p>
-<p>这里的“相等”，包括代表类的Class对象的 equals() 、isAssignableFrom()、isInstance() 方法返回的结果，也包括使用 instanceof 关键字做对象所属关系判定等情况。以下代码演示了不同类加载器对instanceof关键字运算的结果的影响：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClassLoaderTest</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>&#123;</span><br><span class="line">        ClassLoader myLoader = <span class="keyword">new</span> ClassLoader()&#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException&#123;</span><br><span class="line">                <span class="keyword">try</span>&#123;</span><br><span class="line">                    String fileName = name.substring(name.lastIndexOf(<span class="string">"."</span>) + <span class="number">1</span>);</span><br><span class="line">                    InputStream is = getClass().getResourceAsStream(fileName);</span><br><span class="line">                    <span class="keyword">if</span>(is == <span class="keyword">null</span>)&#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">super</span>.loadClass(name);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">byte</span>[] b = <span class="keyword">new</span> <span class="keyword">byte</span>[is.available()];</span><br><span class="line">                    is.read(b);</span><br><span class="line">                    <span class="keyword">return</span> defineClass(name,b,<span class="number">0</span>,b.length);</span><br><span class="line">                &#125;<span class="keyword">catch</span>()&#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ClassNotFoundException();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        Object obj = myLoader.loadClass(<span class="string">"org.example.classloading. ClassLoaderTest"</span>);</span><br><span class="line">        </span><br><span class="line">        Systemt.out.println(obj.getClass());</span><br><span class="line">        System.out.println(obj <span class="keyword">instanceof</span> org.example.classloading. ClassLoaderTest);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>返回结果：   </p>
-<blockquote>
-<p>class org.example.classloading. ClassLoaderTest<br>false </p>
-</blockquote>
-<p>从结果可以看出，对象确实是类 “org.example.classloading. ClassLoaderTest” 的类，并实例化了这个类的对象。但这个对象与类 org.example.classloading. ClassLoaderTest 做所属类型检查的时候却返回了false，这是因为虚拟机中存在了两个 ClassLoaderTest 类，一个由系统应用程序类加载器加载的，另外一个是由我们自定义的类加载器加载的，虽然都来自同一个Class文件，但依然是两个独立的类。</p>
-<h3 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h3><p>从java虚拟机角度来讲，只存在两种类加载器：一种是启动类加载器(Bootstrap ClassLoader)，是虚拟机自身的一部分；另一种就是所有其他的类加载器，这些类加载器都由Java语言实现，独立于虚拟机外部，并且全部继承自抽象类 java.lang.ClassLoader。</p>
-<p>如下图所示的类加载器之间的这种层次关系，称为双亲委派模型(Parent Delegation Model)。</p>
-<p><img src="/assets/Book-Notes/深入理解Java虚拟机-第2版/第7章/双亲委派模型.png" alt="类的生命周期"></p>
-<p>双亲委派模型要求除了顶层的启动类加载器外，其余的类加载器都应当有自己的父类加载器，这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合(Composition)关系来复用父加载器的代码。</p>
-<p>双亲委派模型的工作过程是：<strong>如果一个类加载器收到了类加载请求，它首先不会自己去尝试加载这个类，而是把请求委派给父类加载器去完成，因此所有的加载请求最终都应该传送到顶层的启动类加载器中。只有当父加载器反馈自己无法完成这个加载请求（它的搜索范围中没有找到所需的类）时，子加载器才会尝试自己去加载。</strong></p>
-<p>双亲委派模型一个显而易见的好处就是：<strong>Java 类随着它的类加载器一起具备了一种带有优先级的层次关系。</strong></p>
-<blockquote>
-<p>例如类 java.lang.Object ，无论哪一个类加载器都要加载这个类（因为所有的类都直接或间接地继承了它），最终都是委派给处于模型最顶端的启动类加载器进行加载，因此，Object 类在程序中的各种类加载器环境中都是同一个类。相反，如果不使用双亲委派模型，由各个类加载器自行去加载的话，如果用户自己编写了一个称为 java.lang.Object 的类，并放在 ClassPath 中，那系统中将将会出现多个不同的Object 类，Java类型体系中最基础的行为也就无法保证。</p>
-</blockquote>
-<h3 id="破坏双亲委派模型"><a href="#破坏双亲委派模型" class="headerlink" title="破坏双亲委派模型"></a>破坏双亲委派模型</h3><p>略</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/07/28/深入理解Java虚拟机-第7章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-深入理解Java虚拟机-第6章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/07/27/深入理解Java虚拟机-第6章/">第6章: 类文件结构</a>
-    </h1>
-  
-
-        
-        <a href="/2019/07/27/深入理解Java虚拟机-第6章/" class="archive-article-date">
-  	<time datetime="2019-07-27T06:56:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-07-27</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>计算机只认识0和1，但是最近10年虚拟机以及大量建立在虚拟上的语言的发展，将我们编写的程序编译成二进制本地机器码（Native Code）已不再是唯一的选择，越来越多的程序语言选择了与操作系统和机器指令集无关的、平台中立的格式作为程序编译后的存储格式。</p>
-<h2 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h2><p>Sun公司及其他虚拟机提供商发布了许多可以运行在各种不同平台上的虚拟机，这些虚拟机都可以载入和执行同一种平台无关的字节码，从而实现程序的“一次编写，到处运行”。而各种不同平台的虚拟机以及平台无关的字节码（ByteCode）是构成平台无关性的基石。  </p>
-<p>到目前为止，或许大部分程序员都还认为Java虚拟机执行Java程序是一件理所当然的事情，但在Java发展之初，Java的规范就分为Java语言规范以及Java虚拟机规范，时至今日，Java语言之外已经有一大批语言运行在Java虚拟机之上，如 Groovy、JRuby、Jython等。  </p>
-<p>Java 虚拟机不和包括Java在内的任何语言绑定，它只与“Class 文件”这种特定的二进制文件格式所关联，任一门功能性语言都可以表示为一个能被Java虚拟机所接受的有效的Class文件。</p>
-<h2 id="Class-类文件的结构"><a href="#Class-类文件的结构" class="headerlink" title="Class 类文件的结构"></a>Class 类文件的结构</h2><p>Class 文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑地排列在Class文件中，中间没有任何分隔符。遇到需要占用8位字节以上空间的数据项时，会按照高位在前的方式分割成若干个8位字节进行存储。</p>
-<p>Class 文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构只有两种数据类型： 无符号数和表。</p>
-<p>无符号数属于基本的数据类型，以u1、u2、u4、u8分别代表1、2、4、8个字节的无符号数，无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8 编码构成的字符串值。</p>
-<p>表示由多个无符号数或者其他表作为数据项的复合数据类型，表用于描述有层次关系的复合结构的数据，整个Class文件本质就是一张表。</p>
-<h3 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h3><p>Class文件的头4个字节称为魔数（Magic Number），它的唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件。Class 文件的魔数值为 0xCAFEBABE (咖啡宝贝？)，很有浪漫气息。紧接着魔数的4个字节存储着Class文件的版本号，高版本的JDK能乡下兼容以前版本的Class文件，但不能运行以后版本的Class文件。</p>
-<blockquote>
-<p>很多文件存储标准中都使用魔数来进行身份识别，如gif和jpeg等在文件头中都存有魔数。使用魔数而不是扩展名来识别主要是基于安全考虑： 文件扩展可以随意改动。</p>
-</blockquote>
-<p><img src="/assets/Book-Notes/深入理解Java虚拟机-第2版/第6章/魔数.png" alt="魔数示意图"></p>
-<h3 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h3><p>版本号之后是常量池入口，该区域可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，由于常量池中常量的数量是不固定的，所以在常量池的入口需要放置一项u2类型的数据，代表常量池容量计数值。</p>
-<p>常量池中主要存放两大类常量：字面量（Literal） 和 符号引用（Symbolic References）。<strong>字面量比较接近于Java语言层面的常量概念，如 文本字符串、声明为final的常量值等</strong>，而符号引用则属于编译原理方面的概念，包括了下面三类常量：</p>
-<ul>
-<li>类和接口的全限定名(Fully Qualified Name)</li>
-<li>字段的名称和描述符(Descriptor)</li>
-<li>方法的名称和描述符</li>
-</ul>
-<p>Java代码在javac编译的时候，并不像c和c++那样有“连接”这一步骤，而是在虚拟机加载 Class 文件的时候进行动态连接，也就是说，在Class文件中不会保存各个方法、字段的最终内存布局信息。虚拟机运行时，需要从常量池获得对应的符号引用，再在类创建时解析、翻译到具体的内存地址中。</p>
-<h3 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h3><p>常量池结束后，紧接着2个字节代表访问标志（access_flags<br>），这个标志用于识别一些类或者接口层次的访问信息，包括： 这个Class 是类还是接口；是否定义为public类型；是否定义为abstract类型；如果是类的话，是否被声明为final等等。</p>
-<h3 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h3><p>类索引（this_class） 和父类索引(super_class)都是一个u2类型的数据，而接口索引集合(interfaces)是一组u2类型的数据的集合，class 文件中由这三项数据来确定这个类的继承关系。</p>
-<p>其中，类索引用于确定这个类的全限定名，父类索引用于确定这个类的父类的全限定名，由于Java不允许多重继承，所以父类索引只有一个，除了java.lang.Object之外，所有的Java类都有父类，因此，父类索引都不为0。接口索引集合用来描述这个类实现了哪些接口，按照implement语句后的接口顺序从左到右排列在接口索引集合中。</p>
-<h3 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h3><p>字段表(field_info)用于描述接口或者类中声明的变量，包括类级变量和实例级变量，不包括方法内的局部变量。这个描述可以包括的信息有： 字段的作用域(public、private、protected修饰符)、实例变量还是类变量(static修饰符)、可变性(final)、并发可见性(volatile 修饰符，是否强制从主内存读写)、可否被序列化(transient修饰符) 等等。</p>
-<h3 id="方法表集合"><a href="#方法表集合" class="headerlink" title="方法表集合"></a>方法表集合</h3><p>Class 文件存储格式中对方法的描述与对字段的描述几乎采用了完全一致的方式，方法表的结构如同字段表一样，只是些微的区别，比如volatile关键字和transient关键字不能修饰方法 。</p>
-<h3 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h3><p>在Class文件、字段表、方法表都可以携带自己的属性表集合，以用于描述某些场景专有的信息(这一块内容也没耐心看下去，下次看明白再补)。</p>
-<h2 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h2><p>这章离App开发比较远，因此第一遍的时候先略过。</p>
-<h2 id="公有设计和私有实现"><a href="#公有设计和私有实现" class="headerlink" title="公有设计和私有实现"></a>公有设计和私有实现</h2><p>理解公有设计与私有实现之间的分界线是非常有必要的，Java虚拟机实现必须能够读取Class文件并精确实现包含在其中的Java虚拟机代码的语义。按照Java虚拟机规范一成不变地逐字实现其中要求的内容是一种可行的途径，但是一个优秀的虚拟机实现，在满足虚拟机规范的约束下对具体实现做出修改和优化也是完全可行的。虚拟机实现的方式主要有以下两种：</p>
-<ul>
-<li>将输入的Java虚拟机代码在加载或执行时翻译成另外一种虚拟机的指令集。</li>
-<li>将输入的Java虚拟机代码在加载或执行翻译成宿主机CPU的本地指令集（即 JIT 代码生成技术）</li>
-</ul>
-<h2 id="Class-文件结构的发展"><a href="#Class-文件结构的发展" class="headerlink" title="Class 文件结构的发展"></a>Class 文件结构的发展</h2><p>略。</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/07/27/深入理解Java虚拟机-第6章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
   
     <nav id="page-nav">
       <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
@@ -1446,6 +1392,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color2">读书笔记-Android进阶之光</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color3">深Android系统源代码情景分析(第三版)</a>
               </li>
             
             <div class="clearfix"></div>
