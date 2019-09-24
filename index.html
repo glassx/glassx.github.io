@@ -1050,7 +1050,24 @@
 <li><p>Handler不同，普通线程申城一个与Looper绑定的Handler，而主线程是从当前线程中获取的Handler，也就是说，ActivityThread 提供了一个“事件管家”，以处理主线程中各种消息。</p>
 </li>
 </ul>
-<h2 id="Thread-类"><a href="#Thread-类" class="headerlink" title="Thread 类"></a>Thread 类</h2>
+<h2 id="Thread-类"><a href="#Thread-类" class="headerlink" title="Thread 类"></a>Thread 类</h2><h3 id="Thread-类的内部原理"><a href="#Thread-类的内部原理" class="headerlink" title="Thread 类的内部原理"></a>Thread 类的内部原理</h3><p>Thread 实现了 Runnable ，也就是说线程是“可执行的代码”。我们一般通过2种方式使用Thread ：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//第1种</span></span><br><span class="line">MyThread thr = <span class="keyword">new</span> MyThread(...);</span><br><span class="line">thr.start();</span><br><span class="line"></span><br><span class="line"><span class="comment">//第2种</span></span><br><span class="line"><span class="keyword">new</span> Thread(Runnable target).start();</span><br></pre></td></tr></table></figure>
+<p>这两种方法最终都通过 start 启动，它会间接调用Runable 的 run 实现.</p>
+<h3 id="线程的休眠和唤醒"><a href="#线程的休眠和唤醒" class="headerlink" title="线程的休眠和唤醒"></a>线程的休眠和唤醒</h3><p>控制线程的相关方法我们至少可以想到以下几个： wait()、notify()、notifyAll()、interrupt()、join() 和 sleep()。</p>
+<ol>
+<li>wait 和 notify/notifyAll</li>
+</ol>
+<p>和其他方法不同，这3个函数是由 Object 类定义的——意味着它们是任何类的共有“属性”，那为什么这么设计呢？官方对wait的解释是：</p>
+<blockquote>
+<p>Causes the calling thread to wait until another thread calls the notify() or notifyAll() method of this object</p>
+</blockquote>
+<p>当某个线程调用一个 Object 的wait 方法时，系统就要在这个 Object 中记录这个请求。因为调用者很可能不止一个，所以可使用列表的形式来逐一添加它们。当后期唤醒条件满足时， Object 既可以使用 notify 来唤醒列表中的一个等待线程，也可以通过 notifyAll 来唤醒列表中的所有线程。值得注意的是，调用者只有称为 Object 的 monitor 后，才能调用它的 wait 方法，而称为一个对象的 monitor 有以下3种途径：</p>
+<ul>
+<li>执行这个 object 的 synchronize 方法     </li>
+<li>执行一段 synchronize 代码，并且是基于这个 object 做的同步    </li>
+<li>如果 object 是 Class 类，可以执行它的 synchronize static 方法    </li>
+</ul>
+
       
 
       
