@@ -6,24 +6,24 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="//glassx.github.io">
-  <title>Android进程通信——Binder理解 | glassx小黑屋</title>
+  <title>第6章：进程间通信——Binder | glassx小黑屋</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和TCP/IP网络有很多相似之处：  Binder">
-<meta name="keywords" content="专题">
+  <meta name="description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：  Bind">
+<meta name="keywords" content="深入理解Android内核设计思想-林学森">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Android进程通信——Binder理解">
-<meta property="og:url" content="//glassx.github.io/2019/03/03/Android进程通信——Binder理解/index.html">
+<meta property="og:title" content="第6章：进程间通信——Binder">
+<meta property="og:url" content="//glassx.github.io/2019/09/26/深入理解Android内核设计思想-第6章/index.html">
 <meta property="og:site_name" content="glassx小黑屋">
-<meta property="og:description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和TCP/IP网络有很多相似之处：  Binder">
+<meta property="og:description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：  Bind">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="//glassx.github.io/assets/专题/Binder/binder-tcpip.png">
-<meta property="og:image" content="//glassx.github.io/assets/专题/Binder/B-mmap.png">
-<meta property="og:image" content="//glassx.github.io/assets/专题/Binder/A复制数据.png">
-<meta property="og:updated_time" content="2019-05-01T09:38:59.433Z">
+<meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第6章/binder-tcpip.png">
+<meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第6章/B-mmap.png">
+<meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第6章/A复制数据.png">
+<meta property="og:updated_time" content="2019-09-26T14:10:44.163Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Android进程通信——Binder理解">
-<meta name="twitter:description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和TCP/IP网络有很多相似之处：  Binder">
-<meta name="twitter:image" content="//glassx.github.io/assets/专题/Binder/binder-tcpip.png">
+<meta name="twitter:title" content="第6章：进程间通信——Binder">
+<meta name="twitter:description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：  Bind">
+<meta name="twitter:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第6章/binder-tcpip.png">
   
     <link rel="alternative" href="/atom.xml" title="glassx小黑屋" type="application/atom+xml">
   
@@ -163,20 +163,20 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            <article id="post-Android进程通信——Binder理解" class="article article-type-post " itemscope itemprop="blogPost">
+            <article id="post-深入理解Android内核设计思想-第6章" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 class="article-title" itemprop="name">
-      Android进程通信——Binder理解
+      第6章：进程间通信——Binder
     </h1>
   
 
         
-        <a href="/2019/03/03/Android进程通信——Binder理解/" class="archive-article-date">
-  	<time datetime="2019-03-03T13:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-03</time>
+        <a href="/2019/09/26/深入理解Android内核设计思想-第6章/" class="archive-article-date">
+  	<time datetime="2019-09-26T13:36:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-09-26</time>
 </a>
         
       </header>
@@ -184,7 +184,7 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。</p>
-<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和TCP/IP网络有很多相似之处：</p>
+<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：</p>
 <ul>
 <li>Binder 驱动 -&gt; 路由器</li>
 <li>Service Manager（本质也是个服务器） -&gt; DNS（本质也是个服务器）</li>
@@ -192,16 +192,26 @@
 <li>Binder Server -&gt; 服务器</li>
 </ul>
 <p>TCP/IP中一个典型的服务连接过程如下图所示：</p>
-<p><img src="/assets/专题/Binder/binder-tcpip.png" alt="TCP/IP连接"></p>
-<p>client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；而在DNS返回查询结果给Clietn时，Client的地址对于DNS也是必须的，不过这些信息会封装在TCP/IP包中。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
-<p>而对于Binder来说，Binder的DNS也不是必须的——前提是客户端能记住它要访问的进程的Binder标志（IP地址），尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取。因此，Service Manager这个DNS的还是挺有必要的。</p>
+<p><img src="/assets/Book-Notes/深入理解Android内核设计思想/第6章/binder-tcpip.png" alt="TCP/IP连接"></p>
+<p>这个简化的流程图有以下几个步骤：</p>
+<ul>
+<li><p>Client 向dns 查询 google.com 的ip地址。<br>显然，Client 一定得先知道DNS 的 IP地址，才能向它发起查询，DNS 服务器的ip设置是在接入网络前就已经设置完成的。当然，client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；</p>
+</li>
+<li><p>DNS 将查询结果返回 Client。<br>Client的Ip地址对于 DNS 是必须的，不过这些信息会封装在 TCP/IP 包中。</p>
+</li>
+<li><p>Client 发起连接。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
+</li>
+</ul>
+<p>而对于Binder来说，Binder的 DNS (Service Manager)也不是必须的——前提是客户端能记住它要访问的进程的 Binder 标志（IP地址），<strong>尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取</strong>。因此，Service Manager 这个 DNS 的还是挺有必要的。</p>
 <blockquote>
-<p>既然Service Manager是DNS，那么它的IP地址是多少呢？Binder机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
+<p>既然Service Manager是 DNS 服务器，那么它的 IP 地址是多少呢？Binder 机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
 </blockquote>
-<h3 id="Parcel"><a href="#Parcel" class="headerlink" title="Parcel"></a>Parcel</h3><p>进程间传递数据是Binder机制中的重要一环，而数据传递的方式是 Parcel，直译过来就是“打包”。之前已经说过，直接传送对象内存地址的做法行不通，那么把对象在进程A中占据的内存相关数据打包起来，然后寄送到进程B中，由B在自己的进程空间中“复现”这个对象，是否可行呢？Parcel就具有这种打包重组能力。所有遵循 Parcelable 协议的对象可以通过 Parcel 来存取，如开发人员经常用到的Bundle 就是继承 Parcelable 的。</p>
-<h3 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h3><p>Android 是linux内核的，因而Binder驱动也是标准的linux驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备，Binder驱动运行于内核态。</p>
+<h2 id="智能指针"><a href="#智能指针" class="headerlink" title="智能指针"></a>智能指针</h2><p>略</p>
+<h2 id="进程间的数据传递载体——Parcel"><a href="#进程间的数据传递载体——Parcel" class="headerlink" title="进程间的数据传递载体——Parcel"></a>进程间的数据传递载体——Parcel</h2><p>进程间传递数据是Binder机制中的重要一环，而数据传递的方式是 Parcel，直译过来就是“打包”。之前已经说过，直接传送对象内存地址的做法行不通，那么把对象在进程A中占据的内存相关数据打包起来，然后寄送到进程B中，由B在自己的进程空间中“复现”这个对象，是否可行呢？Parcel就具有这种打包重组能力。所有遵循 Parcelable 协议的对象可以通过 Parcel 来存取，如开发人员经常用到的Bundle 就是继承 Parcelable 的。</p>
+<p>未完待续。。。。。。</p>
+<h2 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h2><p>Android 是linux内核的，因而Binder驱动也是标准的linux驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备，Binder驱动运行于内核态。</p>
 <p>假设有连个进程A和B，其中进程B通过 open() 和 mmap()与Binder驱动建立了联系，如下图：</p>
-<p><img src="/assets/专题/Binder/B-mmap.png" alt="进程B连接Binder"></p>
+<p><img src="/assets/Book-Notes/深入理解Android内核设计思想/第6章/B-mmap.png" alt="进程B连接Binder"></p>
 <blockquote>
 <p>可以看到 ：</p>
 </blockquote>
@@ -216,7 +226,7 @@
 </ol>
 </blockquote>
 <p>这样，Binder和进程B就拥有了公共的物理内存块，它们对着各自内存地址的操作，实际是在同一块内存中执行，这时候我们再把A进程加入进来，如下图：</p>
-<p><img src="/assets/专题/Binder/A复制数据.png" alt="进程A复制数据"></p>
+<p><img src="/assets/Book-Notes/深入理解Android内核设计思想/第6章/A复制数据.png" alt="进程A复制数据"></p>
 <p>这时候，左半部分没有变化，右半部分Binder驱动通过copy_from_user()，把A进程中某段数据复制到其binder_proc-&gt;buffer所指向的内存空间，这时候我们惊喜发现，binder_proc-&gt;buffer在物理内存中的位置和进程B是共享的，进而，B进程可以直接访问到这段数据，<strong>也就是说，Binder驱动只用了一次复制，就实现了进程A和B之间的数据共享。</strong></p>
 <h3 id="Service-Manager"><a href="#Service-Manager" class="headerlink" title="Service Manager"></a>Service Manager</h3><p>也就是“DNS”服务器，既然是DNS，那么在用户可以浏览网页之前就必须就位，Service Manager也是，在有人使用Binder之前就处于正常工作状态。Service Manager的主要工作：</p>
 <ul>
@@ -313,7 +323,7 @@
 		<ul class="article-tag-list">
 			 
         		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">专题</a>
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">深入理解Android内核设计思想-林学森</a>
         		</li>
       		
 		</ul>
@@ -369,7 +379,7 @@
     <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
     <p>扫一扫，分享到微信</p>
     <div class="wx-qrcode">
-      <img src="//pan.baidu.com/share/qrcode?url=http://glassx.github.io/2019/03/03/Android进程通信——Binder理解/" alt="微信分享二维码">
+      <img src="//pan.baidu.com/share/qrcode?url=http://glassx.github.io/2019/09/26/深入理解Android内核设计思想-第6章/" alt="微信分享二维码">
     </div>
 </div>
 
@@ -383,18 +393,9 @@
   
 <nav id="article-nav">
   
-    <a href="/2019/03/04/常用的有意思的算法(三)/" id="article-nav-newer" class="article-nav-link-wrap">
-      <i class="icon-circle-left"></i>
-      <div class="article-nav-title">
-        
-          常用的有意思的算法(三)
-        
-      </div>
-    </a>
   
-  
-    <a href="/2019/03/03/常用的有意思的算法(二)/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">常用的有意思的算法(二)</div>
+    <a href="/2019/09/23/深入理解Java虚拟机-第12章/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">第12章: Java内存模型与线程</div>
       <i class="icon-circle-right"></i>
     </a>
   
