@@ -19,7 +19,7 @@
 <meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第6章/binder-tcpip.png">
 <meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第6章/B-mmap.png">
 <meta property="og:image" content="//glassx.github.io/assets/Book-Notes/深入理解Android内核设计思想/第6章/A复制数据.png">
-<meta property="og:updated_time" content="2019-09-26T14:10:44.163Z">
+<meta property="og:updated_time" content="2019-09-28T07:54:45.786Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="第6章：进程间通信——Binder">
 <meta name="twitter:description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：  Bind">
@@ -207,8 +207,41 @@
 <p>既然Service Manager是 DNS 服务器，那么它的 IP 地址是多少呢？Binder 机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
 </blockquote>
 <h2 id="智能指针"><a href="#智能指针" class="headerlink" title="智能指针"></a>智能指针</h2><p>略</p>
-<h2 id="进程间的数据传递载体——Parcel"><a href="#进程间的数据传递载体——Parcel" class="headerlink" title="进程间的数据传递载体——Parcel"></a>进程间的数据传递载体——Parcel</h2><p>进程间传递数据是Binder机制中的重要一环，而数据传递的方式是 Parcel，直译过来就是“打包”。之前已经说过，直接传送对象内存地址的做法行不通，那么把对象在进程A中占据的内存相关数据打包起来，然后寄送到进程B中，由B在自己的进程空间中“复现”这个对象，是否可行呢？Parcel就具有这种打包重组能力。所有遵循 Parcelable 协议的对象可以通过 Parcel 来存取，如开发人员经常用到的Bundle 就是继承 Parcelable 的。</p>
-<p>未完待续。。。。。。</p>
+<h2 id="进程间的数据传递载体——Parcel"><a href="#进程间的数据传递载体——Parcel" class="headerlink" title="进程间的数据传递载体——Parcel"></a>进程间的数据传递载体——Parcel</h2><p>关于进程间如何传递，我们可以使用2个生活例子来类比：</p>
+<ul>
+<li>用快递寄衣服：虽然快递种类比较多，但是无论用哪个快递，用哪种运输方式，“衣服”本身始终是没有变过的，接收人拿到的还是原来那件衣服。    </li>
+<li>通过电子邮件发送图片：在接收人看到邮件中的图片时，我们无法确认这张图片在传输过程中被复制了多少次，但是可以肯定的是，对方看到的图片和原始图片是一样的。</li>
+</ul>
+<p>进程间通信的数据传递类似于第2种情况，如果只是一个int型数值，不断复制直到目标进程即可；如果是一个对象呢？我们直到，同一个进程中对象的传递实质上是传递了一个内存地址，但是在跨进程的情况下就无能为力了，因为采用了虚拟内存机制，两个进程都有自己独立的内存地址空间，所以跨进程传递的地址空间是无效的。</p>
+<p>进程间的数据传递是Binder 机制中的重要环节，而担负这一重任的就是Parcel。 Parcel 的直译是 “打包” ，上面提到，进程间数据传递直接传送对象的地址是行不通的，那把对象在进程 A 中占据的内存相关数据打包起来，然后寄送到内存 B 中，由 B 在自己的进程空间中“复现”这个对象，是否可行？ Parcel 就具有这种打包能力。</p>
+<p>Parcel 提供了很多接口方便程序使用，他可以存储多种类型的数据：</p>
+<ul>
+<li>原始数据类型 以及 原始数据类型数组     </li>
+<li>Parcelable    </li>
+<li>Bundle    </li>
+<li>Active Objects    </li>
+</ul>
+<blockquote>
+<p>通常我们存入Parcel 的是对象的内容，而 Active Objects 写入的则是他们的特殊标志引用。所以从 Parcel 中读取这些对象时，大家看到的并不是重新创建的对象实例，而是原来那个被写入的实例，能够以这种方式传递的对象目前主要有两类： Binder 以及 FileDescriptor (Linux 中的文件描述符)。</p>
+</blockquote>
+<ul>
+<li>Untyped Containers    </li>
+</ul>
+<blockquote>
+<p>它是用于读写标准的任意类型的 Java 容器，包括 ： writeArray(Object[])/readArray(ClassLoader)、writeList(list)/readList(list)</p>
+</blockquote>
+<p>Parcel 可以用集装箱来类比，理由如下：</p>
+<ul>
+<li>货物无关性： 不排斥运输的货物种类，电子产品、汽车等都可以    </li>
+<li>不同的货物需要不同的打包和卸货方案： 比如运载易碎物品和坚硬物品的装箱和卸货方式就有很大的不同。</li>
+</ul>
+<blockquote>
+<p>值得注意的是，Parcel 存/取 数据的方式都是一一对应的，如 writeByte(byte)/readByte() </p>
+</blockquote>
+<ul>
+<li>远程运输和组装： 集装箱的货物一般需要跨洋，这类似于 Parcel 的跨进程。不过集装箱运输公司本身并不负责所运输货物的组装，而 Parcel 会依据协议为接收方提供还原冤死数据对象的业务。   </li>
+</ul>
+<h3 id="Parcel-的工作方式（书上没有，自己添加）"><a href="#Parcel-的工作方式（书上没有，自己添加）" class="headerlink" title="Parcel 的工作方式（书上没有，自己添加）"></a>Parcel 的工作方式（书上没有，自己添加）</h3><p> Parcel 的 Parcel.obtain() 方法可以获取一个Parcel 对象，系统预先产生了一个大小为6的 Parcel 池 sOwnedPool，在obtain 操作时，如果 sOwnedPool 中还有现成的 Parcel 对象，则直接利用，否则通过 new Parcel(0) 创建 Parcel 对象。</p>
 <h2 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h2><p>Android 是linux内核的，因而Binder驱动也是标准的linux驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备，Binder驱动运行于内核态。</p>
 <p>假设有连个进程A和B，其中进程B通过 open() 和 mmap()与Binder驱动建立了联系，如下图：</p>
 <p><img src="/assets/Book-Notes/深入理解Android内核设计思想/第6章/B-mmap.png" alt="进程B连接Binder"></p>
