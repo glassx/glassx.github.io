@@ -160,6 +160,152 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-Android 开发艺术探索-第1章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/05/11/Android 开发艺术探索-第1章/">第1章——Activity 生命周期和启动模式</a>
+    </h1>
+  
+
+        
+        <a href="/2019/05/11/Android 开发艺术探索-第1章/" class="archive-article-date">
+  	<time datetime="2019-05-11T07:42:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-05-11</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="Activity-的生命周期全面分析"><a href="#Activity-的生命周期全面分析" class="headerlink" title="Activity 的生命周期全面分析"></a>Activity 的生命周期全面分析</h2><p>本节将分为两部分内容，一部分是典型情况下的生命周期，一部分是异常情况下的生命周期（比如被系统回收或者由于当前设备Configuration 发生改变而导致 Activity 被销毁重建）。</p>
+<h3 id="一、典型情况下的生命周期分析"><a href="#一、典型情况下的生命周期分析" class="headerlink" title="一、典型情况下的生命周期分析"></a>一、典型情况下的生命周期分析</h3><p>正常情况下，Activity 会经历如下生命周期：</p>
+<ol>
+<li>onCreate ： 表示Activity 正在创建，这是生命周期第一个方法。  </li>
+<li>onRestart ： 表示Activity 正在重新启动。一般情况下，当前Activity 从不可见重新变为可见时，onRestart 就会被调用。    </li>
+<li>onStart ： 表示Activity 正在被启动，这时候 Activity 已经可见了，但是还没出现在前台，无法和用户交互。<strong>可以理解为 Activity 已经显示出来了，但是我们还看不到</strong>。  </li>
+<li>onResume ： 表示 Activity 已经可见了，并且出现在前台可以交互。  </li>
+<li>onPause： 表示 Activity 正在停止，正常情况下，紧接着 onStop 会被调用；在特殊情况下，如果这个时候快速地再回到当前 Activity ，那么 onResume 将会被调用。此时可以做一些存储数据、停止动画等工作，但是注意不能太耗时，<strong>因为onPause必须先执行完，新Acitivty 的 onResume 才会执行</strong>。    </li>
+<li>onStop ： 表示 Activity 即将停止，可以做一些稍微重量级的回收工作，同样不能太耗时。  </li>
+<li>onDestroy： 表示 Activity 即将被销毁，这是Activity 生命周期中的最后一个回调，我们可以做一些回收工作和最终的资源释放。  </li>
+</ol>
+<p>以下再针对 Activity 的生命周期具体说明：  </p>
+<ul>
+<li>针对特定的Activity，第一次启动回调如下： onCreate-&gt;onStart-&gt;onResume  </li>
+<li>打开新的Activity 或者(按Home键)回到桌面的时候，回调 onPause-&gt;onStop ；这里有种特殊情况，打开的新Activity 如果是透明主题（意味着当前Activity还是可见的），那么当前Activity 不会回调 onStop 。  </li>
+<li>当用于再次回到原来的 Activity 时，回调 onRestart-&gt;onStart-&gt;onResume  </li>
+<li>当用户按返回键返回上一个页面时，回调 onPause-&gt;onStop-&gt;onDestroy  </li>
+<li>从整个生命周期来看，<strong>onCreate与onDestroy是配对的，分别标识着Activity的创建与销毁；onStart与onStop是配对的，标识着Activity是否可见；onResume 与 onPause 是配对的，标识着Activity是否在前台</strong>。 </li>
+</ul>
+<p>一个问题：当前 Activity 标识为 A，启动一个新的Activity 标识为 B，那么B的onResume 和 A 的onPause 哪个先执行？</p>
+<blockquote>
+<p>由上面的描述可知是限制性A的 onPause，再执行 B 的onResume ，具体看源码，<a href="https://developer.android.google.cn/reference/android/app/Activity" target="_blank" rel="noopener">官方文档</a>也是这么解释(<strong>Always followed by onPause()</strong>)。 </p>
+</blockquote>
+<h3 id="二、异常情况下的生命周期分析"><a href="#二、异常情况下的生命周期分析" class="headerlink" title="二、异常情况下的生命周期分析"></a>二、异常情况下的生命周期分析</h3><h4 id="1、资源相关的系统配置发生改变导致Activity被杀死并重建"><a href="#1、资源相关的系统配置发生改变导致Activity被杀死并重建" class="headerlink" title="1、资源相关的系统配置发生改变导致Activity被杀死并重建"></a>1、资源相关的系统配置发生改变导致Activity被杀死并重建</h4><p>如果没有做特殊处理，当横竖屏切换的时候，由于系统配置发生了改变，Activity 会加载不同的资源（比如横竖屏加载两张不同图片），此时 Activity 会被销毁并且重新创建。由于 Acitivity 是在异常情况下终止的，因此在销毁Activity的时候，<strong>确切来说是在onStop之前（但是跟onPause没有顺序关系，有可能在其之前，也可能在其之后）会调用 onSaveInstanceState 来保存当前 Activity 状态</strong>；  </p>
+<p>Activity 被重新创建后，会把销毁时 onSaveInstanceState 方法保存的Bundle对象作为参数传给 onCreate 方法和 onRestoreInstanceState 方法，因此可以从这两个方法恢复之前保存的数据。<strong>从时序上来说，onRestoreInstanceState 调用时机在 onStart 之后。</strong></p>
+<blockquote>
+<p>这两个方法恢复数据的区别是：onRestoreInstanceState 一旦被调用，其参数 savedInstanceState 是一定有值的，我们不需要额外地判空；而 onCreate 中的数据是可能为空的，官方文档建议采用 onRestoreInstanceState 去恢复数据。</p>
+</blockquote>
+<p>如果没有覆写的话，onSaveInstanceState 和 onRestoreInstanceState 方法中，系统会自动为我们做一定的恢复工作。</p>
+<h4 id="2、资源内存不足导致低优先级Activity被杀死"><a href="#2、资源内存不足导致低优先级Activity被杀死" class="headerlink" title="2、资源内存不足导致低优先级Activity被杀死"></a>2、资源内存不足导致低优先级Activity被杀死</h4><p>Activity 按照优先级从高到低可以分为如下三种：</p>
+<p>（1）前台Activity——正在和用户交互的Activity，优先级最高<br>（2）可见但非前台Activity——比如Activity中弹出了dialog，导致Activity可见但是位于后台无法和用户直接交互。<br>（3）后台Activity——已经被暂停的的Activity，优先级最低。  </p>
+<p>我们知道，当系统配置发生改变时，Activity 会被销毁并重新创建，当然我们也可以通过给 Activity 指定configChanges 属性来阻止销毁重建：</p>
+<blockquote>
+<p>android:configChanges=”orientation”</p>
+</blockquote>
+<p>当然这个属性可以配置的项目还有很多，比如切换系统语言、使用了新字号、界面模式改变（比如 是否开启/关闭夜间模式）。</p>
+<h2 id="Activity-的启动模式"><a href="#Activity-的启动模式" class="headerlink" title="Activity 的启动模式"></a>Activity 的启动模式</h2><ul>
+<li>standard： 标准模式。不复用，每次请求都创建新实例，并且就运行在启动它的那个Activity所在的栈。    </li>
+<li>singleTop： 栈顶复用模式 。如果实例位于任务栈的栈顶就复用，复用时调用 onNewIntent方法，否则就创建新的实例。       </li>
+<li>singleTask： 栈内复用模式。当前栈内没有实例，则创建实例放入栈中；如果实例在当前栈内，则复用，复用时调用 onNewIntent方法，并把它之上的Activity出栈。  </li>
+<li>singleInstance： 单例模式。<strong>只能单独位于一个任务栈中</strong>，只要这个实例存在，后续的请求均不会创建新的Activity。复用时调用 onNewIntent方法。  </li>
+</ul>
+<p>在使用 ApplicationContext 启动standard 模式的Activity时会报错：</p>
+<blockquote>
+<p>Callking startActivity from outside of an Activity context requires the FLAG_ACTIVITY_NEW_TASK flag</p>
+</blockquote>
+<p>这是因为standard模式的Activity 默认会进入启动它的Activity所属的任务栈中，由于非Activity类型的Context 没有所谓的任务栈，所以会报错。解决这个问题的方法是为待启动的Activity指定 FLAG_ACTIVITY_NEW_TASK 标记，这样启动的时候会为它创建一个新的任务栈（体会下，这时候实际上是以singleTask模式启动的）</p>
+<h3 id="Activity-的Flags"><a href="#Activity-的Flags" class="headerlink" title="Activity 的Flags"></a>Activity 的Flags</h3><p>Activity 的Flags很多，这里分析比较常用的几个:</p>
+<ul>
+<li>FLAG_ ACTIVITY_ NEW_ TASK</li>
+</ul>
+<blockquote>
+<p>为Activity 指定singleTask启动模式，其效果和在XML中指定 singleTask 启动模式相同</p>
+</blockquote>
+<ul>
+<li>FLAG_ ACTIVITY_ SINGLE_ TOP</li>
+</ul>
+<blockquote>
+<p>为Activity 指定 singleTop 启动模式，其效果和在XML中指定 singleTop 启动模式相同</p>
+</blockquote>
+<ul>
+<li>FLAG_ ACTIVITY_ CLEAR_ TOP</li>
+</ul>
+<blockquote>
+<p>具有此标记的Activity，当它启动时，在同一个任务栈中所有位于它上面的Activity都要出栈，这个标记为一般会和FLAG_ACTIVITY_SINGLE_TOP标记位一起出现。由前面的分析可知，singleTask启动模式默认具有此标记位效果。</p>
+</blockquote>
+<ul>
+<li>FLAG_ ACTIVITY_ EXCLUDE_ FROM_ RECENTS</li>
+</ul>
+<blockquote>
+<p>具有这个标记位的Activity不会出现在历史Activity列表中，当某些情况下我们不希望用户通过历史列表回到我们的Activity的时候，这个标记比较有用。这个标记等同于xml中指定Activity 的属性 android:excludeFromRecents = “true”</p>
+</blockquote>
+<h4 id="IntentFilter-的匹配规则"><a href="#IntentFilter-的匹配规则" class="headerlink" title="IntentFilter 的匹配规则"></a>IntentFilter 的匹配规则</h4><p>略</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">Android开发艺术探索</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/05/11/Android 开发艺术探索-第1章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-深入理解Java虚拟机-第3章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1033,104 +1179,6 @@
       
         <p class="article-more-link">
           <a class="article-more-a" href="/2019/03/06/可能的面试题/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-常用的有意思的算法(三)" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/04/常用的有意思的算法(三)/">常用的有意思的算法(三)</a>
-    </h1>
-  
-
-        
-        <a href="/2019/03/04/常用的有意思的算法(三)/" class="archive-article-date">
-  	<time datetime="2019-03-04T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-04</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="冒泡排序算法"><a href="#冒泡排序算法" class="headerlink" title="冒泡排序算法"></a>冒泡排序算法</h2><p>思路：依次比较相邻的两个数，将小数放在前面，大数放在后面。<strong>即第一趟：首先比较第1个和第2个数，将小数放前，大数放后。然后比较第2个数和第3个数，将小数放前，大数放后，如此继续，直至比较最后两个数，将小数放前，大数放后。之后便是重复第一趟步骤，直至全部排序完成</strong>。</p>
-<blockquote>
-<p>第一趟比较完成后，最后一个数一定是数组中最大的一个数，所以第二趟比较的时候最后一个数不参与比较；第二趟比较完成后，倒数第二个数也一定是数组中第二大的数，所以第三趟比较的时候最后两个数不参与比较；依次类推，每一趟比较次数-1;</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">bubbleSort1</span><span class="params">(<span class="keyword">int</span>[] ints)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> len = ints.length;</span><br><span class="line">    <span class="keyword">boolean</span> flag = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">while</span> (flag) &#123;</span><br><span class="line">        flag = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; len; i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (ints[i - <span class="number">1</span>] &gt; ints[i]) &#123;</span><br><span class="line">                <span class="keyword">int</span> temp = ints[i];</span><br><span class="line">                ints[i] = ints[i-<span class="number">1</span>];</span><br><span class="line">                ints[i-<span class="number">1</span>] = temp;</span><br><span class="line">                flag = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        len -- ;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    foreach(<span class="keyword">int</span> i : ints)&#123;</span><br><span class="line">        print(i);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="选择排序"><a href="#选择排序" class="headerlink" title="选择排序"></a>选择排序</h2><p>选择排序的基本思想：给定数组：int[] arr={里面n个数据}；第1趟排序，在待排序数据arr[1]~arr[n]中选出最小的数据，将它与arrr[1]交换；第2趟，在待排序数据arr[2]~arr[n]中选出最小的数据，将它与r[2]交换；以此类推，第i趟在待排序数据arr[i]~arr[n]中选出最小的数据，将它与r[i]交换，直到全部排序完成。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">selectSort</span><span class="params">(<span class="keyword">int</span>[] a)</span></span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i&lt; a.length - <span class="number">1</span>; i++)&#123;</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">int</span> index = i;<span class="comment">//当前趟最小的数所在index</span></span><br><span class="line">        </span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> j=i+<span class="number">1</span>; j &lt; a.length; j++)&#123;</span><br><span class="line">            <span class="keyword">if</span> (a[j] &lt; a[index])&#123;</span><br><span class="line">                index = j;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (index != i)&#123;</span><br><span class="line">            <span class="keyword">int</span> temp = a[i];</span><br><span class="line">            a[i] = a[index];</span><br><span class="line">            a[index] = temp;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//排序结束</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> h = <span class="number">0</span>; h &lt; a.length; h++)&#123;</span><br><span class="line">        System.out.print(<span class="string">""</span> + a[h]);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="插入排序"><a href="#插入排序" class="headerlink" title="插入排序"></a>插入排序</h2><ol>
-<li>以数组的某一位作为分隔位，比如 index = 1 ，假设左面的都是有序的。</li>
-<li>将 index 位的数据拿出来，放到临时变量里，这时index位置就空出来了。</li>
-<li>从 leftindex = index-1 开始将左面的数据与当前 index 位的数据（即temp）进行比较，如果 array[leftindex] &gt; temp ，则将 array[leftindex] 后移一位，即 array[leftindex+1] = array[leftindex] ,此时 leftindex 就空出来了。</li>
-<li>再用 index-2 (即leftindex=leftindex-1)位的数据和temp比，重复步骤3，直到找到 &lt;=temp 的数据或者比到了最左面（说明temp最小），停止比较，将temp放在当前空的位置上。</li>
-<li>index 向后挪1，即 index=index+1 ，temp=array[index] ，重复步骤2~4，直到index=array.length，排序结束，此时数组中的数据即为从小到大的顺序。</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doInsertSort</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> index = <span class="number">1</span>; index&lt;length; index++)&#123;<span class="comment">//外层向右的index，即作为比较对象的数据的index</span></span><br><span class="line">        <span class="keyword">int</span> temp = array[index];<span class="comment">//用作比较的数据</span></span><br><span class="line">        <span class="keyword">int</span> leftindex = index-<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">while</span>(leftindex&gt;=<span class="number">0</span> &amp;&amp; array[leftindex]&gt;temp)&#123;<span class="comment">//当比到最左边或者遇到比temp小的数据时，结束循环</span></span><br><span class="line">            array[leftindex+<span class="number">1</span>] = array[leftindex];</span><br><span class="line">            leftindex--;</span><br><span class="line">        &#125;</span><br><span class="line">        array[leftindex+<span class="number">1</span>] = temp;<span class="comment">//把temp放到空位上</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="shell排序"><a href="#shell排序" class="headerlink" title="shell排序"></a>shell排序</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 思路：三层循环</span></span><br><span class="line"><span class="comment"> * 第一层循环：控制增量-增量随着程序的进行依次递减一半</span></span><br><span class="line"><span class="comment"> * 第二层循环：遍历数组</span></span><br><span class="line"><span class="comment"> * 第三层循环：比较元素，交换元素。</span></span><br><span class="line"><span class="comment"> * 这里需要注意的是：比较的两个元素和交换的两个元素是不同的。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="title">shellSort</span><span class="params">(<span class="keyword">int</span>[] data)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> div = data.length/<span class="number">2</span>; div&gt;<span class="number">0</span>; div/=<span class="number">2</span>) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> j = div; j &lt; data.length; j++) &#123;</span><br><span class="line">            <span class="keyword">int</span> temp = data[j];</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> k=j; k&gt;=div &amp;&amp; temp&lt;data[k-div] ; k-=div) &#123;</span><br><span class="line">                data[k] = data[k-div];</span><br><span class="line">            &#125;</span><br><span class="line">            data[k] = temp;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="快速排序"><a href="#快速排序" class="headerlink" title="快速排序"></a>快速排序</h2><p>假设我们现在对“6 1 2 7 9 3 4 5 10 8”这个10个数进行排序。首先在这个序列中随便找一个数作为基准数，为了方便，就让第一个数6作为基准数吧。接下来，需要将这个序列中所有比基准数大的数放在6的右边，比基准数小的数放在6的左边。得到一个一个以6为中心的序列，再以6为界限，将左右两边都看成数组，分别按照刚才的方法排序。上个图会比较直观：</p>
-<p><img src="/assets/趣味/算法/快速排序.png" alt="快速排序"></p>
-<p>代码如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">quickSort</span><span class="params">(<span class="keyword">int</span>[] arr,<span class="keyword">int</span> low,<span class="keyword">int</span> high)</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> i,j,temp,t;</span><br><span class="line">    <span class="keyword">if</span>(low&gt;high)&#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    i=low;</span><br><span class="line">    j=high;</span><br><span class="line">    <span class="comment">//temp就是基准位</span></span><br><span class="line">    temp = arr[low];</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">while</span> (i&lt;j) &#123;</span><br><span class="line">        <span class="comment">//先看右边，依次往左递减</span></span><br><span class="line">        <span class="keyword">while</span> (temp&lt;=arr[j]&amp;&amp;i&lt;j) &#123;</span><br><span class="line">            j--;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//再看左边，依次往右递增</span></span><br><span class="line">        <span class="keyword">while</span> (temp&gt;=arr[i]&amp;&amp;i&lt;j) &#123;</span><br><span class="line">            i++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//如果满足条件则交换</span></span><br><span class="line">        <span class="keyword">if</span> (i&lt;j) &#123;</span><br><span class="line">            t = arr[j];</span><br><span class="line">            arr[j] = arr[i];</span><br><span class="line">            arr[i] = t;</span><br><span class="line">        &#125;</span><br><span class="line"> </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//最后将基准为与i和j相等位置的数字交换</span></span><br><span class="line">     arr[low] = arr[i];</span><br><span class="line">     arr[i] = temp;</span><br><span class="line">    <span class="comment">//递归调用左半数组</span></span><br><span class="line">    quickSort(arr, low, j-<span class="number">1</span>);</span><br><span class="line">    <span class="comment">//递归调用右半数组</span></span><br><span class="line">    quickSort(arr, j+<span class="number">1</span>, high);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="堆排序"><a href="#堆排序" class="headerlink" title="堆排序"></a>堆排序</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">//非递归算法实现二路归并排序，length代表数组长度，即数组最大下标是 legth - 1</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">mergeSort</span><span class="params">(<span class="keyword">int</span> List[],<span class="keyword">int</span> length)</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> size = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">int</span> low;</span><br><span class="line">    <span class="keyword">int</span> mid;</span><br><span class="line">    <span class="keyword">int</span> high;</span><br><span class="line">    <span class="comment">//size 是标记当前各个归并序列的high-low，从1，2，4，8，……，2*size</span></span><br><span class="line">    <span class="keyword">while</span>(size &lt;= length - <span class="number">1</span>)&#123;</span><br><span class="line">        <span class="comment">//从第一个元素开始扫描，low代表第一个分割的序列的第一个元素</span></span><br><span class="line">        low = <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//当前的归并算法结束的条件</span></span><br><span class="line">        <span class="keyword">while</span>(low + size &lt;= length - <span class="number">1</span>)&#123;</span><br><span class="line">            <span class="comment">//mid代表第一个分割的序列的最后一个元素</span></span><br><span class="line">            mid = low + size - <span class="number">1</span>;</span><br><span class="line">            <span class="comment">//high 代表第二个分割的序列的最后一个元素</span></span><br><span class="line">            high = mid + size;</span><br><span class="line">            <span class="comment">//判断一下：如果第二个序列个数不足size个</span></span><br><span class="line">            <span class="keyword">if</span>(high &gt; length - <span class="number">1</span>)&#123;</span><br><span class="line">                <span class="comment">//调整 high 为最后一个元素的下标即可</span></span><br><span class="line">                high = length - <span class="number">1</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//调用归并函数，进行分割的序列的分段排序</span></span><br><span class="line">            merge(List, low, mid, high);</span><br><span class="line">            <span class="comment">//打印出每次归并的区间</span></span><br><span class="line">            cout &lt;&lt; <span class="string">"low:"</span> &lt;&lt; low &lt;&lt; <span class="string">" mid:"</span> &lt;&lt; mid &lt;&lt; <span class="string">" high:"</span> &lt;&lt; high &lt;&lt; endl;</span><br><span class="line">            <span class="comment">//下一次归并时第一序列的第一个元素位置</span></span><br><span class="line">            low = high + <span class="number">1</span>;</span><br><span class="line">        &#125;<span class="comment">// end of while</span></span><br><span class="line">        <span class="comment">//范围扩大一倍，二路归并的过程</span></span><br><span class="line">        size *= <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>归并的思想主要用于外部排序：<br>外部排序可分两步<br>①待排序记录分批读入内存，用某种方法在内存排序，组成有序的子文件，再按某种策略存入外存。<br>②子文件多路归并，成为较长有序子文件，再记入外存，如此反复，直到整个待排序文件有序。</p>
-</blockquote>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>上述排序，稳定的排序有：冒泡、插入、合并 ，不稳定排序：选择、shell、快排、堆排</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">趣味题</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/04/常用的有意思的算法(三)/">展开全文 >></a>
         </p>
       
 
