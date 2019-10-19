@@ -160,6 +160,170 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-从小工到专家-第九章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2018/10/17/从小工到专家-第九章/">第9章-单元测试</a>
+    </h1>
+  
+
+        
+        <a href="/2018/10/17/从小工到专家-第九章/" class="archive-article-date">
+  	<time datetime="2018-10-17T14:30:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-10-17</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>照例，如果自学不需要看我这个博客的话，资料如下：<br><a href="https://developer.android.google.cn/studio/test/?hl=zh-cn" target="_blank" rel="noopener">官网关于Android Test的介绍的地址</a><br><a href="https://github.com/googlesamples/android-testing" target="_blank" rel="noopener">Android官方关于测试的例子</a> ，需要的自取</p>
+<p>单元测试、集成测试、黑盒测试、白盒测试等，只有单元测试是我们开发人员需要自己完成的，其余都是由测试人员完成的。单元测试本质上也是代码，是验证代码正确性的代码。</p>
+<h2 id="为什么要做单元测试"><a href="#为什么要做单元测试" class="headerlink" title="为什么要做单元测试"></a>为什么要做单元测试</h2><ul>
+<li>便于后期重构。单元测试为后期测试提供了保障，在重构之后，只要单元测试还是全部通过，那么在很大程度上表示重构没有引入新的bug。</li>
+<li>优化设计。编写单元测试将使开发者从调用者的角度观察和思考，这样迫使开发者把程序设计成易于调用和低耦合的易测试的形式。</li>
+<li>避免代码出现回归。编写完成后，可以随时随地快速运行测试，而不是要求将代码部署到设备上，再手动执行覆盖各种路径。</li>
+<li>文档记录。单元测试是极好的“官方文档”，它展示函数或者类如何使用。</li>
+</ul>
+<h2 id="Android-测试类型-选自官网"><a href="#Android-测试类型-选自官网" class="headerlink" title="Android 测试类型(选自官网)"></a>Android 测试类型(选自官网)</h2><p>测试代码的位置取决于您要编写的测试的类型。 Android Studio 为以下两种测试类型提供了源代码目录（源集）：</p>
+<h3 id="本地单元测试"><a href="#本地单元测试" class="headerlink" title="本地单元测试"></a>本地单元测试</h3><p>位于 <strong>module-name/src/test/java/</strong>目录。</p>
+<p>这些测试在计算机的本地 Java 虚拟机 (JVM) 上运行。 当您的测试没有 Android 框架依赖项或当您可以模拟 Android 框架依赖项时，可以利用这些测试来尽量缩短执行时间。</p>
+<p>在运行时，这些测试的执行对象是去掉了所有 final 修饰符的修改版 android.jar。 这样一来，您就可以使用 Mockito 之类的常见模拟库。</p>
+<h3 id="Instrumented测试（仪器测试）"><a href="#Instrumented测试（仪器测试）" class="headerlink" title="Instrumented测试（仪器测试）"></a>Instrumented测试（仪器测试）</h3><p>位于 module-name/src/androidTest/java/。</p>
+<p>这些测试在硬件设备或模拟器上运行。 这些测试有权访问 Instrumentation API，让您可以获取某些信息（例如您要测试的应用的 Context）， 并且允许您通过测试代码来控制受测应用。 可以在编写集成和功能 UI 测试来自动化用户交互时，或者在测试具有模拟对象无法满足的 Android 依赖项时使用这些测试。</p>
+<p>由于仪器测试内置于 APK 中（与您的应用 APK 分离），因此它们必须拥有自己的 AndroidManifest.xml 文件。 不过，由于 Gradle 会自动在构建时生成该文件，因此它在您的项目源集中不可见。 您可以在必要时（例如需要为 <code>minSdkVersion</code> 指定其他值或注册测试专用的运行侦听器时）添加自己的清单文件。 构建应用时，Gradle 会将多个清单文件合并成一个清单。</p>
+<p>Gradle 构建解读这些测试源集的方式与其解读项目应用源集的方式相同，您可以利用这一点根据构建变体创建测试。</p>
+<p>以下示意图诠释了两种测试的代码结构（图中1表示的是<strong>仪器测试</strong>的代码，2表示的是<strong>单元测试</strong>的代码结构）</p>
+<p><img src="https://developer.android.google.cn/studio/images/test/project-window-tests_2-2_2x.png?hl=zh-cn" alt="单元测试与仪器测试示意图"></p>
+<h2 id="Junit4"><a href="#Junit4" class="headerlink" title="Junit4"></a>Junit4</h2><p>在Android测试框架中，常用的有以下几个框架和工具类：JUnit4、AndroidJUnitRunner、Mockito、Espresso，其中主要的单元测试使用Junit4。Junit4是一套基于注解的单元测试框架，在Android studio中，编写在test目录下的测试类都是基于该框架实现，该目录下的代码直接运行在本地的JVM上，不需要Android真机或者模拟器支持。常用的注解如下(更多内容可以查看<a href="https://junit.org/junit4/" target="_blank" rel="noopener">Junit4官网</a>)：</p>
+<ul>
+<li>@BeforeClass 测试类里所有用例运行之前，运行一次这个方法。方法必须是public static void</li>
+<li>@AfterClass 与BeforeClass对应</li>
+<li>@Before 在每个用测试例运行之前都运行一次。</li>
+<li>@After 与Before对应</li>
+<li>@Test 指定该方法为测试方法，方法必须是public void</li>
+<li>@RunWith 测试类名之前，用来确定这个类的测试运行器<br>以下用一个简单的测试类来展示测试类的大概形式：</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CaculatUtilTest</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> CaculatUtil mCaculatUtil;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Before</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span></span>&#123;</span><br><span class="line">		mCaculatUtil = <span class="keyword">new</span> CaculatUtil();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Test</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTwoNumbers</span><span class="params">()</span></span>&#123;</span><br><span class="line">		assertEquals(<span class="number">3</span>,mCaculatUtil.add(<span class="number">1</span>,<span class="number">2</span>));</span><br><span class="line">		<span class="comment">//或者如果是静态方法，就类似于以下这种静态调用方法</span></span><br><span class="line">		assertEquals(<span class="number">3</span>,Caculator.add(<span class="number">1</span>,<span class="number">2</span>));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Junit的断言和失败提示"><a href="#Junit的断言和失败提示" class="headerlink" title="Junit的断言和失败提示"></a>Junit的断言和失败提示</h2><p>Junit提供了多个以assert开头的函数，分别用来验证各类相等性质的问题，大致有如下几类：</p>
+<ul>
+<li><p>assertEquals</p>
+<blockquote>
+<p>assertEquals的作用是判断两个值或者对象是否相等。接受2个参数，参数1为预期值，参数2为计算得到的值。</p>
+</blockquote>
+</li>
+<li><p>assertTrue 与 assertFalse</p>
+<blockquote>
+<p>assertTrue 与 assertFalse顾名思义就是分别验证真与假，只需要一个boolean类型的参数。例如 assertTrue(false)测试会失败， 而 assertTrue(true) 测试通过。</p>
+</blockquote>
+</li>
+<li><p>assertNull 与 assertNotNull</p>
+<blockquote>
+<p>和assertTrue、assertFalse类似，只不过是用来判断空或者非空。例如：assertNull(null) 会测试失败，因为值为null；而assertNull(“hell”)就能测试通过。</p>
+</blockquote>
+</li>
+<li><p>assertSame 与 assertNotSame</p>
+<blockquote>
+<p>assertSame用于判断两个对象是否是同一个对象，与assertEquals不同的是，assertSame强调的为同一个对象，而assertEquals只要两个对象相等即可（即调用equals函数时返回true）。</p>
+</blockquote>
+</li>
+<li><p>failNotEquals</p>
+<blockquote>
+<p>函数有3个参数，参数1位失败时提示信息，参数2为期望值，参数3是实际值。当两个对象不相等时抛出参数1的错误信息。</p>
+</blockquote>
+</li>
+<li><p>failSame与failNotSame</p>
+<blockquote>
+<p>failNotSame与failNotEquals类似，不是同一个对象时就抛出参数1的错误信息。</p>
+</blockquote>
+</li>
+<li><p>fail(String) 与 fail()</p>
+<blockquote>
+<p>fail(String)直接抛出当前测试用例参数1中的错误信息，而fail()给出默认的错误信息。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="运行多个测试类——TestSuite"><a href="#运行多个测试类——TestSuite" class="headerlink" title="运行多个测试类——TestSuite"></a>运行多个测试类——TestSuite</h2><p>如果需要同时运行两个或多个Test类，JUnit提供了Suite注解，在对应的测试目录下创建一个空Test类：</p>
+<ul>
+<li>@RunWith(Suite.class)：配置Runner运行环境。</li>
+<li>@Suite.SuiteClasses({A.class, B.class})：添加需要一起运行的测试类。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RunWith</span>(Suite.class)</span><br><span class="line"><span class="meta">@Suite</span>.SuiteClasses(&#123;CalculatorTest.class, CalculatorWithParameterizedTest.class&#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UnitTestSuite</span></span>&#123;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述代码中，UnitTestSuite成了一个空类，测试类被添加到注解中了。<br>或者，如果不用注解，可以通过JUnit4TestAdapter包装测试类，并将JUnit4TestAdapter对象添加到TestSuit中，示例代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MathTestSuite</span></span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Test <span class="title">suite</span><span class="params">()</span></span>&#123;</span><br><span class="line">		TestSuite suite = <span class="keyword">new</span> TestSuite(<span class="string">"com.book.jtm"</span>);</span><br><span class="line">		<span class="comment">//添加测试用例</span></span><br><span class="line">		suite.addTest(<span class="keyword">new</span> JUnit4TestAdapter(AdderTest.class));</span><br><span class="line">		suite.addTest(<span class="keyword">new</span> JUnit4TestAdapter(DiverTest.class));</span><br><span class="line">		<span class="keyword">return</span> suite;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述代码有一个静态的suite函数，它返回一个Test对象，这个对象是TestSuite类型的。测试时，以Junit测试用例的形式运行这个MathTestSuite即可运行这两个测试类。</p>
+<h2 id="多个参数输入测试"><a href="#多个参数输入测试" class="headerlink" title="多个参数输入测试"></a>多个参数输入测试</h2><p>当需要传入多个参数进行测试时，可以使用 @Parameters 来进行单个方法的多次不同参数的测试，对于测试类，使用该方法需要如下步骤：</p>
+<ul>
+<li>在测试类上添加@RunWith(Parameterized.class)注解</li>
+<li>添加测试类的构造函数</li>
+<li>添加获取参数集合的static方法，并在方法上添加@Parameters注解</li>
+<li>在需要测试的方法中直接使用成员变量，该变量由JUnit通过构造方法生成</li>
+</ul>
+<p>直接上示例代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RunWith</span>(Parameterized.class)<span class="comment">//为测试类添加注解</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CaculatUtilTest</span></span>&#123;</span><br><span class="line">	<span class="comment">//两个传入的参数</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramOne;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramTwo;</span><br><span class="line">	<span class="comment">//期望值</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> expectResult;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> CaculatUtil mCaculatUtil;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">CaculatUtilTest</span><span class="params">(<span class="keyword">int</span> paramOne,<span class="keyword">int</span> paramTwo,<span class="keyword">int</span> expectResult)</span></span>&#123;<span class="comment">//添加构造函数</span></span><br><span class="line">		<span class="keyword">this</span>.paramOne = paramOne;</span><br><span class="line">		<span class="keyword">this</span>.paramTwo = paramTwo;</span><br><span class="line">		<span class="keyword">this</span>.expectResult = expectResult;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//添加获取参数集合的static方法，并在方法上添加@Parameters注解</span></span><br><span class="line">	<span class="meta">@Parameters</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> Collection&lt;Object[]&gt; initTestData()&#123;</span><br><span class="line">		<span class="keyword">return</span> Arrays.asList(<span class="keyword">new</span> Object[][]&#123;</span><br><span class="line">		&#123;<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>&#125;,</span><br><span class="line">		&#123;<span class="number">1</span>,<span class="number">1</span>,<span class="number">2</span>&#125;,</span><br><span class="line">		&#123;<span class="number">1</span>,<span class="number">5</span>,<span class="number">6</span>&#125;</span><br><span class="line">		&#125;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Before</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span></span>&#123;</span><br><span class="line">		mCaculatUtil = <span class="keyword">new</span> CaculatUtil();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Test</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTwoNumbers</span><span class="params">()</span></span>&#123;</span><br><span class="line">		<span class="comment">//测试的方法中直接使用成员变量</span></span><br><span class="line">		assertEquals(expectResult,mCaculatUtil.add(paramOne,paramTwo));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="AndroidJUnitRunner"><a href="#AndroidJUnitRunner" class="headerlink" title="AndroidJUnitRunner"></a>AndroidJUnitRunner</h2><p>当单元测试中涉及Android系统库的调用时，可以通过AndroidJUnitRunner方案完成测试，这样就能在测试类中使用Context、parcelable、Shareprefrence等类。使用方法是在androidTest目录下创建测试类（因为这涉及到Instrumented测试的内容），在该类上添加@RunWith(AndroidJUnit4.class)注解。如以下代码示范了如何在测试类中使用SharedPrefrences：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RunWith</span>(AndroidJUnit4.class)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SharedPreferencesHelperTest</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String TEST_NAME = <span class="string">"Test name"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String TEST_EMAIL = <span class="string">"test@email.com"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Calendar TEST_DATE_OF_BIRTH = Calendar.getInstance();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> SharedPreferenceEntry mSharedPreferenceEntry;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> SharedPreferencesHelper mSharedPreferencesHelper;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> SharedPreferences mSharePreferences;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** 上下文 */</span></span><br><span class="line">    <span class="keyword">private</span> Context mContext;</span><br><span class="line">    ……</span><br><span class="line">    <span class="meta">@Before</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">//获取application的context</span></span><br><span class="line">        mContext = InstrumentationRegistry.getTargetContext();</span><br><span class="line">        <span class="comment">//实例化SharedPreferences</span></span><br><span class="line">        mSharePreferences = PreferenceManager.getDefaultSharedPreferences(mContext);</span><br><span class="line"></span><br><span class="line">        mSharedPreferenceEntry = <span class="keyword">new</span> SharedPreferenceEntry(TEST_NAME, TEST_DATE_OF_BIRTH, TEST_EMAIL);</span><br><span class="line">        <span class="comment">//实例化SharedPreferencesHelper，依赖注入SharePreferences</span></span><br><span class="line">        mSharedPreferencesHelper = <span class="keyword">new</span> SharedPreferencesHelper(mSharePreferences);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//以下是在mock的相关操作，模拟commit失败</span></span><br><span class="line">        mMockSharePreferences = Mockito.mock(SharedPreferences.class);</span><br><span class="line">        mMockBrokenEditor = Mockito.mock(SharedPreferences.Editor.class);</span><br><span class="line">        when(mMockSharePreferences.edit()).thenReturn(mMockBrokenEditor);</span><br><span class="line">        when(mMockBrokenEditor.commit()).thenReturn(<span class="keyword">false</span>);</span><br><span class="line">        mMockSharedPreferencesHelper = <span class="keyword">new</span> SharedPreferencesHelper(mMockSharePreferences);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 测试保存数据是否成功</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sharedPreferencesHelper_SavePersonalInformation</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        assertThat(mSharedPreferencesHelper.savePersonalInfo(mSharedPreferenceEntry), is(<span class="keyword">true</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 测试保存数据，然后获取数据是否成功</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sharedPreferencesHelper_SaveAndReadPersonalInformation</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        mSharedPreferencesHelper.savePersonalInfo(mSharedPreferenceEntry);</span><br><span class="line">        SharedPreferenceEntry sharedPreferenceEntry = mSharedPreferencesHelper.getPersonalInfo();</span><br><span class="line">        assertThat(isEquals(mSharedPreferenceEntry, sharedPreferenceEntry), is(<span class="keyword">true</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    ……</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="模拟所需要的模块"><a href="#模拟所需要的模块" class="headerlink" title="模拟所需要的模块"></a>模拟所需要的模块</h2><p>有时我们测试需要依赖于其他的功能模块，但是某些原因这个功能模块不能在测试时运用或未开发完，为了不阻塞测试，我们可以Mock对象来完成测试。还有一些场景，诸如对象很难被创建、真实对象运行缓慢、真实对象的错误很难出现等，也可以通过Mock对象来测试。</p>
+<h3 id="手动Mock对象"><a href="#手动Mock对象" class="headerlink" title="手动Mock对象"></a>手动Mock对象</h3><p>举个例子，开发一款记事本软件，登录成功后才能写/存笔记，小明小刘分别负责登录和写/存笔记功能，存笔记的时候时候需要用户信息User的实例，而用户信息在登录成功后才能获得。可行的代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//保存数据的类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NoteDAO</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> NoteDAO noteDAO;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">saveNote</span><span class="params">(User user,String note)</span></span>&#123;</span><br><span class="line">		Log.d(<span class="string">"NoteDAO"</span>,<span class="string">"存储笔记"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//测试类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NoteTest</span></span>&#123;</span><br><span class="line">	<span class="meta">@Before</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span></span>&#123;</span><br><span class="line">		noteDAO = <span class="keyword">new</span> NoteDAO();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Test</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testSaveNote</span><span class="params">()</span></span>&#123;</span><br><span class="line">		MockLoginImpl loginImpl = <span class="keyword">new</span> MockLoginImpl();</span><br><span class="line">		noteDAO.saveNote(loginImpl.login(<span class="string">"dd"</span>,<span class="string">"pwd"</span>),<span class="string">"note_content"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//Mock类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MockLoginImpl</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> User <span class="title">login</span><span class="params">(String name,String pwd)</span></span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> User(name,<span class="string">"1234556"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="使用第三方工具Mockito"><a href="#使用第三方工具Mockito" class="headerlink" title="使用第三方工具Mockito"></a>使用第三方工具Mockito</h3><p>前面有例子已经涉及到Mockito的部分使用，可以在网上搜索相关使用，这里不再详细展开，如果需要，后面会专门介绍。</p>
+<h2 id="运行单元测试"><a href="#运行单元测试" class="headerlink" title="运行单元测试"></a>运行单元测试</h2><ul>
+<li>在Android studio中，对指定的测试类点击鼠标右键，选择对应的Run或者debug<br>*在Terminal输入gradle testDebugUnitTest或gradle testReleaseUnitTest指令来分别运行debug和release版本的unittesting，在执行的结果可以在xxx\project\app\build\reports\tests\testReleaseUnitTest中查看</li>
+</ul>
+<p>声明：整篇文章有部分内容摘抄自博客：<a href="https://www.jianshu.com/p/925191464389" target="_blank" rel="noopener">https://www.jianshu.com/p/925191464389</a></p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">读书笔记-从小工到专家</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2018/10/17/从小工到专家-第九章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-第一季kotlin崛起-第5章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -939,113 +1103,6 @@
 
 
   
-    <article id="post-第一行代码（第二版）-第七章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2018/06/21/第一行代码（第二版）-第七章/">第7章： 数据存储全方案——跨程序共享数据：探究内容提供器</a>
-    </h1>
-  
-
-        
-        <a href="/2018/06/21/第一行代码（第二版）-第七章/" class="archive-article-date">
-  	<time datetime="2018-06-21T00:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-06-21</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>可能你会有些疑惑，为什么要将我们程序中的数据共享给其他程序呢？当然，这是视情况而定的，比如账号密码之类的隐私数据显然是不能共享给其他程序的，不过一些可以让其他程序进行二次开发的基础性数据，我们还是可以选择共享。例如联系人程序、短信程序、多媒体库等，它们的数据库中保存了很多基础数据，如果不允许其他应用进行访问，则方便性就会大打折扣。</p>
-<h3 id="运行时权限"><a href="#运行时权限" class="headerlink" title="运行时权限"></a>运行时权限</h3><p>Android的权限机制在一开始就存在，但是在6.0以前保护隐私方面比较有限，因为像微信这种大家都离不开的软件，容易“店大欺客”，不同意它所有的权限只能不安装，这并不合理。</p>
-<h4 id="权限机制详解"><a href="#权限机制详解" class="headerlink" title="权限机制详解"></a>权限机制详解</h4><p>开发者在AndroidManifest.xml中声明权限，一种情况是，用户如果在低于6.0的系统上安装该程序，会在安装时列出该应用所需要的权限，从而决定是否要安装这个程序，并且在用户安装成功之后，还能在<strong>设置</strong>中查看程序所申请的权限，但是对于那些离不开的程序（比如微信）来说，要么全部同意它申请的权限，要么不安装，这不太合理；如果在6.0及以上的系统中安装，则用户不必在安装时一次性授权所有申请的权限，而是在软件使用的过程中再对<strong>危险权限</strong>进行授权，就算拒绝了这个权限，仍然可以使用应用的其他功能，而不是以前那样直接无法安装。</p>
-<p>Android 6.0 及以上将所有权限分为两类，<strong>普通权限和危险权限</strong>，普通权限是指不会直接威胁用户的安全和隐私的权限，这部分权限系统自动帮我们授权，避免用户不停地手动授权；危险权限则表示会触及用户隐私或者设备安全性的权限，如获取联系人、定位设备位置等，必须由程序员动态申请，由用户手动点击授权才可以，否则无法使用相应功能。目前为止，Android中的危险权限有9组共24个权限，如下列表所示（图片来自<a href="https://developer.android.google.cn/guide/topics/security/permissions#normal-dangerous" target="_blank" rel="noopener">官网</a>）：</p>
-<p><img src="/assets/Book-Notes/第一行代码/chapter-7/图1.png" alt="危险权限列表"></p>
-<p>这张表格无需记住，在使用的时候作为参照，如果权限在这张表中，则进行运行时处理就好。<strong>另外注意一下，表格中每个危险权限都属于一个权限组，我们在进行运行时权限处理时使用的是权限名，但是用户一旦同意授权了，那么该权限对应的权限组中所有的其他权限也会同时被授权</strong>。</p>
-<h3 id="在程序运行时申请权限"><a href="#在程序运行时申请权限" class="headerlink" title="在程序运行时申请权限"></a>在程序运行时申请权限</h3><p>以拨打电话的权限为例来说明权限的申请，点击一个按钮，就拨打指定的号码，在6.0以前可能是这样实现的：</p>
-<ol>
-<li><p>在AndroidManifest.xml中申请权限：</p>
-<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.CALL_PHONE"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>在代码中实现：</p>
-</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">btnCall.setOnclickListener(<span class="keyword">new</span> View.OnclickListener()&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span></span>&#123;</span><br><span class="line">		Intent intent = <span class="keyword">new</span> Intent(Intent.ACTION_CALL);</span><br><span class="line">		intent.setData(Uri.parse(<span class="string">"tel:10086"</span>));</span><br><span class="line">		startActivity(Intent);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
-<p>在6.0以下系统上能正常拨打电话，但是在6.0或者以上系统运行，会报错<strong>Permission Denial</strong>，可以看出是由于权限被禁止导致的，因此我们应该尝试使用以下方式来申请权限：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">btnCall.setOnclickListener(<span class="keyword">new</span> View.OnclickListener()&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span></span>&#123;</span><br><span class="line">		</span><br><span class="line">		<span class="keyword">if</span>(ContextCompat.checkSelfPermission(MainActivity.<span class="keyword">this</span>,Manifest.permission.CALL_PHONE) !=   </span><br><span class="line">		PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">			ActivityCompat.requestPermission(MainActivity.<span class="keyword">this</span>,<span class="keyword">new</span> </span><br><span class="line">			String[]&#123;Manifest.permission.CALL_PHONE&#125;,<span class="number">1</span>);</span><br><span class="line">		&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">			call();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">call</span><span class="params">()</span></span>&#123;</span><br><span class="line">	Intent intent = <span class="keyword">new</span> Intent(Intent.ACTION_CALL);</span><br><span class="line">	intent.setData(Uri.parse(<span class="string">"tel:10086"</span>));</span><br><span class="line">	startActivity(Intent);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onRequestPermissionResult</span><span class="params">(<span class="keyword">int</span> requestCode,String[] permissions,<span class="keyword">int</span>[] grantResults)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span>(requestCode)&#123;</span><br><span class="line">		<span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">			<span class="keyword">if</span>(grantResults.lenght &gt; <span class="number">0</span> &amp;&amp; grantResults(<span class="number">0</span>) == PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">				call();</span><br><span class="line">			&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">				Toast.makeText(<span class="keyword">this</span>,<span class="string">"You denied the permission"</span>,Toast.LEGHTH_SHORT).show();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上述第一步先判断用户是不是已经给我们授权了，使用的是<strong>ContextCompat.checkSelfPermission</strong>，如果已经授权，直接拨打电话，否则调用<strong>ActivityCompat.requestPermission</strong>方法向用户申请授权，这时候用户可以选择同意或者拒绝我们的申请，不论哪种结果，都会通过回调<strong>onRequestPermissionResult</strong>告知，在回调中根据不同的结果做不同的处理。<strong>记住，在动态声明权限后，AndroidManifest中还得添加<uses-permission android:name="android.permission.CALL_PHONE"> 声明</uses-permission></strong>。</p>
-<h3 id="访问其他程序中的数据"><a href="#访问其他程序中的数据" class="headerlink" title="访问其他程序中的数据"></a>访问其他程序中的数据</h3><p>内容提供器的用法一般有两种，一是使用现有的内容提供器来读取和操作响应程序中的数据，另一种是创建自己的内容提供器给我们的数据提供外部访问接口。</p>
-<h4 id="ContentResolver的基本使用"><a href="#ContentResolver的基本使用" class="headerlink" title="ContentResolver的基本使用"></a>ContentResolver的基本使用</h4><p>如果想要访问内容提供器共享的数据，就一定要借助ContentResolver类，可以通过Context中的getContentResolver方法获取到该类的实例。可以对内容进行CRUD操作，不同于SQLiteDatabase，ContentResolver增删改查不接收表名参数，而是使用Uri参数代替，该Uri主要由两部分组成：<strong>authority和path</strong>，前者用于对不同的应用程序做区分，一般采用程序包名形式，如某个程序的包名是com.example.app，那么对应的authority就可以命名为com.example.app.provider；path则是对同一应用程序中不同表做区分的，通常会添加到authority后面，所以内容Uri的形式一般如下所示(带协议声明)：</p>
-<blockquote>
-<p>content://com.example.app.provicer/table1<br>content://com.example.app.provicer/table2</p>
-</blockquote>
-<p>正式查询的时候，将Uri作为参数传入，代码如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Uri uri = Uri.parse(<span class="string">"content://com.example.app.provicer/table1"</span>);</span><br><span class="line">Cuisor cursor = getContentResolver().query(uri,projection,selection,selectionArgs,sortOrder);</span><br></pre></td></tr></table></figure>
-<p>其中，query方法中各个参数对应的含义如下所示：</p>
-<p><img src="/assets/Book-Notes/第一行代码/chapter-7/图2.png" alt="参数对应的含义"></p>
-<p>接下来便可以进行相应的增删改查操作，代码如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//查</span></span><br><span class="line"><span class="keyword">if</span>(cursor != <span class="keyword">null</span>)&#123;</span><br><span class="line">	<span class="keyword">while</span>(cursor.moveToNext())&#123;</span><br><span class="line">		String colomn1 = cursor.getString(cursor.getColumnIndex(<span class="string">"column1"</span>));</span><br><span class="line">		<span class="keyword">int</span> colomn2 = cursor.getInt(cursor.getColumnIndex(<span class="string">"column2"</span>));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//增</span></span><br><span class="line">ContentValues values = <span class="keyword">new</span> ContentValues();</span><br><span class="line">values.put(<span class="string">"column1"</span>,<span class="string">"text"</span>);</span><br><span class="line">values.put(<span class="string">"column2"</span>,<span class="number">1</span>);</span><br><span class="line">getContentResolver().insert(uri,values);</span><br></pre></td></tr></table></figure>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//改，把column1的值清空</span></span><br><span class="line">ContentValues values = <span class="keyword">new</span> ContentValues();</span><br><span class="line">values.put(<span class="string">"column1"</span>,<span class="string">""</span>);</span><br><span class="line">getContentResolver().update(uri,values,<span class="string">"column1 = ? and column2 = ?"</span>,<span class="keyword">new</span> String[]&#123;<span class="string">"text"</span>,<span class="string">"1"</span>&#125;);</span><br></pre></td></tr></table></figure>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//删除</span></span><br><span class="line">getContentResolver().delete(uri,<span class="string">"column2 = ?"</span>,<span class="keyword">new</span> String[]&#123;<span class="string">"1"</span>&#125;);</span><br></pre></td></tr></table></figure>
-<p>其实整体就相当于sql语句，因此并不太难。</p>
-<h3 id="创建自己的内容提供器"><a href="#创建自己的内容提供器" class="headerlink" title="创建自己的内容提供器"></a>创建自己的内容提供器</h3><p>因为基本上没有这样的需求，暂时略后续补上</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">读书笔记-第一行代码（第二版）</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2018/06/21/第一行代码（第二版）-第七章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
   
     <nav id="page-nav">
       <a class="extend prev" rel="prev" href="/page/4/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span><a class="page-number" href="/page/6/">6</a><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/6/">Next &raquo;</a>
@@ -1204,6 +1261,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">深Android系统源代码情景分析(第三版)</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color4">Flutter从0到1构建大前端应用</a>
               </li>
             
             <div class="clearfix"></div>
