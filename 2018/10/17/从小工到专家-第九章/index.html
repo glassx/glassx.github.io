@@ -1,34 +1,497 @@
-extends partial/layout
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.4.2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.4.2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.4.2">
+  <link rel="mask-icon" href="/images/logo.svg?v=7.4.2" color="#222">
 
-include mixins
+<link rel="stylesheet" href="/css/main.css?v=7.4.2">
 
-block site_title
-    != page.title + " · " + config.title
 
-block description
-    - var desc = page.desc || strip_html(page.content).replace(/^\s*/, '').replace(/\s*$/, '').substring(0, 150);
-    meta(name="description", content=desc)
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
 
-block content
-  .autopagerize_page_element: .content: .post-page
-    include mixins
-    +make_post(page, true)
-    .share
-      .evernote
-        a.fa.fa-bookmark(href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);}})();", ref="nofollow", target="_blank")
-      .weibo
-        a.fa.fa-weibo(href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&title=',e(d.title),'&appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));")
-      .twitter
-        a.fa.fa-twitter(href=url_for("http://twitter.com/home?status="+","+config.url+"/"+page.path+","+config.title+","+page.title+",;"))
-    - var prev = page.prev ? page.prev.path : false;
-    - var next = page.next ? page.next.path : false;
-    .pagination
-      ul.clearfix
-        if prev
-          li.pre.pagbuttons
-            a.btn(role="navigation",href=url_for(prev), title=page.prev.title)!= __('prev_post')
-        if next
-          li.next.pagbuttons
-            a.btn(role="navigation",href=url_for(next), title=page.next.title)!= __('next_post')
-    if page.comments
-        include partial/comments
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '7.4.2',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: 'Copy',
+      copy_success: 'Copied',
+      copy_failure: 'Copy failed'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="照例，如果自学不需要看我这个博客的话，资料如下：官网关于Android Test的介绍的地址Android官方关于测试的例子 ，需要的自取 单元测试、集成测试、黑盒测试、白盒测试等，只有单元测试是我们开发人员需要自己完成的，其余都是由测试人员完成的。单元测试本质上也是代码，是验证代码正确性的代码。 为什么要做单元测试 便于后期重构。单元测试为后期测试提供了保障，在重构之后，只要单元测试还是全部通过">
+<meta name="keywords" content="读书笔记-从小工到专家">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第9章-单元测试">
+<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2018&#x2F;10&#x2F;17&#x2F;%E4%BB%8E%E5%B0%8F%E5%B7%A5%E5%88%B0%E4%B8%93%E5%AE%B6-%E7%AC%AC%E4%B9%9D%E7%AB%A0&#x2F;index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="照例，如果自学不需要看我这个博客的话，资料如下：官网关于Android Test的介绍的地址Android官方关于测试的例子 ，需要的自取 单元测试、集成测试、黑盒测试、白盒测试等，只有单元测试是我们开发人员需要自己完成的，其余都是由测试人员完成的。单元测试本质上也是代码，是验证代码正确性的代码。 为什么要做单元测试 便于后期重构。单元测试为后期测试提供了保障，在重构之后，只要单元测试还是全部通过">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:image" content="https:&#x2F;&#x2F;developer.android.google.cn&#x2F;studio&#x2F;images&#x2F;test&#x2F;project-window-tests_2-2_2x.png?hl=zh-cn">
+<meta property="og:updated_time" content="2018-10-17T14:50:05.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;developer.android.google.cn&#x2F;studio&#x2F;images&#x2F;test&#x2F;project-window-tests_2-2_2x.png?hl=zh-cn">
+
+<link rel="canonical" href="https://glassx.gitee.io/2018/10/17/%E4%BB%8E%E5%B0%8F%E5%B7%A5%E5%88%B0%E4%B8%93%E5%AE%B6-%E7%AC%AC%E4%B9%9D%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第9章-单元测试 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/10/17/%E4%BB%8E%E5%B0%8F%E5%B7%A5%E5%88%B0%E4%B8%93%E5%AE%B6-%E7%AC%AC%E4%B9%9D%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="glassx的小黑屋,读书笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第9章-单元测试
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2018-10-17 22:30:00 / Modified: 22:50:05" itemprop="dateCreated datePublished" datetime="2018-10-17T22:30:00+08:00">2018-10-17</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>照例，如果自学不需要看我这个博客的话，资料如下：<br><a href="https://developer.android.google.cn/studio/test/?hl=zh-cn" target="_blank" rel="noopener">官网关于Android Test的介绍的地址</a><br><a href="https://github.com/googlesamples/android-testing" target="_blank" rel="noopener">Android官方关于测试的例子</a> ，需要的自取</p>
+<p>单元测试、集成测试、黑盒测试、白盒测试等，只有单元测试是我们开发人员需要自己完成的，其余都是由测试人员完成的。单元测试本质上也是代码，是验证代码正确性的代码。</p>
+<h2 id="为什么要做单元测试"><a href="#为什么要做单元测试" class="headerlink" title="为什么要做单元测试"></a>为什么要做单元测试</h2><ul>
+<li>便于后期重构。单元测试为后期测试提供了保障，在重构之后，只要单元测试还是全部通过，那么在很大程度上表示重构没有引入新的bug。</li>
+<li>优化设计。编写单元测试将使开发者从调用者的角度观察和思考，这样迫使开发者把程序设计成易于调用和低耦合的易测试的形式。</li>
+<li>避免代码出现回归。编写完成后，可以随时随地快速运行测试，而不是要求将代码部署到设备上，再手动执行覆盖各种路径。</li>
+<li>文档记录。单元测试是极好的“官方文档”，它展示函数或者类如何使用。</li>
+</ul>
+<h2 id="Android-测试类型-选自官网"><a href="#Android-测试类型-选自官网" class="headerlink" title="Android 测试类型(选自官网)"></a>Android 测试类型(选自官网)</h2><p>测试代码的位置取决于您要编写的测试的类型。 Android Studio 为以下两种测试类型提供了源代码目录（源集）：</p>
+<h3 id="本地单元测试"><a href="#本地单元测试" class="headerlink" title="本地单元测试"></a>本地单元测试</h3><p>位于 <strong>module-name/src/test/java/</strong>目录。</p>
+<p>这些测试在计算机的本地 Java 虚拟机 (JVM) 上运行。 当您的测试没有 Android 框架依赖项或当您可以模拟 Android 框架依赖项时，可以利用这些测试来尽量缩短执行时间。</p>
+<p>在运行时，这些测试的执行对象是去掉了所有 final 修饰符的修改版 android.jar。 这样一来，您就可以使用 Mockito 之类的常见模拟库。</p>
+<h3 id="Instrumented测试（仪器测试）"><a href="#Instrumented测试（仪器测试）" class="headerlink" title="Instrumented测试（仪器测试）"></a>Instrumented测试（仪器测试）</h3><p>位于 module-name/src/androidTest/java/。</p>
+<p>这些测试在硬件设备或模拟器上运行。 这些测试有权访问 Instrumentation API，让您可以获取某些信息（例如您要测试的应用的 Context）， 并且允许您通过测试代码来控制受测应用。 可以在编写集成和功能 UI 测试来自动化用户交互时，或者在测试具有模拟对象无法满足的 Android 依赖项时使用这些测试。</p>
+<p>由于仪器测试内置于 APK 中（与您的应用 APK 分离），因此它们必须拥有自己的 AndroidManifest.xml 文件。 不过，由于 Gradle 会自动在构建时生成该文件，因此它在您的项目源集中不可见。 您可以在必要时（例如需要为 <code>minSdkVersion</code> 指定其他值或注册测试专用的运行侦听器时）添加自己的清单文件。 构建应用时，Gradle 会将多个清单文件合并成一个清单。</p>
+<p>Gradle 构建解读这些测试源集的方式与其解读项目应用源集的方式相同，您可以利用这一点根据构建变体创建测试。</p>
+<p>以下示意图诠释了两种测试的代码结构（图中1表示的是<strong>仪器测试</strong>的代码，2表示的是<strong>单元测试</strong>的代码结构）</p>
+<p><img src="https://developer.android.google.cn/studio/images/test/project-window-tests_2-2_2x.png?hl=zh-cn" alt="单元测试与仪器测试示意图"></p>
+<h2 id="Junit4"><a href="#Junit4" class="headerlink" title="Junit4"></a>Junit4</h2><p>在Android测试框架中，常用的有以下几个框架和工具类：JUnit4、AndroidJUnitRunner、Mockito、Espresso，其中主要的单元测试使用Junit4。Junit4是一套基于注解的单元测试框架，在Android studio中，编写在test目录下的测试类都是基于该框架实现，该目录下的代码直接运行在本地的JVM上，不需要Android真机或者模拟器支持。常用的注解如下(更多内容可以查看<a href="https://junit.org/junit4/" target="_blank" rel="noopener">Junit4官网</a>)：</p>
+<ul>
+<li>@BeforeClass 测试类里所有用例运行之前，运行一次这个方法。方法必须是public static void</li>
+<li>@AfterClass 与BeforeClass对应</li>
+<li>@Before 在每个用测试例运行之前都运行一次。</li>
+<li>@After 与Before对应</li>
+<li>@Test 指定该方法为测试方法，方法必须是public void</li>
+<li>@RunWith 测试类名之前，用来确定这个类的测试运行器<br>以下用一个简单的测试类来展示测试类的大概形式：</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CaculatUtilTest</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> CaculatUtil mCaculatUtil;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Before</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span></span>&#123;</span><br><span class="line">		mCaculatUtil = <span class="keyword">new</span> CaculatUtil();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Test</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTwoNumbers</span><span class="params">()</span></span>&#123;</span><br><span class="line">		assertEquals(<span class="number">3</span>,mCaculatUtil.add(<span class="number">1</span>,<span class="number">2</span>));</span><br><span class="line">		<span class="comment">//或者如果是静态方法，就类似于以下这种静态调用方法</span></span><br><span class="line">		assertEquals(<span class="number">3</span>,Caculator.add(<span class="number">1</span>,<span class="number">2</span>));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Junit的断言和失败提示"><a href="#Junit的断言和失败提示" class="headerlink" title="Junit的断言和失败提示"></a>Junit的断言和失败提示</h2><p>Junit提供了多个以assert开头的函数，分别用来验证各类相等性质的问题，大致有如下几类：</p>
+<ul>
+<li><p>assertEquals</p>
+<blockquote>
+<p>assertEquals的作用是判断两个值或者对象是否相等。接受2个参数，参数1为预期值，参数2为计算得到的值。</p>
+</blockquote>
+</li>
+<li><p>assertTrue 与 assertFalse</p>
+<blockquote>
+<p>assertTrue 与 assertFalse顾名思义就是分别验证真与假，只需要一个boolean类型的参数。例如 assertTrue(false)测试会失败， 而 assertTrue(true) 测试通过。</p>
+</blockquote>
+</li>
+<li><p>assertNull 与 assertNotNull</p>
+<blockquote>
+<p>和assertTrue、assertFalse类似，只不过是用来判断空或者非空。例如：assertNull(null) 会测试失败，因为值为null；而assertNull(“hell”)就能测试通过。</p>
+</blockquote>
+</li>
+<li><p>assertSame 与 assertNotSame</p>
+<blockquote>
+<p>assertSame用于判断两个对象是否是同一个对象，与assertEquals不同的是，assertSame强调的为同一个对象，而assertEquals只要两个对象相等即可（即调用equals函数时返回true）。</p>
+</blockquote>
+</li>
+<li><p>failNotEquals</p>
+<blockquote>
+<p>函数有3个参数，参数1位失败时提示信息，参数2为期望值，参数3是实际值。当两个对象不相等时抛出参数1的错误信息。</p>
+</blockquote>
+</li>
+<li><p>failSame与failNotSame</p>
+<blockquote>
+<p>failNotSame与failNotEquals类似，不是同一个对象时就抛出参数1的错误信息。</p>
+</blockquote>
+</li>
+<li><p>fail(String) 与 fail()</p>
+<blockquote>
+<p>fail(String)直接抛出当前测试用例参数1中的错误信息，而fail()给出默认的错误信息。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="运行多个测试类——TestSuite"><a href="#运行多个测试类——TestSuite" class="headerlink" title="运行多个测试类——TestSuite"></a>运行多个测试类——TestSuite</h2><p>如果需要同时运行两个或多个Test类，JUnit提供了Suite注解，在对应的测试目录下创建一个空Test类：</p>
+<ul>
+<li>@RunWith(Suite.class)：配置Runner运行环境。</li>
+<li>@Suite.SuiteClasses({A.class, B.class})：添加需要一起运行的测试类。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RunWith</span>(Suite.class)</span><br><span class="line"><span class="meta">@Suite</span>.SuiteClasses(&#123;CalculatorTest.class, CalculatorWithParameterizedTest.class&#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UnitTestSuite</span></span>&#123;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述代码中，UnitTestSuite成了一个空类，测试类被添加到注解中了。<br>或者，如果不用注解，可以通过JUnit4TestAdapter包装测试类，并将JUnit4TestAdapter对象添加到TestSuit中，示例代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MathTestSuite</span></span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Test <span class="title">suite</span><span class="params">()</span></span>&#123;</span><br><span class="line">		TestSuite suite = <span class="keyword">new</span> TestSuite(<span class="string">"com.book.jtm"</span>);</span><br><span class="line">		<span class="comment">//添加测试用例</span></span><br><span class="line">		suite.addTest(<span class="keyword">new</span> JUnit4TestAdapter(AdderTest.class));</span><br><span class="line">		suite.addTest(<span class="keyword">new</span> JUnit4TestAdapter(DiverTest.class));</span><br><span class="line">		<span class="keyword">return</span> suite;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述代码有一个静态的suite函数，它返回一个Test对象，这个对象是TestSuite类型的。测试时，以Junit测试用例的形式运行这个MathTestSuite即可运行这两个测试类。</p>
+<h2 id="多个参数输入测试"><a href="#多个参数输入测试" class="headerlink" title="多个参数输入测试"></a>多个参数输入测试</h2><p>当需要传入多个参数进行测试时，可以使用 @Parameters 来进行单个方法的多次不同参数的测试，对于测试类，使用该方法需要如下步骤：</p>
+<ul>
+<li>在测试类上添加@RunWith(Parameterized.class)注解</li>
+<li>添加测试类的构造函数</li>
+<li>添加获取参数集合的static方法，并在方法上添加@Parameters注解</li>
+<li>在需要测试的方法中直接使用成员变量，该变量由JUnit通过构造方法生成</li>
+</ul>
+<p>直接上示例代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RunWith</span>(Parameterized.class)<span class="comment">//为测试类添加注解</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CaculatUtilTest</span></span>&#123;</span><br><span class="line">	<span class="comment">//两个传入的参数</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramOne;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> paramTwo;</span><br><span class="line">	<span class="comment">//期望值</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> expectResult;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> CaculatUtil mCaculatUtil;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">CaculatUtilTest</span><span class="params">(<span class="keyword">int</span> paramOne,<span class="keyword">int</span> paramTwo,<span class="keyword">int</span> expectResult)</span></span>&#123;<span class="comment">//添加构造函数</span></span><br><span class="line">		<span class="keyword">this</span>.paramOne = paramOne;</span><br><span class="line">		<span class="keyword">this</span>.paramTwo = paramTwo;</span><br><span class="line">		<span class="keyword">this</span>.expectResult = expectResult;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//添加获取参数集合的static方法，并在方法上添加@Parameters注解</span></span><br><span class="line">	<span class="meta">@Parameters</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> Collection&lt;Object[]&gt; initTestData()&#123;</span><br><span class="line">		<span class="keyword">return</span> Arrays.asList(<span class="keyword">new</span> Object[][]&#123;</span><br><span class="line">		&#123;<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>&#125;,</span><br><span class="line">		&#123;<span class="number">1</span>,<span class="number">1</span>,<span class="number">2</span>&#125;,</span><br><span class="line">		&#123;<span class="number">1</span>,<span class="number">5</span>,<span class="number">6</span>&#125;</span><br><span class="line">		&#125;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Before</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span></span>&#123;</span><br><span class="line">		mCaculatUtil = <span class="keyword">new</span> CaculatUtil();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Test</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTwoNumbers</span><span class="params">()</span></span>&#123;</span><br><span class="line">		<span class="comment">//测试的方法中直接使用成员变量</span></span><br><span class="line">		assertEquals(expectResult,mCaculatUtil.add(paramOne,paramTwo));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="AndroidJUnitRunner"><a href="#AndroidJUnitRunner" class="headerlink" title="AndroidJUnitRunner"></a>AndroidJUnitRunner</h2><p>当单元测试中涉及Android系统库的调用时，可以通过AndroidJUnitRunner方案完成测试，这样就能在测试类中使用Context、parcelable、Shareprefrence等类。使用方法是在androidTest目录下创建测试类（因为这涉及到Instrumented测试的内容），在该类上添加@RunWith(AndroidJUnit4.class)注解。如以下代码示范了如何在测试类中使用SharedPrefrences：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RunWith</span>(AndroidJUnit4.class)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SharedPreferencesHelperTest</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String TEST_NAME = <span class="string">"Test name"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String TEST_EMAIL = <span class="string">"test@email.com"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Calendar TEST_DATE_OF_BIRTH = Calendar.getInstance();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> SharedPreferenceEntry mSharedPreferenceEntry;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> SharedPreferencesHelper mSharedPreferencesHelper;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> SharedPreferences mSharePreferences;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** 上下文 */</span></span><br><span class="line">    <span class="keyword">private</span> Context mContext;</span><br><span class="line">    ……</span><br><span class="line">    <span class="meta">@Before</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">//获取application的context</span></span><br><span class="line">        mContext = InstrumentationRegistry.getTargetContext();</span><br><span class="line">        <span class="comment">//实例化SharedPreferences</span></span><br><span class="line">        mSharePreferences = PreferenceManager.getDefaultSharedPreferences(mContext);</span><br><span class="line"></span><br><span class="line">        mSharedPreferenceEntry = <span class="keyword">new</span> SharedPreferenceEntry(TEST_NAME, TEST_DATE_OF_BIRTH, TEST_EMAIL);</span><br><span class="line">        <span class="comment">//实例化SharedPreferencesHelper，依赖注入SharePreferences</span></span><br><span class="line">        mSharedPreferencesHelper = <span class="keyword">new</span> SharedPreferencesHelper(mSharePreferences);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//以下是在mock的相关操作，模拟commit失败</span></span><br><span class="line">        mMockSharePreferences = Mockito.mock(SharedPreferences.class);</span><br><span class="line">        mMockBrokenEditor = Mockito.mock(SharedPreferences.Editor.class);</span><br><span class="line">        when(mMockSharePreferences.edit()).thenReturn(mMockBrokenEditor);</span><br><span class="line">        when(mMockBrokenEditor.commit()).thenReturn(<span class="keyword">false</span>);</span><br><span class="line">        mMockSharedPreferencesHelper = <span class="keyword">new</span> SharedPreferencesHelper(mMockSharePreferences);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 测试保存数据是否成功</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sharedPreferencesHelper_SavePersonalInformation</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        assertThat(mSharedPreferencesHelper.savePersonalInfo(mSharedPreferenceEntry), is(<span class="keyword">true</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 测试保存数据，然后获取数据是否成功</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sharedPreferencesHelper_SaveAndReadPersonalInformation</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        mSharedPreferencesHelper.savePersonalInfo(mSharedPreferenceEntry);</span><br><span class="line">        SharedPreferenceEntry sharedPreferenceEntry = mSharedPreferencesHelper.getPersonalInfo();</span><br><span class="line">        assertThat(isEquals(mSharedPreferenceEntry, sharedPreferenceEntry), is(<span class="keyword">true</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    ……</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<h2 id="模拟所需要的模块"><a href="#模拟所需要的模块" class="headerlink" title="模拟所需要的模块"></a>模拟所需要的模块</h2><p>有时我们测试需要依赖于其他的功能模块，但是某些原因这个功能模块不能在测试时运用或未开发完，为了不阻塞测试，我们可以Mock对象来完成测试。还有一些场景，诸如对象很难被创建、真实对象运行缓慢、真实对象的错误很难出现等，也可以通过Mock对象来测试。</p>
+<h3 id="手动Mock对象"><a href="#手动Mock对象" class="headerlink" title="手动Mock对象"></a>手动Mock对象</h3><p>举个例子，开发一款记事本软件，登录成功后才能写/存笔记，小明小刘分别负责登录和写/存笔记功能，存笔记的时候时候需要用户信息User的实例，而用户信息在登录成功后才能获得。可行的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//保存数据的类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NoteDAO</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> NoteDAO noteDAO;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">saveNote</span><span class="params">(User user,String note)</span></span>&#123;</span><br><span class="line">		Log.d(<span class="string">"NoteDAO"</span>,<span class="string">"存储笔记"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//测试类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NoteTest</span></span>&#123;</span><br><span class="line">	<span class="meta">@Before</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUp</span><span class="params">()</span></span>&#123;</span><br><span class="line">		noteDAO = <span class="keyword">new</span> NoteDAO();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Test</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testSaveNote</span><span class="params">()</span></span>&#123;</span><br><span class="line">		MockLoginImpl loginImpl = <span class="keyword">new</span> MockLoginImpl();</span><br><span class="line">		noteDAO.saveNote(loginImpl.login(<span class="string">"dd"</span>,<span class="string">"pwd"</span>),<span class="string">"note_content"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//Mock类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MockLoginImpl</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> User <span class="title">login</span><span class="params">(String name,String pwd)</span></span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> User(name,<span class="string">"1234556"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="使用第三方工具Mockito"><a href="#使用第三方工具Mockito" class="headerlink" title="使用第三方工具Mockito"></a>使用第三方工具Mockito</h3><p>前面有例子已经涉及到Mockito的部分使用，可以在网上搜索相关使用，这里不再详细展开，如果需要，后面会专门介绍。</p>
+<h2 id="运行单元测试"><a href="#运行单元测试" class="headerlink" title="运行单元测试"></a>运行单元测试</h2><ul>
+<li>在Android studio中，对指定的测试类点击鼠标右键，选择对应的Run或者debug</li>
+<li>在Terminal输入gradle testDebugUnitTest或gradle testReleaseUnitTest指令来分别运行debug和release版本的unittesting，在执行的结果可以在xxx\project\app\build\reports\tests\testReleaseUnitTest中查看</li>
+</ul>
+<p>声明：整篇文章有部分内容摘抄自博客：<a href="https://www.jianshu.com/p/925191464389" target="_blank" rel="noopener">https://www.jianshu.com/p/925191464389</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E4%BB%8E%E5%B0%8F%E5%B7%A5%E5%88%B0%E4%B8%93%E5%AE%B6/" rel="tag"># 读书笔记-从小工到专家</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2018/10/11/%E7%AC%AC%E4%B8%80%E5%AD%A3kotlin%E5%B4%9B%E8%B5%B7-%E7%AC%AC5%E7%AB%A0/" rel="next" title="第5章： 函数">
+                  <i class="fa fa-chevron-left"></i> 第5章： 函数
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2018/12/10/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC5%E7%AB%A0/" rel="prev" title="第五章——理解 RemoteViews">
+                  第五章——理解 RemoteViews <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么要做单元测试"><span class="nav-number">1.</span> <span class="nav-text">为什么要做单元测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Android-测试类型-选自官网"><span class="nav-number">2.</span> <span class="nav-text">Android 测试类型(选自官网)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#本地单元测试"><span class="nav-number">2.1.</span> <span class="nav-text">本地单元测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Instrumented测试（仪器测试）"><span class="nav-number">2.2.</span> <span class="nav-text">Instrumented测试（仪器测试）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Junit4"><span class="nav-number">3.</span> <span class="nav-text">Junit4</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Junit的断言和失败提示"><span class="nav-number">4.</span> <span class="nav-text">Junit的断言和失败提示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#运行多个测试类——TestSuite"><span class="nav-number">5.</span> <span class="nav-text">运行多个测试类——TestSuite</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#多个参数输入测试"><span class="nav-number">6.</span> <span class="nav-text">多个参数输入测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AndroidJUnitRunner"><span class="nav-number">7.</span> <span class="nav-text">AndroidJUnitRunner</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#模拟所需要的模块"><span class="nav-number">8.</span> <span class="nav-text">模拟所需要的模块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#手动Mock对象"><span class="nav-number">8.1.</span> <span class="nav-text">手动Mock对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用第三方工具Mockito"><span class="nav-number">8.2.</span> <span class="nav-text">使用第三方工具Mockito</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#运行单元测试"><span class="nav-number">9.</span> <span class="nav-text">运行单元测试</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="glassx"
+    src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">glassx的小黑屋,读书笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">57</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.4.2
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js?v=3.1.0"></script>
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+<script src="/js/utils.js?v=7.4.2"></script><script src="/js/motion.js?v=7.4.2"></script>
+<script src="/js/schemes/muse.js?v=7.4.2"></script>
+<script src="/js/next-boot.js?v=7.4.2"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
