@@ -14,6 +14,8 @@
 
 
 <link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2">
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
 
 
 <script id="hexo-configurations">
@@ -50,13 +52,13 @@
   };
 </script>
 
-  <meta name="description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。 硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓">
+  <meta name="description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存">
 <meta name="keywords" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第12章: Java内存模型与线程">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;09&#x2F;23&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。 硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓">
+<meta property="og:description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88&#x2F;%E7%AC%AC12%E7%AB%A0&#x2F;increase%E5%AD%97%E8%8A%82%E7%A0%81.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88&#x2F;%E7%AC%AC12%E7%AB%A0&#x2F;%E5%8D%95%E4%BE%8B%E7%BC%96%E8%AF%91%E5%90%8E%E7%9A%84%E5%AD%97%E8%8A%82%E7%A0%81.png">
@@ -255,6 +257,13 @@
               </span>
 
           
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
 
         </div>
       </header>
@@ -265,8 +274,8 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I/O 、网络通信或者数据库访问上。</p>
-<h2 id="硬件的效率与一致性"><a href="#硬件的效率与一致性" class="headerlink" title="硬件的效率与一致性"></a>硬件的效率与一致性</h2><p>高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存，而它们又共享同一主存(Main memory)，当多个处理器的运算任务都涉及同一块主内存区域时，可能导致各自的缓存数据不一致，此时，同步回到主存时以谁的缓存数据为准呢？</p>
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I/O 、网络通信或者数据库访问上。</p><h2 id="硬件的效率与一致性"><a href="#硬件的效率与一致性" class="headerlink" title="硬件的效率与一致性"></a>硬件的效率与一致性</h2><p>高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存，而它们又共享同一主存(Main memory)，当多个处理器的运算任务都涉及同一块主内存区域时，可能导致各自的缓存数据不一致，此时，同步回到主存时以谁的缓存数据为准呢？</p><a id="more"></a>
+
 <p>除高速缓存外，为了使处理器内部运算单元尽量被充分利用，处理器可能会对输入代码进行乱序执行(Out-Of-Execution)优化，处理器会在计算之后将乱序执行的结果重组，保证该结果与顺序执行的结果是一致的，但是并不保证程序中各个语句计算的先后顺序与输入代码中的顺序一致。因此，如果某个计算任务依赖另一个计算任务的中间结果，那么其顺序性不能依靠代码的先后顺序来保证。</p>
 <h2 id="Java-内存模型"><a href="#Java-内存模型" class="headerlink" title="Java 内存模型"></a>Java 内存模型</h2><p>Java 内存模型(Java Memory Model, JMM) 是用来屏蔽各种硬件和操作系统的内存访问差异。</p>
 <h3 id="主内存与工作内存"><a href="#主内存与工作内存" class="headerlink" title="主内存与工作内存"></a>主内存与工作内存</h3><p>Java 内存模型的主要目标是定义程序中各个变量的访问规则，此处的变量(Variables) 包括 <strong>实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不存在竞争。</strong></p>
@@ -383,7 +392,7 @@
     
       
         <div class="reward-container">
-  <div></div>
+  <div>呼啦啦</div>
   <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
     打赏
   </button>
@@ -432,6 +441,7 @@
 
           </div>
           
+    <div class="comments" id="gitalk-container"></div>
 
         </div>
           
@@ -501,6 +511,20 @@
   </div>
 
 
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
 
       </div>
 
@@ -531,7 +555,49 @@
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.4.2
   </div>
 
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共119.7k字</span>
+</div>
+
+
+
         
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
 
 
 
@@ -585,6 +651,24 @@
   
 
   
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '97c38ada090a7ec46a4df39aa424c910',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
 
 </body>
 </html>

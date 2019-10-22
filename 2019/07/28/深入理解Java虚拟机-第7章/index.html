@@ -14,6 +14,8 @@
 
 
 <link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2">
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
 
 
 <script id="hexo-configurations">
@@ -50,13 +52,13 @@
   };
 </script>
 
-  <meta name="description" content="概述上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？ 虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能">
+  <meta name="description" content="概述上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能开">
 <meta name="keywords" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第7章: 虚拟机类加载机制">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;07&#x2F;28&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC7%E7%AB%A0&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="概述上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？ 虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能">
+<meta property="og:description" content="概述上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能开">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88&#x2F;%E7%AC%AC7%E7%AB%A0&#x2F;%E7%B1%BB%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88&#x2F;%E7%AC%AC7%E7%AB%A0&#x2F;%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%A8%A1%E5%9E%8B.png">
@@ -254,6 +256,13 @@
               </span>
 
           
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
 
         </div>
       </header>
@@ -264,8 +273,8 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？</p>
-<p>虚拟机把描述类的数据从Class文件加载到内存，<strong>并对数据进行校验、转换解析和初始化</strong>，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能开销，但是会为Java应用程序提供高度的灵活性。</p>
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？</p><p>虚拟机把描述类的数据从Class文件加载到内存，<strong>并对数据进行校验、转换解析和初始化</strong>，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能开销，但是会为Java应用程序提供高度的灵活性。</p><a id="more"></a>
+
 <blockquote>
 <p>例如，可以等到运行时再指定其实际的实现类：用户可以通过Java预定义和自定义的类加载器，让一个本地的应用程序可以在运行时从网络或者其他地方加载一个二进制流作为程序代码的一部分。</p>
 </blockquote>
@@ -337,24 +346,24 @@
 <h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>解析阶段是虚拟机将常量池内的符号引用替换成直接引用的过程。</p>
 <p><strong>符号引用(Symbolic References)：</strong>符号引用以一组符号来描述所引用的目标，符号可以是任何形式的字面量，只要使用时能无歧义地定位到目标即可。</p>
 <p><strong>直接引用(Symbolic References)：</strong>直接引用可以是直接指向目标的指针、相对偏移量或是一个能间接定位到目标的句柄。</p>
-<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>到了初始化阶段，才真正开始执行类中定义的Java程序代码(或者说是字节码)。在准备阶段，变量已经赋过一次系统要求的初始值，而在初始化阶段，则根据程序员通过程序自定的主观计划去初始化类变量和其他资源。换一个角度来表达就是：<strong>初始化阶段是执行类构造器<clinit>()方法的过程</strong>。以下介绍下<clinit>()方法执行过程中一些可能会影响程序运行行为的特点和细节：</p>
+<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>到了初始化阶段，才真正开始执行类中定义的Java程序代码(或者说是字节码)。在准备阶段，变量已经赋过一次系统要求的初始值，而在初始化阶段，则根据程序员通过程序自定的主观计划去初始化类变量和其他资源。换一个角度来表达就是：<strong>初始化阶段是执行类构造器<clinit>()方法的过程</clinit></strong>。以下介绍下<clinit>()方法执行过程中一些可能会影响程序运行行为的特点和细节：</clinit></p>
 <ul>
-<li><clinit>()方法由编译器自动收集类中的所有类变量的赋值动作和静态语句块(static{}块)中的语句合并产生的，编译器收集的顺序是由语句<strong>在源文件中出现的顺序决定</strong>的，静态语句块中<strong>只能访问到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但不能访问</strong>。一个例子说明：</li>
+<li><clinit>()方法由编译器自动收集类中的所有类变量的赋值动作和静态语句块(static{}块)中的语句合并产生的，编译器收集的顺序是由语句<strong>在源文件中出现的顺序决定</strong>的，静态语句块中<strong>只能访问到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但不能访问</strong>。一个例子说明：</clinit></li>
 </ul>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i =<span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        Systemt.out.print(i);<span class="comment">//正常使用</span></span><br><span class="line">        </span><br><span class="line">        j = <span class="number">0</span>;<span class="comment">//给变量赋值可以正常编译</span></span><br><span class="line">        Systemt.out.print(j);<span class="comment">//这句提示“非法向前引用”</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> j =<span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <ul>
-<li><clinit>()方法与类的构造函数（实例构造器<init>()）不同,它不需要显式地调用父类构造器，虚拟机会保证在子类的 <clinit>() 执行之前，父类的<clinit>()已经执行完毕。因此，在虚拟机中第一个被执行<clinit>()方法的类肯定是 java.lang.Object。<strong>这其实也意味着，父类定义的静态语句块要优先于子类变量赋值操作</strong>。一个例子说明：</li>
+<li><clinit>()方法与类的构造函数（实例构造器<init>()）不同,它不需要显式地调用父类构造器，虚拟机会保证在子类的 <clinit>() 执行之前，父类的<clinit>()已经执行完毕。因此，在虚拟机中第一个被执行<clinit>()方法的类肯定是 java.lang.Object。<strong>这其实也意味着，父类定义的静态语句块要优先于子类变量赋值操作</strong>。一个例子说明：</clinit></clinit></clinit></init></clinit></li>
 </ul>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Parent</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> A = <span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        A = <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sub</span> <span class="title">extentds</span> <span class="title">Parent</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> B = A;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span></span>&#123;</span><br><span class="line">    Systemt.out.println(Sub.B)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>以上代码将打印出 2 而不是 1。</p>
 <ul>
-<li><p><clinit>()方法对于类或者接口不是必需的，如果类中没有静态语句块，也没有对变量的赋值，那么编译器可以不为这个类生成<clinit>()方法。</p>
+<li><p><clinit>()方法对于类或者接口不是必需的，如果类中没有静态语句块，也没有对变量的赋值，那么编译器可以不为这个类生成<clinit>()方法。</clinit></clinit></p>
 </li>
-<li><p>接口中不能使用静态语句块，但是可以有变量初始化的赋值操作，因此接口与类一样都会生成 <clinit>()方法 。但接口的 <clinit>()方法 无须先执行父接口的<clinit>()方法，只有父接口中定义的变量使用时，父接口才会初始化（接口的实现类在初始化时也不会执行接口的<clinit>()方法）。</p>
+<li><p>接口中不能使用静态语句块，但是可以有变量初始化的赋值操作，因此接口与类一样都会生成 <clinit>()方法 。但接口的 <clinit>()方法 无须先执行父接口的<clinit>()方法，只有父接口中定义的变量使用时，父接口才会初始化（接口的实现类在初始化时也不会执行接口的<clinit>()方法）。</clinit></clinit></clinit></clinit></p>
 </li>
-<li><p>虚拟机会保证一个类的 <clinit>()方法 在多线程环境中会被正确地加锁、同步，所以，多线程同时去初始化一个类，那么只会有一个县城执行这个类的&lt;clinit&gt;()方法，其他的线程都会阻塞等待。举个例子：</p>
+<li><p>虚拟机会保证一个类的 <clinit>()方法 在多线程环境中会被正确地加锁、同步，所以，多线程同时去初始化一个类，那么只会有一个县城执行这个类的&lt;clinit&gt;()方法，其他的线程都会阻塞等待。举个例子：</clinit></p>
 </li>
 </ul>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">DeadLoopClass</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">        <span class="comment">//如果不加上这个if语句，编译器将报错，并拒绝编译</span></span><br><span class="line">        <span class="keyword">if</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            System.out.println(Thread.currentThread() + <span class="string">"init DeadLoopClass"</span>);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Runnable script = <span class="keyword">new</span> Runnable()&#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"start"</span>);</span><br><span class="line">                DeadLoopClass dlc = <span class="keyword">new</span> DeadLoopClass();</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"run over"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">           </span><br><span class="line">        &#125;;</span><br><span class="line">        </span><br><span class="line">        Thread thread1 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        Thread thread2 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        thread1.start();</span><br><span class="line">        thread2.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -391,7 +400,7 @@
     
       
         <div class="reward-container">
-  <div></div>
+  <div>呼啦啦</div>
   <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
     打赏
   </button>
@@ -440,6 +449,7 @@
 
           </div>
           
+    <div class="comments" id="gitalk-container"></div>
 
         </div>
           
@@ -509,6 +519,20 @@
   </div>
 
 
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
 
       </div>
 
@@ -539,7 +563,49 @@
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.4.2
   </div>
 
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共119.7k字</span>
+</div>
+
+
+
         
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
 
 
 
@@ -593,6 +659,24 @@
   
 
   
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '2b5f36b0bafa8a5c22d95a4e19ee268d',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
 
 </body>
 </html>

@@ -14,6 +14,8 @@
 
 
 <link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2">
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
 
 
 <script id="hexo-configurations">
@@ -50,13 +52,13 @@
   };
 </script>
 
-  <meta name="description" content="从字面可以看出这应该是一种远程view，与远程service概念一样，RemoteViews表示的是一种view结构，这种view能够在其他进程显示。由于需要跨进程显示，RemoteViews结构提供了一组基础功能用于跨进程更新View。RemoteViews在Android中有2种应用场景：Notification以及桌面小部件。 RemoteViews的应用平时的开发过程中，Notificat">
+  <meta name="description" content="从字面可以看出这应该是一种远程view，与远程service概念一样，RemoteViews表示的是一种view结构，这种view能够在其他进程显示。由于需要跨进程显示，RemoteViews结构提供了一组基础功能用于跨进程更新View。RemoteViews在Android中有2种应用场景：Notification以及桌面小部件。">
 <meta name="keywords" content="Android开发艺术探索">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第五章——理解 RemoteViews">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2018&#x2F;12&#x2F;10&#x2F;Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC5%E7%AB%A0&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="从字面可以看出这应该是一种远程view，与远程service概念一样，RemoteViews表示的是一种view结构，这种view能够在其他进程显示。由于需要跨进程显示，RemoteViews结构提供了一组基础功能用于跨进程更新View。RemoteViews在Android中有2种应用场景：Notification以及桌面小部件。 RemoteViews的应用平时的开发过程中，Notificat">
+<meta property="og:description" content="从字面可以看出这应该是一种远程view，与远程service概念一样，RemoteViews表示的是一种view结构，这种view能够在其他进程显示。由于需要跨进程显示，RemoteViews结构提供了一组基础功能用于跨进程更新View。RemoteViews在Android中有2种应用场景：Notification以及桌面小部件。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:updated_time" content="2019-05-01T09:48:00.432Z">
 <meta name="twitter:card" content="summary">
@@ -251,6 +253,13 @@
               </span>
 
           
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
 
         </div>
       </header>
@@ -261,7 +270,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>从字面可以看出这应该是一种远程view，与远程service概念一样，RemoteViews表示的是一种view结构，这种view能够在其他进程显示。由于需要跨进程显示，RemoteViews结构提供了一组基础功能用于跨进程更新View。RemoteViews在Android中有2种应用场景：<strong>Notification</strong>以及<strong>桌面小部件</strong>。</p>
+        <p>从字面可以看出这应该是一种远程view，与远程service概念一样，RemoteViews表示的是一种view结构，这种view能够在其他进程显示。由于需要跨进程显示，RemoteViews结构提供了一组基础功能用于跨进程更新View。RemoteViews在Android中有2种应用场景：<strong>Notification</strong>以及<strong>桌面小部件</strong>。</p><a id="more"></a>
 <h3 id="RemoteViews的应用"><a href="#RemoteViews的应用" class="headerlink" title="RemoteViews的应用"></a>RemoteViews的应用</h3><p>平时的开发过程中，Notifications主要通过NotificationManager的notify方法实现的，它除了默认效果外，还可以另外定义布局。使用RemoteViews实现通知栏时无法像Activity里面一样直接更新View，这是因为RemoteView界面运行在其他进程中，确切来说是系统的SystemServer进程。使用系统默认的样式弹出一个通知是很简单的：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">Notification notification = newNotification();</span><br><span class="line">notification.icon = R.drawable.icon;</span><br><span class="line">notification.tickerText = <span class="string">"hello world"</span>;</span><br><span class="line">notification.when = System.currentTimeMillis();</span><br><span class="line">notification.flags = Notification.FLAG_AUTO_CANCEL;</span><br><span class="line">Intent intent = <span class="keyword">new</span> Intent(<span class="keyword">this</span>,DemoActivity_1.class);</span><br><span class="line">PendingIntent pendingIntent = PendingIntent.getActivity(<span class="keyword">this</span>,<span class="number">0</span>,intent,PendingIntent.FLAG_UPDATE_CURRENT);</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用普通样式展示一个通知</span></span><br><span class="line">notification.setLatestEventInfo(<span class="keyword">this</span>,<span class="string">"chapter_5"</span>,<span class="string">"this is notification"</span>,pendingIntent);</span><br><span class="line">NotificationManager manager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);</span><br><span class="line">manager.notify(<span class="number">1</span>,notification);</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用RemoteViews的方式展示第一个通知</span></span><br><span class="line">RemoteViews remoteViews = <span class="keyword">new</span> RemoteViews(getPackageName(),R.layout.layout_notification);</span><br><span class="line">remoteViews.setTextViewText(R.id.msg,<span class="string">"chapter_5"</span>);</span><br><span class="line">remoteViews.setImageViewResource(R.id.icon,R.drawable.icon1);</span><br><span class="line">PendingIntent openActivity2PendingIntent = PendingIntent.getActivity(<span class="keyword">this</span>,<span class="number">0</span>,<span class="keyword">new</span> Intent(<span class="keyword">this</span>,DemoActivity_2.class),PendingIntent.FLAG_UPDATE_CURRENT);</span><br><span class="line">remoteViews.setOnclickPendingIntent(R.id.open_activity2,openActivity2PendingIntent);</span><br><span class="line">notification.contentView = remoteViews;</span><br><span class="line">notification.contentIntent = pendingIntent;</span><br><span class="line">NotificationManager manager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);</span><br><span class="line">manager.notify(<span class="number">2</span>,notification);</span><br></pre></td></tr></table></figure>
 
@@ -275,7 +284,7 @@
     
       
         <div class="reward-container">
-  <div></div>
+  <div>呼啦啦</div>
   <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
     打赏
   </button>
@@ -324,6 +333,7 @@
 
           </div>
           
+    <div class="comments" id="gitalk-container"></div>
 
         </div>
           
@@ -393,6 +403,20 @@
   </div>
 
 
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
 
       </div>
 
@@ -423,7 +447,49 @@
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.4.2
   </div>
 
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共119.7k字</span>
+</div>
+
+
+
         
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
 
 
 
@@ -477,6 +543,24 @@
   
 
   
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '2a999aaf2aae6fd47d5e11d1b34961bf',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
 
 </body>
 </html>
