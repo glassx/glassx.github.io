@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.4.2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.4.2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.4.2">
+  <link rel="mask-icon" href="/images/logo.svg?v=7.4.2" color="#222">
+
+<link rel="stylesheet" href="/css/main.css?v=7.4.2">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '7.4.2',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: 'Copy',
+      copy_success: 'Copied',
+      copy_failure: 'Copy failed'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="Android系统架构 最底层是Linux内核层。  为Android设备各种硬件提供了底层驱动，如显示驱动，音频驱动等。   系统运行库层。  这层通过一些C&#x2F;C++库来为Android系统提供主要的特性支持。如Sqlite库提供了数据库支持，OpenGL|ES提供提供3D绘图等。   应用框架层。  主要提供了构建应用程序可能用到的各种API。   应用层。  所有安装在手机上的应用程序都属于">
+<meta name="keywords" content="读书笔记-第一行代码（第二版）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第1章：开启启程">
+<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2018&#x2F;05&#x2F;31&#x2F;%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%80%E7%AB%A0&#x2F;index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="Android系统架构 最底层是Linux内核层。  为Android设备各种硬件提供了底层驱动，如显示驱动，音频驱动等。   系统运行库层。  这层通过一些C&#x2F;C++库来为Android系统提供主要的特性支持。如Sqlite库提供了数据库支持，OpenGL|ES提供提供3D绘图等。   应用框架层。  主要提供了构建应用程序可能用到的各种API。   应用层。  所有安装在手机上的应用程序都属于">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81&#x2F;chapter-1&#x2F;%E5%9B%BE1.png">
+<meta property="og:updated_time" content="2019-05-01T08:43:32.932Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81&#x2F;chapter-1&#x2F;%E5%9B%BE1.png">
+
+<link rel="canonical" href="https://glassx.gitee.io/2018/05/31/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%80%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第1章：开启启程 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/05/31/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%80%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="glassx的小黑屋,读书笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第1章：开启启程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-05-31 18:00:00" itemprop="dateCreated datePublished" datetime="2018-05-31T18:00:00+08:00">2018-05-31</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2019-05-01 16:43:32" itemprop="dateModified" datetime="2019-05-01T16:43:32+08:00">2019-05-01</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h4 id="Android系统架构"><a href="#Android系统架构" class="headerlink" title="Android系统架构"></a>Android系统架构</h4><ol>
+<li><p>最底层是Linux内核层。</p>
+<blockquote>
+<p>为Android设备各种硬件提供了底层驱动，如显示驱动，音频驱动等。</p>
+</blockquote>
+</li>
+<li><p>系统运行库层。</p>
+<blockquote>
+<p>这层通过一些C/C++库来为Android系统提供主要的特性支持。如Sqlite库提供了数据库支持，OpenGL|ES提供提供3D绘图等。</p>
+</blockquote>
+</li>
+<li><p>应用框架层。</p>
+<blockquote>
+<p>主要提供了构建应用程序可能用到的各种API。</p>
+</blockquote>
+</li>
+<li><p>应用层。</p>
+<blockquote>
+<p>所有安装在手机上的应用程序都属于这一层。比如系统自带的联系人、短信等程序，自己开发的应用。</p>
+</blockquote>
+</li>
+</ol>
+<p><img src="/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-1/%E5%9B%BE1.png" alt="Android系统层次"></p>
+<h3 id="Android应用开发特色"><a href="#Android应用开发特色" class="headerlink" title="Android应用开发特色"></a>Android应用开发特色</h3><h4 id="四大组件"><a href="#四大组件" class="headerlink" title="四大组件"></a>四大组件</h4><p>四大组件分别是活动（Activity）、服务（Service）、广播接收器（Broadcast Receiver）和内容提供器（Content Provider）</p>
+<p>build.gradle 文件中，<strong>compileSdkVersion</strong>用于指定项目的编译版本；<strong>buildToolsVersion</strong>用于指定项目构建工具的版本；<strong>applicationId</strong>用于指定项目的包名，并且它的优先级高于在 AndroidManifest.xml<br>中指定的包名；<strong>minSdkVersion</strong>用于指定项目最低兼容的Android版本;<strong>targetSdkVersion</strong>表明你在该目标版本上做过了充分的测试，系统将为你的应用程序启用一些最新的功能和特性。比如说Android6.0 系统中引入了运行时权限这个功能，如果你将targetSdkVersion指定成23或者更高，那么系统就会为你的程序启用运行时权限功能；否则就不会启用运行时权限功能。</p>
+<p>而在build.gradle的<strong>dependencies</strong>闭包中，声明了当前项目所有的依赖关系，Android studio 项目一共有3中依赖方式，本地依赖、库依赖和远程依赖，本地依赖可以对本地的jar包或者目录添加依赖关系，形式如：<strong>compile fileTree(dir: ‘libs’, include: [‘*.jar’])</strong>；库依赖可以对项目中的库模块添加依赖关系，如<strong>compile(name: ‘testsdk’, ext: ‘aar’)</strong>；远程依赖则可以对jcenter库上的开源项目添加依赖关系，如<strong>compile ‘com.android.support.constraint:constraint-layout:1.0.2’</strong>，其中，com.android.support.constraint是域名，用于和其他公司的库作区分，constraint-layout是组名称，用于和同一个公司其他库作区分。</p>
+<p><strong>关于日志：</strong>不用System.out.println()，因为Log系统可以对日志分级，可以展示打印时间，可以添加过滤器等等。<strong>Log快捷键：如果要打Log.d，则输入logd，按tab键即可，同理Log.i只需要logi之后按Tab键，以此类推，四种级别的日志都能快捷打出来。还有，如果在oncreate方法外面输入logt，然后按下Tab键，就会以当前的类名作为值自动生成一个类似下面的TAG常量：</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HelloWorldActivity</span> <span class="keyword">extends</span> <span class="title">AppCompatActivity</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String TAG = <span class="string">"HelloWorldActivity"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89/" rel="tag"># 读书笔记-第一行代码（第二版）</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2018/05/30/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/" rel="next" title="第6章：死锁">
+                  <i class="fa fa-chevron-left"></i> 第6章：死锁
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2018/06/01/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%BA%8C%E7%AB%A0/" rel="prev" title="第2章：先从看得到的入手">
+                  第2章：先从看得到的入手 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Android系统架构"><span class="nav-number">1.</span> <span class="nav-text">Android系统架构</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android应用开发特色"><span class="nav-number"></span> <span class="nav-text">Android应用开发特色</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#四大组件"><span class="nav-number">1.</span> <span class="nav-text">四大组件</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="glassx"
+    src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">glassx的小黑屋,读书笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">57</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.4.2
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js?v=3.1.0"></script>
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+<script src="/js/utils.js?v=7.4.2"></script><script src="/js/motion.js?v=7.4.2"></script>
+<script src="/js/schemes/muse.js?v=7.4.2"></script>
+<script src="/js/next-boot.js?v=7.4.2"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

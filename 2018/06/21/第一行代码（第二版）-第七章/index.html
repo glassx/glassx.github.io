@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.4.2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.4.2">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.4.2">
+  <link rel="mask-icon" href="/images/logo.svg?v=7.4.2" color="#222">
+
+<link rel="stylesheet" href="/css/main.css?v=7.4.2">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '7.4.2',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: 'Copy',
+      copy_success: 'Copied',
+      copy_failure: 'Copy failed'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="可能你会有些疑惑，为什么要将我们程序中的数据共享给其他程序呢？当然，这是视情况而定的，比如账号密码之类的隐私数据显然是不能共享给其他程序的，不过一些可以让其他程序进行二次开发的基础性数据，我们还是可以选择共享。例如联系人程序、短信程序、多媒体库等，它们的数据库中保存了很多基础数据，如果不允许其他应用进行访问，则方便性就会大打折扣。 运行时权限Android的权限机制在一开始就存在，但是在6.0以前">
+<meta name="keywords" content="读书笔记-第一行代码（第二版）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第7章： 数据存储全方案——跨程序共享数据：探究内容提供器">
+<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2018&#x2F;06&#x2F;21&#x2F;%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0&#x2F;index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="可能你会有些疑惑，为什么要将我们程序中的数据共享给其他程序呢？当然，这是视情况而定的，比如账号密码之类的隐私数据显然是不能共享给其他程序的，不过一些可以让其他程序进行二次开发的基础性数据，我们还是可以选择共享。例如联系人程序、短信程序、多媒体库等，它们的数据库中保存了很多基础数据，如果不允许其他应用进行访问，则方便性就会大打折扣。 运行时权限Android的权限机制在一开始就存在，但是在6.0以前">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81&#x2F;chapter-7&#x2F;%E5%9B%BE1.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81&#x2F;chapter-7&#x2F;%E5%9B%BE2.png">
+<meta property="og:updated_time" content="2019-05-01T08:43:42.531Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81&#x2F;chapter-7&#x2F;%E5%9B%BE1.png">
+
+<link rel="canonical" href="https://glassx.gitee.io/2018/06/21/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第7章： 数据存储全方案——跨程序共享数据：探究内容提供器 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/06/21/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="glassx的小黑屋,读书笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第7章： 数据存储全方案——跨程序共享数据：探究内容提供器
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-06-21 08:00:00" itemprop="dateCreated datePublished" datetime="2018-06-21T08:00:00+08:00">2018-06-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2019-05-01 16:43:42" itemprop="dateModified" datetime="2019-05-01T16:43:42+08:00">2019-05-01</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>可能你会有些疑惑，为什么要将我们程序中的数据共享给其他程序呢？当然，这是视情况而定的，比如账号密码之类的隐私数据显然是不能共享给其他程序的，不过一些可以让其他程序进行二次开发的基础性数据，我们还是可以选择共享。例如联系人程序、短信程序、多媒体库等，它们的数据库中保存了很多基础数据，如果不允许其他应用进行访问，则方便性就会大打折扣。</p>
+<h3 id="运行时权限"><a href="#运行时权限" class="headerlink" title="运行时权限"></a>运行时权限</h3><p>Android的权限机制在一开始就存在，但是在6.0以前保护隐私方面比较有限，因为像微信这种大家都离不开的软件，容易“店大欺客”，不同意它所有的权限只能不安装，这并不合理。</p>
+<h4 id="权限机制详解"><a href="#权限机制详解" class="headerlink" title="权限机制详解"></a>权限机制详解</h4><p>开发者在AndroidManifest.xml中声明权限，一种情况是，用户如果在低于6.0的系统上安装该程序，会在安装时列出该应用所需要的权限，从而决定是否要安装这个程序，并且在用户安装成功之后，还能在<strong>设置</strong>中查看程序所申请的权限，但是对于那些离不开的程序（比如微信）来说，要么全部同意它申请的权限，要么不安装，这不太合理；如果在6.0及以上的系统中安装，则用户不必在安装时一次性授权所有申请的权限，而是在软件使用的过程中再对<strong>危险权限</strong>进行授权，就算拒绝了这个权限，仍然可以使用应用的其他功能，而不是以前那样直接无法安装。</p>
+<p>Android 6.0 及以上将所有权限分为两类，<strong>普通权限和危险权限</strong>，普通权限是指不会直接威胁用户的安全和隐私的权限，这部分权限系统自动帮我们授权，避免用户不停地手动授权；危险权限则表示会触及用户隐私或者设备安全性的权限，如获取联系人、定位设备位置等，必须由程序员动态申请，由用户手动点击授权才可以，否则无法使用相应功能。目前为止，Android中的危险权限有9组共24个权限，如下列表所示（图片来自<a href="https://developer.android.google.cn/guide/topics/security/permissions#normal-dangerous" target="_blank" rel="noopener">官网</a>）：</p>
+<p><img src="/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE1.png" alt="危险权限列表"></p>
+<p>这张表格无需记住，在使用的时候作为参照，如果权限在这张表中，则进行运行时处理就好。<strong>另外注意一下，表格中每个危险权限都属于一个权限组，我们在进行运行时权限处理时使用的是权限名，但是用户一旦同意授权了，那么该权限对应的权限组中所有的其他权限也会同时被授权</strong>。</p>
+<h3 id="在程序运行时申请权限"><a href="#在程序运行时申请权限" class="headerlink" title="在程序运行时申请权限"></a>在程序运行时申请权限</h3><p>以拨打电话的权限为例来说明权限的申请，点击一个按钮，就拨打指定的号码，在6.0以前可能是这样实现的：</p>
+<ol>
+<li>在AndroidManifest.xml中申请权限：<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.CALL_PHONE"</span>/&gt;</span></span><br></pre></td></tr></table></figure></li>
+<li>在代码中实现：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">btnCall.setOnclickListener(<span class="keyword">new</span> View.OnclickListener()&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span></span>&#123;</span><br><span class="line">		Intent intent = <span class="keyword">new</span> Intent(Intent.ACTION_CALL);</span><br><span class="line">		intent.setData(Uri.parse(<span class="string">"tel:10086"</span>));</span><br><span class="line">		startActivity(Intent);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>在6.0以下系统上能正常拨打电话，但是在6.0或者以上系统运行，会报错<strong>Permission Denial</strong>，可以看出是由于权限被禁止导致的，因此我们应该尝试使用以下方式来申请权限：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">btnCall.setOnclickListener(<span class="keyword">new</span> View.OnclickListener()&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span></span>&#123;</span><br><span class="line">		</span><br><span class="line">		<span class="keyword">if</span>(ContextCompat.checkSelfPermission(MainActivity.<span class="keyword">this</span>,Manifest.permission.CALL_PHONE) !=   </span><br><span class="line">		PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">			ActivityCompat.requestPermission(MainActivity.<span class="keyword">this</span>,<span class="keyword">new</span> </span><br><span class="line">			String[]&#123;Manifest.permission.CALL_PHONE&#125;,<span class="number">1</span>);</span><br><span class="line">		&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">			call();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">call</span><span class="params">()</span></span>&#123;</span><br><span class="line">	Intent intent = <span class="keyword">new</span> Intent(Intent.ACTION_CALL);</span><br><span class="line">	intent.setData(Uri.parse(<span class="string">"tel:10086"</span>));</span><br><span class="line">	startActivity(Intent);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onRequestPermissionResult</span><span class="params">(<span class="keyword">int</span> requestCode,String[] permissions,<span class="keyword">int</span>[] grantResults)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span>(requestCode)&#123;</span><br><span class="line">		<span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">			<span class="keyword">if</span>(grantResults.lenght &gt; <span class="number">0</span> &amp;&amp; grantResults(<span class="number">0</span>) == PackageManager.PERMISSION_GRANTED)&#123;</span><br><span class="line">				call();</span><br><span class="line">			&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">				Toast.makeText(<span class="keyword">this</span>,<span class="string">"You denied the permission"</span>,Toast.LEGHTH_SHORT).show();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述第一步先判断用户是不是已经给我们授权了，使用的是<strong>ContextCompat.checkSelfPermission</strong>，如果已经授权，直接拨打电话，否则调用<strong>ActivityCompat.requestPermission</strong>方法向用户申请授权，这时候用户可以选择同意或者拒绝我们的申请，不论哪种结果，都会通过回调<strong>onRequestPermissionResult</strong>告知，在回调中根据不同的结果做不同的处理。<strong>记住，在动态声明权限后，AndroidManifest中还得添加<uses-permission android:name="android.permission.CALL_PHONE"/> 声明</strong>。</p>
+<h3 id="访问其他程序中的数据"><a href="#访问其他程序中的数据" class="headerlink" title="访问其他程序中的数据"></a>访问其他程序中的数据</h3><p>内容提供器的用法一般有两种，一是使用现有的内容提供器来读取和操作响应程序中的数据，另一种是创建自己的内容提供器给我们的数据提供外部访问接口。</p>
+<h4 id="ContentResolver的基本使用"><a href="#ContentResolver的基本使用" class="headerlink" title="ContentResolver的基本使用"></a>ContentResolver的基本使用</h4><p>如果想要访问内容提供器共享的数据，就一定要借助ContentResolver类，可以通过Context中的getContentResolver方法获取到该类的实例。可以对内容进行CRUD操作，不同于SQLiteDatabase，ContentResolver增删改查不接收表名参数，而是使用Uri参数代替，该Uri主要由两部分组成：<strong>authority和path</strong>，前者用于对不同的应用程序做区分，一般采用程序包名形式，如某个程序的包名是com.example.app，那么对应的authority就可以命名为com.example.app.provider；path则是对同一应用程序中不同表做区分的，通常会添加到authority后面，所以内容Uri的形式一般如下所示(带协议声明)：</p>
+<blockquote>
+<p>content://com.example.app.provicer/table1<br>content://com.example.app.provicer/table2</p>
+</blockquote>
+<p>正式查询的时候，将Uri作为参数传入，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Uri uri = Uri.parse(<span class="string">"content://com.example.app.provicer/table1"</span>);</span><br><span class="line">Cuisor cursor = getContentResolver().query(uri,projection,selection,selectionArgs,sortOrder);</span><br></pre></td></tr></table></figure>
+
+<p>其中，query方法中各个参数对应的含义如下所示：</p>
+<p><img src="/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE2.png" alt="参数对应的含义"></p>
+<p>接下来便可以进行相应的增删改查操作，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//查</span></span><br><span class="line"><span class="keyword">if</span>(cursor != <span class="keyword">null</span>)&#123;</span><br><span class="line">	<span class="keyword">while</span>(cursor.moveToNext())&#123;</span><br><span class="line">		String colomn1 = cursor.getString(cursor.getColumnIndex(<span class="string">"column1"</span>));</span><br><span class="line">		<span class="keyword">int</span> colomn2 = cursor.getInt(cursor.getColumnIndex(<span class="string">"column2"</span>));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//增</span></span><br><span class="line">ContentValues values = <span class="keyword">new</span> ContentValues();</span><br><span class="line">values.put(<span class="string">"column1"</span>,<span class="string">"text"</span>);</span><br><span class="line">values.put(<span class="string">"column2"</span>,<span class="number">1</span>);</span><br><span class="line">getContentResolver().insert(uri,values);</span><br></pre></td></tr></table></figure>
+
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//改，把column1的值清空</span></span><br><span class="line">ContentValues values = <span class="keyword">new</span> ContentValues();</span><br><span class="line">values.put(<span class="string">"column1"</span>,<span class="string">""</span>);</span><br><span class="line">getContentResolver().update(uri,values,<span class="string">"column1 = ? and column2 = ?"</span>,<span class="keyword">new</span> String[]&#123;<span class="string">"text"</span>,<span class="string">"1"</span>&#125;);</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//删除</span></span><br><span class="line">getContentResolver().delete(uri,<span class="string">"column2 = ?"</span>,<span class="keyword">new</span> String[]&#123;<span class="string">"1"</span>&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>其实整体就相当于sql语句，因此并不太难。</p>
+<h3 id="创建自己的内容提供器"><a href="#创建自己的内容提供器" class="headerlink" title="创建自己的内容提供器"></a>创建自己的内容提供器</h3><p>因为基本上没有这样的需求，暂时略后续补上</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89/" rel="tag"># 读书笔记-第一行代码（第二版）</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2018/06/11/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E5%85%AD%E7%AB%A0/" rel="next" title="第6章：数据存储全方案：详解持久化技术">
+                  <i class="fa fa-chevron-left"></i> 第6章：数据存储全方案：详解持久化技术
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2018/06/22/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E5%85%AB%E7%AB%A0/" rel="prev" title="第8章：丰富你的程序-使用手机多媒体">
+                  第8章：丰富你的程序-使用手机多媒体 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#运行时权限"><span class="nav-number">1.</span> <span class="nav-text">运行时权限</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#权限机制详解"><span class="nav-number">1.1.</span> <span class="nav-text">权限机制详解</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#在程序运行时申请权限"><span class="nav-number">2.</span> <span class="nav-text">在程序运行时申请权限</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#访问其他程序中的数据"><span class="nav-number">3.</span> <span class="nav-text">访问其他程序中的数据</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#ContentResolver的基本使用"><span class="nav-number">3.1.</span> <span class="nav-text">ContentResolver的基本使用</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建自己的内容提供器"><span class="nav-number">4.</span> <span class="nav-text">创建自己的内容提供器</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <img class="site-author-image" itemprop="image" alt="glassx"
+    src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">glassx的小黑屋,读书笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">57</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.4.2
+  </div>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js?v=3.1.0"></script>
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+<script src="/js/utils.js?v=7.4.2"></script><script src="/js/motion.js?v=7.4.2"></script>
+<script src="/js/schemes/muse.js?v=7.4.2"></script>
+<script src="/js/next-boot.js?v=7.4.2"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
