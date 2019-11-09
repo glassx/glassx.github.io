@@ -53,13 +53,13 @@
   };
 </script>
 
-  <meta name="description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。 对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。 很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程">
+  <meta name="description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。">
 <meta name="keywords" content="深入理解Android内核设计思想-林学森">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第5章：Android 进程&#x2F;线程管理">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;08&#x2F;06&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。 对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。 很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程">
+<meta property="og:description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;activity%E5%90%AF%E5%8A%A8.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;%E8%BF%90%E8%A1%8C%E7%9A%84thread%E5%9B%BE.png">
@@ -274,12 +274,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="Android-进程和线程"><a href="#Android-进程和线程" class="headerlink" title="Android 进程和线程"></a>Android 进程和线程</h2><p>进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。</p>
-<p>对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。</p>
+        <h2 id="Android-进程和线程"><a href="#Android-进程和线程" class="headerlink" title="Android 进程和线程"></a>Android 进程和线程</h2><p>进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。</p><p>对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。</p><a id="more"></a>
+
 <p>很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程的组成部分，从 AndroidManifest.xml 中也可以得到一点提示（这个xml是对应用程序的声明和描述）：</p>
 <figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">application</span> <span class="attr">android:label</span>=<span class="string">"launch performance"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">"SimpleActivity"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
 
-<p>可以看到，Activity的外围有一个名为 <application> 的标签，换句话说，四大组件都只是 “application”的零件。通过例子来分析让读者有个更全面的认识，通过Activity A启动Activity B，在 B 的onCreate(Bundle savedInstanceState) 打断点，查看断点详情可以看到如下图所示的内容：</p>
+<p>可以看到，Activity的外围有一个名为 <application> 的标签，换句话说，四大组件都只是 “application”的零件。通过例子来分析让读者有个更全面的认识，通过Activity A启动Activity B，在 B 的onCreate(Bundle savedInstanceState) 打断点，查看断点详情可以看到如下图所示的内容：</application></p>
 <p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC5%E7%AB%A0/activity%E5%90%AF%E5%8A%A8.png" alt="activity启动"></p>
 <p>从这个实验中还解决了一个重要问题，即主线程到底怎么产生的，从上图的函数堆栈可以知道：主线程由ZygoteInit启动，经由一系列调用后最终才执行Activity的onCreate函数，并且，Zygote为Activity创建的主线程是 ActivityThread。以下是源码展示：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    CloseGuard.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//只有主线程才能调用这个函数，普通线程应该使用prepare()，具体见对 Looper 的讲解</span></span><br><span class="line">    Looper.prepareMainLooper();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主线程对应的handler</span></span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span>) &#123;</span><br><span class="line">        sMainThreadHandler = thread.getHandler();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//这个main()是static的，因此这里需要创建一个实例</span></span><br><span class="line">    ActivityThread thread = <span class="keyword">new</span> ActivityThread();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//Activity是由界面显示的，这个函数将与WindowManagerService 建立联系</span></span><br><span class="line">    thread.attach(<span class="keyword">false</span>, startSeq);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主循环开始</span></span><br><span class="line">    Looper.loop();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//如果程序运行到了这里，说明退出了上面的Looper循环</span></span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -293,7 +293,7 @@
 <p>最终输出的结果是2，说明都是在同一个进程中，当然，我们还可以通过查看二者的 PID 和 TID 的方法证明这两个Activity默认确实在同一个进程中。当然，Android还提供了特殊方式让不是同一个包的组件也可以运行于相同的进程中，这样做的优势是，它们可以方便地资源共享，而不用大费周章地进程间通信。这可以分为两种情况：</p>
 <ol>
 <li>在AndroidManifest中的四大组件标签中加入 android:process 来表明这一组件想要运行在哪个进程空间。</li>
-<li>针对整个程序包，可以直接在 <application> 标签中，加入 android:process 属性来指明想要依存的进程环境。</li>
+<li>针对整个程序包，可以直接在 <application> 标签中，加入 android:process 属性来指明想要依存的进程环境。</application></li>
 </ol>
 <h2 id="Handler、MessageQueue、Runable与Looper"><a href="#Handler、MessageQueue、Runable与Looper" class="headerlink" title="Handler、MessageQueue、Runable与Looper"></a>Handler、MessageQueue、Runable与Looper</h2><p>参考专题里面的内容（现在还没放上去）<br>略</p>
 <h2 id="UI主线程-ActivityThread"><a href="#UI主线程-ActivityThread" class="headerlink" title="UI主线程-ActivityThread"></a>UI主线程-ActivityThread</h2><p>前面提到Activity的部分源码，这里精简下再贴出来：</p>

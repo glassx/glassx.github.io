@@ -53,13 +53,13 @@
   };
 </script>
 
-  <meta name="description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。 硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓">
+  <meta name="description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存">
 <meta name="keywords" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第12章: Java内存模型与线程">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;09&#x2F;23&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。 硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓">
+<meta property="og:description" content="概述在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I&#x2F;O 、网络通信或者数据库访问上。硬件的效率与一致性高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88&#x2F;%E7%AC%AC12%E7%AB%A0&#x2F;increase%E5%AD%97%E8%8A%82%E7%A0%81.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88&#x2F;%E7%AC%AC12%E7%AB%A0&#x2F;%E5%8D%95%E4%BE%8B%E7%BC%96%E8%AF%91%E5%90%8E%E7%9A%84%E5%AD%97%E8%8A%82%E7%A0%81.png">
@@ -275,8 +275,8 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I/O 、网络通信或者数据库访问上。</p>
-<h2 id="硬件的效率与一致性"><a href="#硬件的效率与一致性" class="headerlink" title="硬件的效率与一致性"></a>硬件的效率与一致性</h2><p>高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存，而它们又共享同一主存(Main memory)，当多个处理器的运算任务都涉及同一块主内存区域时，可能导致各自的缓存数据不一致，此时，同步回到主存时以谁的缓存数据为准呢？</p>
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I/O 、网络通信或者数据库访问上。</p><h2 id="硬件的效率与一致性"><a href="#硬件的效率与一致性" class="headerlink" title="硬件的效率与一致性"></a>硬件的效率与一致性</h2><p>高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存，而它们又共享同一主存(Main memory)，当多个处理器的运算任务都涉及同一块主内存区域时，可能导致各自的缓存数据不一致，此时，同步回到主存时以谁的缓存数据为准呢？</p><a id="more"></a>
+
 <p>除高速缓存外，为了使处理器内部运算单元尽量被充分利用，处理器可能会对输入代码进行乱序执行(Out-Of-Execution)优化，处理器会在计算之后将乱序执行的结果重组，保证该结果与顺序执行的结果是一致的，但是并不保证程序中各个语句计算的先后顺序与输入代码中的顺序一致。因此，如果某个计算任务依赖另一个计算任务的中间结果，那么其顺序性不能依靠代码的先后顺序来保证。</p>
 <h2 id="Java-内存模型"><a href="#Java-内存模型" class="headerlink" title="Java 内存模型"></a>Java 内存模型</h2><p>Java 内存模型(Java Memory Model, JMM) 是用来屏蔽各种硬件和操作系统的内存访问差异。</p>
 <h3 id="主内存与工作内存"><a href="#主内存与工作内存" class="headerlink" title="主内存与工作内存"></a>主内存与工作内存</h3><p>Java 内存模型的主要目标是定义程序中各个变量的访问规则，此处的变量(Variables) 包括 <strong>实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不存在竞争。</strong></p>
