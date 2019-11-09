@@ -5,17 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
 <meta name="generator" content="Hexo 4.0.0">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.4.2">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.4.2">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.4.2">
-  <link rel="mask-icon" href="/images/logo.svg?v=7.4.2" color="#222">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
 
-<link rel="stylesheet" href="/css/main.css?v=7.4.2">
+<link rel="stylesheet" href="/css/main.css">
 
 
-<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
-  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2">
-  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
 
 
 <script id="hexo-configurations">
@@ -23,7 +24,7 @@
   var CONFIG = {
     root: '/',
     scheme: 'Pisces',
-    version: '7.4.2',
+    version: '7.5.0',
     exturl: false,
     sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
     copycode: {"enable":false,"show_result":false,"style":null},
@@ -52,13 +53,13 @@
   };
 </script>
 
-  <meta name="description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。">
+  <meta name="description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。 对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。 很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程">
 <meta name="keywords" content="深入理解Android内核设计思想-林学森">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第5章：Android 进程&#x2F;线程管理">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;08&#x2F;06&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。">
+<meta property="og:description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。 对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。 很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;activity%E5%90%AF%E5%8A%A8.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;%E8%BF%90%E8%A1%8C%E7%9A%84thread%E5%9B%BE.png">
@@ -82,8 +83,6 @@
 
   <title>第5章：Android 进程/线程管理 | glassx的小黑屋</title>
   
-
-
 
 
 
@@ -184,17 +183,18 @@
   <span class="search-icon">
     <i class="fa fa-search"></i>
   </span>
-  <div class="search-input-container">
-    <input autocomplete="off" autocorrect="off" autocapitalize="none"
-           placeholder="搜索..." spellcheck="false"
-           type="text" id="search-input">
-  </div>
+  <div class="search-input" id="search-input"></div>
   <span class="popup-btn-close">
     <i class="fa fa-times-circle"></i>
   </span>
 </div>
-<div id="search-result"></div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
 
+  
 </div>
 <div class="search-pop-overlay"></div>
 
@@ -207,6 +207,7 @@
     <i class="fa fa-arrow-up"></i>
     <span>0%</span>
   </div>
+  <div class="reading-progress-bar"></div>
 
 
     <main class="main">
@@ -273,12 +274,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="Android-进程和线程"><a href="#Android-进程和线程" class="headerlink" title="Android 进程和线程"></a>Android 进程和线程</h2><p>进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。</p><p>对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。</p><a id="more"></a>
-
+        <h2 id="Android-进程和线程"><a href="#Android-进程和线程" class="headerlink" title="Android 进程和线程"></a>Android 进程和线程</h2><p>进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。</p>
+<p>对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。</p>
 <p>很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程的组成部分，从 AndroidManifest.xml 中也可以得到一点提示（这个xml是对应用程序的声明和描述）：</p>
 <figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">application</span> <span class="attr">android:label</span>=<span class="string">"launch performance"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">"SimpleActivity"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
 
-<p>可以看到，Activity的外围有一个名为 <application> 的标签，换句话说，四大组件都只是 “application”的零件。通过例子来分析让读者有个更全面的认识，通过Activity A启动Activity B，在 B 的onCreate(Bundle savedInstanceState) 打断点，查看断点详情可以看到如下图所示的内容：</application></p>
+<p>可以看到，Activity的外围有一个名为 <application> 的标签，换句话说，四大组件都只是 “application”的零件。通过例子来分析让读者有个更全面的认识，通过Activity A启动Activity B，在 B 的onCreate(Bundle savedInstanceState) 打断点，查看断点详情可以看到如下图所示的内容：</p>
 <p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC5%E7%AB%A0/activity%E5%90%AF%E5%8A%A8.png" alt="activity启动"></p>
 <p>从这个实验中还解决了一个重要问题，即主线程到底怎么产生的，从上图的函数堆栈可以知道：主线程由ZygoteInit启动，经由一系列调用后最终才执行Activity的onCreate函数，并且，Zygote为Activity创建的主线程是 ActivityThread。以下是源码展示：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    CloseGuard.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//只有主线程才能调用这个函数，普通线程应该使用prepare()，具体见对 Looper 的讲解</span></span><br><span class="line">    Looper.prepareMainLooper();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主线程对应的handler</span></span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span>) &#123;</span><br><span class="line">        sMainThreadHandler = thread.getHandler();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//这个main()是static的，因此这里需要创建一个实例</span></span><br><span class="line">    ActivityThread thread = <span class="keyword">new</span> ActivityThread();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//Activity是由界面显示的，这个函数将与WindowManagerService 建立联系</span></span><br><span class="line">    thread.attach(<span class="keyword">false</span>, startSeq);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主循环开始</span></span><br><span class="line">    Looper.loop();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//如果程序运行到了这里，说明退出了上面的Looper循环</span></span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -292,7 +293,7 @@
 <p>最终输出的结果是2，说明都是在同一个进程中，当然，我们还可以通过查看二者的 PID 和 TID 的方法证明这两个Activity默认确实在同一个进程中。当然，Android还提供了特殊方式让不是同一个包的组件也可以运行于相同的进程中，这样做的优势是，它们可以方便地资源共享，而不用大费周章地进程间通信。这可以分为两种情况：</p>
 <ol>
 <li>在AndroidManifest中的四大组件标签中加入 android:process 来表明这一组件想要运行在哪个进程空间。</li>
-<li>针对整个程序包，可以直接在 <application> 标签中，加入 android:process 属性来指明想要依存的进程环境。</application></li>
+<li>针对整个程序包，可以直接在 <application> 标签中，加入 android:process 属性来指明想要依存的进程环境。</li>
 </ol>
 <h2 id="Handler、MessageQueue、Runable与Looper"><a href="#Handler、MessageQueue、Runable与Looper" class="headerlink" title="Handler、MessageQueue、Runable与Looper"></a>Handler、MessageQueue、Runable与Looper</h2><p>参考专题里面的内容（现在还没放上去）<br>略</p>
 <h2 id="UI主线程-ActivityThread"><a href="#UI主线程-ActivityThread" class="headerlink" title="UI主线程-ActivityThread"></a>UI主线程-ActivityThread</h2><p>前面提到Activity的部分源码，这里精简下再贴出来：</p>
@@ -367,9 +368,8 @@
     
     
     
-      
         <div class="reward-container">
-  <div>呼啦啦</div>
+  <div>谢谢你的鼓励</div>
   <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
     打赏
   </button>
@@ -449,8 +449,8 @@
 
       <div class="site-overview-wrap sidebar-panel">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
-  <img class="site-author-image" itemprop="image" alt="glassx"
-    src="/images/avatar.jpeg">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
   <p class="site-author-name" itemprop="name">glassx</p>
   <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
 </div>
@@ -475,16 +475,10 @@
       </div>
   </nav>
 </div>
-  <div class="links-of-author motion-element">
-      <span class="links-of-author-item">
-        <a href="https://github.com/yourname" title="GitHub &amp;rarr; https:&#x2F;&#x2F;github.com&#x2F;yourname" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
-      </span>
-      <span class="links-of-author-item">
-        <a href="mailto:yourname@gmail.com" title="E-Mail &amp;rarr; mailto:yourname@gmail.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
-      </span>
-      <span class="links-of-author-item">
-        <a href="https://weibo.com/yourname" title="Weibo &amp;rarr; https:&#x2F;&#x2F;weibo.com&#x2F;yourname" rel="noopener" target="_blank"><i class="fa fa-fw fa-weibo"></i>Weibo</a>
-      </span>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
   </div>
 
 
@@ -529,7 +523,7 @@
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
   </div>
   <span class="post-meta-divider">|</span>
-  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.4.2
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
   </div>
 
 
@@ -593,12 +587,12 @@
   </div>
 
   
-  <script src="/lib/anime.min.js?v=3.1.0"></script>
-  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
-  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
-<script src="/js/utils.js?v=7.4.2"></script><script src="/js/motion.js?v=7.4.2"></script>
-<script src="/js/schemes/pisces.js?v=7.4.2"></script>
-<script src="/js/next-boot.js?v=7.4.2"></script>
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/pisces.js"></script>
+<script src="/js/next-boot.js"></script>
 
 
 
@@ -607,23 +601,22 @@
 
 
 
-
-
-  <script src="/js/local-search.js?v=7.4.2"></script>
-
-
-
-
-
-
-
-
-
-
-
-
-
   
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   
 
@@ -649,5 +642,3 @@
 
 </body>
 </html>
-
-
