@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="前面讨论的基本认证方式和摘要认证以及报文完整性检查都是轻量级的方法，但对于重要的如银行业务处理，大规模网上购物来说，这还不够，我们需要一种能够提供下列功能的HTTP安全技术：  服务器验证，客户端验证服务器是真的还是伪造的 客户端认证，服务器验证客户端是真的还是伪造的 完整性，客户端和服务器的数据不被修改 加密，无需担心会话被窃听 效率，算法的运行要求足够快 普适性，基本上所有的客户端和服务器都支">
+<meta name="keywords" content="读书笔记-HTTP 权威指南">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第14章：安全HTTP">
+<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2018&#x2F;05&#x2F;25&#x2F;HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC14%E7%AB%A0&#x2F;index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="前面讨论的基本认证方式和摘要认证以及报文完整性检查都是轻量级的方法，但对于重要的如银行业务处理，大规模网上购物来说，这还不够，我们需要一种能够提供下列功能的HTTP安全技术：  服务器验证，客户端验证服务器是真的还是伪造的 客户端认证，服务器验证客户端是真的还是伪造的 完整性，客户端和服务器的数据不被修改 加密，无需担心会话被窃听 效率，算法的运行要求足够快 普适性，基本上所有的客户端和服务器都支">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;layer-with-https.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;N=3-example.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;same-pass-diff-key.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;key-len-with-crack-time.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;diff-encry-method.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;msg-sign-example.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;typical-digital-signing.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;verify-the-sign.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;http-with-https.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;simple-SSL-handshake.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;server-agent.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;cannot-transmit.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;connect-sample.png">
+<meta property="og:updated_time" content="2019-05-01T08:42:12.639Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97&#x2F;chapter-14&#x2F;layer-with-https.png">
+
+<link rel="canonical" href="https://glassx.gitee.io/2018/05/25/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC14%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第14章：安全HTTP | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">19</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">3</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">59</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/05/25/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC14%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第14章：安全HTTP
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-05-25 08:00:00" itemprop="dateCreated datePublished" datetime="2018-05-25T08:00:00+08:00">2018-05-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-05-01 16:42:12" itemprop="dateModified" datetime="2019-05-01T16:42:12+08:00">2019-05-01</time>
+              </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>前面讨论的基本认证方式和摘要认证以及报文完整性检查都是轻量级的方法，但对于重要的如银行业务处理，大规模网上购物来说，这还不够，我们需要一种能够提供下列功能的HTTP安全技术：</p>
+<ul>
+<li>服务器验证，客户端验证服务器是真的还是伪造的</li>
+<li>客户端认证，服务器验证客户端是真的还是伪造的</li>
+<li>完整性，客户端和服务器的数据不被修改</li>
+<li>加密，无需担心会话被窃听</li>
+<li>效率，算法的运行要求足够快</li>
+<li>普适性，基本上所有的客户端和服务器都支持这种协议</li>
+<li>其他</li>
+</ul>
+<h3 id="https"><a href="#https" class="headerlink" title="https"></a>https</h3><p>https是最流行的HTTP安全形式，它的URL以** https:// ** 而不是  http:// 开头。所有的HTTP请求和响应数据在发送到网络之前都要进行加密，HTTPS在HTTP下面提供了一个安全层，可以使用SSL，也可以使用其后继者TSL（Transport Layer Security，传输层安全），由于二者十分类似，所以一般不太严格地用SSL来表示SSL和TSL。</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/layer-with-https.png" alt="http与https的层次"></p>
+<h4 id="数字加密"><a href="#数字加密" class="headerlink" title="数字加密"></a>数字加密</h4><p>概念</p>
+<ul>
+<li><p>密码：对文本进行编码的算法。</p>
+</li>
+<li><p>密钥：改变密码行为的数字化参数</p>
+</li>
+<li><p>对称密钥加密系统：编/解码使用相同密钥的算法</p>
+</li>
+<li><p>不对称密钥加密系统：编/解码使用不同密钥的算法</p>
+</li>
+<li><p>公开密钥加密算法：一种能够使数百万计算机便捷地发送机密报文的系统</p>
+</li>
+<li><p>数字签名：用来验证报文是否被改动的校验和。</p>
+</li>
+<li><p>数字证书：由可信的组织验证和签发的识别信息</p>
+</li>
+</ul>
+<p>假如使用rot3（循环移位3字符）方式对报文加密，则 明文 meet 加密后为 phhw，示意图如下：</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/N=3-example.png" alt="循环移位3字符"></p>
+<p>那在概念中，<strong>密码</strong>就是 “循环移位N字符” ，N的值是由<strong>密钥</strong>控制的，在这里N的值是3。 改变密钥的值就能产生不同的密文。编码算法和编码机器都可能落入敌人手中，但是只要没有正确的号盘设置（密钥值），也无法实现解码。这种属于使用了密钥的密码。</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/same-pass-diff-key.png" alt="相同密码不同密钥"></p>
+<p><strong>数字密码：</strong>数字密码只是一些数字，这些数字密钥值是编码/解码算法的输入，编码算法就是一些函数，这些函数会读取一块数据，并根据算法和密钥的值对其进行编码/解码。给定一段明文P、一个编码函数E和一个数字编码密钥e，就可以生成一段经过编码的密文C，通过解码函数D和解码密钥d，就可以将密文C解码为原始的明文P，当然，编码/解码函数互为反函数。</p>
+<h4 id="对称密钥加密技术"><a href="#对称密钥加密技术" class="headerlink" title="对称密钥加密技术"></a>对称密钥加密技术</h4><p><strong>对称密钥加密</strong>在编码时候使用的密钥值和解码时候的密钥值一样的。保持密钥的机密很重要，在很多情况下，编码解码算法都是众所周知的，因此密钥是唯一保密的东西了。可用密钥的数量取决于密钥中的位数，以及可能的密钥中有多少是有效的。就对称加密而言，通常所有的密钥值都是有效的（知名的非对称密钥加密系统RSA中，有效密钥必须以某种方式与质数相关，因此并非所有的密钥都有效）。8位的密钥只有256个可能，40位的密钥可以有2的40次方个可能的密钥值等等。</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/key-len-with-crack-time.png" alt="密钥长度与破解难度"></p>
+<blockquote>
+<p>流行的对称密钥加密算法有:DES/Triple-DES、RC2、RC4</p>
+</blockquote>
+<p><strong>缺点：</strong>发送者和接收者在对话前一定要有一个共享的保密密钥，服务器与每个客户端都需要有一个独立的密钥，以致如果客户端数量过多的情况下，服务器保存的密钥数量可观。如果N个节点，每个节点都要和其他所有N-1个节点通信，总共大概会保存N的平方个密钥，这将是一个管理噩梦。</p>
+<h4 id="公开密钥加密技术"><a href="#公开密钥加密技术" class="headerlink" title="公开密钥加密技术"></a>公开密钥加密技术</h4><p>公开密钥加密技术使用了两个非对称密钥，一个用来对报文编码，一个用来对报文解码。编码密钥是可以公之于众的，每个<strong>不同的客户端</strong>可以用<strong>相同的编码密钥</strong>进行加密，但是只有主机自己才知道私有的解密密钥，只有解密密钥才能解码。</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/diff-encry-method.png" alt="对称加密与公开密钥技术"></p>
+<p>在引入公钥加密机制之前，可以先看两个问题：</p>
+<blockquote>
+<p>问题1:314159265358979 × 314159265358979 的结果是多少？<br>问题2： 3912571506419387090594828508241 的平方根是多少？</p>
+</blockquote>
+<p>如果不用计算器，第一个问题，相信大多数人花上一两个小时用纸笔能够计算出来，而第二个问题，即使花上一两天，估计也基本上没人能解出来。虽然平方和开方互为逆运算，但是它们的复杂度差异却很大，这种不对称性构成了公钥密码体系的基础。一种叫做RSA的公钥机制表明，对计算机来说，大数的乘法比对大数进行因式分解要容易得多。所有公开密钥非对称加密系统的要求是，即便拥有以下线索：</p>
+<ul>
+<li>公开密钥（共有的，每个人都可以获得）</li>
+<li>一小片拦截下来的密文（可以网络嗅探获得）</li>
+<li>一条报文以及与之相关的密文（对一段文本使用公钥加密就可以得到）</li>
+</ul>
+<p>也无法计算出保密的私有密钥。</p>
+<p>RSA 就是满足这些条件的流行的公开机密要加密系统。RSA的算法是公开的，源代码也可以获得，破解的难度与一个极大的数字进行质因数分解的难度一样。</p>
+<h4 id="混合加密系统和会话密钥"><a href="#混合加密系统和会话密钥" class="headerlink" title="混合加密系统和会话密钥"></a>混合加密系统和会话密钥</h4><p>任何人只要知道了公开密钥，就可以向一台公共服务器发送安全报文，所以非对称的公开密钥加密系统是很好用的，两个节点无须为了进行安全的通信而先交换私有密钥。但公开密钥加密算法的计算可能会很慢，比较常见的做法是在两个节点之间通过便捷的公开密钥加密技术建立起安全通信，然后再利用那条安全通道产生并发送临时的随机对称密钥，通过更快的对称加密技术对其余的数据进行加密。</p>
+<h4 id="数字签名"><a href="#数字签名" class="headerlink" title="数字签名"></a>数字签名</h4><p>除了加密/解密报文之外，还可以用加密系统对报文进行<strong>签名（sign）</strong>，以说明是谁编写的报文，同时证明报文未被篡改过，这种技术被称为<strong>数字签名（digital signing）</strong>。签名是加了密的校验和，使用数字签名有以下两个好处：</p>
+<ul>
+<li><p>签名可以证明是作者编写了这条报文。</p>
+<blockquote>
+<p>只有作者才有最机密的私有密钥，因此只有作者才能计算出这些校验和。</p>
+</blockquote>
+</li>
+<li><p>签名可以防止报文被篡改。</p>
+<blockquote>
+<p>如果恶意攻击者在传输过程中修改了报文，则校验和就不再匹配了，攻击者没有私钥，无法为篡改的报文伪造正确的验证码。</p>
+</blockquote>
+</li>
+</ul>
+<p>以下例子说明了节点A是如何向节点B发送一条报文，并对其进行签名：</p>
+<ol>
+<li>节点A将变长报文提取为定长摘要。</li>
+<li>节点A对摘要应用一个“签名”函数，这个函数会将用户的私有秘钥作为参数。因为只有A知道私有密钥，所以正确的签名函数会说明签名者就是所有者。在下图中，由于解码函数D中包含了用户的私有密码，所以我们将其作为签名函数使用。</li>
+<li>一旦计算出签名，节点A就将其附加在报文末尾，并将报文和签名都发给B</li>
+<li>在接收端，如果B需要确定报文确实是A写的，而且没有被篡改过，节点B就可以对签名进行检查。节点B接收经过私有秘钥扰码的签名，并应用了使用公开密钥的反函数，如果拆包后的摘要与节点B自己的摘要版本不匹配，就说明要么被篡改了，要么发送者不是A。</li>
+</ol>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/msg-sign-example.png" alt="报文签名例子"></p>
+<h4 id="数字证书"><a href="#数字证书" class="headerlink" title="数字证书"></a>数字证书</h4><p>数字证书都是由可信任的颁发机构颁发，它通常包括 对象的名称、过期时间，证书颁发者，来自证书发布者的数字签名、通常还包括对象的公开密钥以及对象使用签名算法的描述性信息。典型的数字签名格式如下：</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/typical-digital-signing.png" alt="典型的数字签名"></p>
+<p>数字证书没有单一的全球标准，但现在大多数证书都以一种标准格式 ——X.509 v3 描述。</p>
+<h4 id="用证书对服务器进行认证"><a href="#用证书对服务器进行认证" class="headerlink" title="用证书对服务器进行认证"></a>用证书对服务器进行认证</h4><p>通过https建立一个安全的web事务之后，现代的浏览器会自动获取所连接服务器的数字证书，如果如武器没有证书，安全连接就会失败，服务器证书中包含很多字段，包括：</p>
+<ul>
+<li>web站点的名称和主机名；</li>
+<li>web站点的公开密钥；</li>
+<li>颁发机构的名称；</li>
+<li>颁发机构的签名。</li>
+</ul>
+<p>浏览器收到证书时会对签名颁发机构进行检查，如果这个机构是很权威的公司，那浏览器一般已经知道其公开密钥了（浏览器会预先安装很多签名颁发机构的证书），就能像之前那样验证签名了。如果对签名颁发机构一无所知，浏览器就无法确定是否应该信任这个签名颁发机构，它通常会向用户展示一个对话框，看用户是否相信这个签名发布者，因为发布者可能是本地IT部门。以下展示了验证签名的过程：</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/verify-the-sign.png" alt="验证签名"></p>
+<h3 id="HTTPS-细节介绍"><a href="#HTTPS-细节介绍" class="headerlink" title="HTTPS-细节介绍"></a>HTTPS-细节介绍</h3><p>https就是在安全的传输层上发送的http，它在将http报文发送给TCP之前，先将其发送给一个安全层，对其进行加密。对web服务器发起请求时，我们需要一种方式来告知web服务器去执行http的安全协议版本，这是在URL的方案中实现的，对web资源执行某事务时，它会检查URL方案：</p>
+<ol>
+<li>如果URL方案是http，客户端会打开一条到服务器端口80的连接（默认情况下），并发送http命令。</li>
+<li>如果URL的方案是https，客户端就会打开一条到服务器端口443（默认情况）的连接，然后与服务器握手，以二进制格式与服务器交换一些SSL安全参数，附上加密的http命令。</li>
+</ol>
+<p>在https中，客户端首先打开一条到web服务器端口443（默认情况）的连接，一旦建立了TCP连接，客户端和服务器就会初始化SSL层，对加密参数进行沟通，并交换密钥，握手完成后，SSL就初始化完成了，客户端就可以将请求报文发送给安全层了，在将这些报文发送给TCP之前，要先对其进行加密。http和https的对比：</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/http-with-https.png" alt="验证签名"></p>
+<h4 id="SSL握手"><a href="#SSL握手" class="headerlink" title="SSL握手"></a>SSL握手</h4><p>在发送已加密的HTTP报文之前，客户端和服务端要进行一次SSL握手，主要完成以下工作：</p>
+<ul>
+<li>交换协议版本号</li>
+<li>选择一个两端都了解的密码</li>
+<li>对两端身份进行验证</li>
+<li>生成临时会话密钥，以便加密信道</li>
+</ul>
+<p>SSL握手简化版示意图如下：</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/simple-SSL-handshake.png" alt="SSL简化版握手"></p>
+<p>在一个web服务器上执行安全事务，比如提交银行卡信息时，总是希望在于你所认为的那个组织对话，因此https事务总是要求使用服务器证书的。站点证书有效性检查步骤如下：</p>
+<ol>
+<li><strong>日期检测</strong>。检查证书的起始日期和结束日期。</li>
+<li><strong>签名颁发者可信度检测</strong>。每个证书是由某个证书颁发机构（CA）签发的，它们负责位服务器担保，证书有不同的等级，每种证书都要求不同级别的背景验证。比如申请某个电子商务服务证书，通常要求提供一个营业的合法证明。</li>
+<li><strong>签名检测</strong>。一旦判定签名授权是可信的，浏览器就要对签名使用颁发机构的公开密钥，并将其与校验码比较，以查看证书的完整性。</li>
+<li><strong>站点身份检测</strong>。为防止服务器复制其他人的证书，或拦截他人流量，大部分浏览器都会试着去验证证书中的域名与它们所对话的服务器的域名是否匹配。</li>
+</ol>
+<h4 id="虚拟主机与证书"><a href="#虚拟主机与证书" class="headerlink" title="虚拟主机与证书"></a>虚拟主机与证书</h4><p>对于虚拟主机（一台服务器上有多个主机名），有些流行的web服务器程序只支持一个证书，如果用户请求的是虚拟主机名，与证书名称并不完全匹配，浏览器就会显示警告框。比如cajun-shop.com网站，站点的托管服务提供商提供的官方名称位 cajun-shop.securesites.com。 用户进入<a href="http://www.cajun-shop.com时，服务器证书中列出的官方主机名（*.securesites.com）与用户浏览的虚拟主机名（www.cajun-shop.com）不匹配，以至于出现警告。" target="_blank" rel="noopener">http://www.cajun-shop.com时，服务器证书中列出的官方主机名（*.securesites.com）与用户浏览的虚拟主机名（www.cajun-shop.com）不匹配，以至于出现警告。</a></p>
+<p>为了防止出现这个问题，cajun-shop.com的所有者会在开始处理安全事务时，将所有用户都重定向到cajun-shop.securesites.com。</p>
+<h4 id="通多代理以隧道形式传输安全流量"><a href="#通多代理以隧道形式传输安全流量" class="headerlink" title="通多代理以隧道形式传输安全流量"></a>通多代理以隧道形式传输安全流量</h4><p>很多公司都会在公司网络和公共因特网的安全边界上放置一个代理，代理是防火墙路由器唯一允许进行http流量交换的设备，它可能会进行病毒检测或者其他的内容控制工作。</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/server-agent.png" alt="公司的代理"></p>
+<p>但只要客户端开始用服务器的公开密钥对发往服务器的数据进行加密，代理就再也不能读取http首部了！代理不能读取首部，意味着无法知道应该将请求转向何处。</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/cannot-transmit.png" alt="代理不能转发"></p>
+<p>这种情况一种常用的技术就是https SSL 隧道协议，客户端首先要告知代理，他想要连接的安全主机和端口，这是在开始加密之前以明文形式告知的，所以代理可以理解这条信息。</p>
+<blockquote>
+<p>http通过新的名为connect的扩展方法来发送明文形式的端点信息，connect方法会告诉代理，打开一条到期望主机和端口号的连接，这项工作完成之后，直接在客户端和服务器之间以隧道形式传输数据。</p>
+</blockquote>
+<p>以下示意了一个connet：</p>
+<p><img src="/assets/Book-Notes/http%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/chapter-14/connect-sample.png" alt="connect实例"></p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-HTTP-%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/" rel="tag"># 读书笔记-HTTP 权威指南</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2018/05/23/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC12%E3%80%8113%E7%AB%A0/" rel="next" title="第12、13章：认证机制">
+                  <i class="fa fa-chevron-left"></i> 第12、13章：认证机制
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2018/05/29/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC2%E7%AB%A0/" rel="prev" title="第2章：进程与线程">
+                  第2章：进程与线程 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#https"><span class="nav-number">1.</span> <span class="nav-text">https</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#数字加密"><span class="nav-number">1.1.</span> <span class="nav-text">数字加密</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#对称密钥加密技术"><span class="nav-number">1.2.</span> <span class="nav-text">对称密钥加密技术</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#公开密钥加密技术"><span class="nav-number">1.3.</span> <span class="nav-text">公开密钥加密技术</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#混合加密系统和会话密钥"><span class="nav-number">1.4.</span> <span class="nav-text">混合加密系统和会话密钥</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#数字签名"><span class="nav-number">1.5.</span> <span class="nav-text">数字签名</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#数字证书"><span class="nav-number">1.6.</span> <span class="nav-text">数字证书</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#用证书对服务器进行认证"><span class="nav-number">1.7.</span> <span class="nav-text">用证书对服务器进行认证</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTPS-细节介绍"><span class="nav-number">2.</span> <span class="nav-text">HTTPS-细节介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SSL握手"><span class="nav-number">2.1.</span> <span class="nav-text">SSL握手</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#虚拟主机与证书"><span class="nav-number">2.2.</span> <span class="nav-text">虚拟主机与证书</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#通多代理以隧道形式传输安全流量"><span class="nav-number">2.3.</span> <span class="nav-text">通多代理以隧道形式传输安全流量</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共120.7k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/pisces.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'b8f46d2dbd2c893344cd26b3b96d1aea',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
