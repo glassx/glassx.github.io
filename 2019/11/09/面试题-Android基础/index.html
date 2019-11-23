@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="简述Android事件分发机制之前写过专题，直接参考这里怎么处理滑动冲突聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？ Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。当然，如果在子线程">
+<meta name="keywords" content="面试题">
+<meta property="og:type" content="article">
+<meta property="og:title" content="面试题-Android基础">
+<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;11&#x2F;09&#x2F;%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80&#x2F;index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="简述Android事件分发机制之前写过专题，直接参考这里怎么处理滑动冲突聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？ Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。当然，如果在子线程">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-11-23T14:54:34.316Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>面试题-Android基础 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">23</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">6</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">69</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          面试题-Android基础
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-09 21:25:00" itemprop="dateCreated datePublished" datetime="2019-11-09T21:25:00+08:00">2019-11-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-23 22:54:34" itemprop="dateModified" datetime="2019-11-23T22:54:34+08:00">2019-11-23</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="简述Android事件分发机制"><a href="#简述Android事件分发机制" class="headerlink" title="简述Android事件分发机制"></a>简述Android事件分发机制</h3><p>之前写过专题，直接<a href="https://glassx.github.io/2019/02/25/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/" target="_blank" rel="noopener">参考这里</a></p><h3 id="怎么处理滑动冲突"><a href="#怎么处理滑动冲突" class="headerlink" title="怎么处理滑动冲突"></a><a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247484662&idx=1&sn=7b8a8831b37975936a9ea95c7a54d52a&chksm=96cda5bba1ba2cad32081316ad0771aab42fa64782f7b2c726acc2bb5809fb04f4ef7088ab29&scene=21#wechat_redirect" target="_blank" rel="noopener">怎么处理滑动冲突</a></h3><h3 id="聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><a href="#聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？" class="headerlink" title="聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"></a>聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</h3><blockquote>
+<p>Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。<br>当然，如果在子线程中new Handler ，基本上会提示 您还未执行Looper.prepare();<br>Looper.prepare() 会判断当前 sThreadLocal.get()是否已经存在了，如果已经存在了，就会提示 “一个线程只能有一个Looper”（<strong>注意，就是在这里保证了一个线程只有一个Looper</strong>）。Looper.prepare() 只是执行了sThreadLocal.set(new Looper())，在这里给线程设置了Looper。<br>而在主线程中，ActivityThread 的main 方法中会执行 Looper.prepareMainLooper（）来设置Looper，故我们可以直接new Handler，而在子线程中要手动Looper.prepare()才行，并且还要Looper.loop()，让消息循环。<br>接下来就是 handler 的 sendMessage 和post 方法，其实两个方法都是调用 sendMessageDelay 方法，只不过post方法首先将 Runnable封装成Message，变成Message的CallBack。<br>在最终send的时候，Message会持有handler的引用，叫做target，之后，message被丢到handler所持有的MessageQueue中。<br>之后，在主线程中，Looper一直在循环，取出queue中的Message，然后执行message.target.dispatchMessage，在这个方法中，最终会调用到我们写handler时候覆写的 handleMessage 方法。至此，整个流程走完。</p>
+</blockquote><a id="more"></a>
+
+<h3 id="Activity的加载模式。"><a href="#Activity的加载模式。" class="headerlink" title="Activity的加载模式。"></a>Activity的加载模式。</h3><blockquote>
+<p>standard标准启动。<br>singleTop在当前栈顶就复用，否则新建。<br>singleTask：在当前栈存在有实例，如果在栈顶，直接使用；如果不在栈顶，将该实例之上的Activity全部出栈。<br>singleInstance：只要有这个实例，不管在哪个栈，都复用之；否则，在新的栈创建实例。</p>
+</blockquote>
+<h3 id="ANR异常发生条件？如何分析ANR？"><a href="#ANR异常发生条件？如何分析ANR？" class="headerlink" title="ANR异常发生条件？如何分析ANR？"></a>ANR异常发生条件？如何分析ANR？</h3><ul>
+<li>5s内没有响应用户输入事件</li>
+<li>10s内广播接收器没有处理完毕</li>
+<li>20s内服务没有处理完毕</li>
+</ul>
+<h3 id="Android动画种类，各自特征"><a href="#Android动画种类，各自特征" class="headerlink" title="Android动画种类，各自特征"></a>Android动画种类，各自特征</h3><h3 id="谈谈你对Application类的理解"><a href="#谈谈你对Application类的理解" class="headerlink" title="谈谈你对Application类的理解"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/01.%E8%B0%88%E8%B0%88%E4%BD%A0%E5%AF%B9Application%E7%B1%BB%E7%9A%84%E7%90%86%E8%A7%A3.md" target="_blank" rel="noopener">谈谈你对Application类的理解</a></h3><h3 id="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><a href="#Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递" class="headerlink" title="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/02.Android%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E8%AE%BE%E8%AE%A1%E5%87%BABundle%E8%80%8C%E4%B8%8D%E6%98%AF%E7%9B%B4%E6%8E%A5%E4%BD%BF%E7%94%A8HashMap%E6%9D%A5%E8%BF%9B%E8%A1%8C%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92.md" target="_blank" rel="noopener">Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</a></h3><h3 id="Android中IPC通信的方式有哪些？使用场景是什么"><a href="#Android中IPC通信的方式有哪些？使用场景是什么" class="headerlink" title="Android中IPC通信的方式有哪些？使用场景是什么"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/04.Android%E4%B8%ADIPC%E9%80%9A%E4%BF%A1%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9C%89%E5%93%AA%E4%BA%9B%EF%BC%9F%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F.md" target="_blank" rel="noopener">Android中IPC通信的方式有哪些？使用场景是什么</a></h3><h3 id="SharedPreference在使用过程中有什么注意点？"><a href="#SharedPreference在使用过程中有什么注意点？" class="headerlink" title="SharedPreference在使用过程中有什么注意点？"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/09.SharedPreference%E5%9C%A8%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%9C%89%E4%BB%80%E4%B9%88%E6%B3%A8%E6%84%8F%E7%82%B9%EF%BC%9F.md" target="_blank" rel="noopener">SharedPreference在使用过程中有什么注意点？</a></h3><h3 id="内存泄露检测工具-anr检测工具"><a href="#内存泄露检测工具-anr检测工具" class="headerlink" title="[内存泄露检测工具,anr检测工具]"></a>[内存泄露检测工具,anr检测工具]</h3><h3 id="Android应用启动过程，Android应用打包过程"><a href="#Android应用启动过程，Android应用打包过程" class="headerlink" title="Android应用启动过程，Android应用打包过程"></a>Android应用启动过程，Android应用打包过程</h3><h3 id="android-5-0-6-0-7-0-8-0新特性"><a href="#android-5-0-6-0-7-0-8-0新特性" class="headerlink" title="android 5.0, 6.0, 7.0, 8.0新特性"></a>android 5.0, 6.0, 7.0, 8.0新特性</h3><h3 id="内存泄漏场景"><a href="#内存泄漏场景" class="headerlink" title="内存泄漏场景"></a><a href="https://yq.aliyun.com/articles/3009?spm=a2c4e.11153940.blogcont70277.24.6387f9c9hDGhAk#" target="_blank" rel="noopener">内存泄漏场景</a></h3><h3 id="图片优化怎么做的？"><a href="#图片优化怎么做的？" class="headerlink" title="图片优化怎么做的？"></a>图片优化怎么做的？</h3><h3 id="性能优化，具体做了哪儿些操作？"><a href="#性能优化，具体做了哪儿些操作？" class="headerlink" title="性能优化，具体做了哪儿些操作？"></a>性能优化，具体做了哪儿些操作？</h3><h3 id="轮播图实现原理？"><a href="#轮播图实现原理？" class="headerlink" title="轮播图实现原理？"></a>轮播图实现原理？</h3><h3 id="Intent、Bundle-内部如何实现传递"><a href="#Intent、Bundle-内部如何实现传递" class="headerlink" title="Intent、Bundle 内部如何实现传递"></a>Intent、Bundle 内部如何实现传递</h3><h3 id="安全方面做过什么？"><a href="#安全方面做过什么？" class="headerlink" title="安全方面做过什么？"></a>安全方面做过什么？</h3><h3 id="大图加载做过么，描述思路。"><a href="#大图加载做过么，描述思路。" class="headerlink" title="大图加载做过么，描述思路。"></a>大图加载做过么，描述思路。</h3><h3 id="Android应用程序启动过程"><a href="#Android应用程序启动过程" class="headerlink" title="Android应用程序启动过程"></a>Android应用程序启动过程</h3><p>参考老罗的文章<a href="https://blog.csdn.net/luoshengyang/article/details/6689748" target="_blank" rel="noopener">https://blog.csdn.net/luoshengyang/article/details/6689748</a></p>
+<h3 id="Handler-消息转递机制，为什么-Loop-一直在死循环而-UI-界面不会卡死？"><a href="#Handler-消息转递机制，为什么-Loop-一直在死循环而-UI-界面不会卡死？" class="headerlink" title="Handler 消息转递机制，为什么 Loop 一直在死循环而 UI 界面不会卡死？"></a>Handler 消息转递机制，为什么 Loop 一直在死循环而 UI 界面不会卡死？</h3>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%A2%E8%AF%95%E9%A2%98/" rel="tag"># 面试题</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2019/10/23/Flutter%E4%BB%8E0%E5%88%B01%E6%9E%84%E5%BB%BA%E5%A4%A7%E5%89%8D%E7%AB%AF%E5%BA%94%E7%94%A8-%E7%AC%AC3%E7%AB%A0/" rel="next" title="第3章：一切皆组件">
+                  <i class="fa fa-chevron-left"></i> 第3章：一切皆组件
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/" rel="prev" title="面试题-Java基础">
+                  面试题-Java基础 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#简述Android事件分发机制"><span class="nav-number">1.</span> <span class="nav-text">简述Android事件分发机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#怎么处理滑动冲突"><span class="nav-number">2.</span> <span class="nav-text">怎么处理滑动冲突</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><span class="nav-number">3.</span> <span class="nav-text">聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Activity的加载模式。"><span class="nav-number">4.</span> <span class="nav-text">Activity的加载模式。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR异常发生条件？如何分析ANR？"><span class="nav-number">5.</span> <span class="nav-text">ANR异常发生条件？如何分析ANR？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android动画种类，各自特征"><span class="nav-number">6.</span> <span class="nav-text">Android动画种类，各自特征</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#谈谈你对Application类的理解"><span class="nav-number">7.</span> <span class="nav-text">谈谈你对Application类的理解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><span class="nav-number">8.</span> <span class="nav-text">Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android中IPC通信的方式有哪些？使用场景是什么"><span class="nav-number">9.</span> <span class="nav-text">Android中IPC通信的方式有哪些？使用场景是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SharedPreference在使用过程中有什么注意点？"><span class="nav-number">10.</span> <span class="nav-text">SharedPreference在使用过程中有什么注意点？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#内存泄露检测工具-anr检测工具"><span class="nav-number">11.</span> <span class="nav-text">[内存泄露检测工具,anr检测工具]</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android应用启动过程，Android应用打包过程"><span class="nav-number">12.</span> <span class="nav-text">Android应用启动过程，Android应用打包过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#android-5-0-6-0-7-0-8-0新特性"><span class="nav-number">13.</span> <span class="nav-text">android 5.0, 6.0, 7.0, 8.0新特性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#内存泄漏场景"><span class="nav-number">14.</span> <span class="nav-text">内存泄漏场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#图片优化怎么做的？"><span class="nav-number">15.</span> <span class="nav-text">图片优化怎么做的？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#性能优化，具体做了哪儿些操作？"><span class="nav-number">16.</span> <span class="nav-text">性能优化，具体做了哪儿些操作？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#轮播图实现原理？"><span class="nav-number">17.</span> <span class="nav-text">轮播图实现原理？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Intent、Bundle-内部如何实现传递"><span class="nav-number">18.</span> <span class="nav-text">Intent、Bundle 内部如何实现传递</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安全方面做过什么？"><span class="nav-number">19.</span> <span class="nav-text">安全方面做过什么？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#大图加载做过么，描述思路。"><span class="nav-number">20.</span> <span class="nav-text">大图加载做过么，描述思路。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android应用程序启动过程"><span class="nav-number">21.</span> <span class="nav-text">Android应用程序启动过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Handler-消息转递机制，为什么-Loop-一直在死循环而-UI-界面不会卡死？"><span class="nav-number">22.</span> <span class="nav-text">Handler 消息转递机制，为什么 Loop 一直在死循环而 UI 界面不会卡死？</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">69</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">23</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共129.2k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/schemes/pisces.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '4dd0c6b6952aafa3fb76c92cddb41327',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
