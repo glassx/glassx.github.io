@@ -160,39 +160,79 @@
           <div id="js-content" class="content-ll">
             
   
-    <article id="post-常用的有意思的算法(一).md--" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-深入理解Android内核设计思想-第4章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/02/常用的有意思的算法(一).md--/">常用的有意思的算法(一)</a>
+      <a class="article-title" href="/2019/03/09/深入理解Android内核设计思想-第4章/">第4章：操作系统基础</a>
     </h1>
   
 
         
-        <a href="/2019/03/02/常用的有意思的算法(一).md--/" class="archive-article-date">
-  	<time datetime="2019-03-02T12:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-02</time>
+        <a href="/2019/03/09/深入理解Android内核设计思想-第4章/" class="archive-article-date">
+  	<time datetime="2019-03-09T13:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-09</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="扑克洗牌算法"><a href="#扑克洗牌算法" class="headerlink" title="扑克洗牌算法"></a>扑克洗牌算法</h2><p>打乱一个已有顺序有多种实现方式，但是要高效地实现，还需要斟酌，以下是目前能想到的最有的解决方案：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//生成一副牌</span></span><br><span class="line">Card[<span class="number">52</span>] oneCard = generateOneCard;</span><br><span class="line"></span><br><span class="line"><span class="comment">//顺序与 随机位置交换</span></span><br><span class="line">Random r = <span class="keyword">new</span> Random();</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; oneCard.size(); i ++)&#123;</span><br><span class="line">    <span class="keyword">int</span> j = r.nextInt(<span class="number">52</span>);</span><br><span class="line">    Card tempCard = oneCard[i];</span><br><span class="line">    oneCard[i] = onCard[j];</span><br><span class="line">    onCard[j] = tempCard;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="判断链表中是否有环"><a href="#判断链表中是否有环" class="headerlink" title="判断链表中是否有环"></a>判断链表中是否有环</h2><p><strong>快慢指针法：</strong>创建两个指针1和2同时指向这个链表的头节点，然后两个指针分别向后移动，其中指针1每次向后移动一个节点，指针2每次向后移动两个节点，每移动一次就比较两个指针指向的节点是否相同，如果相同说明出链表有环；如果不同，则继续循环，直到有环结束或者到达尾部结束。</p>
+        <h2 id="进程间通信的经典实现"><a href="#进程间通信的经典实现" class="headerlink" title="进程间通信的经典实现"></a>进程间通信的经典实现</h2><h3 id="共享内存"><a href="#共享内存" class="headerlink" title="共享内存"></a>共享内存</h3><p>共享内存的工作流程：</p>
+<ol>
+<li>创建共享区。进程1从内存中申请一块内存作为共享区域，并且将该区域与某个Key绑定  </li>
+<li>映射共享区。创建共享区之后，需要将其映射到进程1的空间中才能操作。  </li>
+<li>访问共享区。进程2利用第一步得到的Key，访问到共享区，之后将这块内存映射到进程2的空间中。  </li>
+<li>进程间通信。各进程实现了对共享内存的映射后，便可以利用该区域进行信息交换。（注意：整个内存过程都没有实现同步机制，需要进程间自己实现）  </li>
+</ol>
+<h3 id="管道"><a href="#管道" class="headerlink" title="管道"></a>管道</h3><ul>
+<li>进程A和B分立管道两端，进行数据传输通信</li>
+<li>管道是单向的，如果进程既要“读”也要“写”，就需要两根管道这点很像水管的特性  </li>
+<li>管道同时具有“读取”(read end)端和“写入”(write end)端，比如进程A从 write end 写入，进程 B 就可以从 read end 端读取到数据  </li>
+<li>管道容量有限制，当pipe满了后，写操作将阻塞；反之，pipe空了之后，读操作将会阻塞  </li>
+<li>普通的管道是<strong>匿名的</strong>，这种匿名的管道只适合有斧子关系的进程通信，如果要实现没有任何关系的管道间的通信，就需要<strong>命名管道(Named pipe)</strong></li>
+</ul>
+<h3 id="UNIX-DOMAIN-SOCKET"><a href="#UNIX-DOMAIN-SOCKET" class="headerlink" title="UNIX DOMAIN SOCKET"></a>UNIX DOMAIN SOCKET</h3><ul>
+<li>简称UDS,也可以说是IPC Socket，与普通的Socket不一样，专门针对单机进程间通信提出来的。  </li>
+<li>大家熟知的 Network Socket 是以 TCP/IP 协议栈作为基础的，需要分包、重组 等一系列操作，而 UDS 因为是本机内的“安全可靠操作”，实现机制上并不依赖于这些协议。  </li>
+<li>Android 中使用最多的一种IPC就是Binder，其次就是 UDS 。  </li>
+</ul>
+<h3 id="RPC（REMOTE-PROCEDURE-CALLS）"><a href="#RPC（REMOTE-PROCEDURE-CALLS）" class="headerlink" title="RPC（REMOTE PROCEDURE CALLS）"></a>RPC（REMOTE PROCEDURE CALLS）</h3><p>RPC 涉及通信双方通常运行于两台不同的机器中。</p>
+<h2 id="同步机制的经典实现"><a href="#同步机制的经典实现" class="headerlink" title="同步机制的经典实现"></a>同步机制的经典实现</h2><p>###信号量（SEMAPHORE）</p>
+<p>信号量与PV原语是分不开的，也是最为广泛的互斥方法之一，主要包括以下几个元素：</p>
+<ul>
+<li>Semaphore S（信号量，用于指示共享资源的可用数量）  </li>
+<li>Operation P （可以减小S计数）  </li>
+<li>Operation V （可以增加S计数）  </li>
+</ul>
 <blockquote>
-<p>原理：两个人在环形跑道上同一位置开始跑，一人速度快，一人速度慢，如此持续跑一段时间，速度快的那个肯定会从速度慢的身后再次追上以及超越，这中间必然有个交汇点。如果是跑直线的话，到终点就结束了，不会再碰面。</p>
+<p>P执行：S = S -1，此时判断若 S&gt;=0 ，说明资源此时允许访问，开始操作共享资源；否则，加入等待队列，待别人释放资源后唤醒。<br>V执行：S=S+1，如果此时S&gt;0，说明当前没有希望访问资源的等待者；否则，唤醒等待队列中的相关对象。<br><strong>其中，PV源于都属于原子操作，意味着他们执行过程是不允许被中断的。</strong></p>
 </blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//判断是否有环</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function"><span class="keyword">boolean</span> <span class="title">isLoopList</span><span class="params">(ListNode&lt;T&gt; head)</span></span>&#123;</span><br><span class="line">    ListNode&lt;T&gt; slowPointer, fastPointer;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//使用快慢指针，慢指针每次向前一步，快指针每次两步</span></span><br><span class="line">    slowPointer = fastPointer = head;</span><br><span class="line">    <span class="keyword">while</span>(fastPointer != <span class="keyword">null</span> &amp;&amp; fastPointer.next != <span class="keyword">null</span>)&#123;</span><br><span class="line">        slowPointer = slowPointer.next;</span><br><span class="line">        fastPointer = fastPointer.next.next;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//两指针相遇则有环</span></span><br><span class="line">        <span class="keyword">if</span>(slowPointer == fastPointer)&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="引申：如何判断环的入口"><a href="#引申：如何判断环的入口" class="headerlink" title="引申：如何判断环的入口"></a>引申：如何判断环的入口</h2><p>我们假定链表头到环入口的距离是len，环入口到slow和fast交汇点的距离为x，环的长度为R。slow和fast第一次交汇时，设slow走的长度为：d = len + x，而fast走的长度为：2d = len + nR + x，(n &gt;= 1)，从而我们可以得知：2len + 2x = len + nR + x，即len = nR - x，(n &gt;= 1)。所以，要找出环入口，也要两个指针，一个指针A指向相遇时候的节点，一个指针B指向链表头，两个指针每次都走一步，A指针在遍历过程中可能多次(n &gt;= 1)经过环入口节点，但当B指针第一次达到入口节点时，A指针此时必然也指向入口节点。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//判断是否有环，有环就返回入口</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">ListNode&lt;T&gt; <span class="title">findEntranceInLoopList</span><span class="params">(ListNode&lt;T&gt; head)</span></span>&#123;</span><br><span class="line">    ListNode&lt;T&gt; slowPointer, fastPointer;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//使用快慢指针，慢指针每次向前一步，快指针每次两步</span></span><br><span class="line">    <span class="keyword">boolean</span> isLoop = <span class="keyword">false</span>;</span><br><span class="line">    slowPointer = fastPointer = head;</span><br><span class="line">    <span class="keyword">while</span>(fastPointer != <span class="keyword">null</span> &amp;&amp; fastPointer.next != <span class="keyword">null</span>)&#123;</span><br><span class="line">        slowPointer = slowPointer.next;</span><br><span class="line">        fastPointer = fastPointer.next.next;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//两指针相遇则有环</span></span><br><span class="line">        <span class="keyword">if</span>(slowPointer == fastPointer)&#123;</span><br><span class="line">            isLoop = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//一个指针从链表头开始，一个从相遇点开始，每次一步，再次相遇的点即是入口节点</span></span><br><span class="line">    <span class="keyword">if</span>(isLoop)&#123;</span><br><span class="line">        slowPointer = head;</span><br><span class="line">        <span class="keyword">while</span>(fastPointer != <span class="keyword">null</span> &amp;&amp; fastPointer.next != <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="comment">//两指针相遇的点即是入口节点</span></span><br><span class="line">            <span class="keyword">if</span>(slowPointer == fastPointer)&#123;</span><br><span class="line">                <span class="keyword">return</span> slowPointer;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            slowPointer = slowPointer.next;</span><br><span class="line">            fastPointer = fastPointer.next;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="再引申，两个单链表是否相交"><a href="#再引申，两个单链表是否相交" class="headerlink" title="再引申，两个单链表是否相交"></a>再引申，两个单链表是否相交</h2><p>两个<strong>没有环的链表</strong>在某一节点相交，那么在这个节点之后的所有结点都是两个链表所共有的。如果它们相交，则最后一个结点一定是共有的，因此问题转化为：两个链表最后一个结点是否相同（时间复杂度为O(len1+len2)）。要找出相交的第一个结点，可以首先获得两个链表的长度，然后获得两个链表长度差值 K，之后长的链表指向第K个结点，短的链表从头开始，每次向后移动一个结点，再比较当前结点是否相等，第一次相等的那个结点点就是相交节点。</p>
+<h3 id="互斥体（MUTEX）"><a href="#互斥体（MUTEX）" class="headerlink" title="互斥体（MUTEX）"></a>互斥体（MUTEX）</h3><p>Mutex 是 Mutual Exclusion 的缩写，释义为 互斥体。如果资源允许多个对象同时访问，成为 Counting Semaphores；而如果只允许取值0或1（lock/unlocked）的Semaphore，则叫做 Binary Semaphore。Binary Semaphore 与Mutex有相同性质，Mutex通常是对某一排他资源的共享控制——要么这个资源被占用（locked），要么是可以访问的（unlocked）。</p>
+<h3 id="管程（MONITOR）"><a href="#管程（MONITOR）" class="headerlink" title="管程（MONITOR）"></a>管程（MONITOR）</h3><p>针对信号量机制的程序易读性较差，并且信号量管理分散在各个参与对象中，很难维护等缺点，管程被提出来了。管程是可以被多个进程/线程安全访问的对象或者模块，管程中的方法在同一时刻只允许一个范文这使用它们（方法受 mutual exclusion 保护的）。</p>
+<h2 id="操作系统内存基础"><a href="#操作系统内存基础" class="headerlink" title="操作系统内存基础"></a>操作系统内存基础</h2><p>操作系统中任何操作都与内存息息相关，内存管理的底层原理主要注意几个核心：</p>
+<ul>
+<li>虚拟内存</li>
+</ul>
 <blockquote>
-<p>代码略</p>
+<p>内存总是“不够大”的，随着应用的增加，总会填满，虚拟内存为运行更多的程序提供了可能，其基本思想是：1.将硬盘上一部分空间作为内存的扩展；2.出现资源不足时，按照一定算法挑出优先级较低的数据块移动到第1步划出的空间；3.需要用到硬盘中的数据块时，系统将产生“缺页”，之后把硬盘中的数据交换回内存中。</p>
 </blockquote>
+<ul>
+<li>内存分配与回收</li>
+</ul>
+<blockquote>
+<p>分配、native层回收，java层回收</p>
+</blockquote>
+<ul>
+<li>内存保护</li>
+</ul>
+<blockquote>
+<p>内存分页或者分段式管理。进程的逻辑地址不是直接对应物理地址的，因此没办法访问它范围外的内存空间。</p>
+</blockquote>
+<p><strong>顺带一提，mmap函数（Memory Map）正如其名，可以将某个设备或者文件映射到应用进程的内存空间中，这样访问这块内存就相当于对设备/文件进行读写；可见，理论上mmap可以用于进程间通信，即通过映射同一块物理内存来共享内存，这种方式因为减少了复制次数，在一定程度上提高了进程间通信效率。</strong></p>
+<h2 id="Android-匿名共享内存（Ashmem）"><a href="#Android-匿名共享内存（Ashmem）" class="headerlink" title="Android 匿名共享内存（Ashmem）"></a>Android 匿名共享内存（Ashmem）</h2><p>Ashmem 全称 Anony Shared Memory，是Android 特有的内存共享机制，它可以将指定的物理内存分别映射到各个进程的地址空间，从而便捷地实现进程间的内存共享。Ashmem 是一个 misc 设备，其实现依托于 /dev/ashmem 。</p>
 
       
 
@@ -206,7 +246,7 @@
 		<ul class="article-tag-list">
 			 
         		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">趣味题</a>
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">深入理解Android内核设计思想-林学森</a>
         		</li>
       		
 		</ul>
@@ -216,7 +256,7 @@
 
       
         <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/02/常用的有意思的算法(一).md--/">展开全文 >></a>
+          <a class="article-more-a" href="/2019/03/09/深入理解Android内核设计思想-第4章/">展开全文 >></a>
         </p>
       
 
@@ -246,54 +286,101 @@
 
 
   
-    <article id="post-趣味烧脑题.md--" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-内存泄漏" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/01/趣味烧脑题.md--/">趣味烧脑题</a>
+      <a class="article-title" href="/2019/03/07/内存泄漏/">内存泄漏</a>
     </h1>
   
 
         
-        <a href="/2019/03/01/趣味烧脑题.md--/" class="archive-article-date">
-  	<time datetime="2019-03-01T12:10:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-01</time>
+        <a href="/2019/03/07/内存泄漏/" class="archive-article-date">
+  	<time datetime="2019-03-07T14:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-07</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p><strong>1、给100盏灯编号 1~100，开始时所有灯都是关着的<br>第1次：把所有编号是1的倍数的灯的开关状态改变一次；<br>第2次：把所有编号是2的倍数的灯的开关状态改变一次；<br>第3次，把所有编号是3的倍数的灯的开关状态改变一次；<br>…<br>第100次，把所有编号是100的倍数的灯的开关状态改变一次；<br>问：最后开着的灯的编号是哪些？</strong></p>
+        <h2 id="常见内存泄漏场景："><a href="#常见内存泄漏场景：" class="headerlink" title="常见内存泄漏场景："></a>常见内存泄漏场景：</h2><ul>
+<li>资源性对象未关闭</li>
+</ul>
 <blockquote>
-<p>分析：最开始灯是灭的，因此只有经过<strong>奇数</strong>次开关状态改变，灯才会是亮的。从题意可知一个数字有多少约数就会状态改变多少次，因此这道题可以转换为：<strong>1~100数字中约数个数是奇数的有哪些</strong>。并且我们知道约数是成对出现的，如8的约数：（1，8）、（2，4），因此如果要出现约数的个数是奇数个，除非它是个平方数，如36的约数：（1，36）、（2，18）、（3，12）、（4，9）、（6），因此，这题又可以转换为<strong>1~100数字中的平方数有哪些</strong>，这操作。。。。666吧，这就是分析问题的乐趣吧</p>
+<p>如 File、Cursor、stream等资源，他们的缓存不只存在java虚拟机内，还存在虚拟机外，仅仅把对象置为null而不关闭，就会引起内存泄漏</p>
 </blockquote>
-<p><strong>2、烧一根不均匀的绳子，从头烧到尾总共需要1小时，现在有若干条这样的绳子，问如何用烧绳子的方法来计时1小时15分钟呢</strong></p>
+<ul>
+<li>注册对象未注销</li>
+</ul>
 <blockquote>
-<p>从题目知道，绳子不均匀，不能根据燃烧半根来计量半小时。但是还可以推断，从两头烧，只要半小时。因此可以使用3根绳子来计时：1）第1根绳子点燃两端，第2根绳子点燃一端，第三根绳子先不点燃； 2）第1根绳子烧完计时30分钟，接着第2根绳子另一端也点燃 3）第2根绳子烧完计时15分钟，此时已经计时45分钟了，剩下的半小时只需要将第3条绳子两端点燃就能计算出。</p>
+<p>观察者模式的注册，在不使用的时候未注销，就会导致，如在Activity中监听电话服务，定义PhoneStateListener注册到TelphoneManager服务中，如果忘记注销，会导致Activity无法被Gc回收。</p>
 </blockquote>
-<p><strong>3、有12个外观一样的小球，但有一个与其他小球重量略微不同，用手感觉不出来，用一个天平，能称3次就能找到那个小球吗</strong></p>
+<ul>
+<li><p>非静态内部类创建静态实例</p>
+</li>
+<li><p>Handler造成的内存泄漏。</p>
+</li>
+</ul>
 <blockquote>
-<p>把小球编号 1~12，然后分为3组（想想为什么是3组）：1~4分为A组，5~8分为B组，9~12分为C组。首先A组和B组称量比较：<br>1、天平平衡。则目标小球在C组。将C分为两组：9、10、11分为一组C1，12分为一组C2，再从B中随意拿出3个球分组为B1，C1和B1比较：<br>    1）若平衡，则12号球就是目标球。<br>    2）若不平衡，则目标球在C1内，并且根据天平倾斜，可以判断目标球比普通球重还是轻（若是天平显示B1重，则目标球比较轻；反之目标球比较重），此时随意取 C1 中的2个球放在天平上即可知道结果（如果平衡，则目标球是另一个，如果不平衡，根据轻重可知目标球）。<br>2、天平不平衡。则目标球在A或者B中。<br>    1）若A &gt; B,取（1，2，3，5）为一组X,(4,9,10,11)为一组Y，（6，7，8）为一组Z，比较X和Y，若X&gt;Y，可知不同小球在1，2，3中，且目标球重于普通球，此时再将编号 1，2，3 任取2个放上天平即可知道目标球。若X&lt;Y,则说明4号是目标球；若X=Y，则目标球在Z中（6，7，8），并且目标球轻于普通球，此时只需要将编号 其中任意两个球放上天平即可找出目标球。<br>    2）若 A &lt; B，同样按照上述分为X、Y、Z三组，同理，若X&lt;Y，则目标球在1，2，3中，且目标球轻于普通球，此时再将编号 1，2，3 任取2个放上天平即可知道目标球；若X&gt;Y,说明4号为目标球，若X=Y，则目标球在Z中（6，7，8），并且目标球重于普通球，此时再将编号 6，7，8 任取2个放上天平即可知道目标球。</p>
+<p>非静态Handler默认持有外部Activity的引用，退出Activity时，如果Looper中还有Message，就会导致Activity无法回收，可以（1）将Handler设置为静态，并且弱引用持有的对象 （2）Activity 的onDestroy的时候，一处消息队列的消息 来解决内存泄漏。</p>
 </blockquote>
-<p><strong>3、一笔画出经过9个点的4条直线</strong></p>
+<ul>
+<li>容器中的对象没有清理</li>
+</ul>
 <blockquote>
-<p>主要是要突破点，不要局限于点上，不说了，直接上图：<br>9点4线</p>
+<p>容器里的对象在不需要的时候，要及时移除，使其正确及时地被回收。</p>
 </blockquote>
-<p><img src="/assets/趣味/9point-4line.png" alt="9点4线"></p>
-<p><strong>4、有1块钱1瓶的契税，喝完后2个空瓶换一瓶汽水，问有20块钱，可以喝几瓶汽水？</strong></p>
+<h2 id="优化内存空间"><a href="#优化内存空间" class="headerlink" title="优化内存空间"></a>优化内存空间</h2><p>总体来说即是开源节流</p>
+<ul>
+<li>开源</li>
+</ul>
 <blockquote>
-<p>总共40瓶（不要浪费最后那个空瓶，找老板借1个，凑2瓶子再喝一瓶，最后这空瓶还给老板。。。）</p>
+<p>large heap</p>
 </blockquote>
-<p><strong>5、时针分针秒针重合的次数</strong></p>
+<ul>
+<li>对象引用入手</li>
+</ul>
 <blockquote>
-<p>只有2次，一次是 00:00:00 一次是 12：00：00</p>
+<p>强引用、软引用、弱引用。</p>
 </blockquote>
-<p><strong>假设排列100个球，两个人轮流一拿球装入口袋，能拿到第100个球为胜，条件是每次拿球至少拿1个，最多拿5个，加入你是最先拿球的人，你该拿几个，以后怎么保证拿到最后一个球？</strong></p>
+<ul>
+<li>减少不必要的装箱机制</li>
+</ul>
 <blockquote>
-<p>怎样保证拿到最后一个球呢？最简单的方法是最后剩下6个，并且轮到对方来拿，这样无论对方拿几个，都能保证自己拿到最后一个。<br>（1）首先，要控制每一轮拿出的个数，但是对方拿的个数是不受控制的，假设对方拿n个，自己就拿6-n个（为什么是控制总数是6个，是因为对手最多拿5个，自己最少能拿1个，和值就是6，自己不能把和值控制得更低；而对手至少拿1个，自己最多拿5个，同样自己不能把和值控制得更高。因此只有6才是一个可控的值）。<br>（2）其次，假设第一次拿x个球，以后每次自己和对方拿的和是6，最多可以拿到15轮（除去第一轮的x个，最后留这肯定少于10个了），还剩 10-x个，为了达到之前定的目标最后留6个，所以x应该是4.<br>（3）总结而言就是第一次拿4个，以后每次对方拿了n个后，自己拿 6-n 个。</p>
+<p>sparseArray，类似的还有 SparseLongArray，LongSpaseArray等。</p>
+</blockquote>
+<ul>
+<li>使用最优数据类型</li>
+</ul>
+<blockquote>
+<p>（1）需要限制输入参数的时候，使用注解而不是枚举 （2）谨慎选择 HashMap 、ArrayMap 以及 SparseArray。</p>
+</blockquote>
+<h2 id="顺带一提UI绘制优化"><a href="#顺带一提UI绘制优化" class="headerlink" title="顺带一提UI绘制优化"></a>顺带一提UI绘制优化</h2><ul>
+<li>减少布局层级</li>
+</ul>
+<blockquote>
+<p>（1） 合理使用 merge （2）合理使用 ConstranLayout</p>
+</blockquote>
+<ul>
+<li>提高显示速度</li>
+</ul>
+<blockquote>
+<p>使用 viewstub 延后显示。</p>
+</blockquote>
+<ul>
+<li>减少wrap_content</li>
+</ul>
+<blockquote>
+<p>尽量使用match_parent 或者 确定的宽高度</p>
+</blockquote>
+<ul>
+<li>避免过度绘制</li>
+</ul>
+<blockquote>
+<p>（1）移除布局中非必须的背景 （2）可能的话，移除window的默认背景 （3）自定义view，要注意重叠部分，可以通过canvas.clipRect()帮助系统识别可见的区域，减少过度绘制</p>
 </blockquote>
 
       
@@ -308,7 +395,7 @@
 		<ul class="article-tag-list">
 			 
         		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">趣味题</a>
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">专题</a>
         		</li>
       		
 		</ul>
@@ -318,7 +405,7 @@
 
       
         <p class="article-more-link">
-          <a class="article-more-a" href="/2019/03/01/趣味烧脑题.md--/">展开全文 >></a>
+          <a class="article-more-a" href="/2019/03/07/内存泄漏/">展开全文 >></a>
         </p>
       
 
@@ -1087,11 +1174,15 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
               </li>
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color4">Flutter从0到1构建大前端应用</a>
+                <a href="javascript:void(0)" class="js-tag color3">深Android系统源代码情景分析(第三版)</a>
               </li>
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color3">深Android系统源代码情景分析(第三版)</a>
+                <a href="javascript:void(0)" class="js-tag color2">Android进阶解密</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color4">Flutter从0到1构建大前端应用</a>
               </li>
              
               <li class="article-tag-list-item">
@@ -1103,15 +1194,11 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
               </li>
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color4">手摸手</a>
-              </li>
-             
-              <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">随时翻阅的工具</a>
               </li>
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color4">趣味题</a>
+                <a href="javascript:void(0)" class="js-tag color4">手摸手</a>
               </li>
              
               <li class="article-tag-list-item">
@@ -1131,10 +1218,6 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
               </li>
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color3">面试</a>
-              </li>
-             
-              <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color2">读书笔记-Android进阶之光</a>
               </li>
              
@@ -1144,10 +1227,6 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color2">读书笔记-现代操作系统（第三版）</a>
-              </li>
-             
-              <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color2">Android进阶解密</a>
               </li>
             
             <div class="clearfix"></div>
