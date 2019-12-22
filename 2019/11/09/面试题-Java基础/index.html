@@ -64,7 +64,8 @@
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E9%9B%86%E5%90%88&#x2F;HashTable%E4%B8%8D%E8%83%BD%E5%90%8C%E6%97%B6%E8%AF%BB%E5%86%99.jpg">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E9%9B%86%E5%90%88&#x2F;%E5%8D%95%E4%B8%80segment.jpg">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E9%9B%86%E5%90%88&#x2F;ConcurrentHashMap%E7%BB%93%E6%9E%84.jpg">
-<meta property="og:updated_time" content="2019-12-21T13:50:11.030Z">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E9%9B%86%E5%90%88&#x2F;LinkedHashMap%E5%8E%9F%E7%90%86.png">
+<meta property="og:updated_time" content="2019-12-22T13:19:41.895Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E9%9B%86%E5%90%88&#x2F;HashTable%E4%B8%8D%E8%83%BD%E5%90%8C%E6%97%B6%E8%AF%BB%E5%86%99.jpg">
 
@@ -254,7 +255,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-12-21 21:50:11" itemprop="dateModified" datetime="2019-12-21T21:50:11+08:00">2019-12-21</time>
+                <time title="修改时间：2019-12-22 21:19:41" itemprop="dateModified" datetime="2019-12-22T21:19:41+08:00">2019-12-22</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -330,8 +331,29 @@
 <p>所谓为什么要是2的幂，也即如果不是2的幂会怎样？比如hashMap的长度是 10，还是以上面的例子：hashCode(二进制) = 101110001110101110 1001，length - 1 = 9 ，即 1001，则index 也还会是1001(因为hashCode的后4位也是1001)，单独看这里没什么问题，但是从此我们可以推断：如果hashCode的后 4 位是 1001、1101、1111，1101等等，它们的结果都会是 1001，<strong>因为相当于只有第1位和第4位在起作用，这不符合index均匀分布的要求。那如果是2的幂呢？则length - 1后，所有的位数都是1，则每位都会起作用</strong>。</p>
 <p>Hashmap的容量是有限的，当容量达到一定的饱和度的时候，Key映射位置发生碰撞的概率会上升，这好理解，因为如果每个坑都差不多有entry在了，无论你index是多少，都会碰撞，所以元素越多，越容易发生碰撞。java中的条件是 : hashmap.size &gt;= capacity * load factor 的时候，就需要resize，需要经历两个步骤，1、扩容，创建一个新的Entry数组，长度是以前的2倍，2、ReHash，遍历原来的 Entry数组，把所有的Entry 重新hash到新的数组，<strong>因为数组长度变化了，hash的规则也会改变，所以需要rehash</strong>。这里不需要重新计算hash，只需要判断原来的hash值新增的那位是0 还是1，如果是0的话，索引还是没变化，如果是1，则索引变成 “原索引 + oldCapacity”。</p>
 <p>举个例子拉说，如果以前的capacity 是 8，则resize后变成16，以前的length - 1 为 111 现在则变成了 1111，多了一个有效位，所以只要判断 hashCode 的对应新增的那位的值是0还是1了，0的话，整个index还是不变，1的话，就在index的基础上加上老的容量 8 即可。</p>
-<p><strong>需要注意的是：由于resize操作存在，hashmap在多线程的情况下，可能会出现死循环，具体参考：<a href="https://zhuanlan.zhihu.com/p/31614195" target="_blank" rel="noopener">小灰的解释</a></strong></p>
+<ul>
+<li><p>前面提到，key和value都可能为null，如果key为null，则直接从哈希表的第一个位置table[0]对应的链表上查找。记住，key为null的键值对永远都放在以table[0]为头结点的链表中。</p>
+</li>
+<li><p>Hashmap的线程不安全如何体现？</p>
+</li>
+</ul>
+<ol>
+<li>如果多个线程同时使用put添加元素，如果发生碰撞，最终只有一个线程值被保存，因为另一个的会被覆盖。    </li>
+<li>由于resize操作存在，hashmap在多线程的情况下，可能会出现死循环，具体参考：<a href="https://zhuanlan.zhihu.com/p/31614195" target="_blank" rel="noopener">小灰的解释</a></li>
+</ol>
+<blockquote>
 <p>参考链接： <a href="https://zhuanlan.zhihu.com/p/31610616" target="_blank" rel="noopener">知乎链接</a>、<a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/hashmap.html" target="_blank" rel="noopener">hashmap介绍链接</a></p>
+</blockquote>
+<h3 id="HashTable"><a href="#HashTable" class="headerlink" title="HashTable"></a>HashTable</h3><p>HashTable 类似于HashMap ，它同样基于hash表实现，每个元素也是key-value 对，也是通过单链表解决冲突，容量不足时，也会resize，二者区别是：</p>
+<ol>
+<li>HashTable 的key和Value 都不能为null，而HashMap允许。    </li>
+<li>HashTable 默认大小是 11，扩容方式是 old*2 + 1,而HashMap 默认大小是16，要求数组大小是2的幂，扩容时，直接扩为2倍。    </li>
+<li>获取index的方式不一样，Hashtable 采用除余的方式，而HashMap采用 位与的方式，效率更高。    </li>
+<li>HashTable 保证方法调用的线程安全，因为在每个方法前都有synchronize 关键字。而HashMap 没有，因此在线程安全条件下效率更高。</li>
+</ol>
+<blockquote>
+<p>上文的<a href="https://zhuanlan.zhihu.com/p/24338517" target="_blank" rel="noopener">参考链接</a></p>
+</blockquote>
 <h3 id="ConcurrentHashMap"><a href="#ConcurrentHashMap" class="headerlink" title="ConcurrentHashMap"></a>ConcurrentHashMap</h3><p>想要避免HashMap 的线程安全问题有很多办法，比如采用 HashTable 或者 Collections.synchronizedMap ，<strong>但是这两者有共同的问题：性能，因为无论是读还是写操作，它们都会给整个集合加锁，导致同一时间的其他操作阻塞</strong>。如下图所示：</p>
 <p><img src="/assets/%E9%9D%A2%E8%AF%95/java%E9%9B%86%E5%90%88/HashTable%E4%B8%8D%E8%83%BD%E5%90%8C%E6%97%B6%E8%AF%BB%E5%86%99.jpg" alt="阻塞其他操作"></p>
 <p>此时，ConcurrentHashMap应运而生，理解 ConcurrentHashMap 关键要理解一个概念： Segment 。Segment 本身就相当于一个 HashMap 对象，Segment 包含一个HashEntry 数组，数组中每个 HashEntry 既是一个键值对，也是一个链表的头结点，如下图所示：</p>
@@ -368,11 +390,37 @@
 <li>此时，统计的结果肯定正确，统计结束，释放锁。   </li>
 </ol>
 <p>为了尽量不锁住所有的Segment ，首先乐观假设Size过程中不会有修改，当尝试一定次数后，才无奈转换为悲观锁。</p>
+<blockquote>
 <p>以上文章参考<a href="https://zhuanlan.zhihu.com/p/31614308" target="_blank" rel="noopener">小灰的分析</a> </p>
-<h3 id="WeakHashMap"><a href="#WeakHashMap" class="headerlink" title="WeakHashMap"></a>WeakHashMap</h3><h3 id="LinkedHashMap"><a href="#LinkedHashMap" class="headerlink" title="LinkedHashMap"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/LinkedHashMap.html" target="_blank" rel="noopener">LinkedHashMap</a></h3><h3 id="TreeMap"><a href="#TreeMap" class="headerlink" title="TreeMap"></a>TreeMap</h3><ul>
-<li><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/treemap.html" target="_blank" rel="noopener">TreeMap</a>    </li>
+</blockquote>
+<h3 id="LinkedHashMap"><a href="#LinkedHashMap" class="headerlink" title="LinkedHashMap"></a>LinkedHashMap</h3><p>LinkedHashMap 是Hash表和链表的实现，并且保存了记录的插入顺序。因为LinkedHashMap里面的Entry比HashMap多了两个字段：after和before，而以前的HashMap中的next 字段没有变化，从而额外构成一个双向链表，当然就可以在keySet()时按插入顺序输出，LinkedHashMap结构如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/java%E9%9B%86%E5%90%88/LinkedHashMap%E5%8E%9F%E7%90%86.png" alt="LinkedHashMap原理"></p>
+<p>与HashMap的区别：1、保存了记录的插入顺序，遍历的时候，首先打印最先插入的记录。2、遍历的时候比HashMap慢，因为LinkedHashMap 遍历链表，而HashMap可以说是根据capacity 遍历链表。不过如果HashMap容量很大并且实际数据比较少的情况下，遍历起来可能比LinkedHashMap慢。3、HashMap的遍历速度和容量有关，而LinkedHashMap 遍历速度只和实际数据有关。</p>
+<blockquote>
+<p>以上内容参考<a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/LinkedHashMap.html" target="_blank" rel="noopener">这个链接</a>，从<a href="https://www.zhihu.com/question/278676747" target="_blank" rel="noopener">知乎这个问题</a>得到了灵感，忽然想明白了这个结构。</p>
+</blockquote>
+<h3 id="WeakHashMap"><a href="#WeakHashMap" class="headerlink" title="WeakHashMap"></a>WeakHashMap</h3><p>WeakHashMap，从名字可以看出它是某种 Map。它的特殊之处在于 WeakHashMap 里的entry可能会被GC自动删除，即使程序员没有调用remove()或者clear()方法。</p>
+<p>更直观的说，当使用 WeakHashMap 时，即使没有显示的添加或删除任何元素，也可能发生如下情况：</p>
+<blockquote>
+<ul>
+<li>调用两次size()方法返回不同的值；    </li>
 </ul>
-<h3 id="Java泛型"><a href="#Java泛型" class="headerlink" title="Java泛型"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/genericity.html" target="_blank" rel="noopener">Java泛型</a></h3><h3 id="画下-HashMap-的结构图？HashMap-、-HashTable-和-ConcurrentHashMap-的区别？"><a href="#画下-HashMap-的结构图？HashMap-、-HashTable-和-ConcurrentHashMap-的区别？" class="headerlink" title="画下 HashMap 的结构图？HashMap 、 HashTable 和 ConcurrentHashMap 的区别？"></a>画下 HashMap 的结构图？HashMap 、 HashTable 和 ConcurrentHashMap 的区别？</h3><h3 id="Java反射"><a href="#Java反射" class="headerlink" title="Java反射"></a>Java反射</h3><ul>
+</blockquote>
+<ul>
+<li>两次调用isEmpty()方法，第一次返回false，第二次返回true；    </li>
+<li>两次调用containsKey()方法，第一次返回true，第二次返回false，尽管两次使用的是同一个key；    </li>
+<li>两次调用get()方法，第一次返回一个value，第二次返回null，尽管两次使用的是同一个对象。    </li>
+</ul>
+<p>遇到这么奇葩的现象，你是不是觉得使用者一定会疯掉？其实不然，WeekHashMap 的这个特点特别适用于需要缓存的场景。在缓存场景下，由于内存是有限的，不能缓存所有对象；对象缓存命中可以提高系统效率，但缓存MISS也不会造成错误，因为可以通过计算重新得到。</p>
+<blockquote>
+<p>以上内容参考 <a href="https://zhuanlan.zhihu.com/p/24887482" target="_blank" rel="noopener">知乎的大神</a></p>
+</blockquote>
+<h3 id="TreeMap"><a href="#TreeMap" class="headerlink" title="TreeMap"></a>TreeMap</h3><p>HashMap不保证数据有序，LinkedHashMap保证数据可以保持插入顺序，而如果我们希望Map可以保持key的大小顺序的时候，我们就需要利用TreeMap了。TreeMap 实现了 SortedMap 接口，它是有序的集合。而且是一个红黑树结构。每个key-value都作为一个红黑树的节点。</p>
+<p>使用红黑树的好处是能够使得树具有不错的平衡性，这样操作的速度就可以达到log(n)的水平了。</p>
+<blockquote>
+<p>以上文章参考<a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/treemap.html" target="_blank" rel="noopener">java集合-TreeMap</a>、<a href="https://my.oschina.net/90888/blog/1626065" target="_blank" rel="noopener">oschina链接</a> 还有<a href="https://www.cnblogs.com/CarpenterLee/p/5503882.html" target="_blank" rel="noopener">这个大牛</a></p>
+</blockquote>
+<h3 id="Java泛型"><a href="#Java泛型" class="headerlink" title="Java泛型"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/genericity.html" target="_blank" rel="noopener">Java泛型</a></h3><h3 id="Java反射"><a href="#Java反射" class="headerlink" title="Java反射"></a>Java反射</h3><ul>
 <li><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/reflection1.html" target="_blank" rel="noopener">java反射(一)</a>        </li>
 <li><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/reflection2.html" target="_blank" rel="noopener">java反射(二)</a>    </li>
 <li><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/basis/reflection3.html" target="_blank" rel="noopener">java反射(三)</a>   </li>
@@ -472,7 +520,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Java集合"><span class="nav-number">1.</span> <span class="nav-text">Java集合</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ArrayList-与-LinkedList的区别"><span class="nav-number">1.1.</span> <span class="nav-text">ArrayList 与 LinkedList的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HashMap"><span class="nav-number">1.2.</span> <span class="nav-text">HashMap</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#两个重要的参数"><span class="nav-number">1.2.1.</span> <span class="nav-text">两个重要的参数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#hashMap的put函数实现"><span class="nav-number">1.2.2.</span> <span class="nav-text">hashMap的put函数实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#get函数的实现"><span class="nav-number">1.2.3.</span> <span class="nav-text">get函数的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#hashmap细节"><span class="nav-number">1.2.4.</span> <span class="nav-text">hashmap细节</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ConcurrentHashMap"><span class="nav-number">1.3.</span> <span class="nav-text">ConcurrentHashMap</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#get-方法"><span class="nav-number">1.3.1.</span> <span class="nav-text">get 方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#put-方法"><span class="nav-number">1.3.2.</span> <span class="nav-text">put 方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#size-方法"><span class="nav-number">1.3.3.</span> <span class="nav-text">size 方法</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WeakHashMap"><span class="nav-number">1.4.</span> <span class="nav-text">WeakHashMap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LinkedHashMap"><span class="nav-number">1.5.</span> <span class="nav-text">LinkedHashMap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TreeMap"><span class="nav-number">1.6.</span> <span class="nav-text">TreeMap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java泛型"><span class="nav-number">1.7.</span> <span class="nav-text">Java泛型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#画下-HashMap-的结构图？HashMap-、-HashTable-和-ConcurrentHashMap-的区别？"><span class="nav-number">1.8.</span> <span class="nav-text">画下 HashMap 的结构图？HashMap 、 HashTable 和 ConcurrentHashMap 的区别？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java反射"><span class="nav-number">1.9.</span> <span class="nav-text">Java反射</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java注解"><span class="nav-number">1.10.</span> <span class="nav-text">Java注解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-IO"><span class="nav-number">1.11.</span> <span class="nav-text">Java IO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RandomAccessFile"><span class="nav-number">1.12.</span> <span class="nav-text">RandomAccessFile</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-NIO"><span class="nav-number">1.13.</span> <span class="nav-text">Java NIO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java异常详解"><span class="nav-number">1.14.</span> <span class="nav-text">Java异常详解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java抽象类和接口的区别"><span class="nav-number">1.15.</span> <span class="nav-text">Java抽象类和接口的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java深拷贝和浅拷贝"><span class="nav-number">1.16.</span> <span class="nav-text">Java深拷贝和浅拷贝</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-transient关键字"><span class="nav-number">1.17.</span> <span class="nav-text">Java transient关键字</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-finally与return执行顺序"><span class="nav-number">1.18.</span> <span class="nav-text">Java finally与return执行顺序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-8-新特性"><span class="nav-number">1.19.</span> <span class="nav-text">Java 8 新特性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何理解Java类加载机制"><span class="nav-number">1.20.</span> <span class="nav-text">如何理解Java类加载机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HashMap-、-HashTable-和-ConcurrentHashMap-的区别？"><span class="nav-number">1.21.</span> <span class="nav-text">HashMap 、 HashTable 和 ConcurrentHashMap 的区别？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#两个对象的-hashcode-相同，是否对象相同？equal-相同呢？"><span class="nav-number">1.22.</span> <span class="nav-text">两个对象的 hashcode 相同，是否对象相同？equal() 相同呢？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java的Feature如何理解？"><span class="nav-number">1.23.</span> <span class="nav-text">Java的Feature如何理解？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？"><span class="nav-number">1.24.</span> <span class="nav-text">静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#成员内部类、静态内部类、局部内部类和匿名内部类的理解"><span class="nav-number">1.25.</span> <span class="nav-text">成员内部类、静态内部类、局部内部类和匿名内部类的理解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#String为什么要设计成不可变的"><span class="nav-number">1.26.</span> <span class="nav-text">String为什么要设计成不可变的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何控制某个方法允许并发访问线程的个数？"><span class="nav-number">1.27.</span> <span class="nav-text">如何控制某个方法允许并发访问线程的个数？</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Java集合"><span class="nav-number">1.</span> <span class="nav-text">Java集合</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ArrayList-与-LinkedList的区别"><span class="nav-number">1.1.</span> <span class="nav-text">ArrayList 与 LinkedList的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HashMap"><span class="nav-number">1.2.</span> <span class="nav-text">HashMap</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#两个重要的参数"><span class="nav-number">1.2.1.</span> <span class="nav-text">两个重要的参数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#hashMap的put函数实现"><span class="nav-number">1.2.2.</span> <span class="nav-text">hashMap的put函数实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#get函数的实现"><span class="nav-number">1.2.3.</span> <span class="nav-text">get函数的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#hashmap细节"><span class="nav-number">1.2.4.</span> <span class="nav-text">hashmap细节</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HashTable"><span class="nav-number">1.3.</span> <span class="nav-text">HashTable</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ConcurrentHashMap"><span class="nav-number">1.4.</span> <span class="nav-text">ConcurrentHashMap</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#get-方法"><span class="nav-number">1.4.1.</span> <span class="nav-text">get 方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#put-方法"><span class="nav-number">1.4.2.</span> <span class="nav-text">put 方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#size-方法"><span class="nav-number">1.4.3.</span> <span class="nav-text">size 方法</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LinkedHashMap"><span class="nav-number">1.5.</span> <span class="nav-text">LinkedHashMap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WeakHashMap"><span class="nav-number">1.6.</span> <span class="nav-text">WeakHashMap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TreeMap"><span class="nav-number">1.7.</span> <span class="nav-text">TreeMap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java泛型"><span class="nav-number">1.8.</span> <span class="nav-text">Java泛型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java反射"><span class="nav-number">1.9.</span> <span class="nav-text">Java反射</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java注解"><span class="nav-number">1.10.</span> <span class="nav-text">Java注解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-IO"><span class="nav-number">1.11.</span> <span class="nav-text">Java IO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RandomAccessFile"><span class="nav-number">1.12.</span> <span class="nav-text">RandomAccessFile</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-NIO"><span class="nav-number">1.13.</span> <span class="nav-text">Java NIO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java异常详解"><span class="nav-number">1.14.</span> <span class="nav-text">Java异常详解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java抽象类和接口的区别"><span class="nav-number">1.15.</span> <span class="nav-text">Java抽象类和接口的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java深拷贝和浅拷贝"><span class="nav-number">1.16.</span> <span class="nav-text">Java深拷贝和浅拷贝</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-transient关键字"><span class="nav-number">1.17.</span> <span class="nav-text">Java transient关键字</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-finally与return执行顺序"><span class="nav-number">1.18.</span> <span class="nav-text">Java finally与return执行顺序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-8-新特性"><span class="nav-number">1.19.</span> <span class="nav-text">Java 8 新特性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何理解Java类加载机制"><span class="nav-number">1.20.</span> <span class="nav-text">如何理解Java类加载机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HashMap-、-HashTable-和-ConcurrentHashMap-的区别？"><span class="nav-number">1.21.</span> <span class="nav-text">HashMap 、 HashTable 和 ConcurrentHashMap 的区别？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#两个对象的-hashcode-相同，是否对象相同？equal-相同呢？"><span class="nav-number">1.22.</span> <span class="nav-text">两个对象的 hashcode 相同，是否对象相同？equal() 相同呢？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java的Feature如何理解？"><span class="nav-number">1.23.</span> <span class="nav-text">Java的Feature如何理解？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？"><span class="nav-number">1.24.</span> <span class="nav-text">静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#成员内部类、静态内部类、局部内部类和匿名内部类的理解"><span class="nav-number">1.25.</span> <span class="nav-text">成员内部类、静态内部类、局部内部类和匿名内部类的理解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#String为什么要设计成不可变的"><span class="nav-number">1.26.</span> <span class="nav-text">String为什么要设计成不可变的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何控制某个方法允许并发访问线程的个数？"><span class="nav-number">1.27.</span> <span class="nav-text">如何控制某个方法允许并发访问线程的个数？</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -574,7 +622,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共139.8k字</span>
+  <span class="post-count">博客全站共140.7k字</span>
 </div>
 
 
