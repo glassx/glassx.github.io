@@ -938,15 +938,62 @@
 <h2 id="聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><a href="#聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？" class="headerlink" title="聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"></a>聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</h2><blockquote>
 <p>Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。<br>当然，如果在子线程中new Handler ，基本上会提示 您还未执行Looper.prepare();<br>Looper.prepare() 会判断当前 sThreadLocal.get()是否已经存在了，如果已经存在了，就会提示 “一个线程只能有一个Looper”（<strong>注意，就是在这里保证了一个线程只有一个Looper</strong>）。Looper.prepare() 只是执行了sThreadLocal.set(new Looper())，在这里给线程设置了Looper。<br>而在主线程中，ActivityThread 的main 方法中会执行 Looper.prepareMainLooper（）来设置Looper，故我们可以直接new Handler，而在子线程中要手动Looper.prepare()才行，并且还要Looper.loop()，让消息循环。<br>接下来就是 handler 的 sendMessage 和post 方法，其实两个方法都是调用 sendMessageDelay 方法，只不过post方法首先将 Runnable封装成Message，变成Message的CallBack。<br>在最终send的时候，Message会持有handler的引用，叫做target，之后，message被丢到handler所持有的MessageQueue中。<br>之后，在主线程中，Looper一直在循环，取出queue中的Message，然后执行message.target.dispatchMessage，在这个方法中，最终会调用到我们写handler时候覆写的 handleMessage 方法。至此，整个流程走完。</p>
 </blockquote>
-<h2 id="Activity的加载模式。"><a href="#Activity的加载模式。" class="headerlink" title="Activity的加载模式。"></a>Activity的加载模式。</h2><blockquote>
-<p>standard标准启动。<br>singleTop在当前栈顶就复用，否则新建。<br>singleTask：在当前栈存在有实例，如果在栈顶，直接使用；如果不在栈顶，将该实例之上的Activity全部出栈。<br>singleInstance：只要有这个实例，不管在哪个栈，都复用之；否则，在新的栈创建实例。</p>
-</blockquote>
+<h2 id="Activity生命周期"><a href="#Activity生命周期" class="headerlink" title="Activity生命周期"></a>Activity生命周期</h2><ol>
+<li>onCreate()：当 Activity 第一次创建时会被调用     </li>
+<li>onRestart()：表示Activity正在重新启动。一般情况下，当当前Activity从不可见重新变为可见状态时，onRestart就会被调用。     </li>
+<li>onStart(): Activity已经出现了，但是还没有出现在前台，无法与用户交互。这个时候可以理解为Activity已经显示出来，但是我们还看不到        </li>
+<li>onResume():表示Activity已经可见了，并且出现在前台并开始活动。需要和onStart()对比，onStart的时候Activity还在后台，onResume的时候Activity才显示到前台       </li>
+<li>onPause():表示 Activity仍可见，只是不可交互    </li>
+<li>onStop():表示Activity不可见，位于后台      </li>
+<li>onDestory():表示Activity即将销毁，这是Activity生命周期的最后一个回调，可以做一些回收工作和最终的资源回收</li>
+</ol>
+<h2 id="延伸-生命周期几种普通情况"><a href="#延伸-生命周期几种普通情况" class="headerlink" title="延伸-生命周期几种普通情况"></a>延伸-生命周期几种普通情况</h2><p><strong>从 A 页面Activity 跳转到 B 页面Activity：</strong></p>
+<p>一、 启动过程会经历：</p>
+<p><strong>A</strong>:onPause-&gt; B:onCreat-&gt; B:onStart-&gt; B:onResume-&gt; <strong>A</strong>:onStop</p>
+<p>所以我们可以得出结论：</p>
+<ul>
+<li>在A 的onPause 中不要执行耗时操作，否则会影响新打开的B，因为当前A 的 onPause 必须执行完，B 的onResume 才会执行。     </li>
+<li>等 B 的onResume 执行后，A 才完全被覆盖看不见，故，B的onResume 调用完后，A的Stop 才调用。</li>
+</ul>
+<p>二、按返回键返回到A：</p>
+<p>B:onPause-&gt; <strong>A</strong>:onRestart-&gt; <strong>A</strong>:onStart-&gt; <strong>A</strong>:onResume-&gt; B:onStop-&gt; B:onDestroy</p>
+<p>我们得出结论：</p>
+<ul>
+<li>B 首先让出交互权力</li>
+<li>A 到前台(onResume)后 ，B才退到后台，B才调用 onStop  </li>
+</ul>
+<p>三、按Home 键：     </p>
+<p>onPause -&gt; onStop，即让出交互，退到后台</p>
+<p>反之，此时再点击图标唤起：</p>
+<p>onRestart-&gt; onStart-&gt; onResume，即Activity 还在，只需要重新可见即可</p>
+<h2 id="Activity的启动模式"><a href="#Activity的启动模式" class="headerlink" title="Activity的启动模式"></a>Activity的启动模式</h2><ul>
+<li>standard：标准启动。      </li>
+<li>singleTop(栈顶复用模式)：在当前栈顶就复用，否则新建。      </li>
+<li>singleTask(栈内复用模式)：在当前栈存在有实例，如果在栈顶，直接使用；如果不在栈顶，将该实例之上的Activity全部出栈。      </li>
+<li>singleInstance(单例模式)：只要有这个实例，不管在哪个栈，都复用之；否则，在新的栈创建实例。    </li>
+</ul>
+<h2 id="Fragment-为何不推荐使用构造方法传递参数？"><a href="#Fragment-为何不推荐使用构造方法传递参数？" class="headerlink" title="Fragment 为何不推荐使用构造方法传递参数？"></a>Fragment 为何不推荐使用构造方法传递参数？</h2><p>因为activity 给fragment 传递数据时是通过 setArguments 来传递。如果采用构造方法传递，在诸如横竖屏切换的时候会调用fragment 的空的构造函数，造成数据丢失。</p>
+<h2 id="compileSdkVersion、minSdkVersion、targetSDKVersion-的含义"><a href="#compileSdkVersion、minSdkVersion、targetSDKVersion-的含义" class="headerlink" title="compileSdkVersion、minSdkVersion、targetSDKVersion 的含义"></a>compileSdkVersion、minSdkVersion、targetSDKVersion 的含义</h2><p>请参考：<a href="https://github.com/yangchong211/YCBlogs/blob/master/android/%E5%9F%BA%E7%A1%80%E7%BB%84%E4%BB%B6/36.CompileSdkVersion%E5%92%8CMinSdkVersion.md" target="_blank" rel="noopener">https://github.com/yangchong211/YCBlogs/blob/master/android/%E5%9F%BA%E7%A1%80%E7%BB%84%E4%BB%B6/36.CompileSdkVersion%E5%92%8CMinSdkVersion.md</a></p>
 <h2 id="ANR异常发生条件？如何分析ANR？"><a href="#ANR异常发生条件？如何分析ANR？" class="headerlink" title="ANR异常发生条件？如何分析ANR？"></a>ANR异常发生条件？如何分析ANR？</h2><ul>
 <li>5s内没有响应用户输入事件</li>
 <li>10s内广播接收器没有处理完毕</li>
 <li>20s内服务没有处理完毕</li>
 </ul>
-<h2 id="Android动画种类，各自特征"><a href="#Android动画种类，各自特征" class="headerlink" title="Android动画种类，各自特征"></a>Android动画种类，各自特征</h2><h2 id="谈谈你对Application类的理解"><a href="#谈谈你对Application类的理解" class="headerlink" title="谈谈你对Application类的理解"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/01.%E8%B0%88%E8%B0%88%E4%BD%A0%E5%AF%B9Application%E7%B1%BB%E7%9A%84%E7%90%86%E8%A7%A3.md" target="_blank" rel="noopener">谈谈你对Application类的理解</a></h2><h2 id="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><a href="#Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递" class="headerlink" title="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"></a>Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</h2><ul>
+<h2 id="Android动画种类，各自特征"><a href="#Android动画种类，各自特征" class="headerlink" title="Android动画种类，各自特征"></a>Android动画种类，各自特征</h2><h2 id="谈谈你对Application类的理解"><a href="#谈谈你对Application类的理解" class="headerlink" title="谈谈你对Application类的理解"></a>谈谈你对Application类的理解</h2><p>说说对什么的理解，就是考察这个东西会不会用，重点有没有什么坑。有以下几点需要注意：</p>
+<ul>
+<li>Application 在一个虚拟机里面只有一个实例。这里不是说一个App只有一个实例，因为一个App 可能有多个进程，也就是多个虚拟机，这种情况下，每个虚拟机中都会存在一个Application 对象。      </li>
+<li>Application 本质是一个Context ，继承自 ContextWrapper。      </li>
+<li>Application 有 MultiDexApplication 子类，这个子类可以用来解决 65535 问题，完成多Dex 打包配置相关工作。       </li>
+<li>在Application 的onCreate 方法中我们会进行各种初始化，如图片加载库、log 等，但是最好别在里面进行太多耗时操作，这会影响App启动速度，可以使用异步、懒加载、延时加载等策略来减少影响。       </li>
+<li>通过Context.getApplicationContext ，不论是从Activity 中、Service中获取，都是同一个Application 对象。     </li>
+<li>在低内存情况下，Application 可能会被销毁，从而导致保存在Application 中的数据错乱，所以要注意判空或者选择其他方式保存数据。      </li>
+<li>Application 中几个有用的回调如 onLowMemory 、onTrimMemory ，在内存紧张的时候，在这些回调里面关闭数据库连接、移除图片缓存等方式来降低内存，降低被回收的风险。     </li>
+<li>Application 的生命周期和虚拟机一样长，所以单例或者静态变量的初始化一定要使用Application 的Context 进行初始化，防止内存泄漏。     </li>
+</ul>
+<blockquote>
+<p><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/01.%E8%B0%88%E8%B0%88%E4%BD%A0%E5%AF%B9Application%E7%B1%BB%E7%9A%84%E7%90%86%E8%A7%A3.md" target="_blank" rel="noopener">以上内容可以参考这个链接</a></p>
+</blockquote>
+<h2 id="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><a href="#Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递" class="headerlink" title="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"></a>Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</h2><ul>
 <li>Bundle 内部是由ArrayMap 实现的，我们知道，ArrayMap 内部实现原理是两个数组，在添加、删除、查找 数据时，都会使用二分查找法，在数据量较小的情况下，相对 HashMap 而言，在效率相差不太大的情况下，更节省内存(HashMap的Entry Array 占用更多内存，并且没用到的会导致浪费)。而我们在Android中使用Bundle 传递数据都是比较少的，因此Bundle 更有效率。    </li>
 <li>Android 中如果使用Intent 携带数据的话，需要数据基本类型或者是可序列化类型，HashMap 使用Serializeble 进行序列化，而Bundle 是实现了 Parcelable 进行序列化。在Android 平台中，更推荐使用 Parcelable 进行序列化，因为更少的 io 操作(但同时使用更加复杂)。</li>
 </ul>
