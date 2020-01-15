@@ -1,7 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>第4章：理解上下文Context</title>
+    <title>第13章：热修复原理</title>
+    <url>/2020/01/15/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC13%E7%AB%A0/</url>
+    <content><![CDATA[<p>热修复框架的核心技术主要有3类：代码修复、资源修复和动态链接库修复。</p><h2 id="资源修复"><a href="#资源修复" class="headerlink" title="资源修复"></a>资源修复</h2><p>很多热修复的框架的资源修复参考了Instant Run的资源修复原理，因此我们首先了解下Instant Run 的原理。Instant Run 的资源修复核心逻辑在MonkeyPatcher 的monkeyPatchExistingResources 方法中，如下所示：</p><a id="more"></a>
+
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//com/android/tools/fd/runtime/MonkeyPatcher.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">monkeyPatchExistingResources</span><span class="params">(Context context,String externalResourceFile,Collection&lt;Activity&gt; activityes)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">try</span>&#123;</span><br><span class="line">    <span class="comment">//创建一个新的 AssetManager</span></span><br><span class="line">       AssetManager newAssetManager = (newAssetManager)newAssetManager.class.getConstructor(<span class="keyword">new</span> Class[<span class="number">0</span>]).newInstance(<span class="keyword">new</span> Object[<span class="number">0</span>]);<span class="comment">//1</span></span><br><span class="line">       </span><br><span class="line">       Method mAddAssetPath = AssetManager.class.getDeclareMethod(<span class="string">"addAssetPath"</span>,<span class="keyword">new</span> Class[] &#123;String.class&#125;);<span class="comment">//2</span></span><br><span class="line">       </span><br><span class="line">       mAddAssetPath.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">       <span class="comment">//通过反射调用 addAssetPath 方法加载外部的资源( SD 卡)</span></span><br><span class="line">       <span class="keyword">if</span> (((Integer) mAddAssetPath.invoke(newAssetManager,<span class="keyword">new</span> Object[]&#123; externalResourceFile&#125;)).intValue () == <span class="number">0</span>) &#123;<span class="comment">//3</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Could not create new AssetManager"</span>);</span><br><span class="line">            </span><br><span class="line">       <span class="keyword">if</span>&#123;activities != <span class="keyword">null</span>)&#123;</span><br><span class="line">         <span class="keyword">for</span> (Activity activity : activities) &#123;</span><br><span class="line">         Resources resources= activity.getResources() ;<span class="comment">//4</span></span><br><span class="line">         <span class="keyword">try</span> &#123;</span><br><span class="line">          <span class="comment">//反射得到 Resources 的 AssetManager 类型的 mAssets 字段</span></span><br><span class="line">          Field mAssets = Resources.class.getDeclareField(<span class="string">"mAssets"</span>);<span class="comment">//5</span></span><br><span class="line">          mAssets.setAccessible(<span class="keyword">true</span> );</span><br><span class="line"></span><br><span class="line">          <span class="comment">//将 mAssets 字段的引用替换为新创建的 AssetManager</span></span><br><span class="line">          mAssets.set(resources,newAssetManager) ;<span class="comment">//6</span></span><br><span class="line">          </span><br><span class="line">          <span class="comment">//得到 Activity 的 Resources.Theme</span></span><br><span class="line">          Resources.Theme theme = activity.getTheme();</span><br><span class="line">          ...</span><br><span class="line">          <span class="comment">//反射得到 Resources.Theme 的 mAssets 字段</span></span><br><span class="line">          Field ma = Resources . Theme.class.getDeclaredField (” mAssets <span class="string">" ) ;</span></span><br><span class="line"><span class="string">          ma.setAccessible(true);</span></span><br><span class="line"><span class="string">          </span></span><br><span class="line"><span class="string">          //将 Resources.Theme 的 mAssets 字段替换为 newAssetManager</span></span><br><span class="line"><span class="string">          ma.set(theme,newAssetManager);//7</span></span><br><span class="line"><span class="string">         &#125; catch (Throwable ignore) &#123;</span></span><br><span class="line"><span class="string">         </span></span><br><span class="line"><span class="string">         &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看出，在注释1处创建了一个新的AssetManager，之后通过反射调用 addAssetPath 方法加载外部(SD卡)的资源。在注释4处遍历Activity 列表，得到每个Activity 的Resource ，在5处通过反射得到Resources 的AssetManager 类型的mAsset字段，并在注释6处改写mAssets字段的引用为新的 AssetManager。之后，将AssetManager 类型的mAssets 字段的引用全部替换为新创建的 AssetManager。所以，总共就是两个步骤：</p>
+<ul>
+<li>创建新的 AssetManager ,通过反射调用 addAssetPath 方法加载外部的资源,这样<br>新创建的 AssetManager 就含有了外部资源。     </li>
+<li>将 AssetManager 类型的 rnAssets 字段的引用全部替换为新创建的 AssetManager。</li>
+</ul>
+<h2 id="代码修复"><a href="#代码修复" class="headerlink" title="代码修复"></a>代码修复</h2><p>先写到这，后续有空再来。。。</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android进阶解密</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第5章：理解上下文Context</title>
     <url>/2019/12/06/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/</url>
     <content><![CDATA[<h2 id="Context-的关联类"><a href="#Context-的关联类" class="headerlink" title="Context 的关联类"></a>Context 的关联类</h2><p>开发中经常使用的Context 的使用场景大体分为两类：</p><ul>
 <li>使用Context 调用方法，比如启动 Activity、访问资源、调用系统服务等。    </li>
@@ -200,6 +221,17 @@
       </tags>
   </entry>
   <entry>
+    <title>面试题-设计模式</title>
+    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
+    <content><![CDATA[<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>面试题-虚拟机知识</title>
     <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/</url>
     <content><![CDATA[<h3 id="简述下GC，垃圾回收算法，gc什么时候回收？同时看看-这个链接"><a href="#简述下GC，垃圾回收算法，gc什么时候回收？同时看看-这个链接" class="headerlink" title="简述下GC，垃圾回收算法，gc什么时候回收？同时看看 这个链接"></a><a href="https://www.jianshu.com/p/7c708a66ff42" target="_blank" rel="noopener">简述下GC，垃圾回收算法</a>，gc什么时候回收？同时看看 <a href="https://zhuanlan.zhihu.com/p/28258571" target="_blank" rel="noopener">这个链接</a></h3><h3 id="Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><a href="#Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time" class="headerlink" title="Dalvik和Art区别？(Just In Time和Ahead Of Time)"></a>Dalvik和Art区别？(Just In Time和Ahead Of Time)</h3><blockquote>
@@ -219,17 +251,6 @@
 <p>“虚引用”顾名思义，就是形同虚设，与其他几种引用都不同，虚引用并不会决定对象的生命周期。如果一个对象仅持有虚引用，那么它就和没有任何引用一样，在任何时候都可能被垃圾回收器回收。要注意的是，虚引用必须和引用队列关联使用.</p>
 </blockquote>
 ]]></content>
-      <categories>
-        <category>面试</category>
-      </categories>
-      <tags>
-        <tag>面试题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>面试题-设计模式</title>
-    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -442,7 +463,7 @@
   <entry>
     <title>面试题-网络知识</title>
     <url>/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/</url>
-    <content><![CDATA[<h3 id="TCP-IP-三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）"><a href="#TCP-IP-三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）" class="headerlink" title="TCP/IP 三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）"></a>TCP/IP 三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）</h3><p>3次握手的示意图如下：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E4%B8%89%E6%AC%A1%E6%8F%A1%E6%89%8B.png" alt="三次握手"></p><p>三次握手过程：TCP发起的一方A，由操作系统生成一个序列号 n，以这个n为原点，对自己每个将要发送的数据进行编号，连接的另一方 B 会对A每次发送的数据进行确认，如果A收到B的确认编号2001，则可以认为 n~2000编号已经全部到达B。</p><a id="more"></a>
+    <content><![CDATA[<h2 id="TCP-IP-三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）"><a href="#TCP-IP-三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）" class="headerlink" title="TCP/IP 三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）"></a>TCP/IP 三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）</h2><p>3次握手的示意图如下：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E4%B8%89%E6%AC%A1%E6%8F%A1%E6%89%8B.png" alt="三次握手"></p><p>三次握手过程：TCP发起的一方A，由操作系统生成一个序列号 n，以这个n为原点，对自己每个将要发送的数据进行编号，连接的另一方 B 会对A每次发送的数据进行确认，如果A收到B的确认编号2001，则可以认为 n~2000编号已经全部到达B。</p><a id="more"></a>
 
 
 <blockquote>
@@ -452,16 +473,16 @@
 <p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%9B%9B%E6%AC%A1%E6%8C%A5%E6%89%8B.png" alt="四次挥手"></p>
 <p>由上图看出，由client端发起挥手，server给client的2次回复中，一次是确认信息ack，一次是数据的传送，那可不可以只要3次挥手呢？答案是可能的，TCP是全双工的，Client在没有数据需要发送给Server后，就发送FIN告知server，然后终止对server发送消息，但这个时候server还以发送数据给client，这时候需要4次；但是如果server收到client的FIN后再也没有数据要发给client了，那么 对client的ack包和server自己的FIN包就能合并成一个包发送过去，四次挥手变成3次。</p>
 <p>了解完挥手完成后，可能还想更深入了解 TIME_WAIT，可以查看<a href="https://glassx.github.io/2018/05/21/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/" target="_blank" rel="noopener">之前写的这篇</a>。</p>
-<h3 id="引申——为什么要等待2MSL？"><a href="#引申——为什么要等待2MSL？" class="headerlink" title="引申——为什么要等待2MSL？"></a>引申——为什么要等待2MSL？</h3><p>原因有二：<strong>保证TCP协议的全双工连接能够可靠关闭</strong> 以及 <strong>保证这次连接的重复数据段从网络中消失</strong></p>
+<h2 id="引申——为什么要等待2MSL？"><a href="#引申——为什么要等待2MSL？" class="headerlink" title="引申——为什么要等待2MSL？"></a>引申——为什么要等待2MSL？</h2><p>原因有二：<strong>保证TCP协议的全双工连接能够可靠关闭</strong> 以及 <strong>保证这次连接的重复数据段从网络中消失</strong></p>
 <p>第一点：如果主机1直接CLOSED了，那么由于IP协议的不可靠性或者是其它网络原因，导致主机2没有收到主机1最后回复的ACK。那么主机2就会在超时之后继续发送FIN，此时由于主机1已经CLOSED了，就找不到与重发的FIN对应的连接。所以，主机1不是直接进入CLOSED，而是要保持TIME_WAIT，当再次收到FIN的时候，能够保证对方收到ACK，最后正确的关闭连接。</p>
 <p>第二点：如果主机1直接CLOSED，然后又再向主机2发起一个新连接，我们不能保证这个新连接与刚关闭的连接的端口号是不同的。也就是说有可能新连接和老连接的端口号是相同的。一般来说不会发生什么问题，但是还是有特殊情况出现：假设新连接和已经关闭的老连接端口号是一样的，如果前一次连接的某些数据仍然滞留在网络中，这些延迟数据在建立新连接之后才到达主机2，由于新连接和老连接的端口号是一样的，TCP协议就认为那个延迟的数据是属于新连接的，这样就和真正的新连接的数据包发生混淆了。所以TCP连接还要在TIME_WAIT状态等待2倍MSL，这样可以保证本次连接的所有数据都从网络中消失。</p>
-<h3 id="IP地址分类（A-B-C-D类）"><a href="#IP地址分类（A-B-C-D类）" class="headerlink" title="IP地址分类（A/B/C/D类）"></a>IP地址分类（A/B/C/D类）</h3><p>IP地址由四段组成，每个字段是一个字节，即4个字节、 每个字节有8位，最大值是255，IP地址 = 网络号+主机号。分为A、B、C三类及特殊地址D、E。全0和全1的都保留不用。</p>
+<h2 id="IP地址分类（A-B-C-D类）"><a href="#IP地址分类（A-B-C-D类）" class="headerlink" title="IP地址分类（A/B/C/D类）"></a>IP地址分类（A/B/C/D类）</h2><p>IP地址由四段组成，每个字段是一个字节，即4个字节、 每个字节有8位，最大值是255，IP地址 = 网络号+主机号。分为A、B、C三类及特殊地址D、E。全0和全1的都保留不用。</p>
 <p><img src="/assets/%E9%9D%A2%E8%AF%95/ip%E5%9C%B0%E5%9D%80%E5%88%86%E7%B1%BB.png" alt="ip地址分类"></p>
 <p>由图可知：</p>
 <blockquote>
 <p>A类：前1个字节(8位)为网络号，后3个字节(24位)为主机号。A类第1位必须是0<br>B类：前2个字节(16位)为网络号，后2个字节(16位)为主机号。B类前两位固定为10<br>C类：前3个字节(24位)为网络号，后1个字节(8位)为主机号。C类前3位固定为110<br>D类： 是多播地址，一般用于多路广播用户。该类IP地址的最前面为1110<br>E类： 是保留地址。该类IP地址的最前面为1111</p>
 </blockquote>
-<h3 id="TCP与UDP区别"><a href="#TCP与UDP区别" class="headerlink" title="TCP与UDP区别"></a>TCP与UDP区别</h3><ol>
+<h2 id="TCP与UDP区别"><a href="#TCP与UDP区别" class="headerlink" title="TCP与UDP区别"></a>TCP与UDP区别</h2><ol>
 <li>UDP发送数据前无需建立连接，TCP需要握手建立连接。    </li>
 <li>UDP尽最大努力交付,不保证可靠交付；TCP提供可靠交付。    </li>
 <li>UDP面向报文，对应用程序交下来的报文，在添加首部之后就交付给Ip层，不会对报文拆分；TCP面向字节流，会对应用程序的报文进行拆分。    </li>
@@ -470,26 +491,67 @@
 <li>UDP没有拥塞控制，在网络条件差的情况下发送端也不会降低发送速率；TCP有拥塞控制，慢开始避免拥塞，快重传、快恢复。  </li>
 <li>TCP 通过滑动窗口实现流量控制，UDP 无。  </li>
 </ol>
-<h3 id="引申-TCP流量控制"><a href="#引申-TCP流量控制" class="headerlink" title="引申-TCP流量控制"></a>引申-TCP流量控制</h3><p>如果发送方把数据发送得过快，接收方可能会来不及接收，这就会造成数据的丢失。所谓流量控制就是让发送方的发送速率不要太快，要让接收方来得及接收。</p>
+<h2 id="引申-TCP流量控制"><a href="#引申-TCP流量控制" class="headerlink" title="引申-TCP流量控制"></a>引申-TCP流量控制</h2><p>如果发送方把数据发送得过快，接收方可能会来不及接收，这就会造成数据的丢失。所谓流量控制就是让发送方的发送速率不要太快，要让接收方来得及接收。</p>
 <p>利用滑动窗口机制可以很方便地在TCP连接上实现对发送方的流量控制。</p>
 <p>设A向B发送数据。在连接建立时，B告诉了A：“我的接收窗口是 rwnd = 400 ”(这里的 rwnd 表示 receiver window) 。因此，发送方的发送窗口不能超过接收方给出的接收窗口的数值。请注意，TCP的窗口单位是字节，不是报文段。假设每一个报文段为100字节长，而数据报文段序号的初始值设为1。大写ACK表示首部中的确认位ACK，小写ack表示确认字段的值ack。</p>
 <p><img src="/assets/%E9%9D%A2%E8%AF%95/tcp%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6.jpg" alt="tcp流量控制"></p>
 <p>从图中可以看出，B进行了三次流量控制。第一次把窗口减少到 rwnd = 300 ，第二次又减到了 rwnd = 100 ，最后减到 rwnd = 0 ，即不允许发送方再发送数据了。这种使发送方暂停发送的状态将持续到主机B重新发出一个新的窗口值为止。B向A发送的三个报文段都设置了 ACK = 1 ，只有在ACK=1时确认号字段才有意义。</p>
 <p>TCP为每一个连接设有一个持续计时器(persistence timer)。只要TCP连接的一方收到对方的零窗口通知，就启动持续计时器。若持续计时器设置的时间到期，就发送一个零窗口控测报文段（携1字节的数据），那么收到这个报文段的一方就重新设置持续计时器。</p>
-<h3 id="快重传和快恢复"><a href="#快重传和快恢复" class="headerlink" title="快重传和快恢复"></a>快重传和快恢复</h3><ul>
+<h2 id="快重传和快恢复"><a href="#快重传和快恢复" class="headerlink" title="快重传和快恢复"></a>快重传和快恢复</h2><ul>
 <li>快重传算法首先要求接收方每收到一个失序的报文段后就立即发出重复确认（为的是使发送方及早知道有报文段没有到达对方）而不要等到自己发送数据时才进行捎带确认。</li>
 </ul>
 <p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%BF%AB%E9%87%8D%E4%BC%A0.webp" alt="快重传"></p>
 <ul>
 <li>快恢复：当发送方连续收到三个重复确认，就开始执行拥塞避免算法，缩小拥塞窗口，随后再使拥塞窗口缓慢地线性增大。</li>
 </ul>
-<h3 id="Http和Https的区别？"><a href="#Http和Https的区别？" class="headerlink" title="Http和Https的区别？"></a>Http和Https的区别？</h3><blockquote>
+<h2 id="Http和Https的区别？"><a href="#Http和Https的区别？" class="headerlink" title="Http和Https的区别？"></a>Http和Https的区别？</h2><blockquote>
 <p>Https是ssl加密传输，Http是明文传输<br>Https是使用端口443，而Http使用80<br>HttpsSSL+HTTP协议构建的可进行加密传输、身份认证的网络协议要比Http协议安全<br>Https协议需要到CA申请证书</p>
 </blockquote>
-<h3 id="TCP-IP-流量控制，拥塞避免，可以结合这篇文章"><a href="#TCP-IP-流量控制，拥塞避免，可以结合这篇文章" class="headerlink" title="TCP/IP 流量控制，拥塞避免，可以结合这篇文章"></a>TCP/IP 流量控制，拥塞避免，可以结合<a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247486825&idx=1&sn=db596ed4b69bd9220f6a8ad79ef308db" target="_blank" rel="noopener">这篇文章</a></h3><h3 id="Session-和-Cookie-的区别？"><a href="#Session-和-Cookie-的区别？" class="headerlink" title="Session 和 Cookie 的区别？"></a>Session 和 Cookie 的区别？</h3><blockquote>
+<h2 id="中间人攻击"><a href="#中间人攻击" class="headerlink" title="中间人攻击"></a>中间人攻击</h2><p>带着下列问题去了解Https 安全性：</p>
+<ul>
+<li>为什么用了https 就是安全的？用了https就一定安全吗？    </li>
+<li>https 的底层原理如何？    </li>
+</ul>
+<h3 id="https的原理"><a href="#https的原理" class="headerlink" title="https的原理"></a>https的原理</h3><p>https的整体过程分为证书验证和数据传输阶段，具体交互如下图：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%BD%91%E7%BB%9C/https%E6%95%B4%E4%BD%93%E8%BF%87%E7%A8%8B.jpg" alt="https整体过程"></p>
+<p>所以证书验证阶段流程就是：</p>
+<ol>
+<li>客户端发起https 请求     </li>
+<li>服务端返回https 证书      </li>
+<li>客户端验证证书是否合法</li>
+</ol>
+<p>数据传输阶段流程就是：</p>
+<ol>
+<li>证书合法后，在本地生成随机数    </li>
+<li>通过公钥加密随机数，并把加密后的随机数传输给服务端    </li>
+<li>服务端通过私钥对随机数解密     </li>
+<li>服务端<strong>通过客户端传入的随机数构造对称加密算法</strong>，对返回结果内容进行加密后传输</li>
+</ol>
+<p>那我们再引申一下，为什么后来要使用对称加密传输数据。这是因为：</p>
+<ul>
+<li>非对称加密的效率低    </li>
+<li>https 上述场景中，只有服务端保存了私钥，一对公私钥只能单向加解密，而对称加密可以实现双向的加解密</li>
+</ul>
+<h3 id="中间人攻击-1"><a href="#中间人攻击-1" class="headerlink" title="中间人攻击"></a>中间人攻击</h3><p>了解以上原理之后，中间人攻击的具体流程如下：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%BD%91%E7%BB%9C/%E4%B8%AD%E9%97%B4%E4%BA%BA%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B%E5%9B%BE.jpg" alt="中间人攻击流程图"></p>
+<p>主要包括以下步骤：</p>
+<ol>
+<li>本地请求被劫持(如dns劫持等)，所有请求均发送到中间人的服务器    </li>
+<li>中间人<strong>返回自己自己的证书</strong>    </li>
+<li>客户端创建随机数并通过中间人的证书公钥加密，之后凭随机数构造对称加密对传输内容加密    </li>
+<li>中间人用私钥解密随机数，此时中间人拥有客户端的随机数，所以可以通过对称加密算法解密内容    </li>
+<li>中间人再以客户端的请求内容向正规服务器发送请求，此时中间人发起的请求就是正规请求了，数据也是正规数据，所以合法，正规服务器会通过建立的安全通道返回加密数据      </li>
+<li>此后流程都是合法化的了，中间人只是做了个转发而已     </li>
+</ol>
+<p>以上，就是中间人攻击的流程，我们日常使用的fiddler 代理，其实就很好地模拟了中间人攻击。因为我们使用fiddler 代理https 的时候，需要本地信任fiddler 的证书，其实就是中间人返回自己的证书过程，中间人攻击关键也是这一步。</p>
+<p>一般客户端会验证证书的合法性，所以中间人的证书没有这么容易被信任，中间人攻击的难点也在这。</p>
+<blockquote>
+<p>以上内容参考自<a href="https://zhuanlan.zhihu.com/p/95293098" target="_blank" rel="noopener">知乎-Java面试那些事儿</a></p>
+</blockquote>
+<h2 id="TCP-IP-流量控制，拥塞避免，可以结合这篇文章"><a href="#TCP-IP-流量控制，拥塞避免，可以结合这篇文章" class="headerlink" title="TCP/IP 流量控制，拥塞避免，可以结合这篇文章"></a>TCP/IP 流量控制，拥塞避免，可以结合<a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247486825&idx=1&sn=db596ed4b69bd9220f6a8ad79ef308db" target="_blank" rel="noopener">这篇文章</a></h2><h2 id="Session-和-Cookie-的区别？"><a href="#Session-和-Cookie-的区别？" class="headerlink" title="Session 和 Cookie 的区别？"></a>Session 和 Cookie 的区别？</h2><blockquote>
 <p>HTTP是一种无状态的协议，为了分辨链接是谁发起的，Session和Cookie就是为解决这个问题而提出来的两个机制。<br><strong>Cookies是服务器下发，存储到本地机器上的一段文本，并随每一个请求发回服务器，是在客户端保持状态的方案。</strong><br>浏览器第一次发送请求时，服务器自动生成了一HashTable和一个Session ID来唯一标识这个HashTable，并将其通过响应发送回浏览器。Session的实现方式和Cookie有一定关系，一般会把session id存在Cookie中（<strong>也可以依赖于url重写</strong>），每次访问的时候将Session id带过去，服务器就根据id查找hashtable就可以识别当前用户状态了。<br>所以可以总结，cookie存在本地，session存在服务器；父路径不能享用子路径的cookies，而同一个session的窗口可以共享session；cookie没有session可靠。</p>
 </blockquote>
-<h3 id="在浏览器中输入www-baidu-com后执行的全部过程"><a href="#在浏览器中输入www-baidu-com后执行的全部过程" class="headerlink" title="在浏览器中输入www.baidu.com后执行的全部过程"></a>在浏览器中输入<a href="http://www.baidu.com后执行的全部过程" target="_blank" rel="noopener">www.baidu.com后执行的全部过程</a></h3><ol>
+<h2 id="在浏览器中输入www-baidu-com后执行的全部过程"><a href="#在浏览器中输入www-baidu-com后执行的全部过程" class="headerlink" title="在浏览器中输入www.baidu.com后执行的全部过程"></a>在浏览器中输入<a href="http://www.baidu.com后执行的全部过程" target="_blank" rel="noopener">www.baidu.com后执行的全部过程</a></h2><ol>
 <li><p>客户端浏览器通过DNS解析到<a href="http://www.baidu.com的IP地址220.181.27.48，通过这个IP地址找到客户端到服务器的路径。客户端浏览器发起一个HTTP会话到220.161.27.48，然后通过TCP进行封装数据包，输入到网络层。" target="_blank" rel="noopener">www.baidu.com的IP地址220.181.27.48，通过这个IP地址找到客户端到服务器的路径。客户端浏览器发起一个HTTP会话到220.161.27.48，然后通过TCP进行封装数据包，输入到网络层。</a></p>
 </li>
 <li><p>在客户端的传输层，把HTTP会话请求分成报文段，添加源和目的端口，如服务器使用80端口监听客户端的请求，客户端由系统随机选择一个端口如5000，与服务器进行交换，服务器把相应的请求返回给客户端的5000端口。然后使用IP层的IP地址查找目的端。</p>
@@ -499,7 +561,7 @@
 <li><p>客户端的链路层，包通过链路层发送到路由器，通过邻居协议查找给定IP地址的MAC地址，然后发送ARP请求查找目的地址，如果得到回应后就可以使用ARP的请求应答交换的IP数据包现在就可以传输了，然后发送IP数据包到达服务器的地址。</p>
 </li>
 </ol>
-<h3 id="HTTP中，POST与GET的区别"><a href="#HTTP中，POST与GET的区别" class="headerlink" title="HTTP中，POST与GET的区别"></a>HTTP中，POST与GET的区别</h3><ol>
+<h2 id="HTTP中，POST与GET的区别"><a href="#HTTP中，POST与GET的区别" class="headerlink" title="HTTP中，POST与GET的区别"></a>HTTP中，POST与GET的区别</h2><ol>
 <li><p>Get是从服务器上获取数据，Post是向服务器传送数据。</p>
 </li>
 <li><p>Get是把参数数据队列加到提交表单的Action属性所指向的URL中，值和表单内各个字段一一对应，在URL中科院看到。</p>
@@ -509,7 +571,7 @@
 <li><p>根据HTTP规范，GET用于信息获取，而且应该是安全的和幂等的。</p>
 </li>
 </ol>
-<h3 id="27、网络状态码？以-2、3、4、5-开头的代表什么意思。"><a href="#27、网络状态码？以-2、3、4、5-开头的代表什么意思。" class="headerlink" title="27、网络状态码？以 2、3、4、5 开头的代表什么意思。"></a>27、网络状态码？以 2、3、4、5 开头的代表什么意思。</h3>]]></content>
+<h2 id="网络状态码？以-2、3、4、5-开头的代表什么意思。"><a href="#网络状态码？以-2、3、4、5-开头的代表什么意思。" class="headerlink" title="网络状态码？以 2、3、4、5 开头的代表什么意思。"></a>网络状态码？以 2、3、4、5 开头的代表什么意思。</h2>]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -715,13 +777,13 @@
   <entry>
     <title>面试题-多线程知识</title>
     <url>/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/</url>
-    <content><![CDATA[<h3 id="1、线程同步，你了解哪几种方式？"><a href="#1、线程同步，你了解哪几种方式？" class="headerlink" title="1、线程同步，你了解哪几种方式？"></a>1、线程同步，你了解哪几种方式？</h3><blockquote>
+    <content><![CDATA[<h2 id="1、线程同步，你了解哪几种方式？"><a href="#1、线程同步，你了解哪几种方式？" class="headerlink" title="1、线程同步，你了解哪几种方式？"></a>1、线程同步，你了解哪几种方式？</h2><blockquote>
 <ol>
 <li>数据同步：可以使用Android 提供的同步容器。如： CopyOnWriteArrayList（当某个线程要修改list的元素时，首先copy一份出来，然后在修改前加锁，防止多个线程同时修改而copy多个副本，读的时候无需加锁，读的是副本）、concurrentHashMap（分段锁）、BlockingQueue（队列满了，在调用put，会阻塞，直到不再是满的；同理，取也是一样）。</li>
 <li>用锁。同步锁：synchronize（无论synchronized关键字加在方法上还是对象上，他锁的都是对象，而不是把一段代码或函数当作锁）、ReentrantLock</li>
 </ol>
 </blockquote><a id="more"></a>
-<h3 id="2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？"><a href="#2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？" class="headerlink" title="2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？"></a>2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？</h3><blockquote>
+<h2 id="2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？"><a href="#2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？" class="headerlink" title="2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？"></a>2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？</h2><blockquote>
 <p><strong>介绍：</strong>synchronized：无论synchronized关键字加在方法上还是对象上，他锁的都是对象，而不是把一段代码或函数当作锁。<br>Lock：一般使用ReentrantLock类做为锁，需要显式指出加锁与释放锁的位置，在加锁和解锁处通过lock()和unlock()显示指出，所以一般会在finally块中写unlock()以防死锁。  </p>
 </blockquote>
 <blockquote>
@@ -733,9 +795,35 @@
 <li>synchronized是悲观锁，其他线程只能阻塞来等待线程释放锁；Lock是乐观锁。  </li>
 <li>lock可以使我们多线程交互变得方便，而使用synchronized则无法做到这点。如：某个线程在等待锁的过程中需要中断、或者获知某个线程有没有获取到锁、或者需要指定notify哪个线程</li>
 </ul>
-<h3 id="3、讲下-Volatile-吧？他是怎样做到同步的？Volatile-为什么不支持原子性？notify、wait"><a href="#3、讲下-Volatile-吧？他是怎样做到同步的？Volatile-为什么不支持原子性？notify、wait" class="headerlink" title="3、讲下 Volatile 吧？他是怎样做到同步的？Volatile 为什么不支持原子性？notify、wait"></a>3、讲下 Volatile 吧？他是怎样做到同步的？Volatile 为什么不支持原子性？notify、wait</h3><h3 id="了解协程吗"><a href="#了解协程吗" class="headerlink" title="了解协程吗"></a>了解协程吗</h3><h3 id="Java创建线程的三种方式"><a href="#Java创建线程的三种方式" class="headerlink" title="Java创建线程的三种方式"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/CreateThread.html" target="_blank" rel="noopener">Java创建线程的三种方式</a></h3><h3 id="Java线程池"><a href="#Java线程池" class="headerlink" title="Java线程池"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/thread-pool.html" target="_blank" rel="noopener">Java线程池</a></h3><h3 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/deadlock.html" target="_blank" rel="noopener">死锁</a></h3><h3 id="线程间通信？"><a href="#线程间通信？" class="headerlink" title="线程间通信？"></a>线程间通信？</h3><p>1、通过内存共享，共享内存中的信息是公共可见的，但是需要显式地进行同步，可以使用Synchronize 和 Lock 来进行同步。    </p>
+<h2 id="为什么wait、notify、notifyAll-方法在object-类中，而sleep-在Thread-类中？"><a href="#为什么wait、notify、notifyAll-方法在object-类中，而sleep-在Thread-类中？" class="headerlink" title="为什么wait、notify、notifyAll 方法在object 类中，而sleep 在Thread 类中？"></a>为什么wait、notify、notifyAll 方法在object 类中，而sleep 在Thread 类中？</h2><p>一个例子，假如要做的事情是“生火-烧水-煮面”。sleep 就是，当我生火之后，觉得有点累，要休息一段时间，所以并不立即烧水，等过会再烧，休息的这段时间是由我自己来控制的，这个灶台我也要一直占用；而对于wait，首先，wait 是由某个object 来调用的，这个object 类似于监督人的角色，当我点火在烧水的过程中，监督人要求我停下来，不允许我继续烧水了，同时剥夺我灶台使用权，让其他人先用灶台，我在旁边等着，直到这个监督人通知(notify/notifyAll)我可以继续使用灶台了，我才能继续。</p>
+<p>通过这个例子，我们可以知道：</p>
+<ul>
+<li>首先，sleep 和 其他的是有本质区别的：sleep 是一个线程的运行状态控制，所以交给Thread 自己更合适；而wait 是线程之间的通讯工具，交给object更合适，这样各个竞争线程不需要知道彼此的存在。       </li>
+<li>其次，wait、notify与notifyAll 是锁级别的操作，而锁属于对象，每个对象都可能作为锁，所以它们定义在Object 类中。       </li>
+</ul>
+<blockquote>
+<p>需要注意的是，在调用对象的notify()和notifyAll()方法之前，调用线程必须已经得到该对象的锁。因此，<strong>必须在某个对象的同步方法或同步代码块中才能调用该对象的notify()或notifyAll()方法</strong>，这很好理解，如果你自己都没获得锁，就发出消息通知别人来拿锁了，这不是捣乱么。还有一点要注意的是，并不是notify 之后，在等候的线程就会马上拿到锁，而是要等前一个线程切实放弃锁之后才能获取到锁。</p>
+</blockquote>
+<p>从另一个角度来说是，假如不这样做的话，即如果wait、notify和notifyAll 都在Thread 中，会有什么问题：</p>
+<p>首先，wait 方法仍然可以使当前线程挂起，但是挂起后怎么被其他线程唤起呢？因为唤起时需要知道要唤起哪个线程。<br>其次，notify 与 notifyAll 都需要知道目前需要唤醒哪些线程。</p>
+<p>当然你可以说我们使用共享变量或者其他方式，这无疑会增加线程间通信的复杂性，并带来安全隐患，所以并没有必要。</p>
+<p><strong>为什么wait/notify 要在同步块</strong>，参考这篇：<a href="https://blog.csdn.net/belalds/article/details/89225104" target="_blank" rel="noopener">https://blog.csdn.net/belalds/article/details/89225104</a></p>
+<blockquote>
+<p>以上内容<a href="https://blog.csdn.net/liuzhe_2008/article/details/36901737" target="_blank" rel="noopener">参考csdn的这篇文章</a></p>
+</blockquote>
+<h2 id="两个线程交替打印，一个输出偶数，一个输出奇数"><a href="#两个线程交替打印，一个输出偶数，一个输出奇数" class="headerlink" title="两个线程交替打印，一个输出偶数，一个输出奇数"></a>两个线程交替打印，一个输出偶数，一个输出奇数</h2><p>第一种，使用synchronize 关键字，锁住对象，每次只能一个线程进入。每打印一个数，就释放锁，然后挂起自己，如此往复：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainClass</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        MainClass obj = <span class="keyword">new</span> MainClass();</span><br><span class="line"></span><br><span class="line">        Thread t1 = <span class="keyword">new</span> Thread(obj::printOdds);</span><br><span class="line">        Thread t2 = <span class="keyword">new</span> Thread(obj::printEven);</span><br><span class="line"></span><br><span class="line">        t2.start();</span><br><span class="line">        t1.start();</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">printOdds</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= <span class="number">100</span>; i += <span class="number">2</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"t1---"</span> + i);</span><br><span class="line">            notify();</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                wait();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">printEven</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">100</span>; i += <span class="number">2</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"t2---"</span> + i);</span><br><span class="line">            <span class="keyword">this</span>.notify();</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                wait();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>第二种，使用volatile 来保证:</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainClass</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> num = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">boolean</span> flag = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        Thread t1 = <span class="keyword">new</span> Thread()&#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;=<span class="number">100</span>;)&#123;</span><br><span class="line">                    <span class="keyword">if</span> (!flag &amp;&amp; (num == <span class="number">0</span> || ++num %<span class="number">2</span> == <span class="number">0</span>))&#123;<span class="comment">//打印偶数</span></span><br><span class="line">                        System.out.println(num);</span><br><span class="line">                        flag = <span class="keyword">true</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        Thread t2 = <span class="keyword">new</span> Thread()&#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;<span class="number">100</span>;)&#123;</span><br><span class="line">                    <span class="keyword">if</span> (flag &amp;&amp; ++num %<span class="number">2</span> != <span class="number">0</span>)&#123;<span class="comment">//打印奇数</span></span><br><span class="line">                        System.out.println(num);</span><br><span class="line">                        flag = <span class="keyword">false</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码中 num 和flag 都必须为volatile ，根据短路机制，if 语句中基本上只需要管 flag的值，所以即使 ++num 这个操作是非原子性的，也无妨。</p>
+<blockquote>
+<p>以上内容参考<a href="https://www.cnblogs.com/stateis0/p/9091254.html" target="_blank" rel="noopener">莫那.鲁道的博客</a></p>
+</blockquote>
+<h2 id="Java创建线程的三种方式"><a href="#Java创建线程的三种方式" class="headerlink" title="Java创建线程的三种方式"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/CreateThread.html" target="_blank" rel="noopener">Java创建线程的三种方式</a></h2><h2 id="Java线程池"><a href="#Java线程池" class="headerlink" title="Java线程池"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/thread-pool.html" target="_blank" rel="noopener">Java线程池</a></h2><h2 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/deadlock.html" target="_blank" rel="noopener">死锁</a></h2><h2 id="线程间通信？"><a href="#线程间通信？" class="headerlink" title="线程间通信？"></a>线程间通信？</h2><p>1、通过内存共享，共享内存中的信息是公共可见的，但是需要显式地进行同步，可以使用Synchronize 和 Lock 来进行同步。    </p>
 <p>2、基于消息模型。Android 中的Handler 就是基于消息传递模型的。</p>
-<h3 id="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"><a href="#有三个线程T1，T2，T3，怎么确保它们按顺序执行？" class="headerlink" title="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"></a>有三个线程T1，T2，T3，怎么确保它们按顺序执行？</h3>]]></content>
+<h2 id="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"><a href="#有三个线程T1，T2，T3，怎么确保它们按顺序执行？" class="headerlink" title="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"></a>有三个线程T1，T2，T3，怎么确保它们按顺序执行？</h2>]]></content>
       <categories>
         <category>面试</category>
       </categories>
