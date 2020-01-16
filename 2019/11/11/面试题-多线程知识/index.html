@@ -61,8 +61,10 @@
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="1、线程同步，你了解哪几种方式？  数据同步：可以使用Android 提供的同步容器。如： CopyOnWriteArrayList（当某个线程要修改list的元素时，首先copy一份出来，然后在修改前加锁，防止多个线程同时修改而copy多个副本，读的时候无需加锁，读的是副本）、concurrentHashMap（分段锁）、BlockingQueue（队列满了，在调用put，会阻塞，直到不再是满的">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-01-15T14:16:23.243Z">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E5%A4%9A%E7%BA%BF%E7%A8%8B&#x2F;%E7%94%9F%E4%BA%A7%E6%B6%88%E8%B4%B9%E4%B9%B1%E5%BA%8F.png">
+<meta property="og:updated_time" content="2020-01-16T14:10:23.222Z">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E5%A4%9A%E7%BA%BF%E7%A8%8B&#x2F;%E7%94%9F%E4%BA%A7%E6%B6%88%E8%B4%B9%E4%B9%B1%E5%BA%8F.png">
 
 <link rel="canonical" href="https://glassx.gitee.io/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">
 
@@ -250,7 +252,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-01-15 22:16:23" itemprop="dateModified" datetime="2020-01-15T22:16:23+08:00">2020-01-15</time>
+                <time title="修改时间：2020-01-16 22:10:23" itemprop="dateModified" datetime="2020-01-16T22:10:23+08:00">2020-01-16</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -306,15 +308,30 @@
 <li>首先，sleep 和 其他的是有本质区别的：sleep 是一个线程的运行状态控制，所以交给Thread 自己更合适；而wait 是线程之间的通讯工具，交给object更合适，这样各个竞争线程不需要知道彼此的存在。       </li>
 <li>其次，wait、notify与notifyAll 是锁级别的操作，而锁属于对象，每个对象都可能作为锁，所以它们定义在Object 类中。       </li>
 </ul>
-<blockquote>
-<p>需要注意的是，在调用对象的notify()和notifyAll()方法之前，调用线程必须已经得到该对象的锁。因此，<strong>必须在某个对象的同步方法或同步代码块中才能调用该对象的notify()或notifyAll()方法</strong>，这很好理解，如果你自己都没获得锁，就发出消息通知别人来拿锁了，这不是捣乱么。还有一点要注意的是，并不是notify 之后，在等候的线程就会马上拿到锁，而是要等前一个线程切实放弃锁之后才能获取到锁。</p>
-</blockquote>
 <p>从另一个角度来说是，假如不这样做的话，即如果wait、notify和notifyAll 都在Thread 中，会有什么问题：</p>
 <p>首先，wait 方法仍然可以使当前线程挂起，但是挂起后怎么被其他线程唤起呢？因为唤起时需要知道要唤起哪个线程。<br>其次，notify 与 notifyAll 都需要知道目前需要唤醒哪些线程。</p>
 <p>当然你可以说我们使用共享变量或者其他方式，这无疑会增加线程间通信的复杂性，并带来安全隐患，所以并没有必要。</p>
-<p><strong>为什么wait/notify 要在同步块</strong>，参考这篇：<a href="https://blog.csdn.net/belalds/article/details/89225104" target="_blank" rel="noopener">https://blog.csdn.net/belalds/article/details/89225104</a></p>
+<blockquote>
+<p>值得注意的是：必须在某个对象的同步方法或同步代码块中才能调用该对象的wait()、notify()或notifyAll()方法。原因很简单，如果这个代码块或者方法不是同步的，那么进入其中必然是不需要获取锁的，所以释放锁和等待锁就无从谈起，这时候调用的话会报 IllegalMonitorStateException。Java 给报这个错，其实就是不想让我们的程序在不经意间出现 Lost Wake-Up 问题。</p>
+</blockquote>
 <blockquote>
 <p>以上内容<a href="https://blog.csdn.net/liuzhe_2008/article/details/36901737" target="_blank" rel="noopener">参考csdn的这篇文章</a></p>
+</blockquote>
+<h2 id="延伸-深究-notify-wait-方法为什么一定要放在同步块中？"><a href="#延伸-深究-notify-wait-方法为什么一定要放在同步块中？" class="headerlink" title="延伸-深究 notify/wait 方法为什么一定要放在同步块中？"></a>延伸-深究 notify/wait 方法为什么一定要放在同步块中？</h2><p>前面谈到的是没有同步就没必要释放或者等待锁，这里深究如果不放在同步块中会出现什么问题。这主要是涉及到 <strong>“Lost Wake-Up Problem”</strong>问题。</p>
+<p>我们notify/wait 很典型的一个用途就是生产者-消费者 场景，伪代码如下：</p>
+<p>生产者：</p>
+<blockquote>
+<p>count ++;<br>notify();    </p>
+</blockquote>
+<p>消费者：</p>
+<blockquote>
+<p>while(count &lt;= 0) wait();<br>count –;    </p>
+</blockquote>
+<p>生产者和消费着都有两个步骤，如果不在同步块中的话，多线程情况下执行顺序很难保证，有可能会出现如下图所示的执行顺序：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%A4%9A%E7%BA%BF%E7%A8%8B/%E7%94%9F%E4%BA%A7%E6%B6%88%E8%B4%B9%E4%B9%B1%E5%BA%8F.png" alt="生产消费乱序"></p>
+<p>初始的时候，count == 0，消费者发现条件成立，此时，发生上下文切换，生产者线程一顿操作执行了 count ++，之后发出了通知准备唤醒一个线程，这时候消费者刚决定wait，但是还没进入wait，此时，由于消费者线程还未进入wait状态，因此在等待队列中还找不到消费者线程，这个notify就被丢掉了。</p>
+<blockquote>
+<p>以上内容<a href="https://blog.csdn.net/belalds/article/details/89225104" target="_blank" rel="noopener">参考自360linker</a>的博客</p>
 </blockquote>
 <h2 id="两个线程交替打印，一个输出偶数，一个输出奇数"><a href="#两个线程交替打印，一个输出偶数，一个输出奇数" class="headerlink" title="两个线程交替打印，一个输出偶数，一个输出奇数"></a>两个线程交替打印，一个输出偶数，一个输出奇数</h2><p>第一种，使用synchronize 关键字，锁住对象，每次只能一个线程进入。每打印一个数，就释放锁，然后挂起自己，如此往复：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainClass</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        MainClass obj = <span class="keyword">new</span> MainClass();</span><br><span class="line"></span><br><span class="line">        Thread t1 = <span class="keyword">new</span> Thread(obj::printOdds);</span><br><span class="line">        Thread t2 = <span class="keyword">new</span> Thread(obj::printEven);</span><br><span class="line"></span><br><span class="line">        t2.start();</span><br><span class="line">        t1.start();</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">printOdds</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= <span class="number">100</span>; i += <span class="number">2</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"t1---"</span> + i);</span><br><span class="line">            notify();</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                wait();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">printEven</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">100</span>; i += <span class="number">2</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"t2---"</span> + i);</span><br><span class="line">            <span class="keyword">this</span>.notify();</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                wait();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -409,7 +426,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、线程同步，你了解哪几种方式？"><span class="nav-number">1.</span> <span class="nav-text">1、线程同步，你了解哪几种方式？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？"><span class="nav-number">2.</span> <span class="nav-text">2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么wait、notify、notifyAll-方法在object-类中，而sleep-在Thread-类中？"><span class="nav-number">3.</span> <span class="nav-text">为什么wait、notify、notifyAll 方法在object 类中，而sleep 在Thread 类中？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#两个线程交替打印，一个输出偶数，一个输出奇数"><span class="nav-number">4.</span> <span class="nav-text">两个线程交替打印，一个输出偶数，一个输出奇数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Java创建线程的三种方式"><span class="nav-number">5.</span> <span class="nav-text">Java创建线程的三种方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Java线程池"><span class="nav-number">6.</span> <span class="nav-text">Java线程池</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#死锁"><span class="nav-number">7.</span> <span class="nav-text">死锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#线程间通信？"><span class="nav-number">8.</span> <span class="nav-text">线程间通信？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#有三个线程T1，T2，T3，怎么确保它们按顺序执行？"><span class="nav-number">9.</span> <span class="nav-text">有三个线程T1，T2，T3，怎么确保它们按顺序执行？</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、线程同步，你了解哪几种方式？"><span class="nav-number">1.</span> <span class="nav-text">1、线程同步，你了解哪几种方式？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？"><span class="nav-number">2.</span> <span class="nav-text">2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么wait、notify、notifyAll-方法在object-类中，而sleep-在Thread-类中？"><span class="nav-number">3.</span> <span class="nav-text">为什么wait、notify、notifyAll 方法在object 类中，而sleep 在Thread 类中？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#延伸-深究-notify-wait-方法为什么一定要放在同步块中？"><span class="nav-number">4.</span> <span class="nav-text">延伸-深究 notify/wait 方法为什么一定要放在同步块中？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#两个线程交替打印，一个输出偶数，一个输出奇数"><span class="nav-number">5.</span> <span class="nav-text">两个线程交替打印，一个输出偶数，一个输出奇数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Java创建线程的三种方式"><span class="nav-number">6.</span> <span class="nav-text">Java创建线程的三种方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Java线程池"><span class="nav-number">7.</span> <span class="nav-text">Java线程池</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#死锁"><span class="nav-number">8.</span> <span class="nav-text">死锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#线程间通信？"><span class="nav-number">9.</span> <span class="nav-text">线程间通信？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#有三个线程T1，T2，T3，怎么确保它们按顺序执行？"><span class="nav-number">10.</span> <span class="nav-text">有三个线程T1，T2，T3，怎么确保它们按顺序执行？</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -511,7 +528,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共151.4k字</span>
+  <span class="post-count">博客全站共152.3k字</span>
 </div>
 
 
