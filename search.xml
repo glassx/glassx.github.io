@@ -173,6 +173,19 @@
 <h3 id="根Activity-启动过程中涉及的进程"><a href="#根Activity-启动过程中涉及的进程" class="headerlink" title="根Activity 启动过程中涉及的进程"></a>根Activity 启动过程中涉及的进程</h3><p>根Activity 启动过程中涉及的4个进程之间关系如下：</p>
 <p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/%E6%A0%B9Activity%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%B6%89%E5%8F%8A%E7%9A%84%E8%BF%9B%E7%A8%8B%E5%85%B3%E7%B3%BB.png" alt="根Activity启动过程中涉及的进程关系"></p>
 <p>首先Launcher 进程向 AMS 请求创建根 Activity ，AMS 会判断根Activity 所需要的应用程序进程是否存在，不存在就请求 Zygote 进程创建应用程序进程；之后，AMS 请求创建根Activity。上图中步骤 2 采用Socket 通信，步骤 1 和4采用Binder 通信。</p>
+<p>读完书本，虽然各个点清晰，但是未能完整总结，<strong>以下Activity 启动流程总结参考自<a href="http://www.androidos.net.cn/book/android-road/android/advance/app-launch.html" target="_blank" rel="noopener">他人博客</a></strong></p>
+<ol>
+<li>点击桌面图标，Launcher 采用Binder IPC 方式向system_server 发起startActivity 请求。    </li>
+<li>system_server 进程接收到请求后，向 zygote 进程发送创建进程请求。    </li>
+<li>zygote 进程fork 出新进程，即App进程。    </li>
+<li>App 进程通过 Binder IPC 向 system_server 发起 attachApplication 请求。     </li>
+<li>system_server收到请求做一系列准备后，通过 Binder IPC 向App 进程发送 scheduleLauncherActivity请求。    </li>
+<li>App 进程的Binder 线程(ApplicationThread)收到请求后，通过Handler 向主线程发送 LAUNCH_ACTIVITY 消息。    </li>
+<li>主线程收到Message 后，通过反射机制创建目标Activity ，并回调Activity.onCreate 等方法。    </li>
+<li>至此，App启动，开始Activity 生命周期。</li>
+</ol>
+<p>这个过程示意图如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/Activity%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%9B%BE.png" alt="Activity启动流程图"></p>
 <h2 id="Service-启动过程"><a href="#Service-启动过程" class="headerlink" title="Service 启动过程"></a>Service 启动过程</h2><p>Service 的启动过程和根Activity 的启动过程有部分相似知识点。Service 的启动过程可以分为两个部分讲解：分别是ContextImpl 到ActivityManageService 的调用过程，以及 ActivityThread 启动 Service。</p>
 <h3 id="ContextImpl-到-AMS-的调用过程"><a href="#ContextImpl-到-AMS-的调用过程" class="headerlink" title="ContextImpl 到 AMS 的调用过程"></a>ContextImpl 到 AMS 的调用过程</h3><p>首先上时序图：</p>
 <p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/ContextImpl%E5%88%B0AMS%E7%9A%84%E8%B0%83%E7%94%A8%E8%BF%87%E7%A8%8B.png" alt="ContextImpl到AMS的调用过程"></p>
@@ -221,17 +234,6 @@
       </tags>
   </entry>
   <entry>
-    <title>面试题-设计模式</title>
-    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
-      <categories>
-        <category>面试</category>
-      </categories>
-      <tags>
-        <tag>面试题</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>面试题-虚拟机知识</title>
     <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/</url>
     <content><![CDATA[<h3 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h3><p>分为3个区域：对象头、实例数据 以及 对齐填充</p><p><strong>对象头：</strong>包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。</p><p><strong>实例数据：</strong>对象真正存储的有效信息。</p><p><strong>对齐填充：</strong>比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必需的。</p><a id="more"></a>
@@ -269,6 +271,17 @@
 </blockquote>
 <p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
 ]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>面试题-设计模式</title>
+    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
+    <content><![CDATA[<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -892,6 +905,280 @@
       </tags>
   </entry>
   <entry>
+    <title>面试题-Android基础</title>
+    <url>/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/</url>
+    <content><![CDATA[<h2 id="是否可以在子线程更新UI"><a href="#是否可以在子线程更新UI" class="headerlink" title="是否可以在子线程更新UI"></a>是否可以在子线程更新UI</h2><p>今天看到网上有人较真，说Android中，你可以在子线程更新UI，于是我写了如下测试代码：</p><figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">onCreate</span><span class="params">(savedInstanceState: <span class="type">Bundle</span>?)</span></span> &#123;</span><br><span class="line">    <span class="keyword">super</span>.onCreate(savedInstanceState)</span><br><span class="line">    setContentView(R.layout.activity_main)</span><br><span class="line">    <span class="keyword">val</span> textView = findViewById&lt;TextView&gt;(R.id.text_view)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> runnable = Runnable &#123;</span><br><span class="line">        textView.setText(<span class="string">"new text"</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Thread(runnable).start()</span><br></pre></td></tr></table></figure><a id="more"></a>
+
+
+<p>在子线程中更新EditText的文字居然成功！其实，在主线程修改UI，这属于一个“建议”而不是“标准”，因为如果在子线程定义UI的修改，无法预料到UI会被如何修改。</p>
+<p>一言以蔽之：View之所以不能在子线程做UI操作，是因为在 ViewRootImpl 里面会做线程检测，而在onCreate 的时候，ViewRootImpl 还没初始化。</p>
+<p>settext的调用流程大概会经历如下步骤：</p>
+<ul>
+<li>TextView 的 checkForRelayout() 方法     </li>
+<li>TextView 的 invalidate() 方法       </li>
+<li>View 的 invalidate() 方法      </li>
+<li>View 的 invalidateInternal() 方法      </li>
+<li>ViewGroup(ViewParent) 的 invalidateChild() 方法(不断loop取上一个节点的mParent，然后DecorView 的mParent 是 ViewRootImpl )       </li>
+<li>即一直调用到 ViewRootImpl 的 invalidateChild()       </li>
+<li>最终在 ViewRootImpl 中会 checkThread()检查线程        </li>
+</ul>
+<p>在ViewGroup 的 invalidateChild() 中，会判断 AttachInfo 是否为空，而在Activity 的 onCreate的时候，Activity 还在初始化，ImageView的mAttachInfo 是空的，所以在ViewGroup 中就直接没执行下去了，而settext 早就发生了，因此，就略过了检查线程这一阶段。</p>
+<h2 id="延伸-子线程更新UI骚操作-在子线程启动-Dialog"><a href="#延伸-子线程更新UI骚操作-在子线程启动-Dialog" class="headerlink" title="延伸-子线程更新UI骚操作-在子线程启动 Dialog"></a>延伸-子线程更新UI骚操作-在子线程启动 Dialog</h2><p>我们可以看下 ViewRootImpl 中的 构造函数 和 checkThread() 方法：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//构造函数</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ViewRootImpl</span><span class="params">(Context context, Display display)</span> </span>&#123;</span><br><span class="line">        mContext = context;</span><br><span class="line">        mWindowSession = WindowManagerGlobal.getWindowSession();</span><br><span class="line">        mDisplay = display;</span><br><span class="line">        mBasePackageName = context.getBasePackageName();</span><br><span class="line">        mThread = Thread.currentThread();</span><br><span class="line">        ...</span><br><span class="line">&#125;</span><br><span class="line">        </span><br><span class="line">        </span><br><span class="line"><span class="comment">//checkThread 方法</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">checkThread</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (mThread != Thread.currentThread()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> CalledFromWrongThreadException(</span><br><span class="line">                    <span class="string">"Only the original thread that created a view hierarchy can touch its views."</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以发现，这里并不是要求什么主线程(UI线程)，而是只要当前线程和ViewRootImpl/Window/View 的创建线程是同一个线程就ok,所以，只要在子线程中创建的View，就能在那个子线程更新UI，试试如下代码(我自己亲测可以运行)：</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> runnable = Runnable &#123;</span><br><span class="line">     Looper.prepare()</span><br><span class="line">     <span class="keyword">val</span> dialog = MyDialog(<span class="keyword">this</span><span class="symbol">@MainActivity</span>)</span><br><span class="line">     dialog.show()</span><br><span class="line">     Looper.loop()</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> Thread(runnable).start()</span><br></pre></td></tr></table></figure>
+
+<h2 id="LruCache-原理"><a href="#LruCache-原理" class="headerlink" title="LruCache 原理"></a>LruCache 原理</h2><p>LRU(Least Recently Used，最近最少使用) 缓存算法就是为缓存设计的，它的思想就是当缓存满时，会优先淘汰那些最近最少使用的缓存对象。LruCache 就是Android 基于 LRU 算法给的一个缓存类。</p>
+<p>LruCache 的核心就是维护一个缓存对象列表，其中对象按照访问顺序实现的，即一致没访问的对象，将放在队尾，首先被淘汰，最近访问的对象放在队头，最后淘汰。如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/LruCache%E6%B7%98%E6%B1%B0%E8%BF%87%E7%A8%8B.png" alt="LruCache淘汰过程"></p>
+<p>这里面的队列是由LinkedHashMap 来维护的，前面已经介绍过<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">它的实现原理</a>了，他有个构造函数是这样的：</p>
+<blockquote>
+<p>public LinkedHashMap(int initialCapacity,float loadFactor,boolean accessOrder)</p>
+</blockquote>
+<p>最后一个参数 accessOrder 用来表示LinkedHashMap 中双向链表的顺序是插入顺序还是访问顺序，举个例子：</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="meta">@JvmStatic</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">val</span> linkedHashMap = LinkedHashMap&lt;<span class="built_in">Int</span>,<span class="built_in">Int</span>&gt;(<span class="number">0</span>,<span class="number">0.75f</span>,<span class="literal">true</span>)</span><br><span class="line"></span><br><span class="line">    linkedHashMap[<span class="number">0</span>] = <span class="number">0</span></span><br><span class="line">    linkedHashMap[<span class="number">1</span>] = <span class="number">1</span></span><br><span class="line">    linkedHashMap[<span class="number">2</span>] = <span class="number">2</span></span><br><span class="line">    linkedHashMap[<span class="number">3</span>] = <span class="number">3</span></span><br><span class="line">    linkedHashMap[<span class="number">4</span>] = <span class="number">4</span></span><br><span class="line">    linkedHashMap[<span class="number">5</span>] = <span class="number">5</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> ar1 = linkedHashMap[<span class="number">1</span>]</span><br><span class="line">    <span class="keyword">val</span> ar2 = linkedHashMap[<span class="number">2</span>]</span><br><span class="line"></span><br><span class="line">    linkedHashMap.forEach &#123; (t, u) -&gt;</span><br><span class="line">        println(<span class="string">"key = <span class="variable">$t</span>,value = <span class="variable">$u</span> \n"</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果在构造LinkedHashMap 的时候，accessOrder 为false ，则会依次打印：</p>
+<blockquote>
+<p>key = 0,value = 0<br>key = 1,value = 1<br>key = 2,value = 2<br>key = 3,value = 3<br>key = 4,value = 4<br>key = 5,value = 5      </p>
+</blockquote>
+<p>如果为true，则会打印：</p>
+<blockquote>
+<p>key = 0,value = 0<br>key = 3,value = 3<br>key = 4,value = 4<br>key = 5,value = 5<br>key = 1,value = 1<br>key = 2,value = 2       </p>
+</blockquote>
+<p>这是因为为true时，会导致最近访问的最后输出，那么这就刚好满足LRU 缓存算法的思想，所以LruCache 的巧妙实现，就是利用了 LinkedHashMap 的这个功能。 所以LruCache 的构造函数为：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">LruCache</span><span class="params">(<span class="keyword">int</span> maxSize)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (maxSize &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"maxSize &lt;= 0"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">this</span>.maxSize = maxSize;</span><br><span class="line">    <span class="keyword">this</span>.map = <span class="keyword">new</span> LinkedHashMap&lt;K, V&gt;(<span class="number">0</span>, <span class="number">0.75f</span>, <span class="keyword">true</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以LruCache 后续的操作就比较好理解了：</p>
+<ul>
+<li>在put 新元素的时候，首先判断 key 和value 都不能为空，之后更新缓存大小；如果之前这个key 有值，则替换这个值，由于已经先前更新过缓存大小，此时要把老的value所占缓存大小减去。最后调整缓存大小，如果缓存大小超过阈值，则依次取出LinkedHashMap 中取出key-value 删除，直到小于阈值为止。    </li>
+<li>get 的时候，判断 key 是否为 null ，不能为 null 。get操作之后，接着把这个节点删除，再把这个节点添加(头插法，会插入到头部，这样保证顺序)。       </li>
+</ul>
+<h2 id="聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><a href="#聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？" class="headerlink" title="聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"></a>聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</h2><blockquote>
+<p>Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。<br>当然，如果在子线程中new Handler ，基本上会提示 您还未执行Looper.prepare();<br>Looper.prepare() 会判断当前 sThreadLocal.get()是否已经存在了，如果已经存在了，就会提示 “一个线程只能有一个Looper”（<strong>注意，就是在这里保证了一个线程只有一个Looper</strong>）。Looper.prepare() 只是执行了sThreadLocal.set(new Looper())，在这里给线程设置了Looper。<br>而在主线程中，ActivityThread 的main 方法中会执行 Looper.prepareMainLooper（）来设置Looper，故我们可以直接new Handler，而在子线程中要手动Looper.prepare()才行，并且还要Looper.loop()，让消息循环。<br>接下来就是 handler 的 sendMessage 和post 方法，其实两个方法都是调用 sendMessageDelay 方法，只不过post方法首先将 Runnable封装成Message，变成Message的CallBack。<br>在最终send的时候，Message会持有handler的引用，叫做target，之后，message被丢到handler所持有的MessageQueue中。<br>之后，在主线程中，Looper一直在循环，取出queue中的Message，然后执行message.target.dispatchMessage，在这个方法中，最终会调用到我们写handler时候覆写的 handleMessage 方法。至此，整个流程走完。</p>
+</blockquote>
+<h2 id="Handler-的postDelay-是怎么实现的？"><a href="#Handler-的postDelay-是怎么实现的？" class="headerlink" title="Handler 的postDelay 是怎么实现的？"></a>Handler 的postDelay 是怎么实现的？</h2><p>可能用举例子的方式容易懂一些：</p>
+<ol>
+<li>postDelay 一个10秒的 RunableA 到 MessageQueue，MessageQueue 会调用 nativePollOnce 阻塞线程。    </li>
+<li>接着post 一个 RunnableB 到 MessageQueue，由于 RunnableB 没有延时，因此when 时间比 RunableA 小，因此被插入在队头，然后调用nativeWake 方法唤醒 线程 。    </li>
+<li>唤醒后，MessageQueue.next() 方法继续执行，读取到第一个消息 RunnableB，由于没有延时，直接交给Looper。    </li>
+<li>Looper 处理完B 后，再次调用 MessageQueue.next() 方法，这时候 RunableA 还没到时间，这时候调用 nativePollOnce 阻塞。    </li>
+<li>这个状态直到阻塞时间到或者下一次有Message 进队。</li>
+</ol>
+<p>至于为什么 handler.postDelay并不是先等待一定的时间再放入到MessageQueue中，因为那样的话会需要多个定时器，增加开销。</p>
+<blockquote>
+<p>以上内容源自阅读源码以及 <a href="https://blog.csdn.net/qingtiantianqing/article/details/72783952" target="_blank" rel="noopener">网上博客</a> </p>
+</blockquote>
+<h2 id="RecyclerView-的性能优化"><a href="#RecyclerView-的性能优化" class="headerlink" title="RecyclerView 的性能优化"></a>RecyclerView 的性能优化</h2><p>有以下几种方式能做到RecyclerView的优化：</p>
+<ul>
+<li><p>数据处理与视图绑定分离。    </p>
+<blockquote>
+<p>bindViewHolder 方法是在ui线程执行的，而远端拉取数据肯定是要放在子线程的，所以我们在拉取数据之后做一些预处理后再丢给adapter，防止在 bindViewHolder 方法中再去处理时间比较、保留小数位数之类的操作。</p>
+</blockquote>
+</li>
+<li><p>布局优化    </p>
+<blockquote>
+<p>1、减少item布局层次  2、减少没必要的xml文件的inflate，可以使用new View()等方式(shape类型的xml 也一样)。</p>
+</blockquote>
+</li>
+<li><p>可能的话，为 RecyclerView 设置 setHasFixedSize(true)</p>
+<blockquote>
+<p>这个方法的主要作用就是设置高度，来避免 rv 的 measure 和 layout 操作。比如一个垂直滚动的rv，height属性设置为 wrap_content，最初的数据集只有3条，全部展示出来也不能使rv撑满，如果我们通过notifyItemRangeInserted 添加数据，那么如果你设置了 setHasFixedSize 为true的情况下，rv高度是不会改变的。体现在diamante中就是requestLayout方法的调用。</p>
+</blockquote>
+</li>
+<li><p>减少itemView的监听器创建    </p>
+<blockquote>
+<p>我们无需对每一个item 都采用匿名内部类的方式添加监听，，而应该公用一个 xxListener 对象，通过id来区分不同操作，避免频繁创建对象带来资源消耗。</p>
+</blockquote>
+</li>
+<li><p>加大RecyclerView的缓存     </p>
+<blockquote>
+<p>通过设置 setItemViewCacheSize、setDrawingCacheEnabled 以及setDrawingCacheQuality 等方法增加缓存空间，以空间换时间，提升流畅性。</p>
+</blockquote>
+</li>
+<li><p>滑动过程中停止加载    </p>
+</li>
+<li><p>使用 DiffUtil 工具    </p>
+<blockquote>
+<p>DiffUtil 工具类用来判断新数据和旧数据的差别，从而进行局部刷新，我们只需要在原来调用 mAdapter.notifiyDataSetChanged() 的地方改成下面这样：<br>DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallBack(oldDatas, newDatas), true);<br>diffResult.dispatchUpdatesTo(mAdapter);<br>最终，mAdapter 会通过调用 notifyItemRangeInserted、notifyItemRangeRemoved 等方法进行局部刷新。</p>
+</blockquote>
+</li>
+<li><p>公用RecycledViewPool    </p>
+<blockquote>
+<p>在嵌套的 rv 中，如果子 rv 具有相同的adapter ，那么可以设置 ：<br>RecyclerView.setRecycledViewPool(pool) 来公用RecycledViewPool。</p>
+</blockquote>
+</li>
+<li><p>RecyclerView数据预取    </p>
+<blockquote>
+<p>默认是开启的，跟我们没关系。具体原理是，当上一帧交给gpu之后，cpu就一直处于空闲状态，需要等待下一帧才会数据处理，所以rv做了个预判，rv会取接下来可能要显示的item，在下一帧到来之前把数据提前处理好，不过呢，这个预判是不一定准确的。</p>
+</blockquote>
+</li>
+</ul>
+<blockquote>
+<p>以上内容参考 <a href="https://www.jianshu.com/p/1d2213f303fc" target="_blank" rel="noopener">mandypig</a>、<a href="https://www.jianshu.com/p/bd432a3527d6" target="_blank" rel="noopener">编码前线</a> 以及 <a href="https://www.jianshu.com/p/aedb2842de30" target="_blank" rel="noopener">Blankj</a></p>
+</blockquote>
+<h2 id="引申-如何保存嵌套rv中的滑动装填"><a href="#引申-如何保存嵌套rv中的滑动装填" class="headerlink" title="引申-如何保存嵌套rv中的滑动装填"></a>引申-如何保存嵌套rv中的滑动装填</h2><p>比如嵌套的rv这时候左滑到第三个，这时候外层的rv滑动很长距离，当前这个嵌套的rv已经看不见了，划出好远了，如何在嵌套rv再次可见的时候，恢复当时滑到的第三个。</p>
+<p>其实 Linearlayoutmanager 中有对应的 onSaveInstanceState 和 onRestoreInstanceState 方法来处理保存和恢复机制。</p>
+<h2 id="图片加载优化"><a href="#图片加载优化" class="headerlink" title="图片加载优化"></a>图片加载优化</h2><ol>
+<li>假设通过ImageView 显示图片，很多时候ImageView 没有原始图片尺寸那么大，把整个图片加载进内存再设置给ImageView则没必要，这时候可以在加载图片时采用低采样率加载进来。    </li>
+<li>与后端配合，在url 后面接上需要的图片尺寸。(目前就是这么做)</li>
+</ol>
+<h2 id="延伸-Bitmap大小计算方法"><a href="#延伸-Bitmap大小计算方法" class="headerlink" title="延伸-Bitmap大小计算方法"></a>延伸-Bitmap大小计算方法</h2><p>//Bitmap所占用的内存空间数等于Bitmap的每一行所占用的空间数乘以Bitmap的行数<br>使用 bitmap.getRowBytes() * bitmap.getHeight();</p>
+<blockquote>
+<p>参考自<a href="https://www.cnblogs.com/yaowen/p/6351214.html" target="_blank" rel="noopener">计算Bitmap 大小</a></p>
+</blockquote>
+<h2 id="Activity生命周期"><a href="#Activity生命周期" class="headerlink" title="Activity生命周期"></a>Activity生命周期</h2><ol>
+<li>onCreate()：当 Activity 第一次创建时会被调用     </li>
+<li>onRestart()：表示Activity正在重新启动。一般情况下，当当前Activity从不可见重新变为可见状态时，onRestart就会被调用。     </li>
+<li>onStart(): Activity已经出现了，但是还没有出现在前台，无法与用户交互。这个时候可以理解为Activity已经显示出来，但是我们还看不到        </li>
+<li>onResume():表示Activity已经可见了，并且出现在前台并开始活动。需要和onStart()对比，onStart的时候Activity还在后台，onResume的时候Activity才显示到前台       </li>
+<li>onPause():表示 Activity仍可见，只是不可交互    </li>
+<li>onStop():表示Activity不可见，位于后台      </li>
+<li>onDestory():表示Activity即将销毁，这是Activity生命周期的最后一个回调，可以做一些回收工作和最终的资源回收</li>
+</ol>
+<h2 id="延伸-生命周期几种普通情况"><a href="#延伸-生命周期几种普通情况" class="headerlink" title="延伸-生命周期几种普通情况"></a>延伸-生命周期几种普通情况</h2><p><strong>从 A 页面Activity 跳转到 B 页面Activity：</strong></p>
+<p>一、 启动过程会经历：</p>
+<p><strong>A</strong>:onPause-&gt; B:onCreat-&gt; B:onStart-&gt; B:onResume-&gt; <strong>A</strong>:onStop</p>
+<p>所以我们可以得出结论：</p>
+<ul>
+<li>在A 的onPause 中不要执行耗时操作，否则会影响新打开的B，因为当前A 的 onPause 必须执行完，B 的onResume 才会执行。     </li>
+<li>等 B 的onResume 执行后，A 才完全被覆盖看不见，故，B的onResume 调用完后，A的Stop 才调用。</li>
+</ul>
+<p>二、按返回键返回到A：</p>
+<p>B:onPause-&gt; <strong>A</strong>:onRestart-&gt; <strong>A</strong>:onStart-&gt; <strong>A</strong>:onResume-&gt; B:onStop-&gt; B:onDestroy</p>
+<p>我们得出结论：</p>
+<ul>
+<li>B 首先让出交互权力</li>
+<li>A 到前台(onResume)后 ，B才退到后台，B才调用 onStop  </li>
+</ul>
+<p>三、按Home 键：     </p>
+<p>onPause -&gt; onStop，即让出交互，退到后台</p>
+<p>反之，此时再点击图标唤起：</p>
+<p>onRestart-&gt; onStart-&gt; onResume，即Activity 还在，只需要重新可见即可</p>
+<h2 id="Activity的启动模式"><a href="#Activity的启动模式" class="headerlink" title="Activity的启动模式"></a>Activity的启动模式</h2><ul>
+<li>standard：标准启动。      </li>
+<li>singleTop(栈顶复用模式)：在当前栈顶就复用，否则新建。      </li>
+<li>singleTask(栈内复用模式)：在当前栈存在有实例，如果在栈顶，直接使用；如果不在栈顶，将该实例之上的Activity全部出栈。      </li>
+<li>singleInstance(单例模式)：只要有这个实例，不管在哪个栈，都复用之；否则，在新的栈创建实例。    </li>
+</ul>
+<h2 id="Fragment-为何不推荐使用构造方法传递参数？"><a href="#Fragment-为何不推荐使用构造方法传递参数？" class="headerlink" title="Fragment 为何不推荐使用构造方法传递参数？"></a>Fragment 为何不推荐使用构造方法传递参数？</h2><p>因为activity 给fragment 传递数据时是通过 setArguments 来传递。如果采用构造方法传递，在诸如横竖屏切换的时候会调用fragment 的空的构造函数，造成数据丢失。</p>
+<h2 id="Context-理解"><a href="#Context-理解" class="headerlink" title="Context 理解"></a>Context 理解</h2><p>参考以前写的博客：<a href="https://glassx.gitee.io/2019/12/06/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/">https://glassx.gitee.io/2019/12/06/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/</a></p>
+<h2 id="Android-全局异常处理"><a href="#Android-全局异常处理" class="headerlink" title="Android 全局异常处理"></a>Android 全局异常处理</h2><p>在Application 中为 Thread 设置ExceptionHandler 即可。</p>
+<p>参考：<a href="http://www.androidos.net.cn/book/android-road/android/advance/exception.html" target="_blank" rel="noopener">全局异常处理</a></p>
+<h2 id="ANR异常发生条件？如何分析ANR？"><a href="#ANR异常发生条件？如何分析ANR？" class="headerlink" title="ANR异常发生条件？如何分析ANR？"></a>ANR异常发生条件？如何分析ANR？</h2><ul>
+<li>5s内没有响应用户输入事件</li>
+<li>10s内广播接收器没有处理完毕</li>
+<li>20s内服务没有处理完毕</li>
+</ul>
+<h2 id="谈谈你对Application类的理解"><a href="#谈谈你对Application类的理解" class="headerlink" title="谈谈你对Application类的理解"></a>谈谈你对Application类的理解</h2><p>说说对什么的理解，就是考察这个东西会不会用，重点有没有什么坑。有以下几点需要注意：</p>
+<ul>
+<li>Application 在一个虚拟机里面只有一个实例。这里不是说一个App只有一个实例，因为一个App 可能有多个进程，也就是多个虚拟机，这种情况下，每个虚拟机中都会存在一个Application 对象。      </li>
+<li>Application 本质是一个Context ，继承自 ContextWrapper。      </li>
+<li>Application 有 MultiDexApplication 子类，这个子类可以用来解决 65535 问题，完成多Dex 打包配置相关工作。       </li>
+<li>在Application 的onCreate 方法中我们会进行各种初始化，如图片加载库、log 等，但是最好别在里面进行太多耗时操作，这会影响App启动速度，可以使用异步、懒加载、延时加载等策略来减少影响。       </li>
+<li>通过Context.getApplicationContext ，不论是从Activity 中、Service中获取，都是同一个Application 对象。     </li>
+<li>在低内存情况下，Application 可能会被销毁，从而导致保存在Application 中的数据错乱，所以要注意判空或者选择其他方式保存数据。      </li>
+<li>Application 中几个有用的回调如 onLowMemory 、onTrimMemory ，在内存紧张的时候，在这些回调里面关闭数据库连接、移除图片缓存等方式来降低内存，降低被回收的风险。     </li>
+<li>Application 的生命周期和虚拟机一样长，所以单例或者静态变量的初始化一定要使用Application 的Context 进行初始化，防止内存泄漏。     </li>
+</ul>
+<blockquote>
+<p><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/01.%E8%B0%88%E8%B0%88%E4%BD%A0%E5%AF%B9Application%E7%B1%BB%E7%9A%84%E7%90%86%E8%A7%A3.md" target="_blank" rel="noopener">以上内容可以参考这个链接</a></p>
+</blockquote>
+<h2 id="Android-中进程通信方式"><a href="#Android-中进程通信方式" class="headerlink" title="Android 中进程通信方式"></a>Android 中进程通信方式</h2><p>可以翻看<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">以前的读书笔记</a></p>
+<h2 id="Binder-原理"><a href="#Binder-原理" class="headerlink" title="Binder 原理"></a>Binder 原理</h2><h3 id="为什么要使用Binder"><a href="#为什么要使用Binder" class="headerlink" title="为什么要使用Binder"></a>为什么要使用Binder</h3><ol>
+<li>性能方面；Binder 数据拷贝只需要一次，而管道、Socket 等都需要2次，共享内存不需要拷贝，但是实现方式比较复杂。    </li>
+<li>安全方面；传统的进程通信方式对于通信双方没有严格限制，而Binder 机制从协议本身就支持对通信双方做身份校验，所以大大提升安全性。</li>
+</ol>
+<h3 id="IPC-原理"><a href="#IPC-原理" class="headerlink" title="IPC 原理"></a>IPC 原理</h3><p>每个Android 进程，只能运行在自己进程所拥有的虚拟地址空间。例如，对应4G的虚拟地址空间，其中3G是用户空间，1G是内核空间，当然，内核空间大小是可以通过参数配置的。对于用户空间，进程间是不能共享的，而内核空间是可以共享的。<strong>Client 进程向Server 进程通信，恰恰是利用进程间内核空间来完成底层通信工作的。</strong></p>
+<h3 id="跨进程使用服务的流程"><a href="#跨进程使用服务的流程" class="headerlink" title="跨进程使用服务的流程"></a>跨进程使用服务的流程</h3><ol>
+<li>Client 通过Server 的代理接口，对Server 进行调用。    </li>
+<li>代理接口中定义的方法与Server 中定义的方法是一一对应的。    </li>
+<li>Client 调用某个代理中的方法时，代理会将Client 传递的参数打包成 Parcel 对象。     </li>
+<li>代理将Parcel 发送给内核中的 Binder Driver。    </li>
+<li>Server 读取Binder Driver 中的请求数据，解包 Parcel 对象，处理并返回。    </li>
+<li>整个调用过程是一个同步过程，在Server 处理的时候，Client 将会Block 住。<strong>故Client 调用过程不应该在主线程。</strong></li>
+</ol>
+<p>整个流程示意图如下所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/IPC%E4%BD%BF%E7%94%A8server%E7%9A%84%E8%BF%87%E7%A8%8B.png" alt="IPC使用server的过程"></p>
+<p>关于IPC，还可以参考<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">以前的文章</a></p>
+<blockquote>
+<p>以上内容参考自：<a href="http://www.androidos.net.cn/book/android-road/android/advance/binder.html" target="_blank" rel="noopener">进程间通信</a></p>
+</blockquote>
+<h2 id="延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><a href="#延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递" class="headerlink" title="延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"></a>延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</h2><ul>
+<li>Bundle 内部是由ArrayMap 实现的，我们知道，ArrayMap 内部实现原理是两个数组，在添加、删除、查找 数据时，都会使用二分查找法，在数据量较小的情况下，相对 HashMap 而言，在效率相差不太大的情况下，更节省内存(HashMap的Entry Array 占用更多内存，并且没用到的会导致浪费)。而我们在Android中使用Bundle 传递数据都是比较少的，因此Bundle 更有效率。    </li>
+<li>Android 中如果使用Intent 携带数据的话，需要数据基本类型或者是可序列化类型，HashMap 使用Serializeble 进行序列化，而Bundle 是实现了 Parcelable 进行序列化。在Android 平台中，更推荐使用 Parcelable 进行序列化，因为更少的 io 操作(但同时使用更加复杂)。</li>
+</ul>
+<blockquote>
+<p>以上内容参考<a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/02.Android%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E8%AE%BE%E8%AE%A1%E5%87%BABundle%E8%80%8C%E4%B8%8D%E6%98%AF%E7%9B%B4%E6%8E%A5%E4%BD%BF%E7%94%A8HashMap%E6%9D%A5%E8%BF%9B%E8%A1%8C%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92.md" target="_blank" rel="noopener">zhaokaiqiang的博客</a></p>
+</blockquote>
+<h2 id="Android中IPC通信的方式有哪些？使用场景是什么"><a href="#Android中IPC通信的方式有哪些？使用场景是什么" class="headerlink" title="Android中IPC通信的方式有哪些？使用场景是什么"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/04.Android%E4%B8%ADIPC%E9%80%9A%E4%BF%A1%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9C%89%E5%93%AA%E4%BA%9B%EF%BC%9F%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F.md" target="_blank" rel="noopener">Android中IPC通信的方式有哪些？使用场景是什么</a></h2><h2 id="SharedPreference在使用过程中有什么注意点？"><a href="#SharedPreference在使用过程中有什么注意点？" class="headerlink" title="SharedPreference在使用过程中有什么注意点？"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/09.SharedPreference%E5%9C%A8%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%9C%89%E4%BB%80%E4%B9%88%E6%B3%A8%E6%84%8F%E7%82%B9%EF%BC%9F.md" target="_blank" rel="noopener">SharedPreference在使用过程中有什么注意点？</a></h2><h2 id="Android应用启动过程，Android应用打包过程"><a href="#Android应用启动过程，Android应用打包过程" class="headerlink" title="Android应用启动过程，Android应用打包过程"></a>Android应用启动过程，Android应用打包过程</h2><h2 id="android-5-0-6-0-7-0-8-0新特性"><a href="#android-5-0-6-0-7-0-8-0新特性" class="headerlink" title="android 5.0, 6.0, 7.0, 8.0新特性"></a>android 5.0, 6.0, 7.0, 8.0新特性</h2><h2 id="常见内存泄漏场景："><a href="#常见内存泄漏场景：" class="headerlink" title="常见内存泄漏场景："></a>常见内存泄漏场景：</h2><ul>
+<li>资源性对象未关闭</li>
+</ul>
+<blockquote>
+<p>如 File、Cursor、stream等资源，他们的缓存不只存在java虚拟机内，还存在虚拟机外，仅仅把对象置为null而不关闭，就会引起内存泄漏</p>
+</blockquote>
+<ul>
+<li>单例造成的内存泄漏</li>
+</ul>
+<blockquote>
+<p>单例的静态性使得其生命周期跟app的生命周期一样长，如果使用不恰当(比如引用了非Application 的 Context)的话，很容易造成内存泄漏。</p>
+</blockquote>
+<ul>
+<li>注册对象未注销</li>
+</ul>
+<blockquote>
+<p>观察者模式的注册，在不使用的时候未注销，就会导致，如在Activity中监听电话服务，定义PhoneStateListener注册到TelphoneManager服务中，如果忘记注销，会导致Activity无法被Gc回收。</p>
+</blockquote>
+<ul>
+<li>非静态内部类创建静态实例</li>
+</ul>
+<blockquote>
+<p>首先，非静态内部类会持有外部类的引用。其次，创建的静态实例生命周期和应用的一样长。这样就导致了该静态实例一直会持有该外部类的引用，导致外部类内存资源不能正常回收。</p>
+</blockquote>
+<ul>
+<li>匿名内部类和异步线程</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainActivity</span> <span class="keyword">extends</span> <span class="title">Activity</span> </span>&#123;</span><br><span class="line"> ...</span><br><span class="line"> Runnable ref1 = <span class="keyword">new</span> MyRunable();</span><br><span class="line"> Runnable ref2 = <span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">     <span class="meta">@Override</span></span><br><span class="line">     <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">     &#125;</span><br><span class="line"> &#125;;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码中，ref2的内部类会持有MainActivity 的实例，此时引入一个异步线程，如果此线程与MainActivity 生命周期不一致，就造成MainActivity 泄漏。</p>
+<ul>
+<li>Handler造成的内存泄漏。</li>
+</ul>
+<blockquote>
+<p>非静态Handler默认持有外部Activity的引用，退出Activity时，如果Looper中还有Message，就会导致Activity无法回收，可以（1）将Handler设置为静态，并且弱引用持有的对象 （2）Activity 的onDestroy的时候，一处消息队列的消息 来解决内存泄漏。</p>
+</blockquote>
+<ul>
+<li>容器中的对象没有清理</li>
+</ul>
+<blockquote>
+<p>容器里的对象在不需要的时候，要及时移除，使其正确及时地被回收。</p>
+</blockquote>
+<blockquote>
+<p>以上内容参考自：<a href="https://yq.aliyun.com/articles/3009?spm=a2c4e.11153940.blogcont70277.24.6387f9c9hDGhAk#" target="_blank" rel="noopener">内存泄漏场景</a></p>
+</blockquote>
+<h2 id="延伸-内存泄露检测工具"><a href="#延伸-内存泄露检测工具" class="headerlink" title="延伸-内存泄露检测工具"></a>延伸-内存泄露检测工具</h2><p>项目中使用 LeakCanary 。它的原理：</p>
+<ol>
+<li>通过registerActivityLifecycleCallbacks 来监听 Activity 的生命周期。    </li>
+<li>lifecycleCallbacks 监听Activity 的 onDestroy 方法，正常情况下执行了onDestroy 后资源立即回收。    </li>
+<li>监察机制利用了 WeakReference 和 ReferenceQueue ，使用 WeakReference 对Activity 进行虚引用，在Activity回收的时候，就会将该WeakReference 引用放到 ReferenceQueue 中。     </li>
+<li>在onDestroy 之后，等待一段时间，再通过监测 ReferenceQueue 里面的内容就能检查Activity 是否被正确回收。    </li>
+<li>如果Activity 没有被回收，就手动 GC 一次，等待若干时间，之后再次判断Activity 是否被回收，若未被回收，说明 Activity 已经泄露。    </li>
+<li>如果Activity 泄露了，则抓取 dump 信息显示出来。</li>
+</ol>
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/261e70f3083f" target="_blank" rel="noopener">JasmineBen的博客</a></p>
+</blockquote>
+<h2 id="anr检测工具"><a href="#anr检测工具" class="headerlink" title="[,anr检测工具]"></a>[,anr检测工具]</h2><h2 id="轮播图实现原理？"><a href="#轮播图实现原理？" class="headerlink" title="轮播图实现原理？"></a>轮播图实现原理？</h2><h2 id="Intent、Bundle-内部如何实现传递"><a href="#Intent、Bundle-内部如何实现传递" class="headerlink" title="Intent、Bundle 内部如何实现传递"></a>Intent、Bundle 内部如何实现传递</h2><h2 id="安全方面做过什么？"><a href="#安全方面做过什么？" class="headerlink" title="安全方面做过什么？"></a>安全方面做过什么？</h2><h2 id="大图加载做过么，描述思路。"><a href="#大图加载做过么，描述思路。" class="headerlink" title="大图加载做过么，描述思路。"></a>大图加载做过么，描述思路。</h2><h2 id="Android应用程序启动过程"><a href="#Android应用程序启动过程" class="headerlink" title="Android应用程序启动过程"></a>Android应用程序启动过程</h2><p>参考老罗的文章<a href="https://blog.csdn.net/luoshengyang/article/details/6689748" target="_blank" rel="noopener">https://blog.csdn.net/luoshengyang/article/details/6689748</a></p>
+<h2 id="Handler-消息转递机制，为什么-Loop-一直在死循环而-UI-界面不会卡死？"><a href="#Handler-消息转递机制，为什么-Loop-一直在死循环而-UI-界面不会卡死？" class="headerlink" title="Handler 消息转递机制，为什么 Loop 一直在死循环而 UI 界面不会卡死？"></a>Handler 消息转递机制，为什么 Loop 一直在死循环而 UI 界面不会卡死？</h2>]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>面试题-Java基础</title>
     <url>/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/</url>
     <content><![CDATA[<h2 id="Java集合"><a href="#Java集合" class="headerlink" title="Java集合"></a>Java集合</h2><h3 id="ArrayList-与-LinkedList的区别"><a href="#ArrayList-与-LinkedList的区别" class="headerlink" title="ArrayList 与 LinkedList的区别"></a>ArrayList 与 LinkedList的区别</h3><p>ArrayList的特点：</p><ul>
@@ -1171,203 +1458,6 @@
 <p>以上内容参考自：<a href="https://www.cnblogs.com/lanxuezaipiao/p/3371224.html" target="_blank" rel="noopener">程序媛想事</a>、<a href="https://blog.csdn.net/qq_35109096/article/details/81105320" target="_blank" rel="noopener">RavenXRZ</a></p>
 </blockquote>
 <h3 id="静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？"><a href="#静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？" class="headerlink" title="静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？"></a>静态属性和静态方法是否可以被继承？是否可以被重写？以及原因？</h3><h3 id="成员内部类、静态内部类、局部内部类和匿名内部类的理解"><a href="#成员内部类、静态内部类、局部内部类和匿名内部类的理解" class="headerlink" title="成员内部类、静态内部类、局部内部类和匿名内部类的理解"></a>成员内部类、静态内部类、局部内部类和匿名内部类的理解</h3><h3 id="String为什么要设计成不可变的"><a href="#String为什么要设计成不可变的" class="headerlink" title="String为什么要设计成不可变的"></a>String为什么要设计成不可变的</h3>]]></content>
-      <categories>
-        <category>面试</category>
-      </categories>
-      <tags>
-        <tag>面试题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>面试题-Android基础</title>
-    <url>/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/</url>
-    <content><![CDATA[<h2 id="是否可以在子线程更新UI"><a href="#是否可以在子线程更新UI" class="headerlink" title="是否可以在子线程更新UI"></a>是否可以在子线程更新UI</h2><p>今天看到网上有人较真，说Android中，你可以在子线程更新UI，于是我写了如下测试代码：</p><figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">onCreate</span><span class="params">(savedInstanceState: <span class="type">Bundle</span>?)</span></span> &#123;</span><br><span class="line">    <span class="keyword">super</span>.onCreate(savedInstanceState)</span><br><span class="line">    setContentView(R.layout.activity_main)</span><br><span class="line">    <span class="keyword">val</span> textView = findViewById&lt;TextView&gt;(R.id.text_view)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> runnable = Runnable &#123;</span><br><span class="line">        textView.setText(<span class="string">"new text"</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Thread(runnable).start()</span><br></pre></td></tr></table></figure><a id="more"></a>
-
-
-<p>在子线程中更新EditText的文字居然成功！其实，在主线程修改UI，这属于一个“建议”而不是“标准”，因为如果在子线程定义UI的修改，无法预料到UI会被如何修改。</p>
-<p>一言以蔽之：View之所以不能在子线程做UI操作，是因为在 ViewRootImpl 里面会做线程检测，而在onCreate 的时候，ViewRootImpl 还没初始化。</p>
-<p>settext的调用流程大概会经历如下步骤：</p>
-<ul>
-<li>TextView 的 checkForRelayout() 方法     </li>
-<li>TextView 的 invalidate() 方法       </li>
-<li>View 的 invalidate() 方法      </li>
-<li>View 的 invalidateInternal() 方法      </li>
-<li>ViewGroup(ViewParent) 的 invalidateChild() 方法(不断loop取上一个节点的mParent，然后DecorView 的mParent 是 ViewRootImpl )       </li>
-<li>即一直调用到 ViewRootImpl 的 invalidateChild()       </li>
-<li>最终在 ViewRootImpl 中会 checkThread()检查线程        </li>
-</ul>
-<p>在ViewGroup 的 invalidateChild() 中，会判断 AttachInfo 是否为空，而在Activity 的 onCreate的时候，Activity 还在初始化，ImageView的mAttachInfo 是空的，所以在ViewGroup 中就直接没执行下去了，而settext 早就发生了，因此，就略过了检查线程这一阶段。</p>
-<h2 id="延伸-子线程更新UI骚操作-在子线程启动-Dialog"><a href="#延伸-子线程更新UI骚操作-在子线程启动-Dialog" class="headerlink" title="延伸-子线程更新UI骚操作-在子线程启动 Dialog"></a>延伸-子线程更新UI骚操作-在子线程启动 Dialog</h2><p>我们可以看下 ViewRootImpl 中的 构造函数 和 checkThread() 方法：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//构造函数</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ViewRootImpl</span><span class="params">(Context context, Display display)</span> </span>&#123;</span><br><span class="line">        mContext = context;</span><br><span class="line">        mWindowSession = WindowManagerGlobal.getWindowSession();</span><br><span class="line">        mDisplay = display;</span><br><span class="line">        mBasePackageName = context.getBasePackageName();</span><br><span class="line">        mThread = Thread.currentThread();</span><br><span class="line">        ...</span><br><span class="line">&#125;</span><br><span class="line">        </span><br><span class="line">        </span><br><span class="line"><span class="comment">//checkThread 方法</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">checkThread</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (mThread != Thread.currentThread()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> CalledFromWrongThreadException(</span><br><span class="line">                    <span class="string">"Only the original thread that created a view hierarchy can touch its views."</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-
-<p>可以发现，这里并不是要求什么主线程(UI线程)，而是只要当前线程和ViewRootImpl/Window/View 的创建线程是同一个线程就ok,所以，只要在子线程中创建的View，就能在那个子线程更新UI，试试如下代码(我自己亲测可以运行)：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> runnable = Runnable &#123;</span><br><span class="line">     Looper.prepare()</span><br><span class="line">     <span class="keyword">val</span> dialog = MyDialog(<span class="keyword">this</span><span class="symbol">@MainActivity</span>)</span><br><span class="line">     dialog.show()</span><br><span class="line">     Looper.loop()</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> Thread(runnable).start()</span><br></pre></td></tr></table></figure>
-
-<h2 id="LruCache-原理"><a href="#LruCache-原理" class="headerlink" title="LruCache 原理"></a>LruCache 原理</h2><p>LRU(Least Recently Used，最近最少使用) 缓存算法就是为缓存设计的，它的思想就是当缓存满时，会优先淘汰那些最近最少使用的缓存对象。LruCache 就是Android 基于 LRU 算法给的一个缓存类。</p>
-<p>LruCache 的核心就是维护一个缓存对象列表，其中对象按照访问顺序实现的，即一致没访问的对象，将放在队尾，首先被淘汰，最近访问的对象放在队头，最后淘汰。如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/LruCache%E6%B7%98%E6%B1%B0%E8%BF%87%E7%A8%8B.png" alt="LruCache淘汰过程"></p>
-<p>这里面的队列是由LinkedHashMap 来维护的，前面已经介绍过<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">它的实现原理</a>了，他有个构造函数是这样的：</p>
-<blockquote>
-<p>public LinkedHashMap(int initialCapacity,float loadFactor,boolean accessOrder)</p>
-</blockquote>
-<p>最后一个参数 accessOrder 用来表示LinkedHashMap 中双向链表的顺序是插入顺序还是访问顺序，举个例子：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="meta">@JvmStatic</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">val</span> linkedHashMap = LinkedHashMap&lt;<span class="built_in">Int</span>,<span class="built_in">Int</span>&gt;(<span class="number">0</span>,<span class="number">0.75f</span>,<span class="literal">true</span>)</span><br><span class="line"></span><br><span class="line">    linkedHashMap[<span class="number">0</span>] = <span class="number">0</span></span><br><span class="line">    linkedHashMap[<span class="number">1</span>] = <span class="number">1</span></span><br><span class="line">    linkedHashMap[<span class="number">2</span>] = <span class="number">2</span></span><br><span class="line">    linkedHashMap[<span class="number">3</span>] = <span class="number">3</span></span><br><span class="line">    linkedHashMap[<span class="number">4</span>] = <span class="number">4</span></span><br><span class="line">    linkedHashMap[<span class="number">5</span>] = <span class="number">5</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> ar1 = linkedHashMap[<span class="number">1</span>]</span><br><span class="line">    <span class="keyword">val</span> ar2 = linkedHashMap[<span class="number">2</span>]</span><br><span class="line"></span><br><span class="line">    linkedHashMap.forEach &#123; (t, u) -&gt;</span><br><span class="line">        println(<span class="string">"key = <span class="variable">$t</span>,value = <span class="variable">$u</span> \n"</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果在构造LinkedHashMap 的时候，accessOrder 为false ，则会依次打印：</p>
-<blockquote>
-<p>key = 0,value = 0<br>key = 1,value = 1<br>key = 2,value = 2<br>key = 3,value = 3<br>key = 4,value = 4<br>key = 5,value = 5      </p>
-</blockquote>
-<p>如果为true，则会打印：</p>
-<blockquote>
-<p>key = 0,value = 0<br>key = 3,value = 3<br>key = 4,value = 4<br>key = 5,value = 5<br>key = 1,value = 1<br>key = 2,value = 2       </p>
-</blockquote>
-<p>这是因为为true时，会导致最近访问的最后输出，那么这就刚好满足LRU 缓存算法的思想，所以LruCache 的巧妙实现，就是利用了 LinkedHashMap 的这个功能。 所以LruCache 的构造函数为：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">LruCache</span><span class="params">(<span class="keyword">int</span> maxSize)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (maxSize &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"maxSize &lt;= 0"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">this</span>.maxSize = maxSize;</span><br><span class="line">    <span class="keyword">this</span>.map = <span class="keyword">new</span> LinkedHashMap&lt;K, V&gt;(<span class="number">0</span>, <span class="number">0.75f</span>, <span class="keyword">true</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>所以LruCache 后续的操作就比较好理解了：</p>
-<ul>
-<li>在put 新元素的时候，首先判断 key 和value 都不能为空，之后更新缓存大小；如果之前这个key 有值，则替换这个值，由于已经先前更新过缓存大小，此时要把老的value所占缓存大小减去。最后调整缓存大小，如果缓存大小超过阈值，则依次取出LinkedHashMap 中取出key-value 删除，直到小于阈值为止。    </li>
-<li>get 的时候，判断 key 是否为 null ，不能为 null 。get操作之后，接着把这个节点删除，再把这个节点添加(头插法，会插入到头部，这样保证顺序)。       </li>
-</ul>
-<h2 id="聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><a href="#聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？" class="headerlink" title="聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"></a>聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</h2><blockquote>
-<p>Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。<br>当然，如果在子线程中new Handler ，基本上会提示 您还未执行Looper.prepare();<br>Looper.prepare() 会判断当前 sThreadLocal.get()是否已经存在了，如果已经存在了，就会提示 “一个线程只能有一个Looper”（<strong>注意，就是在这里保证了一个线程只有一个Looper</strong>）。Looper.prepare() 只是执行了sThreadLocal.set(new Looper())，在这里给线程设置了Looper。<br>而在主线程中，ActivityThread 的main 方法中会执行 Looper.prepareMainLooper（）来设置Looper，故我们可以直接new Handler，而在子线程中要手动Looper.prepare()才行，并且还要Looper.loop()，让消息循环。<br>接下来就是 handler 的 sendMessage 和post 方法，其实两个方法都是调用 sendMessageDelay 方法，只不过post方法首先将 Runnable封装成Message，变成Message的CallBack。<br>在最终send的时候，Message会持有handler的引用，叫做target，之后，message被丢到handler所持有的MessageQueue中。<br>之后，在主线程中，Looper一直在循环，取出queue中的Message，然后执行message.target.dispatchMessage，在这个方法中，最终会调用到我们写handler时候覆写的 handleMessage 方法。至此，整个流程走完。</p>
-</blockquote>
-<h2 id="Handler-的postDelay-是怎么实现的？"><a href="#Handler-的postDelay-是怎么实现的？" class="headerlink" title="Handler 的postDelay 是怎么实现的？"></a>Handler 的postDelay 是怎么实现的？</h2><p>可能用举例子的方式容易懂一些：</p>
-<ol>
-<li>postDelay 一个10秒的 RunableA 到 MessageQueue，MessageQueue 会调用 nativePollOnce 阻塞线程。    </li>
-<li>接着post 一个 RunnableB 到 MessageQueue，由于 RunnableB 没有延时，因此when 时间比 RunableA 小，因此被插入在队头，然后调用nativeWake 方法唤醒 线程 。    </li>
-<li>唤醒后，MessageQueue.next() 方法继续执行，读取到第一个消息 RunnableB，由于没有延时，直接交给Looper。    </li>
-<li>Looper 处理完B 后，再次调用 MessageQueue.next() 方法，这时候 RunableA 还没到时间，这时候调用 nativePollOnce 阻塞。    </li>
-<li>这个状态直到阻塞时间到或者下一次有Message 进队。</li>
-</ol>
-<p>至于为什么 handler.postDelay并不是先等待一定的时间再放入到MessageQueue中，因为那样的话会需要多个定时器，增加开销。</p>
-<blockquote>
-<p>以上内容源自阅读源码以及 <a href="https://blog.csdn.net/qingtiantianqing/article/details/72783952" target="_blank" rel="noopener">网上博客</a> </p>
-</blockquote>
-<h2 id="RecyclerView-的性能优化"><a href="#RecyclerView-的性能优化" class="headerlink" title="RecyclerView 的性能优化"></a>RecyclerView 的性能优化</h2><p>有以下几种方式能做到RecyclerView的优化：</p>
-<ul>
-<li><p>数据处理与视图绑定分离。    </p>
-<blockquote>
-<p>bindViewHolder 方法是在ui线程执行的，而远端拉取数据肯定是要放在子线程的，所以我们在拉取数据之后做一些预处理后再丢给adapter，防止在 bindViewHolder 方法中再去处理时间比较、保留小数位数之类的操作。</p>
-</blockquote>
-</li>
-<li><p>布局优化    </p>
-<blockquote>
-<p>1、减少item布局层次  2、减少没必要的xml文件的inflate，可以使用new View()等方式(shape类型的xml 也一样)。</p>
-</blockquote>
-</li>
-<li><p>可能的话，为 RecyclerView 设置 setHasFixedSize(true)</p>
-<blockquote>
-<p>这个方法的主要作用就是设置高度，来避免 rv 的 measure 和 layout 操作。比如一个垂直滚动的rv，height属性设置为 wrap_content，最初的数据集只有3条，全部展示出来也不能使rv撑满，如果我们通过notifyItemRangeInserted 添加数据，那么如果你设置了 setHasFixedSize 为true的情况下，rv高度是不会改变的。体现在diamante中就是requestLayout方法的调用。</p>
-</blockquote>
-</li>
-<li><p>减少itemView的监听器创建    </p>
-<blockquote>
-<p>我们无需对每一个item 都采用匿名内部类的方式添加监听，，而应该公用一个 xxListener 对象，通过id来区分不同操作，避免频繁创建对象带来资源消耗。</p>
-</blockquote>
-</li>
-<li><p>加大RecyclerView的缓存     </p>
-<blockquote>
-<p>通过设置 setItemViewCacheSize、setDrawingCacheEnabled 以及setDrawingCacheQuality 等方法增加缓存空间，以空间换时间，提升流畅性。</p>
-</blockquote>
-</li>
-<li><p>滑动过程中停止加载    </p>
-</li>
-<li><p>使用 DiffUtil 工具    </p>
-<blockquote>
-<p>DiffUtil 工具类用来判断新数据和旧数据的差别，从而进行局部刷新，我们只需要在原来调用 mAdapter.notifiyDataSetChanged() 的地方改成下面这样：<br>DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallBack(oldDatas, newDatas), true);<br>diffResult.dispatchUpdatesTo(mAdapter);<br>最终，mAdapter 会通过调用 notifyItemRangeInserted、notifyItemRangeRemoved 等方法进行局部刷新。</p>
-</blockquote>
-</li>
-<li><p>公用RecycledViewPool    </p>
-<blockquote>
-<p>在嵌套的 rv 中，如果子 rv 具有相同的adapter ，那么可以设置 ：<br>RecyclerView.setRecycledViewPool(pool) 来公用RecycledViewPool。</p>
-</blockquote>
-</li>
-<li><p>RecyclerView数据预取    </p>
-<blockquote>
-<p>默认是开启的，跟我们没关系。具体原理是，当上一帧交给gpu之后，cpu就一直处于空闲状态，需要等待下一帧才会数据处理，所以rv做了个预判，rv会取接下来可能要显示的item，在下一帧到来之前把数据提前处理好，不过呢，这个预判是不一定准确的。</p>
-</blockquote>
-</li>
-</ul>
-<blockquote>
-<p>以上内容参考 <a href="https://www.jianshu.com/p/1d2213f303fc" target="_blank" rel="noopener">mandypig</a>、<a href="https://www.jianshu.com/p/bd432a3527d6" target="_blank" rel="noopener">编码前线</a> 以及 <a href="https://www.jianshu.com/p/aedb2842de30" target="_blank" rel="noopener">Blankj</a></p>
-</blockquote>
-<h2 id="引申-如何保存嵌套rv中的滑动装填"><a href="#引申-如何保存嵌套rv中的滑动装填" class="headerlink" title="引申-如何保存嵌套rv中的滑动装填"></a>引申-如何保存嵌套rv中的滑动装填</h2><p>比如嵌套的rv这时候左滑到第三个，这时候外层的rv滑动很长距离，当前这个嵌套的rv已经看不见了，划出好远了，如何在嵌套rv再次可见的时候，恢复当时滑到的第三个。</p>
-<p>其实 Linearlayoutmanager 中有对应的 onSaveInstanceState 和 onRestoreInstanceState 方法来处理保存和恢复机制。</p>
-<h2 id="图片加载优化"><a href="#图片加载优化" class="headerlink" title="图片加载优化"></a>图片加载优化</h2><ol>
-<li>假设通过ImageView 显示图片，很多时候ImageView 没有原始图片尺寸那么大，把整个图片加载进内存再设置给ImageView则没必要，这时候可以在加载图片时采用低采样率加载进来。    </li>
-<li>与后端配合，在url 后面接上需要的图片尺寸。(目前就是这么做)</li>
-</ol>
-<h2 id="延伸-Bitmap大小计算方法"><a href="#延伸-Bitmap大小计算方法" class="headerlink" title="延伸-Bitmap大小计算方法"></a>延伸-Bitmap大小计算方法</h2><p>//Bitmap所占用的内存空间数等于Bitmap的每一行所占用的空间数乘以Bitmap的行数<br>使用 bitmap.getRowBytes() * bitmap.getHeight();</p>
-<blockquote>
-<p>参考自<a href="https://www.cnblogs.com/yaowen/p/6351214.html" target="_blank" rel="noopener">计算Bitmap 大小</a></p>
-</blockquote>
-<h2 id="Activity生命周期"><a href="#Activity生命周期" class="headerlink" title="Activity生命周期"></a>Activity生命周期</h2><ol>
-<li>onCreate()：当 Activity 第一次创建时会被调用     </li>
-<li>onRestart()：表示Activity正在重新启动。一般情况下，当当前Activity从不可见重新变为可见状态时，onRestart就会被调用。     </li>
-<li>onStart(): Activity已经出现了，但是还没有出现在前台，无法与用户交互。这个时候可以理解为Activity已经显示出来，但是我们还看不到        </li>
-<li>onResume():表示Activity已经可见了，并且出现在前台并开始活动。需要和onStart()对比，onStart的时候Activity还在后台，onResume的时候Activity才显示到前台       </li>
-<li>onPause():表示 Activity仍可见，只是不可交互    </li>
-<li>onStop():表示Activity不可见，位于后台      </li>
-<li>onDestory():表示Activity即将销毁，这是Activity生命周期的最后一个回调，可以做一些回收工作和最终的资源回收</li>
-</ol>
-<h2 id="延伸-生命周期几种普通情况"><a href="#延伸-生命周期几种普通情况" class="headerlink" title="延伸-生命周期几种普通情况"></a>延伸-生命周期几种普通情况</h2><p><strong>从 A 页面Activity 跳转到 B 页面Activity：</strong></p>
-<p>一、 启动过程会经历：</p>
-<p><strong>A</strong>:onPause-&gt; B:onCreat-&gt; B:onStart-&gt; B:onResume-&gt; <strong>A</strong>:onStop</p>
-<p>所以我们可以得出结论：</p>
-<ul>
-<li>在A 的onPause 中不要执行耗时操作，否则会影响新打开的B，因为当前A 的 onPause 必须执行完，B 的onResume 才会执行。     </li>
-<li>等 B 的onResume 执行后，A 才完全被覆盖看不见，故，B的onResume 调用完后，A的Stop 才调用。</li>
-</ul>
-<p>二、按返回键返回到A：</p>
-<p>B:onPause-&gt; <strong>A</strong>:onRestart-&gt; <strong>A</strong>:onStart-&gt; <strong>A</strong>:onResume-&gt; B:onStop-&gt; B:onDestroy</p>
-<p>我们得出结论：</p>
-<ul>
-<li>B 首先让出交互权力</li>
-<li>A 到前台(onResume)后 ，B才退到后台，B才调用 onStop  </li>
-</ul>
-<p>三、按Home 键：     </p>
-<p>onPause -&gt; onStop，即让出交互，退到后台</p>
-<p>反之，此时再点击图标唤起：</p>
-<p>onRestart-&gt; onStart-&gt; onResume，即Activity 还在，只需要重新可见即可</p>
-<h2 id="Activity的启动模式"><a href="#Activity的启动模式" class="headerlink" title="Activity的启动模式"></a>Activity的启动模式</h2><ul>
-<li>standard：标准启动。      </li>
-<li>singleTop(栈顶复用模式)：在当前栈顶就复用，否则新建。      </li>
-<li>singleTask(栈内复用模式)：在当前栈存在有实例，如果在栈顶，直接使用；如果不在栈顶，将该实例之上的Activity全部出栈。      </li>
-<li>singleInstance(单例模式)：只要有这个实例，不管在哪个栈，都复用之；否则，在新的栈创建实例。    </li>
-</ul>
-<h2 id="Fragment-为何不推荐使用构造方法传递参数？"><a href="#Fragment-为何不推荐使用构造方法传递参数？" class="headerlink" title="Fragment 为何不推荐使用构造方法传递参数？"></a>Fragment 为何不推荐使用构造方法传递参数？</h2><p>因为activity 给fragment 传递数据时是通过 setArguments 来传递。如果采用构造方法传递，在诸如横竖屏切换的时候会调用fragment 的空的构造函数，造成数据丢失。</p>
-<h2 id="Context-理解"><a href="#Context-理解" class="headerlink" title="Context 理解"></a>Context 理解</h2><p>参考以前写的博客：<a href="https://glassx.gitee.io/2019/12/06/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/">https://glassx.gitee.io/2019/12/06/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/</a></p>
-<h2 id="Android-全局异常处理"><a href="#Android-全局异常处理" class="headerlink" title="Android 全局异常处理"></a>Android 全局异常处理</h2><p>在Application 中为 Thread 设置ExceptionHandler 即可。</p>
-<p>参考：<a href="http://www.androidos.net.cn/book/android-road/android/advance/exception.html" target="_blank" rel="noopener">全局异常处理</a></p>
-<h2 id="ANR异常发生条件？如何分析ANR？"><a href="#ANR异常发生条件？如何分析ANR？" class="headerlink" title="ANR异常发生条件？如何分析ANR？"></a>ANR异常发生条件？如何分析ANR？</h2><ul>
-<li>5s内没有响应用户输入事件</li>
-<li>10s内广播接收器没有处理完毕</li>
-<li>20s内服务没有处理完毕</li>
-</ul>
-<h2 id="谈谈你对Application类的理解"><a href="#谈谈你对Application类的理解" class="headerlink" title="谈谈你对Application类的理解"></a>谈谈你对Application类的理解</h2><p>说说对什么的理解，就是考察这个东西会不会用，重点有没有什么坑。有以下几点需要注意：</p>
-<ul>
-<li>Application 在一个虚拟机里面只有一个实例。这里不是说一个App只有一个实例，因为一个App 可能有多个进程，也就是多个虚拟机，这种情况下，每个虚拟机中都会存在一个Application 对象。      </li>
-<li>Application 本质是一个Context ，继承自 ContextWrapper。      </li>
-<li>Application 有 MultiDexApplication 子类，这个子类可以用来解决 65535 问题，完成多Dex 打包配置相关工作。       </li>
-<li>在Application 的onCreate 方法中我们会进行各种初始化，如图片加载库、log 等，但是最好别在里面进行太多耗时操作，这会影响App启动速度，可以使用异步、懒加载、延时加载等策略来减少影响。       </li>
-<li>通过Context.getApplicationContext ，不论是从Activity 中、Service中获取，都是同一个Application 对象。     </li>
-<li>在低内存情况下，Application 可能会被销毁，从而导致保存在Application 中的数据错乱，所以要注意判空或者选择其他方式保存数据。      </li>
-<li>Application 中几个有用的回调如 onLowMemory 、onTrimMemory ，在内存紧张的时候，在这些回调里面关闭数据库连接、移除图片缓存等方式来降低内存，降低被回收的风险。     </li>
-<li>Application 的生命周期和虚拟机一样长，所以单例或者静态变量的初始化一定要使用Application 的Context 进行初始化，防止内存泄漏。     </li>
-</ul>
-<blockquote>
-<p><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/01.%E8%B0%88%E8%B0%88%E4%BD%A0%E5%AF%B9Application%E7%B1%BB%E7%9A%84%E7%90%86%E8%A7%A3.md" target="_blank" rel="noopener">以上内容可以参考这个链接</a></p>
-</blockquote>
-<h2 id="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><a href="#Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递" class="headerlink" title="Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"></a>Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</h2><ul>
-<li>Bundle 内部是由ArrayMap 实现的，我们知道，ArrayMap 内部实现原理是两个数组，在添加、删除、查找 数据时，都会使用二分查找法，在数据量较小的情况下，相对 HashMap 而言，在效率相差不太大的情况下，更节省内存(HashMap的Entry Array 占用更多内存，并且没用到的会导致浪费)。而我们在Android中使用Bundle 传递数据都是比较少的，因此Bundle 更有效率。    </li>
-<li>Android 中如果使用Intent 携带数据的话，需要数据基本类型或者是可序列化类型，HashMap 使用Serializeble 进行序列化，而Bundle 是实现了 Parcelable 进行序列化。在Android 平台中，更推荐使用 Parcelable 进行序列化，因为更少的 io 操作(但同时使用更加复杂)。</li>
-</ul>
-<blockquote>
-<p>以上内容参考<a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/02.Android%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E8%AE%BE%E8%AE%A1%E5%87%BABundle%E8%80%8C%E4%B8%8D%E6%98%AF%E7%9B%B4%E6%8E%A5%E4%BD%BF%E7%94%A8HashMap%E6%9D%A5%E8%BF%9B%E8%A1%8C%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92.md" target="_blank" rel="noopener">zhaokaiqiang的博客</a></p>
-</blockquote>
-<h2 id="Android中IPC通信的方式有哪些？使用场景是什么"><a href="#Android中IPC通信的方式有哪些？使用场景是什么" class="headerlink" title="Android中IPC通信的方式有哪些？使用场景是什么"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/04.Android%E4%B8%ADIPC%E9%80%9A%E4%BF%A1%E7%9A%84%E6%96%B9%E5%BC%8F%E6%9C%89%E5%93%AA%E4%BA%9B%EF%BC%9F%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F.md" target="_blank" rel="noopener">Android中IPC通信的方式有哪些？使用场景是什么</a></h2><h2 id="SharedPreference在使用过程中有什么注意点？"><a href="#SharedPreference在使用过程中有什么注意点？" class="headerlink" title="SharedPreference在使用过程中有什么注意点？"></a><a href="https://github.com/ZhaoKaiQiang/AndroidDifficultAnalysis/blob/master/09.SharedPreference%E5%9C%A8%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%9C%89%E4%BB%80%E4%B9%88%E6%B3%A8%E6%84%8F%E7%82%B9%EF%BC%9F.md" target="_blank" rel="noopener">SharedPreference在使用过程中有什么注意点？</a></h2><h2 id="内存泄露检测工具-anr检测工具"><a href="#内存泄露检测工具-anr检测工具" class="headerlink" title="[内存泄露检测工具,anr检测工具]"></a>[内存泄露检测工具,anr检测工具]</h2><h2 id="Android应用启动过程，Android应用打包过程"><a href="#Android应用启动过程，Android应用打包过程" class="headerlink" title="Android应用启动过程，Android应用打包过程"></a>Android应用启动过程，Android应用打包过程</h2><h2 id="android-5-0-6-0-7-0-8-0新特性"><a href="#android-5-0-6-0-7-0-8-0新特性" class="headerlink" title="android 5.0, 6.0, 7.0, 8.0新特性"></a>android 5.0, 6.0, 7.0, 8.0新特性</h2><h2 id="内存泄漏场景"><a href="#内存泄漏场景" class="headerlink" title="内存泄漏场景"></a><a href="https://yq.aliyun.com/articles/3009?spm=a2c4e.11153940.blogcont70277.24.6387f9c9hDGhAk#" target="_blank" rel="noopener">内存泄漏场景</a></h2><h2 id="图片优化怎么做的？"><a href="#图片优化怎么做的？" class="headerlink" title="图片优化怎么做的？"></a>图片优化怎么做的？</h2><h2 id="性能优化，具体做了哪儿些操作？"><a href="#性能优化，具体做了哪儿些操作？" class="headerlink" title="性能优化，具体做了哪儿些操作？"></a>性能优化，具体做了哪儿些操作？</h2><h2 id="轮播图实现原理？"><a href="#轮播图实现原理？" class="headerlink" title="轮播图实现原理？"></a>轮播图实现原理？</h2><h2 id="Intent、Bundle-内部如何实现传递"><a href="#Intent、Bundle-内部如何实现传递" class="headerlink" title="Intent、Bundle 内部如何实现传递"></a>Intent、Bundle 内部如何实现传递</h2><h2 id="安全方面做过什么？"><a href="#安全方面做过什么？" class="headerlink" title="安全方面做过什么？"></a>安全方面做过什么？</h2><h2 id="大图加载做过么，描述思路。"><a href="#大图加载做过么，描述思路。" class="headerlink" title="大图加载做过么，描述思路。"></a>大图加载做过么，描述思路。</h2><h2 id="Android应用程序启动过程"><a href="#Android应用程序启动过程" class="headerlink" title="Android应用程序启动过程"></a>Android应用程序启动过程</h2><p>参考老罗的文章<a href="https://blog.csdn.net/luoshengyang/article/details/6689748" target="_blank" rel="noopener">https://blog.csdn.net/luoshengyang/article/details/6689748</a></p>
-<h2 id="Handler-消息转递机制，为什么-Loop-一直在死循环而-UI-界面不会卡死？"><a href="#Handler-消息转递机制，为什么-Loop-一直在死循环而-UI-界面不会卡死？" class="headerlink" title="Handler 消息转递机制，为什么 Loop 一直在死循环而 UI 界面不会卡死？"></a>Handler 消息转递机制，为什么 Loop 一直在死循环而 UI 界面不会卡死？</h2>]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -3538,15 +3628,20 @@
 <li>布局优化，尽量使用 ConstraintLayout 减少布局层次(因为深度遍历)     </li>
 <li>布局复用，比如底部的布局大体相似，都使用同一个 layout     </li>
 <li>避免过度绘制。排查移除叠加的背景      </li>
-<li>减少资源数目，因为shape很难复用，故shape换成 固定的控件： ShapedTextView、ShapedConstrainLayout 等            </li>
+<li>减少资源数目，因为shape很难复用，故shape换成 固定的控件： ShapedTextView、ShapedConstrainLayout 等      </li>
+<li>提高显示速度</li>
 </ul>
+<blockquote>
+<p>使用 viewstub 延后显示。         </p>
+</blockquote>
 <p><strong>四、内存相关优化</strong>      </p>
 <blockquote>
 <p>一言以蔽之： 开源节流</p>
 </blockquote>
 <ul>
+<li>开源，在manifest文件application节点加入：android:largeHeap=“true”      </li>
 <li>检查内存泄漏(LeakCanery)    </li>
-<li>正确地使用引用，尤其Activity的context(尽量替换成Application 的context，Activity 的Context 一律弱引用)       </li>
+<li>正确地使用引用，尤其Activity的context(尽量替换成Application 的context，Activity 的Context 一律弱引用)，以及强引用、弱引用、软引用的正确使用。       </li>
 <li>使用正确的容器，比如避免自动装箱(使用SparseArray等)、避免hashmap内存浪费(使用ArrayMap等)       </li>
 <li>枚举替换成注解。</li>
 </ul>
@@ -3698,93 +3793,6 @@
       </categories>
       <tags>
         <tag>面试题目</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>内存泄漏</title>
-    <url>/2019/03/07/%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F/</url>
-    <content><![CDATA[<h2 id="常见内存泄漏场景："><a href="#常见内存泄漏场景：" class="headerlink" title="常见内存泄漏场景："></a>常见内存泄漏场景：</h2><ul>
-<li>资源性对象未关闭</li>
-</ul><blockquote>
-<p>如 File、Cursor、stream等资源，他们的缓存不只存在java虚拟机内，还存在虚拟机外，仅仅把对象置为null而不关闭，就会引起内存泄漏</p>
-</blockquote><ul>
-<li>注册对象未注销</li>
-</ul><blockquote>
-<p>观察者模式的注册，在不使用的时候未注销，就会导致，如在Activity中监听电话服务，定义PhoneStateListener注册到TelphoneManager服务中，如果忘记注销，会导致Activity无法被Gc回收。</p>
-</blockquote><a id="more"></a>
-
-
-
-<ul>
-<li><p>非静态内部类创建静态实例</p>
-</li>
-<li><p>Handler造成的内存泄漏。</p>
-</li>
-</ul>
-<blockquote>
-<p>非静态Handler默认持有外部Activity的引用，退出Activity时，如果Looper中还有Message，就会导致Activity无法回收，可以（1）将Handler设置为静态，并且弱引用持有的对象 （2）Activity 的onDestroy的时候，一处消息队列的消息 来解决内存泄漏。</p>
-</blockquote>
-<ul>
-<li>容器中的对象没有清理</li>
-</ul>
-<blockquote>
-<p>容器里的对象在不需要的时候，要及时移除，使其正确及时地被回收。</p>
-</blockquote>
-<h2 id="优化内存空间"><a href="#优化内存空间" class="headerlink" title="优化内存空间"></a>优化内存空间</h2><p>总体来说即是开源节流</p>
-<ul>
-<li>开源</li>
-</ul>
-<blockquote>
-<p>large heap</p>
-</blockquote>
-<ul>
-<li>对象引用入手</li>
-</ul>
-<blockquote>
-<p>强引用、软引用、弱引用。</p>
-</blockquote>
-<ul>
-<li>减少不必要的装箱机制</li>
-</ul>
-<blockquote>
-<p>sparseArray，类似的还有 SparseLongArray，LongSpaseArray等。</p>
-</blockquote>
-<ul>
-<li>使用最优数据类型</li>
-</ul>
-<blockquote>
-<p>（1）需要限制输入参数的时候，使用注解而不是枚举 （2）谨慎选择 HashMap 、ArrayMap 以及 SparseArray。</p>
-</blockquote>
-<h2 id="顺带一提UI绘制优化"><a href="#顺带一提UI绘制优化" class="headerlink" title="顺带一提UI绘制优化"></a>顺带一提UI绘制优化</h2><ul>
-<li>减少布局层级</li>
-</ul>
-<blockquote>
-<p>（1） 合理使用 merge （2）合理使用 ConstranLayout</p>
-</blockquote>
-<ul>
-<li>提高显示速度</li>
-</ul>
-<blockquote>
-<p>使用 viewstub 延后显示。</p>
-</blockquote>
-<ul>
-<li>减少wrap_content</li>
-</ul>
-<blockquote>
-<p>尽量使用match_parent 或者 确定的宽高度</p>
-</blockquote>
-<ul>
-<li>避免过度绘制</li>
-</ul>
-<blockquote>
-<p>（1）移除布局中非必须的背景 （2）可能的话，移除window的默认背景 （3）自定义view，要注意重叠部分，可以通过canvas.clipRect()帮助系统识别可见的区域，减少过度绘制</p>
-</blockquote>
-]]></content>
-      <categories>
-        <category>专题</category>
-      </categories>
-      <tags>
-        <tag>内存</tag>
       </tags>
   </entry>
   <entry>
