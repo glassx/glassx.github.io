@@ -53,16 +53,18 @@
   };
 </script>
 
-  <meta name="description" content="简述下GC，垃圾回收算法，gc什么时候回收？同时看看 这个链接Dalvik和Art区别？(Just In Time和Ahead Of Time) Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。（关于回收，还">
+  <meta name="description" content="对象的内存布局分为3个区域：对象头、实例数据 以及 对齐填充对象头：包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。实例数据：对象真正存储的有效信息。对齐填充：比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必需的。">
 <meta name="keywords" content="面试题">
 <meta property="og:type" content="article">
 <meta property="og:title" content="面试题-虚拟机知识">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;11&#x2F;23&#x2F;%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="简述下GC，垃圾回收算法，gc什么时候回收？同时看看 这个链接Dalvik和Art区别？(Just In Time和Ahead Of Time) Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。（关于回收，还">
+<meta property="og:description" content="对象的内存布局分为3个区域：对象头、实例数据 以及 对齐填充对象头：包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。实例数据：对象真正存储的有效信息。对齐填充：比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必需的。">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-11-23T13:40:53.117Z">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E8%99%9A%E6%8B%9F%E6%9C%BA&#x2F;%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png">
+<meta property="og:updated_time" content="2020-02-08T04:13:14.972Z">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E8%99%9A%E6%8B%9F%E6%9C%BA&#x2F;%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png">
 
 <link rel="canonical" href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/">
 
@@ -242,10 +244,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2019-11-23 21:40:00 / 修改时间：21:40:53" itemprop="dateCreated datePublished" datetime="2019-11-23T21:40:00+08:00">2019-11-23</time>
+              <time title="创建时间：2019-11-23 21:40:00" itemprop="dateCreated datePublished" datetime="2019-11-23T21:40:00+08:00">2019-11-23</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-02-08 12:13:14" itemprop="dateModified" datetime="2020-02-08T12:13:14+08:00">2020-02-08</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
@@ -276,10 +284,24 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h3 id="简述下GC，垃圾回收算法，gc什么时候回收？同时看看-这个链接"><a href="#简述下GC，垃圾回收算法，gc什么时候回收？同时看看-这个链接" class="headerlink" title="简述下GC，垃圾回收算法，gc什么时候回收？同时看看 这个链接"></a><a href="https://www.jianshu.com/p/7c708a66ff42" target="_blank" rel="noopener">简述下GC，垃圾回收算法</a>，gc什么时候回收？同时看看 <a href="https://zhuanlan.zhihu.com/p/28258571" target="_blank" rel="noopener">这个链接</a></h3><h3 id="Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><a href="#Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time" class="headerlink" title="Dalvik和Art区别？(Just In Time和Ahead Of Time)"></a>Dalvik和Art区别？(Just In Time和Ahead Of Time)</h3><blockquote>
-<p>Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。<br>（<strong>关于回收，还有待看官网之后回来review</strong>）Dalvik 在Gc时，会有2次虚拟机暂停（遍历阶段和标记阶段分别暂停一次；除了GC线程外，其余线程都挂起，stop the world），而Art在Gc开始时，首先锁住java堆，扫描并标记，完成后，挂起所有线程，之后挥手垃圾，最后回复所有线程现场，即Art只有一次暂停。<br>运行时堆得区域划分不同，Dalvic 每次GC完毕后，基本上都千疮百孔，空间碎片化严重；而ART多了两个空间，即 ImageSpace 和Large Object space，前者用于预加载类，后者用于存放大对象，这样可以大大减少碎片化。<br>ART支持64位系统</p>
-</blockquote><a id="more"></a>
-<p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
+        <h3 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h3><p>分为3个区域：对象头、实例数据 以及 对齐填充</p><p><strong>对象头：</strong>包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。</p><p><strong>实例数据：</strong>对象真正存储的有效信息。</p><p><strong>对齐填充：</strong>比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必需的。</p><a id="more"></a>
+
+
+
+<p>以下是句柄访问 时，内存布局关系图：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png" alt="内存布局关系图"></p>
+<blockquote>
+<p>以上内容参考自： <a href="http://www.androidos.net.cn/book/android-road/java/virtual-machine/object.html" target="_blank" rel="noopener">对象创建与定位</a></p>
+</blockquote>
+<h3 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h3><ul>
+<li>标记-清除 算法。不足：1、标记清除效率不高。2、产生内存碎片。    </li>
+<li>复制算法。为了解决标记清除的效率问题，将内存划分为大小相等的两块，每次使用一块。不足：可用内存缩小为原来一半。    </li>
+<li>标记-整理。不足：复制存货对象耗时过多。    </li>
+<li>分代收集算法。 新生代使用复制算法；老年代采用“标记-清除” 或者 “标记-整理”算法。</li>
+</ul>
+<blockquote>
+<p>以上内容参考自： <a href="http://www.androidos.net.cn/book/android-road/java/virtual-machine/Garbage-Collector.html" target="_blank" rel="noopener">垃圾回收算法</a></p>
+</blockquote>
 <h3 id="说说四大引用？强，软，弱，虚，并说明下合适GC"><a href="#说说四大引用？强，软，弱，虚，并说明下合适GC" class="headerlink" title="说说四大引用？强，软，弱，虚，并说明下合适GC"></a>说说四大引用？强，软，弱，虚，并说明下合适GC</h3><blockquote>
 <p>强引用是使用最普遍的引用。如果一个对象具有强引用，那垃圾回收器绝不会回收它。</p>
 </blockquote>
@@ -292,6 +314,10 @@
 <blockquote>
 <p>“虚引用”顾名思义，就是形同虚设，与其他几种引用都不同，虚引用并不会决定对象的生命周期。如果一个对象仅持有虚引用，那么它就和没有任何引用一样，在任何时候都可能被垃圾回收器回收。要注意的是，虚引用必须和引用队列关联使用.</p>
 </blockquote>
+<h3 id="Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><a href="#Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time" class="headerlink" title="Dalvik和Art区别？(Just In Time和Ahead Of Time)"></a>Dalvik和Art区别？(Just In Time和Ahead Of Time)</h3><blockquote>
+<p>Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。<br>（<strong>关于回收，还有待看官网之后回来review</strong>）Dalvik 在Gc时，会有2次虚拟机暂停（遍历阶段和标记阶段分别暂停一次；除了GC线程外，其余线程都挂起，stop the world），而Art在Gc开始时，首先锁住java堆，扫描并标记，完成后，挂起所有线程，之后挥手垃圾，最后回复所有线程现场，即Art只有一次暂停。<br>运行时堆得区域划分不同，Dalvic 每次GC完毕后，基本上都千疮百孔，空间碎片化严重；而ART多了两个空间，即 ImageSpace 和Large Object space，前者用于预加载类，后者用于存放大对象，这样可以大大减少碎片化。<br>ART支持64位系统</p>
+</blockquote>
+<p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
 
     </div>
 
@@ -373,7 +399,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#简述下GC，垃圾回收算法，gc什么时候回收？同时看看-这个链接"><span class="nav-number">1.</span> <span class="nav-text">简述下GC，垃圾回收算法，gc什么时候回收？同时看看 这个链接</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><span class="nav-number">2.</span> <span class="nav-text">Dalvik和Art区别？(Just In Time和Ahead Of Time)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#说说四大引用？强，软，弱，虚，并说明下合适GC"><span class="nav-number">3.</span> <span class="nav-text">说说四大引用？强，软，弱，虚，并说明下合适GC</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#对象的内存布局"><span class="nav-number">1.</span> <span class="nav-text">对象的内存布局</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#垃圾收集算法"><span class="nav-number">2.</span> <span class="nav-text">垃圾收集算法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#说说四大引用？强，软，弱，虚，并说明下合适GC"><span class="nav-number">3.</span> <span class="nav-text">说说四大引用？强，软，弱，虚，并说明下合适GC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><span class="nav-number">4.</span> <span class="nav-text">Dalvik和Art区别？(Just In Time和Ahead Of Time)</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -475,7 +501,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共155.3k字</span>
+  <span class="post-count">博客全站共156.8k字</span>
 </div>
 
 

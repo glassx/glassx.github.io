@@ -234,10 +234,24 @@
   <entry>
     <title>面试题-虚拟机知识</title>
     <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/</url>
-    <content><![CDATA[<h3 id="简述下GC，垃圾回收算法，gc什么时候回收？同时看看-这个链接"><a href="#简述下GC，垃圾回收算法，gc什么时候回收？同时看看-这个链接" class="headerlink" title="简述下GC，垃圾回收算法，gc什么时候回收？同时看看 这个链接"></a><a href="https://www.jianshu.com/p/7c708a66ff42" target="_blank" rel="noopener">简述下GC，垃圾回收算法</a>，gc什么时候回收？同时看看 <a href="https://zhuanlan.zhihu.com/p/28258571" target="_blank" rel="noopener">这个链接</a></h3><h3 id="Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><a href="#Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time" class="headerlink" title="Dalvik和Art区别？(Just In Time和Ahead Of Time)"></a>Dalvik和Art区别？(Just In Time和Ahead Of Time)</h3><blockquote>
-<p>Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。<br>（<strong>关于回收，还有待看官网之后回来review</strong>）Dalvik 在Gc时，会有2次虚拟机暂停（遍历阶段和标记阶段分别暂停一次；除了GC线程外，其余线程都挂起，stop the world），而Art在Gc开始时，首先锁住java堆，扫描并标记，完成后，挂起所有线程，之后挥手垃圾，最后回复所有线程现场，即Art只有一次暂停。<br>运行时堆得区域划分不同，Dalvic 每次GC完毕后，基本上都千疮百孔，空间碎片化严重；而ART多了两个空间，即 ImageSpace 和Large Object space，前者用于预加载类，后者用于存放大对象，这样可以大大减少碎片化。<br>ART支持64位系统</p>
-</blockquote><a id="more"></a>
-<p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
+    <content><![CDATA[<h3 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h3><p>分为3个区域：对象头、实例数据 以及 对齐填充</p><p><strong>对象头：</strong>包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。</p><p><strong>实例数据：</strong>对象真正存储的有效信息。</p><p><strong>对齐填充：</strong>比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必需的。</p><a id="more"></a>
+
+
+
+<p>以下是句柄访问 时，内存布局关系图：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png" alt="内存布局关系图"></p>
+<blockquote>
+<p>以上内容参考自： <a href="http://www.androidos.net.cn/book/android-road/java/virtual-machine/object.html" target="_blank" rel="noopener">对象创建与定位</a></p>
+</blockquote>
+<h3 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h3><ul>
+<li>标记-清除 算法。不足：1、标记清除效率不高。2、产生内存碎片。    </li>
+<li>复制算法。为了解决标记清除的效率问题，将内存划分为大小相等的两块，每次使用一块。不足：可用内存缩小为原来一半。    </li>
+<li>标记-整理。不足：复制存货对象耗时过多。    </li>
+<li>分代收集算法。 新生代使用复制算法；老年代采用“标记-清除” 或者 “标记-整理”算法。</li>
+</ul>
+<blockquote>
+<p>以上内容参考自： <a href="http://www.androidos.net.cn/book/android-road/java/virtual-machine/Garbage-Collector.html" target="_blank" rel="noopener">垃圾回收算法</a></p>
+</blockquote>
 <h3 id="说说四大引用？强，软，弱，虚，并说明下合适GC"><a href="#说说四大引用？强，软，弱，虚，并说明下合适GC" class="headerlink" title="说说四大引用？强，软，弱，虚，并说明下合适GC"></a>说说四大引用？强，软，弱，虚，并说明下合适GC</h3><blockquote>
 <p>强引用是使用最普遍的引用。如果一个对象具有强引用，那垃圾回收器绝不会回收它。</p>
 </blockquote>
@@ -250,6 +264,10 @@
 <blockquote>
 <p>“虚引用”顾名思义，就是形同虚设，与其他几种引用都不同，虚引用并不会决定对象的生命周期。如果一个对象仅持有虚引用，那么它就和没有任何引用一样，在任何时候都可能被垃圾回收器回收。要注意的是，虚引用必须和引用队列关联使用.</p>
 </blockquote>
+<h3 id="Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><a href="#Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time" class="headerlink" title="Dalvik和Art区别？(Just In Time和Ahead Of Time)"></a>Dalvik和Art区别？(Just In Time和Ahead Of Time)</h3><blockquote>
+<p>Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。<br>（<strong>关于回收，还有待看官网之后回来review</strong>）Dalvik 在Gc时，会有2次虚拟机暂停（遍历阶段和标记阶段分别暂停一次；除了GC线程外，其余线程都挂起，stop the world），而Art在Gc开始时，首先锁住java堆，扫描并标记，完成后，挂起所有线程，之后挥手垃圾，最后回复所有线程现场，即Art只有一次暂停。<br>运行时堆得区域划分不同，Dalvic 每次GC完毕后，基本上都千疮百孔，空间碎片化严重；而ART多了两个空间，即 ImageSpace 和Large Object space，前者用于预加载类，后者用于存放大对象，这样可以大大减少碎片化。<br>ART支持64位系统</p>
+</blockquote>
+<p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
 ]]></content>
       <categories>
         <category>面试</category>
@@ -836,9 +854,36 @@
 <blockquote>
 <p>以上内容参考<a href="https://www.cnblogs.com/stateis0/p/9091254.html" target="_blank" rel="noopener">莫那.鲁道的博客</a></p>
 </blockquote>
-<h3 id="如何控制某个方法允许并发访问线程的个数？"><a href="#如何控制某个方法允许并发访问线程的个数？" class="headerlink" title="如何控制某个方法允许并发访问线程的个数？"></a>如何控制某个方法允许并发访问线程的个数？</h3><h2 id="Java创建线程的三种方式"><a href="#Java创建线程的三种方式" class="headerlink" title="Java创建线程的三种方式"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/CreateThread.html" target="_blank" rel="noopener">Java创建线程的三种方式</a></h2><h2 id="Java线程池"><a href="#Java线程池" class="headerlink" title="Java线程池"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/thread-pool.html" target="_blank" rel="noopener">Java线程池</a></h2><h2 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a><a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/deadlock.html" target="_blank" rel="noopener">死锁</a></h2><h2 id="线程间通信？"><a href="#线程间通信？" class="headerlink" title="线程间通信？"></a>线程间通信？</h2><p>1、通过内存共享，共享内存中的信息是公共可见的，但是需要显式地进行同步，可以使用Synchronize 和 Lock 来进行同步。    </p>
-<p>2、基于消息模型。Android 中的Handler 就是基于消息传递模型的。</p>
-<h2 id="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"><a href="#有三个线程T1，T2，T3，怎么确保它们按顺序执行？" class="headerlink" title="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"></a>有三个线程T1，T2，T3，怎么确保它们按顺序执行？</h2>]]></content>
+<h3 id="如何控制某个方法允许并发访问线程的个数？"><a href="#如何控制某个方法允许并发访问线程的个数？" class="headerlink" title="如何控制某个方法允许并发访问线程的个数？"></a>如何控制某个方法允许并发访问线程的个数？</h3><h2 id="Java创建线程的三种方式"><a href="#Java创建线程的三种方式" class="headerlink" title="Java创建线程的三种方式"></a>Java创建线程的三种方式</h2><ul>
+<li>继承Thread类。优点：使用简单 缺点：已经继承Thread 类，不能继承其它类。    </li>
+<li>实现runnable 接口，创建线程类。    </li>
+<li>通过Callable 和 Future 创建线程。</li>
+</ul>
+<blockquote>
+<p>以上内容参考自：<a href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/CreateThread.html" target="_blank" rel="noopener">Java创建线程的三种方式</a></p>
+</blockquote>
+<h3 id="synchronized原理"><a href="#synchronized原理" class="headerlink" title="synchronized原理"></a>synchronized原理</h3><p>JVM基于进入和退出Monitor对象来实现 代码块同步 和 方法同步 ，两者实现细节不同。</p>
+<p>代码块同步： 在编译后通过将monitorenter指令插入到同步代码块的开始处，将monitorexit指令插入到方法结束处和异常处，通过反编译字节码可以观察到。任何一个对象都有一个monitor与之关联，线程执行monitorenter指令时，会尝试获取对象对应的monitor的所有权，即尝试获得对象的锁。</p>
+<p>方法同步： synchronized方法在method_info结构有ACC_synchronized标记，线程执行时会识别该标记，获取对应的锁，实现方法同步。</p>
+<p>两者虽然实现细节不同，但本质上都是对一个对象的监视器（monitor）的获取。任意一个对象都拥有自己的监视器，当同步代码块或同步方法时，执行方法的线程必须先获得该对象的监视器才能进入同步块或同步方法，没有获取到监视器的线程将会被阻塞，并进入同步队列，状态变为BLOCKED。当成功获取监视器的线程释放了锁后，会唤醒阻塞在同步队列的线程，使其重新尝试对监视器的获取。</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%A4%9A%E7%BA%BF%E7%A8%8B/synchronize%E5%8E%9F%E7%90%86.png" alt="对象、监视器、同步队列和执行线程间的关系"></p>
+<blockquote>
+<p>以上内容参考自：<a href="http://www.androidos.net.cn/book/android-road/java/concurrence/synchronized-reentrantlock.html" target="_blank" rel="noopener">synchronized原理</a></p>
+</blockquote>
+<h3 id="线程间通信？"><a href="#线程间通信？" class="headerlink" title="线程间通信？"></a>线程间通信？</h3><p>1、通过内存共享，共享内存中的信息是公共可见的，但是需要显式地进行同步，可以使用Synchronize 和 Lock 来进行同步。    </p>
+<p>2、notify/wait 方法</p>
+<p>3、Condition 实现等待/通知</p>
+<blockquote>
+<p>以上内容部分参考自： <a href="http://www.androidos.net.cn/book/android-road/java/concurrence/producer-consumer.html" target="_blank" rel="noopener">线程通信</a></p>
+</blockquote>
+<h3 id="单例中，为什么要使用volatile-修饰instance？"><a href="#单例中，为什么要使用volatile-修饰instance？" class="headerlink" title="单例中，为什么要使用volatile 修饰instance？"></a>单例中，为什么要使用volatile 修饰instance？</h3><p>主要在于instance = new Singleton()这句，这并非是一个原子操作，事实上在 JVM 中这句话大概做了下面 3 件事情:</p>
+<p>1.给 instance 分配内存<br>2.调用 Singleton 的构造函数来初始化成员变量<br>3.将instance对象指向分配的内存空间（执行完这步 instance 就为非 null 了）。</p>
+<p>但是在 JVM 的即时编译器中存在指令重排序的优化。也就是说上面的第二步和第三步的顺序是不能保证的，最终的执行顺序可能是 1-2-3 也可能是 1-3-2。如果是后者，则在 3 执行完毕、2 未执行之前，被线程二抢占了，这时 instance 已经是非 null 了（但却没有初始化），所以线程二会直接返回 instance，然后使用，然后顺理成章地报错。</p>
+<h2 id="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"><a href="#有三个线程T1，T2，T3，怎么确保它们按顺序执行？" class="headerlink" title="有三个线程T1，T2，T3，怎么确保它们按顺序执行？"></a>有三个线程T1，T2，T3，怎么确保它们按顺序执行？</h2><p>参考2个线程的即可：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainClass1</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> num = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> flag = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        Thread t1 = <span class="keyword">new</span> Thread()&#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;=<span class="number">100</span>;)&#123;</span><br><span class="line">                    <span class="keyword">if</span> (flag == <span class="number">1</span>)&#123;</span><br><span class="line">                        ++num;</span><br><span class="line">                        System.out.println(<span class="string">"t1-"</span>+ num);</span><br><span class="line">                        flag = <span class="number">2</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        Thread t2 = <span class="keyword">new</span> Thread()&#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;<span class="number">100</span>;)&#123;</span><br><span class="line">                    <span class="keyword">if</span> (flag == <span class="number">2</span>)&#123;</span><br><span class="line">                        ++num;</span><br><span class="line">                        System.out.println(<span class="string">"t2-"</span>+ num);</span><br><span class="line">                        flag = <span class="number">3</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        Thread t3 = <span class="keyword">new</span> Thread()&#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;<span class="number">100</span>;)&#123;</span><br><span class="line">                    <span class="keyword">if</span> (flag == <span class="number">3</span>)&#123;</span><br><span class="line">                        ++num;</span><br><span class="line">                        System.out.println(<span class="string">"t3-"</span>+ num);</span><br><span class="line"></span><br><span class="line">                        flag = <span class="number">1</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">        t3.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -1187,6 +1232,18 @@
 <h2 id="聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><a href="#聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？" class="headerlink" title="聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"></a>聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</h2><blockquote>
 <p>Handler 初始化的时候会通过 Looper.myLooper（实际上只是返回了 sThreadLocal.get()） 获取当前线程的Looper。之后通过 looper 获取当前线程的 mQueue 。<br>当然，如果在子线程中new Handler ，基本上会提示 您还未执行Looper.prepare();<br>Looper.prepare() 会判断当前 sThreadLocal.get()是否已经存在了，如果已经存在了，就会提示 “一个线程只能有一个Looper”（<strong>注意，就是在这里保证了一个线程只有一个Looper</strong>）。Looper.prepare() 只是执行了sThreadLocal.set(new Looper())，在这里给线程设置了Looper。<br>而在主线程中，ActivityThread 的main 方法中会执行 Looper.prepareMainLooper（）来设置Looper，故我们可以直接new Handler，而在子线程中要手动Looper.prepare()才行，并且还要Looper.loop()，让消息循环。<br>接下来就是 handler 的 sendMessage 和post 方法，其实两个方法都是调用 sendMessageDelay 方法，只不过post方法首先将 Runnable封装成Message，变成Message的CallBack。<br>在最终send的时候，Message会持有handler的引用，叫做target，之后，message被丢到handler所持有的MessageQueue中。<br>之后，在主线程中，Looper一直在循环，取出queue中的Message，然后执行message.target.dispatchMessage，在这个方法中，最终会调用到我们写handler时候覆写的 handleMessage 方法。至此，整个流程走完。</p>
 </blockquote>
+<h2 id="Handler-的postDelay-是怎么实现的？"><a href="#Handler-的postDelay-是怎么实现的？" class="headerlink" title="Handler 的postDelay 是怎么实现的？"></a>Handler 的postDelay 是怎么实现的？</h2><p>可能用举例子的方式容易懂一些：</p>
+<ol>
+<li>postDelay 一个10秒的 RunableA 到 MessageQueue，MessageQueue 会调用 nativePollOnce 阻塞线程。    </li>
+<li>接着post 一个 RunnableB 到 MessageQueue，由于 RunnableB 没有延时，因此when 时间比 RunableA 小，因此被插入在队头，然后调用nativeWake 方法唤醒 线程 。    </li>
+<li>唤醒后，MessageQueue.next() 方法继续执行，读取到第一个消息 RunnableB，由于没有延时，直接交给Looper。    </li>
+<li>Looper 处理完B 后，再次调用 MessageQueue.next() 方法，这时候 RunableA 还没到时间，这时候调用 nativePollOnce 阻塞。    </li>
+<li>这个状态直到阻塞时间到或者下一次有Message 进队。</li>
+</ol>
+<p>至于为什么 handler.postDelay并不是先等待一定的时间再放入到MessageQueue中，因为那样的话会需要多个定时器，增加开销。</p>
+<blockquote>
+<p>以上内容源自阅读源码以及 <a href="https://blog.csdn.net/qingtiantianqing/article/details/72783952" target="_blank" rel="noopener">网上博客</a> </p>
+</blockquote>
 <h2 id="RecyclerView-的性能优化"><a href="#RecyclerView-的性能优化" class="headerlink" title="RecyclerView 的性能优化"></a>RecyclerView 的性能优化</h2><p>有以下几种方式能做到RecyclerView的优化：</p>
 <ul>
 <li><p>数据处理与视图绑定分离。    </p>
@@ -1237,6 +1294,14 @@
 </blockquote>
 <h2 id="引申-如何保存嵌套rv中的滑动装填"><a href="#引申-如何保存嵌套rv中的滑动装填" class="headerlink" title="引申-如何保存嵌套rv中的滑动装填"></a>引申-如何保存嵌套rv中的滑动装填</h2><p>比如嵌套的rv这时候左滑到第三个，这时候外层的rv滑动很长距离，当前这个嵌套的rv已经看不见了，划出好远了，如何在嵌套rv再次可见的时候，恢复当时滑到的第三个。</p>
 <p>其实 Linearlayoutmanager 中有对应的 onSaveInstanceState 和 onRestoreInstanceState 方法来处理保存和恢复机制。</p>
+<h2 id="图片加载优化"><a href="#图片加载优化" class="headerlink" title="图片加载优化"></a>图片加载优化</h2><ol>
+<li>假设通过ImageView 显示图片，很多时候ImageView 没有原始图片尺寸那么大，把整个图片加载进内存再设置给ImageView则没必要，这时候可以在加载图片时采用低采样率加载进来。    </li>
+<li>与后端配合，在url 后面接上需要的图片尺寸。(目前就是这么做)</li>
+</ol>
+<h2 id="延伸-Bitmap大小计算方法"><a href="#延伸-Bitmap大小计算方法" class="headerlink" title="延伸-Bitmap大小计算方法"></a>延伸-Bitmap大小计算方法</h2><p>//Bitmap所占用的内存空间数等于Bitmap的每一行所占用的空间数乘以Bitmap的行数<br>使用 bitmap.getRowBytes() * bitmap.getHeight();</p>
+<blockquote>
+<p>参考自<a href="https://www.cnblogs.com/yaowen/p/6351214.html" target="_blank" rel="noopener">计算Bitmap 大小</a></p>
+</blockquote>
 <h2 id="Activity生命周期"><a href="#Activity生命周期" class="headerlink" title="Activity生命周期"></a>Activity生命周期</h2><ol>
 <li>onCreate()：当 Activity 第一次创建时会被调用     </li>
 <li>onRestart()：表示Activity正在重新启动。一般情况下，当当前Activity从不可见重新变为可见状态时，onRestart就会被调用。     </li>
@@ -1272,13 +1337,15 @@
 <li>singleInstance(单例模式)：只要有这个实例，不管在哪个栈，都复用之；否则，在新的栈创建实例。    </li>
 </ul>
 <h2 id="Fragment-为何不推荐使用构造方法传递参数？"><a href="#Fragment-为何不推荐使用构造方法传递参数？" class="headerlink" title="Fragment 为何不推荐使用构造方法传递参数？"></a>Fragment 为何不推荐使用构造方法传递参数？</h2><p>因为activity 给fragment 传递数据时是通过 setArguments 来传递。如果采用构造方法传递，在诸如横竖屏切换的时候会调用fragment 的空的构造函数，造成数据丢失。</p>
-<h2 id="compileSdkVersion、minSdkVersion、targetSDKVersion-的含义"><a href="#compileSdkVersion、minSdkVersion、targetSDKVersion-的含义" class="headerlink" title="compileSdkVersion、minSdkVersion、targetSDKVersion 的含义"></a>compileSdkVersion、minSdkVersion、targetSDKVersion 的含义</h2><p>请参考：<a href="https://github.com/yangchong211/YCBlogs/blob/master/android/%E5%9F%BA%E7%A1%80%E7%BB%84%E4%BB%B6/36.CompileSdkVersion%E5%92%8CMinSdkVersion.md" target="_blank" rel="noopener">https://github.com/yangchong211/YCBlogs/blob/master/android/%E5%9F%BA%E7%A1%80%E7%BB%84%E4%BB%B6/36.CompileSdkVersion%E5%92%8CMinSdkVersion.md</a></p>
+<h2 id="Context-理解"><a href="#Context-理解" class="headerlink" title="Context 理解"></a>Context 理解</h2><p>参考以前写的博客：<a href="https://glassx.gitee.io/2019/12/06/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/">https://glassx.gitee.io/2019/12/06/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/</a></p>
+<h2 id="Android-全局异常处理"><a href="#Android-全局异常处理" class="headerlink" title="Android 全局异常处理"></a>Android 全局异常处理</h2><p>在Application 中为 Thread 设置ExceptionHandler 即可。</p>
+<p>参考：<a href="http://www.androidos.net.cn/book/android-road/android/advance/exception.html" target="_blank" rel="noopener">全局异常处理</a></p>
 <h2 id="ANR异常发生条件？如何分析ANR？"><a href="#ANR异常发生条件？如何分析ANR？" class="headerlink" title="ANR异常发生条件？如何分析ANR？"></a>ANR异常发生条件？如何分析ANR？</h2><ul>
 <li>5s内没有响应用户输入事件</li>
 <li>10s内广播接收器没有处理完毕</li>
 <li>20s内服务没有处理完毕</li>
 </ul>
-<h2 id="Android动画种类，各自特征"><a href="#Android动画种类，各自特征" class="headerlink" title="Android动画种类，各自特征"></a>Android动画种类，各自特征</h2><h2 id="谈谈你对Application类的理解"><a href="#谈谈你对Application类的理解" class="headerlink" title="谈谈你对Application类的理解"></a>谈谈你对Application类的理解</h2><p>说说对什么的理解，就是考察这个东西会不会用，重点有没有什么坑。有以下几点需要注意：</p>
+<h2 id="谈谈你对Application类的理解"><a href="#谈谈你对Application类的理解" class="headerlink" title="谈谈你对Application类的理解"></a>谈谈你对Application类的理解</h2><p>说说对什么的理解，就是考察这个东西会不会用，重点有没有什么坑。有以下几点需要注意：</p>
 <ul>
 <li>Application 在一个虚拟机里面只有一个实例。这里不是说一个App只有一个实例，因为一个App 可能有多个进程，也就是多个虚拟机，这种情况下，每个虚拟机中都会存在一个Application 对象。      </li>
 <li>Application 本质是一个Context ，继承自 ContextWrapper。      </li>
