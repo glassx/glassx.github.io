@@ -626,7 +626,41 @@
 <blockquote>
 <p>以上内容参考自：<a href="http://www.androidos.net.cn/book/android-road/android/open-source-framework/okhttp.html" target="_blank" rel="noopener">okhttp 解析</a></p>
 </blockquote>
-<h2 id="谈谈对RxJava的理解"><a href="#谈谈对RxJava的理解" class="headerlink" title="谈谈对RxJava的理解"></a>谈谈对RxJava的理解</h2><h2 id="fresco的理解（或者问看过哪些源码）"><a href="#fresco的理解（或者问看过哪些源码）" class="headerlink" title="fresco的理解（或者问看过哪些源码）"></a>fresco的理解（或者问看过哪些源码）</h2>]]></content>
+<h2 id="谈谈对RxJava的理解"><a href="#谈谈对RxJava的理解" class="headerlink" title="谈谈对RxJava的理解"></a>谈谈对RxJava的理解</h2><h3 id="常用操作符"><a href="#常用操作符" class="headerlink" title="常用操作符"></a>常用操作符</h3><ul>
+<li>map：将被观察者发送的数据类型转换为其他类型    </li>
+<li>flatMap ： 将事件序列中的元素整合，返回一个新的被观察者    </li>
+<li>zip ： 将多个观察者事件整合发送给观察者</li>
+</ul>
+<h3 id="如何实现线程切换"><a href="#如何实现线程切换" class="headerlink" title="如何实现线程切换"></a>如何实现线程切换</h3><ul>
+<li>Observer 最终会封装成 SubscribeTask ，这个类实现了 Runnable 接口。    </li>
+<li>最终在 Runnable 的run 方法中完成 观察者-被观察者的订阅关系      </li>
+<li>也即，这个run 在哪个线程执行，observer 方法就在哪个方法执行。     </li>
+<li>如果是 AndroidSchedulers.mainThread 的话，则会以Android主线程的Looper(Looper.getMainLooper())新建一个 Handler ，之后将上述Runnable 封装成Message ，通过Handler 发送到主线程。     </li>
+<li>如果是其他线程，则会丢给特定线程或者线程池处理。     </li>
+</ul>
+<blockquote>
+<p>以上内容参考自： <a href="https://cloud.tencent.com/developer/article/1408083" target="_blank" rel="noopener">rxjava2线程切换原理</a>、<a href="https://www.jianshu.com/p/5213fe112fa9" target="_blank" rel="noopener">rxjava使用与原理</a></p>
+</blockquote>
+<h2 id="fresco的理解"><a href="#fresco的理解" class="headerlink" title="fresco的理解"></a>fresco的理解</h2><h3 id="为什么使用fresco"><a href="#为什么使用fresco" class="headerlink" title="为什么使用fresco"></a>为什么使用fresco</h3><ol>
+<li>部门决定采用webp 格式的图片，而fresco 对其支持           </li>
+<li>5.0 以下Android系统，使用 ashmem(匿名共享内存) 区域存储bitmap ，它的创建、释放都不会触发 GC，带来良好的性能。   </li>
+</ol>
+<blockquote>
+<p>fresco 使用ashmem 区域存储bitmap ，gc不会处理这块区域，并且也不会被”ashmem内置清除机制”回收，所以减少gc，提升性能。在ashmem 中，fresco 采用引用计数方式，自己管理内存。</p>
+</blockquote>
+<ol start="3">
+<li>使用了三级缓存，方便图片快速复用、加载：Bitmap 缓存 + 未解码缓存 + 硬盘缓存，前面两个是内存缓存，Bitmap 根据不同系统版本存放不同区域(5.0以下存放ashmem)，未解码存放在堆内存。      </li>
+<li>fresco 的设计，UIThread 只做从内存缓存中加载图片和显示图片两件事，其他诸如 图片Decode、缓存读写 都放在非 UI线程。      </li>
+</ol>
+<h3 id="fresco-原理解析"><a href="#fresco-原理解析" class="headerlink" title="fresco 原理解析"></a>fresco 原理解析</h3><p>典型的MVC模式应用：</p>
+<ul>
+<li>DraweeView ： view 层，负责显示图片。它继承ImageView 的目的是使用它来显示 drawable ，其他的ImageView 方法都没有使用，也不推荐使用。   </li>
+<li>Hierarchy： model 层，负责生成要显示的图片     </li>
+<li>DraweeController： controller 层     </li>
+</ul>
+<p>DraweeView 把获得event 转给 controller，controller 决定是否隐藏或者显示什么图像，而这些图像存储在 Hierarchy，最后 DraweeView 直接通过 getTopLevelDrawable 获取要显示的图像。</p>
+<p>DraweeView 不直接与 Hierarchy 及 DraweeController 打交道，而是通过 DraweeHolder 间接与他们打交道，因为 DraweeHolder 管理着 Hierarchy 与 Controller。</p>
+]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -731,10 +765,20 @@
   <entry>
     <title>面试题-算法</title>
     <url>/2019/11/15/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95/</url>
-    <content><![CDATA[<h2 id="反转链表"><a href="#反转链表" class="headerlink" title="反转链表"></a>反转链表</h2><blockquote>
-<p>描述，反转一个单链表，如输入： 1-&gt;2-&gt;3-&gt;4-&gt;5-&gt;Null  ，则输出：5-&gt;4-&gt;3-&gt;2-&gt;1-&gt;Null</p>
-</blockquote><p>分析：在遍历链表时，将当前节点的next 指针改为指向前一个元素，由于节点没有引用其上一个节点，因此必须事先存储其前一个元素，在更改引用前，还需要另一个指针来存储下一个节点。代码如下：</p><a id="more"></a>
+    <content><![CDATA[<h2 id="红黑树"><a href="#红黑树" class="headerlink" title="红黑树"></a>红黑树</h2><h2 id="B树"><a href="#B树" class="headerlink" title="B树"></a>B树</h2><p>理解平衡二叉树后，就会更好理解后续的B树。</p><h3 id="平衡二叉树"><a href="#平衡二叉树" class="headerlink" title="平衡二叉树"></a>平衡二叉树</h3><p>平衡二叉树是一棵二叉树，每个节点的左边节点小于当前节点的值，右边节点的值大于当前节点的值。</p><p>因为二叉树的遍历性能和树的层级成反比，层级h越小查询越快，为了保证树的结构左右两端数据大致平衡以降低二叉树高度，一般会采用算法机制实现节点的平衡，如下图所示：</p><a id="more"></a>
 
+
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%97%E6%B3%95/%E4%BA%8C%E5%8F%89%E6%A0%91%E5%B9%B3%E8%A1%A1.jpg" alt="平衡树的高度"></p>
+<h3 id="B-树"><a href="#B-树" class="headerlink" title="B 树"></a>B 树</h3><p>当上述的平衡二叉树深度很深无法存储所有的节点数据时，需要读取磁盘。从而树的深度越大，需要的I/O操作次数越多，因此效率也越低，因此我们需要想办法降低树的高度。</p>
+<p>B 树的思路和平衡二叉树一样，但是采用了多叉的方式降低了高度。</p>
+<p>B树的具体实现比较难描述，看下面的参考链接更清晰，就不赘述。</p>
+<blockquote>
+<p>以上内容参考自： <a href="https://zhuanlan.zhihu.com/p/27700617" target="_blank" rel="noopener">勤劳的小手</a>、<a href="http://www.androidos.net.cn/book/android-road/data-structure/tree/b-tree.html" target="_blank" rel="noopener">B树概念</a></p>
+</blockquote>
+<h2 id="反转链表"><a href="#反转链表" class="headerlink" title="反转链表"></a>反转链表</h2><blockquote>
+<p>描述，反转一个单链表，如输入： 1-&gt;2-&gt;3-&gt;4-&gt;5-&gt;Null  ，则输出：5-&gt;4-&gt;3-&gt;2-&gt;1-&gt;Null</p>
+</blockquote>
+<p>分析：在遍历链表时，将当前节点的next 指针改为指向前一个元素，由于节点没有引用其上一个节点，因此必须事先存储其前一个元素，在更改引用前，还需要另一个指针来存储下一个节点。代码如下：</p>
 <figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> ListNode reverseList(ListNode head)&#123;</span><br><span class="line">    ListNode prev = <span class="literal">null</span>;</span><br><span class="line">    ListNode curr = head;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">while</span>(curr != <span class="literal">null</span>)&#123;</span><br><span class="line">        ListNode nextTemp = curr.next();</span><br><span class="line">        curr.next = prev;</span><br><span class="line">        prev = curr;</span><br><span class="line">        curr = nextTemp;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> prev;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <blockquote>
