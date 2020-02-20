@@ -62,8 +62,9 @@
 <meta property="og:description" content="Context 的关联类开发中经常使用的Context 的使用场景大体分为两类： 使用Context 调用方法，比如启动 Activity、访问资源、调用系统服务等。     调用方法时传入，比如弹出 Toast、创建dialog。     Activity、Service 与 Application 都间接继承 Context，因此可以说一个应用进程的Context 数量 = Activity">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;Context%E5%85%B3%E8%81%94%E7%B1%BB%E5%85%B3%E7%B3%BB.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;ApplicationContext%E7%9A%84%E5%88%9B%E5%BB%BA%E6%97%B6%E5%BA%8F%E5%9B%BE.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;Activity%E7%9A%84context%E5%88%9B%E5%BB%BA%E8%BF%87%E7%A8%8B%E6%97%B6%E5%BA%8F%E5%9B%BE.png">
-<meta property="og:updated_time" content="2020-01-15T14:19:50.829Z">
+<meta property="og:updated_time" content="2020-02-20T13:53:40.204Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;Context%E5%85%B3%E8%81%94%E7%B1%BB%E5%85%B3%E7%B3%BB.png">
 
@@ -253,7 +254,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-01-15 22:19:50" itemprop="dateModified" datetime="2020-01-15T22:19:50+08:00">2020-01-15</time>
+                <time title="修改时间：2020-02-20 21:53:40" itemprop="dateModified" datetime="2020-02-20T21:53:40+08:00">2020-02-20</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -300,7 +301,7 @@
 <li>通过组合而不是继承，拓展 ContextImpl 的功能。运行时选择不同的装饰类，实现不同功能。    </li>
 </ul>
 <h2 id="Application-Context-的创建过程"><a href="#Application-Context-的创建过程" class="headerlink" title="Application Context 的创建过程"></a>Application Context 的创建过程</h2><p>我们通过 getApplicationContext 来获取应用程序的全局 Application Context，那么 Application Context 是如何创建的呢？在应用程序启动完成后，应用程序就有一个全局的 Application Context，那就从应用程序启动过程着手，Application Context 的创建过程时序图如下：</p>
-<p>![Application context 的创建时序图](/assets/Book-Notes/Android进阶解密/第5章/Application context 的创建时序图.png)</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC5%E7%AB%A0/ApplicationContext%E7%9A%84%E5%88%9B%E5%BB%BA%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="Application context 的创建时序图"></p>
 <p>应用程序进程的主线程管理类 ActivityThread 会调用内部类 ApplicationThread 的 scheduleLaunchActivity 方法来启动Activity，而在scheduleLaunchActivity 中会向 H 发送 LAUNCH_ACTIVITY 类型消息，目的是将启动Activity 的逻辑放在主线程中。在 H 的 handleMessage 方法中最终会调用到 LoadApk 类的  makeApplication 方法：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/LoadedApk.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> Application <span class="title">makeApplication</span><span class="params">(<span class="keyword">boolean</span> forceDefaultAppClass,Instrumentation nstrumentation)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (mApplication != <span class="keyword">null</span>) &#123;<span class="comment">//l</span></span><br><span class="line">        <span class="keyword">return</span> mApplication;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    Application app = <span class="keyword">null</span>;</span><br><span class="line">    String appClass = mApplicationinfo.className;</span><br><span class="line">    <span class="keyword">if</span> (forceDefaultAppClass || (appClass == <span class="keyword">null</span>) ) &#123;</span><br><span class="line">        appClass = <span class="string">"android.app.Application”;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">    try &#123;</span></span><br><span class="line"><span class="string">        java.lang.ClassLoader cl= getClassLoader();</span></span><br><span class="line"><span class="string">        if (!mPackageName.equals ("</span>android<span class="string">"))&#123;</span></span><br><span class="line"><span class="string">            initializeJavaContextClassLoader ();</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        Contextimpl appContext = Contextimpl.createAppContext(mActivityThread,this); //2</span></span><br><span class="line"><span class="string">        app = mActivityThread.rninstrumentation.newApplication(cl, appClass, appContext);//3</span></span><br><span class="line"><span class="string">        appContext. setOUterContext(app) ;//4</span></span><br><span class="line"><span class="string">    &#125;catch (Exception e)&#123;</span></span><br><span class="line"><span class="string">        ...</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">    ...</span></span><br><span class="line"><span class="string">    mApplication = app;//5</span></span><br><span class="line"><span class="string">    ...</span></span><br><span class="line"><span class="string">    return app;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
 
@@ -510,7 +511,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共160.8k字</span>
+  <span class="post-count">博客全站共161.3k字</span>
 </div>
 
 
