@@ -160,6 +160,142 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-Android进阶解密-第10章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/11/18/Android进阶解密-第10章/">第10章：Java虚拟机</a>
+    </h1>
+  
+
+        
+        <a href="/2019/11/18/Android进阶解密-第10章/" class="archive-article-date">
+  	<time datetime="2019-11-18T12:48:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-11-18</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>需要注意的是，Android中的Dalvik 和 ART 并不属于Java 虚拟机。</p>
+<p>当一个Java 文件经过Java编译器后会生成Class 文件，这个Class 文件会由 Java 虚拟机进行处理，Java 虚拟机与 Java 语言没有必然的联系，它只与特定的二进制文件：Class 文件有关。任何语言只要能编译成 Class 文件，都能被Java 虚拟机识别并执行。</p>
+<h2 id="Java虚拟机结构"><a href="#Java虚拟机结构" class="headerlink" title="Java虚拟机结构"></a>Java虚拟机结构</h2><p>按照Java虚拟机规范，抽象的Java 虚拟机如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android进阶解密/第10章/Java虚拟机结构.png" alt="Java虚拟机结构"></p>
+<p>从图可以看出，Java虚拟机结构包括 运行时数据区域、执行引擎、本地库接口和本地方法库，其中类加载子系统并不属于Java 虚拟机的内部结构。下面针对这个图来介绍Android 开发需要掌握的Class 文件格式和运行时数据区域。</p>
+<h3 id="类的生命周期"><a href="#类的生命周期" class="headerlink" title="类的生命周期"></a>类的生命周期</h3><p>类的生命周期如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android进阶解密/第10章/类的生命周期.png" alt="类的生命周期"></p>
+<p>类加载的各个阶段的工作：</p>
+<ol>
+<li>加载： 查找并加载Class文件    </li>
+<li><p>连接： 包括验证、准备和解析    </p>
+<ul>
+<li>验证：确保被导入类型的正确性     </li>
+<li>准备：为类的**静态字段分配字段，并用默认值初始化这些字段    </li>
+<li>解析：虚拟机将常量池内的符号引用替换为直接引用    </li>
+</ul>
+</li>
+<li><p>初始化： 将类变量初始化为正确的初始值。    </p>
+</li>
+</ol>
+<h3 id="运行时数据区域"><a href="#运行时数据区域" class="headerlink" title="运行时数据区域"></a>运行时数据区域</h3><p>可取的几点：</p>
+<ul>
+<li>为了在线程切换后能恢复到正确的执行位置，每个线程都会有个独立的程序计数器。如果线程执行的方法是Native方法，则程序计数器的值为空(Undefined)，否则，保存正在执行的字节码指令地址。    </li>
+<li>可以选择在方法区不显示垃圾收集    </li>
+</ul>
+<p>其他的可以参考深入理解Java虚拟机的<a href="https://glassx.gitee.io/2019/04/02/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%AB%A0/" target="_blank" rel="noopener">这篇文章</a>即可。</p>
+<h2 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h2><p>当虚拟机接收到一个 new 指令时，它会做如下操作：</p>
+<ol>
+<li>判断对象对应的类是否加载、链接、以及初始化。    </li>
+<li>为对象分配内存：如果内存规整，则只需要将指针指示器向空闲的内存移动若干距离即可；若不规整，则需要由虚拟机维护一个列表记录哪些内存是可用的。</li>
+<li>处理并发安全问题，有两种方式解决：   <ul>
+<li>对分配内存空间的动作做同步处理，比如采用 CAS 方式配合失败重试</li>
+<li>为每个线程在Java堆中预先分配一小块内存，只有这块内存被使用完后，才需要同步的方式分配新的内存。</li>
+</ul>
+</li>
+<li>初始化分配到的内存空间：将分配到的内存，出对象头以外都初始化为零值。     </li>
+<li>设置对象的对象头：将对象所属的类、对象的hashcode、以及GC分代年龄等存放在对象头。    </li>
+<li>执行init方法进行初始化。</li>
+</ol>
+<h2 id="垃圾标记算法"><a href="#垃圾标记算法" class="headerlink" title="垃圾标记算法"></a>垃圾标记算法</h2><p>GC 主要做两个工作：一是内存的划分和分配，二是对垃圾进行回收。关于内存的划分和分配，目前Java虚拟机内存的划分是依赖于GC 的，比如现在的GC 都采用分代收集算法来回收垃圾的。<strong>Java 堆作为GC 的主要管理区域</strong>，被细分为新生代和老年代。</p>
+<blockquote>
+<p>查看gc日志的时候，[GC(Systemt.gc()) 和 [Full GC(Systemt.gc() 用于说明此次垃圾收集的<strong>停顿类型(而非区分新生代和老年代)</strong>，后者表示此次GC发生了 STW(Stop the World，只有GC线程在运行，其他线程都暂停)。</p>
+</blockquote>
+<p>其余主要内容，<a href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/" target="_blank" rel="noopener">参考以前写的这篇文章</a></p>
+<h2 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h2><h3 id="标记-清除算法"><a href="#标记-清除算法" class="headerlink" title="标记-清除算法"></a>标记-清除算法</h3><p>首先标记可以被回收的对象，之后回收被标记的对象所占的空间。它主要有两大缺点：一个是标记和清除两个过程的效率都不高，另一个就是，容易产生大量的内存碎片，<strong>碎片太多可能会导致没有足够的连续内存分配给较大的对象</strong>，从而提前触发新的GC。</p>
+<h3 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h3><p>把空间分为两个相等部分，每次只使用其中一部分，垃圾收集时，把存货的对象复制到另一部分，再把当前部分全部清理掉，这样不需要考虑碎片化问题，缺点就是可用内存变为了原来的一半。</p>
+<h3 id="标记-压缩算法"><a href="#标记-压缩算法" class="headerlink" title="标记-压缩算法"></a>标记-压缩算法</h3><p>新生代一半存活的对象比较少，可以使用复制算法，但是老年代不能选择复制算法了，因为老年代的对象存活率会较高，这样会有很多复制操作，导致效率降低。它的主要方式是，在标记可回收的对象后，将所有还存活的对象压缩到内存的一端，使它们紧凑地排列在一起，然后对边界外的内存进行回收。<strong>标记-压缩算法解决了标记-清除算法容易产生大量内存碎片的问题，但是它的效率仍然是很低的。</strong></p>
+<h3 id="分代收集"><a href="#分代收集" class="headerlink" title="分代收集"></a>分代收集</h3><p>垃圾收集的类型分为两种，分别是：</p>
+<ul>
+<li>Minor Collection: 新生代垃圾收集    </li>
+<li>Full Collection: 老年代垃圾收集，也称 Major Collection， Full Collection 通常会伴随至少一次的 Minor Collection。 Full Collection 收集频率低，耗时长。</li>
+</ul>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">Android进阶解密</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+		<i class="icon-book icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="/categories/读书笔记//" class="article-tag-list-link color5">读书笔记</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/11/18/Android进阶解密-第10章/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-Flutter从0到1构建大前端应用-第4章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1384,87 +1520,6 @@
 
 
   
-    <article id="post-Android系统源代码情景分析-第5章" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/09/15/Android系统源代码情景分析-第5章/">第5章：Binder进程间通信系统</a>
-    </h1>
-  
-
-        
-        <a href="/2019/09/15/Android系统源代码情景分析-第5章/" class="archive-article-date">
-  	<time datetime="2019-09-15T07:48:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-09-15</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>Android 应用程序由 Activity、Service、Broadcast Receiver 和 Content Provider 四中组件构成，它们可能运行在不同的进程中。此外，各种系统组件也运行在独立的进程中，如 Activity 管理服务 ActivityManagerService 和 package 管理服务 PackageManagerService 都运行在系统进程 System 中。</p>
-<p>Android 是基于 Linux 内核开发的，Linux 内核提供了丰富的进程间通信机制：管道(Pipe)、信号(Signal)、消息队列(Message)、共享内存(Share Memory) 和 套接字(Socket) 等。但Android 系统并没有采用这些传统的进程间通信机制，而是使用了新的机制——Binder。与传统的进程间通信机制相比，<strong>Binder 进程间通信机制在进程间传输数据时，只需要执行一次复制操作，不仅提高了效率，并且节省了内存空间。</strong></p>
-<blockquote>
-<p>使用共享内存在进程间传输数据的时候，虽然也只需要进行一次复制操作，但是它一般要结合其他的进程间通信机制来同步信息。</p>
-</blockquote>
-<p>Binder 进程间通信机制采用 C/S 通信方式，提供服务的进程称为 Server 进程，而访问服务的进程称为 Client 进程，同一个 Server 进程可以同时运行多个组件来向 Client 提供服务；而同一个 Client 进程也可以同时向多个 Service 组件请求服务。Service 组件启动时，会将自己注册到一个 Service Manager 组件中，以便 Client 组件可以通过 Service Manager 组件找到它。Binder 进程间通信机制中涉及了 Client、Service、Service Manager 和 Binder 驱动程序四个角色的关系如下图所示：</p>
-<p><img src="/assets/Book-Notes/Android系统源代码情景分析(第三版" alt="Binder通信机制">/第5章/Binder通信机制.png)</p>
-<p>Client、Service 和 Service Manager 都运行在用户控件，而Binder 驱动程序运行在内核控件。Client、Service 和 Service Manager 均是通过系统调用 open(打开)、mmap(内存映射)、ioctl(在用户空间，使用ioctl系统调用来控制设备) 来访问设备文件 /dev/binder ，从而实现与Binder驱动的程序的交互，而交互的目的就是为了能够间接执行进程间通信。</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">深Android系统源代码情景分析(第三版)</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2019/09/15/Android系统源代码情景分析-第5章/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
   
     <nav id="page-nav">
       <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/">8</a><a class="extend next" rel="next" href="/page/3/">Next &raquo;</a>
@@ -1479,7 +1534,7 @@
   <div class="outer">
     <div id="footer-info">
     	<div class="footer-left">
-    		&copy; 2019 glassx
+    		&copy; 2020 glassx
     	</div>
       	<div class="footer-right">
       		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
@@ -1623,6 +1678,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color2">读书笔记-现代操作系统（第三版）</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color5">问题记录</a>
               </li>
             
             <div class="clearfix"></div>
