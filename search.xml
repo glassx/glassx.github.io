@@ -5,6 +5,16 @@
     <url>/2020/02/27/Android%E8%8E%B7%E5%8F%96debug%E5%8C%85%E7%9A%84cookies%E7%9A%84db%E6%96%87%E4%BB%B6/</url>
     <content><![CDATA[<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>在项目中，用户登录后，需要为白名单中的 host 注入特定的cookies，在用户退出登录的时候，需要将注入的 cookies 清除(只清除app自己注入的cookies，h5 注入的cookies不要清除)。</p><h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>Android 的webview 并没有提供针对单个host 清除cookies的方法，只有全部清除，因此主要思路是将需要删除的cookies 设置为过期，再删除过期的即可，具体可以参考<a href="https://blog.csdn.net/turkeycock/article/details/53091103" target="_blank" rel="noopener">Android清除单个域名的cookie</a></p><a id="more"></a>
 
+<p>当然，设置cookies过期有两种方法:</p>
+<blockquote>
+<p>Set-Cookie: id=a3fWa; Expires=Wed, 21 Oct 2015 07:28:00 GMT;</p>
+</blockquote>
+<p>使用Cookie的: Expires 属性. 它可以设置cookie的过期时间. 下面的代码表示id这条cookie的过期时间是2015年10月21日早上7点28分;</p>
+<blockquote>
+<p>Set-Cookie: id=a3fWa; Max-Age=86400</p>
+</blockquote>
+<p>使用Cookie的: Max-Age 属性. 它可以指定从现在开始Cookie存在的秒数. 秒数过完则cookie过期</p>
+<p>参考 <a href="https://www.cnblogs.com/aisowe/p/11566073.html" target="_blank" rel="noopener">aisowe</a></p>
 <h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>但是在清理的时候，发现总是不能清除掉指定cookie，打印出来发现：同一个host，比如 baidu.com ，它的cookie里面有2个key是一样的，但是值不一样，清理的时候，指定host 为baidu.com ，但是只能清除一个，另一个怎么也清理不掉。</p>
 <p>这就很奇怪了，能想到的就是可能在多个不同的host下都注入了这个key，于是想办法要把它存储cookies的文件取出来看下。</p>
 <p>我们知道，cookies 文件存储在 /data/data/<package>/app_webview，文件名是Cookies ，但是这个路径是一个app内部空间，普通情况下是没办法将这个文件获取出来的，除非是在虚拟机或者root过后，安装特定的文件管理器。</package></p>
