@@ -63,7 +63,12 @@
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;LruCache%E6%B7%98%E6%B1%B0%E8%BF%87%E7%A8%8B.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;IPC%E4%BD%BF%E7%94%A8server%E7%9A%84%E8%BF%87%E7%A8%8B.png">
-<meta property="og:updated_time" content="2020-04-12T06:01:28.209Z">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;Binder%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;%E9%80%9A%E8%BF%87%E4%BB%A3%E7%90%86%E6%A8%A1%E5%BC%8F%E9%80%9A%E4%BF%A1.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;gityuan.com&#x2F;images&#x2F;android-anr&#x2F;anr_timeout.jpg">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;binder_mmap.jpg">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;binder%E9%80%9A%E4%BF%A1%E8%BF%87%E7%A8%8B.jpg">
+<meta property="og:updated_time" content="2020-04-16T14:22:34.874Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;LruCache%E6%B7%98%E6%B1%B0%E8%BF%87%E7%A8%8B.png">
 
@@ -253,7 +258,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-12 14:01:28" itemprop="dateModified" datetime="2020-04-12T14:01:28+08:00">2020-04-12</time>
+                <time title="修改时间：2020-04-16 22:22:34" itemprop="dateModified" datetime="2020-04-16T22:22:34+08:00">2020-04-16</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -901,11 +906,11 @@
 
 <p>Linux 内核提供了丰富的进程间通信机制，如 管道(pipe)、信号(signal)、消息队列(Message)、共享内存(Share Memory) 以及 Socket 等。——摘自《Android系统源代码分析》</p>
 <p>Android 中使用 Binder 进行多进程间通信只需要一次数据拷贝，效率上仅次于共享内存。Binder IPC 机制通过 mmap() 内存映射实现，<strong>内存映射简单讲就是将用户空间的一块内存区域映射到内核空间</strong>。Android 中Binder 进程间通信示意图如下：</p>
-<p><img src alt="Binder进程间通信"></p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/Binder%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1.png" alt="Binder进程间通信"></p>
 <h3 id="Binder-通信中的代理模式"><a href="#Binder-通信中的代理模式" class="headerlink" title="Binder 通信中的代理模式"></a>Binder 通信中的代理模式</h3><p>我们已经解释清楚 Client、Server 借助 Binder 驱动完成跨进程通信的实现了，但是还有问题让我们困惑：A进程想要B进程中某个对象(object) 是如何实现的呢？毕竟分数不同的进程，内存地址映射规则也不一样，A进程没法直接使用B进程中的object。</p>
 <p>其实，数据流经过Binder驱动都会左一层转换。当A进程想要获取B进程中的object 时，驱动并不会真的把 object 返回给 A，而是返回一个与 object 看起来一样的代理对象 objctProxy，这个 objctProxy 有object 的所有方法，但是这些方法没有 objct 方法中的那些能力，这些方法的主要工作就是将请求参数交给 Binder 驱动，而对于A进程来讲，就和直接调用 object 对象一样一样的。</p>
 <p>当Binder 驱动收到 A 进程的消息后，发现是 objctProxy ，接着查询自己维护的表单，发现它是B进程 object 的代理对象，于是就通知B进程调用 object 的指定方法，并要求将结果返回自己。之后Binder 驱动将结果转发给A进程，一次通信就完成了。具体通信过程如下图所示：</p>
-<p><img src alt="通过代理模式通信"></p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E9%80%9A%E8%BF%87%E4%BB%A3%E7%90%86%E6%A8%A1%E5%BC%8F%E9%80%9A%E4%BF%A1.png" alt="通过代理模式通信"></p>
 <h3 id="多进程通信方式选择"><a href="#多进程通信方式选择" class="headerlink" title="多进程通信方式选择"></a>多进程通信方式选择</h3><p>如果想进程间通信，但是无需多线程，可以使用 Messenger；如果需要进程间通信，并且还需要再服务中处理多线程，那就使用AIDL(其实Socket也是能实现的)。</p>
 <p>顺带一提：App实现多进程有很多弊端，比如：静态和单例会失效(不是同一规则的内存映射)、sharedPreference 会不可靠 等</p>
 <blockquote>
@@ -937,6 +942,149 @@
 <p>参考自<a href="https://www.cnblogs.com/sixrain/p/11777135.html" target="_blank" rel="noopener">别人的博客</a></p>
 </blockquote>
 </details>
+
+<h2 id="38、Android-中大图加载"><a href="#38、Android-中大图加载" class="headerlink" title="38、Android 中大图加载"></a>38、Android 中大图加载</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>一般为了尽可能避免OOM，图片加载都会按照如下做法：</p>
+<ul>
+<li>对于图片显示,根据需要显示图片空间的大小对图片进行压缩显示(我们是提交给后台的链接中拼接了所需要的尺寸)    </li>
+<li>如果图片非常多，则会使用 LruCache 等缓存机制，将所有图片占据的内容维持在一个范围。详情可以参考<a href="https://blog.csdn.net/guolin_blog/article/details/9316683" target="_blank" rel="noopener">郭霖的博客</a></li>
+</ul>
+<p>但是，还有一种情况，如果单个图片非常巨大，并且还不允许压缩(如清明上河图、世界地图等)，那么我们可以使用 <strong>BitmapRegionDecoder</strong> 来实现。</p>
+<blockquote>
+<p>BitmapRegionDecoder 的原理是：给定一个矩形区域(Rect)，然后通过 Bitmap bitmap = mDecoder.decodeRegion(mRect,opthions) 方法来获取这个区域的 bitmap 展示。因此我们大图展示过程中，都是一次次分割实现的。</p>
+</blockquote>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://blog.csdn.net/lmj623565791/article/details/49300989" target="_blank" rel="noopener">鸿洋</a></p>
+</blockquote>
+<h2 id="39、关于Android绘制"><a href="#39、关于Android绘制" class="headerlink" title="39、关于Android绘制"></a>39、关于Android绘制</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>60帧的画面让人感觉不到画面的更新，因此Android系统中基本上是 60帧/s的刷新频率，也就是每16ms 发出一次 <strong>VSYNC信号</strong>触发对UI的绘制。当然，我们要明白，<strong>这个 16ms 不只是全用来绘制界面，而是会包括layout、measure</strong>。</p>
+<p>整体的过程就是，<strong>cpu执行计算任务</strong>，即 layout、measure后将ui计算成多维图形(多边形、纹理)，再经过OpenGL处理，之后交给GPU 进行<strong>栅格化</strong>后显示在屏幕上。 因此，16ms的时间主要被两件事情占用，第一件:将UI对象转换为一系列多边形和纹理；第二件：CPU传递处理数据到GPU进行栅格化</p>
+<h3 id="Frame-Buffer中的数据是怎么来的"><a href="#Frame-Buffer中的数据是怎么来的" class="headerlink" title="Frame Buffer中的数据是怎么来的"></a>Frame Buffer中的数据是怎么来的</h3><p>GPU 从Frame Buffer 中获取数据绘制，但其除了 Frame Buffer 外，还有缓冲的Back Buffer ，GPU 也会定时地切换这两个 Buffer 的角色(可能其中一个为Frame Buffer，另一个就为 Back Buffer)，由于16ms 发出一次 VSYNC 信号，因此这个切换也是 16ms。</p>
+<p>在系统将Back Buffer 交给应用填充数据时，实际过程是将 Back Buffer 锁定，讲一个指向它的引用交给你的应用，这个<strong>引用就是Canvas对象</strong>，View的onDraw 方法中接收到的Canvas就是它。我们知道，父view在onDraw的时候，会一直调用子View的onDraw方法，这个Canvas 就会一直传递下去给每一个View。当所有的View 都通过Canvas 绘制完成后，才算完成了一帧的绘制。</p>
+<h3 id="丢帧是怎么发生的"><a href="#丢帧是怎么发生的" class="headerlink" title="丢帧是怎么发生的"></a>丢帧是怎么发生的</h3><p>上面说GPU 会定期交换 Back Buffer 和 Frame Buffer ，但是有一个例外情况，当你的应用正在往 Back Buffer 中填充数据时，系统会将 Back Buffer 锁定，如果到了 GPU 交换两个Buffer 的时间点，你的应用还在往Back Buffer 中填充数据，GPU 会发现 Back Buffer 被锁定了，它会放弃这次交换(即发生Jank了)，导致的结果就是手机屏幕仍然显示原来的图像，即用户在32ms内看到的是同一帧。</p>
+<h3 id="开发者如何避免"><a href="#开发者如何避免" class="headerlink" title="开发者如何避免"></a>开发者如何避免</h3><p>可以从两个方面考虑：</p>
+<ul>
+<li>CPU产生的问题：不必要的布局和失效</li>
+<li>GPU产生的问题：过度绘制(overdraw)</li>
+</ul>
+<p>1、避免cpu 计算任务过重。1、减少在onDraw 方法中创建对象，尤其是复杂对象。  2、减少视图层次，尽量使用ConstrainLayout 等代替多层嵌套<br>2、避免cpu、GPU 任务过重，减少不必要的View的invalidate 调用(不invalidate可以让gpu最大限度使用缓存)<br>3、减少过度绘制。1、clipRect帮助识别可见的区域。2、去除View 中不必要的background，因为许多background 并不会显示在最终的屏幕上。比如ImageView，假如它现实的图片填满了空间，你就没有必要给它设置一个背景色。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://blog.csdn.net/wei_lei/article/details/70460132" target="_blank" rel="noopener">wei_lei</a>、<a href="https://www.jianshu.com/p/a769a6028e51" target="_blank" rel="noopener">milter</a>、<a href="https://www.jianshu.com/p/02800806356c" target="_blank" rel="noopener">jianshu</a></p>
+</blockquote>
+<h2 id="40、屏幕尺寸变化适配有什么手段"><a href="#40、屏幕尺寸变化适配有什么手段" class="headerlink" title="40、屏幕尺寸变化适配有什么手段"></a>40、屏幕尺寸变化适配有什么手段</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ul>
+<li>使用 match_parent、wrap_content 等方式藐视控件大小    </li>
+<li>使用宽度限定符，如 layout-w600dp    </li>
+<li>屏幕方向限定符，如 layout-land、layout_port 来适配横竖屏       </li>
+<li>使用Fragment，将界面组件化    </li>
+<li>使用.9图片    </li>
+</ul>
+</details>
+
+<h2 id="41、像素密度"><a href="#41、像素密度" class="headerlink" title="41、像素密度"></a>41、像素密度</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>为了保证在密度不同的屏幕上看起来尺寸相同，必须使用密度无关的像素(density-independent pixels，简称 dp 或者 dip) 作为单位。<strong>1dp 是以中密度屏幕(像素密度(dpi，每平方英尺上的像素个数)：160dpi)作为基准密度，在基准上1dp = 1px</strong>。不过在定义文本时，应该使用可缩放像素(scalable pixels，简称： sp)作为单位。默认情况下，dp 与sp大小相同，但是当用户在设置中调整文本大小时，sp就会变化了。还有，要注意的是，我们平时说的屏幕的尺寸是指的屏幕对角线长度。 </p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://developer.android.google.cn/training/multiscreen/screendensities" target="_blank" rel="noopener">官方文档</a></p>
+</blockquote>
+<h2 id="42、彻底理解android-应用无响应机制"><a href="#42、彻底理解android-应用无响应机制" class="headerlink" title="42、彻底理解android 应用无响应机制"></a>42、彻底理解android 应用无响应机制</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>首先总结下ANR发生的情况以及阈值：</p>
+<p><img src="http://gityuan.com/images/android-anr/anr_timeout.jpg" alt="Anr发生的阈值"></p>
+<p>ANR的原理基本上都是<strong>执行某项操作task之前，通过Handler 发送一个延时 Message，如果在延时时间到达之前 task 执行完成，则通过handler removeMessage 将Message 移除，否则，在延时时间到达之后还未能完成，Handler 便会处理这个message，从而抛出ANR</strong>。尤其需要注意的有以下几点：</p>
+<ul>
+<li>通过静态注册的广播(动态广播不用考虑)在完成前会检查 SharedPreference 是否已经完成同步到磁盘，如果没有，要等其完成才能告知系统已经完成。    </li>
+<li>Provider 只有在进程首次启动的时候才会检测ANR，当provider 进程已经启动，再次请求provider 不会触发超时。    </li>
+<li>Activity 退出也会检查 sp 是否已经同步到磁盘，未完成的话，也会等待。</li>
+</ul>
+<h3 id="回答有哪些路径会导致ANR"><a href="#回答有哪些路径会导致ANR" class="headerlink" title="回答有哪些路径会导致ANR"></a>回答有哪些路径会导致ANR</h3><p>从handler 发送了 message 到 removeMessage 之前的任何一个环节都可能出现ANR，比如：service 的回调方法慢，比如主线程的消息队列存在耗时消息让service 的回调迟迟得不到执行，可能是sp操作缓慢，可以是system_server 进程的binder 线程繁忙，而导致 removeMessage 没来得及执行，也有可能是广播在等待sp操作，等等。</p>
+<h3 id="ANR-避免"><a href="#ANR-避免" class="headerlink" title="ANR 避免"></a>ANR 避免</h3><ul>
+<li>主线程尽量只做UI相关操作，避免耗时操作，如过度绘制、IO操作    </li>
+<li>避免主线程与工作线程发生锁竞争    </li>
+<li>谨慎使用SharedPreference     </li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="http://gityuan.com/2019/04/06/android-anr/" target="_blank" rel="noopener">gityuan的博客</a>、<a href="http://gityuan.com/2016/07/02/android-anr/" target="_blank" rel="noopener">gityuan博客</a></p>
+</blockquote>
+<h2 id="43、为什么要使用Binder-机制进程间通信"><a href="#43、为什么要使用Binder-机制进程间通信" class="headerlink" title="43、为什么要使用Binder 机制进程间通信"></a>43、为什么要使用Binder 机制进程间通信</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="Linux现有的IPC-方式"><a href="#Linux现有的IPC-方式" class="headerlink" title="Linux现有的IPC 方式"></a>Linux现有的IPC 方式</h3><ul>
+<li><p>管道：<strong>信息复制2次</strong>。在创建时分配一个page大小的内存，缓存区大小比较有限；    </p>
+</li>
+<li><p>消息队列：<strong>信息复制2次</strong>。额外的CPU消耗；不合适频繁或信息量大的通信；    </p>
+</li>
+<li><p>共享内存：无须复制，共享缓冲区直接付附加到进程虚拟地址空间，速度快；但进程间的同步问题操作系统无法实现，必须各进程利用同步工具解决；     </p>
+</li>
+<li><p>套接字(Socket)：<strong>信息复制2次</strong>。作为更通用的接口，传输效率低，主要用于同机器或跨网络的通信；   </p>
+</li>
+<li><p>信号量：常作为一种锁机制，防止某进程正在访问共享资源时，其他进程也访问该资源。因此，主要作为进程间以及同一进程内不同线程之间的同步手段。   </p>
+</li>
+<li><p>信号: 不适用于信息交换，更适用于进程中断控制，比如非法内存访问，杀死某个进程等；   </p>
+</li>
+</ul>
+<h3 id="为什么采用Binder-从5个维度"><a href="#为什么采用Binder-从5个维度" class="headerlink" title="为什么采用Binder(从5个维度)"></a>为什么采用Binder(从5个维度)</h3><p>总结下：从性能的角度、从稳定性的角度、从安全的角度、从语言层面的角度、从公司战略的角度</p>
+<ul>
+<li>从性能的角度:从拷贝次数看，仅次于共享内存。但是共享内存会遇到进程同步，太复杂。      </li>
+<li>从稳定性的角度：Binder 基于 C/S 架构，清晰明了，Client 端与Server 端相对独立。     </li>
+<li>从安全的角度：传统的Linux IPC 只能由用户在数据包里填入UID/PID，接收方无法获得对方进程可靠的 UID/PID ,从而无法鉴别对方身份。而Android 为每个安装好的应用都分配了自己的UID。此外，C/S架构有利于Server端根据UID鉴别访问权限。     </li>
+<li>语言层面：Binder 这种面向对象的思想与Android 开始的开发语言 Java 高度契合。     </li>
+<li>公司战略： 公司战略层面就不多说了     </li>
+</ul>
+<p>另外，Linux没有采用Binder 不是他们没想到，而是Binder 更适合Android这种手持设备而已。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://blog.csdn.net/Gityuan/article/details/88969180" target="_blank" rel="noopener">gityuan的csdn</a></p>
+</blockquote>
+<h2 id="44、Binder-机制"><a href="#44、Binder-机制" class="headerlink" title="44、Binder 机制"></a>44、Binder 机制</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>而一般的进程间通信方式(共享内存除外)，需要Client端进程空间拷贝到内核空间，再由内核空间拷贝到Server进程空间，会发生两次拷贝。</p>
+<p>Binder 进程间的高效率通信的秘诀在于 binder_mmap() ，如下图示意：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/binder_mmap.jpg" alt="Binder的mmap操作"></p>
+<p>虚拟进程地址空间(vm_area_struct)和虚拟内核地址空间(vm_struct)都映射到同一块物理内存空间。当Client端与Server端发送数据时，Client（作为数据发送端）先从自己的进程空间把IPC通信数据copy_from_user拷贝到内核空间，而Server端（作为数据接收端）与内核共享数据，不再需要拷贝数据，而是通过内存地址空间的偏移量，即可获悉内存地址，整个过程只发生一次内存拷贝。</p>
+<p>进程和内核虚拟地址映射到同一个物理内存的操作是发生在数据接收端，而数据发送端还是需要将用户态的数据复制到内核态。</p>
+<p>下图展示了通过Binder 进行进程间通信：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/binder%E9%80%9A%E4%BF%A1%E8%BF%87%E7%A8%8B.jpg" alt="Binder进程间通信示意"></p>
+<p><strong>我个人理解，client 与server 双方都有进行 mmap 映射操作，但是在用户空间获取到的映射空间只能读，不能写。这样，双方发送数据时都只需要执行 copy_from_user 即可，在接收端通过地址偏移就能获取到数据</strong></p>
+<p>从<a href="https://blog.csdn.net/universus/article/details/6211589" target="_blank" rel="noopener">universus的博客(据说这篇博客是介绍binder的神级存在)</a>能看出来确实两端都有映射。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="http://gityuan.com/2015/11/02/binder-driver-2/" target="_blank" rel="noopener">gityuan的博客</a></p>
+</blockquote>
+<h2 id="45、动画"><a href="#45、动画" class="headerlink" title="45、动画"></a>45、动画</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>帧动画、View 动画(补间动画)、属性动画</p>
+<ul>
+<li>帧动画就一帧帧播放     </li>
+<li>View动画：指定开始状态和结束状态，中间的view会自动被补齐，主要支持 平移、缩放、透明度、旋转 四种基本效果。主要应用场景： view的动画 以及 Activity、Fragment 的切换动画。<strong>注意：View 动画执行到某个位置时，它的动作响应(比如点击)还停留在原来位置的，只有点击原来位置才有效，因为它不是真正改变View的属性。</strong>       </li>
+<li>属性动画：真正的视图移动，点击移动后的视图会有效果。   </li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://blog.csdn.net/f552126367/article/details/84567900" target="_blank" rel="noopener">会飞的鱼</a></p>
+</blockquote>
+
     </div>
 
     
@@ -1017,7 +1165,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、是否可以在子线程更新UI"><span class="nav-number">1.</span> <span class="nav-text">1、是否可以在子线程更新UI</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、延伸-子线程更新UI骚操作-在子线程启动-Dialog"><span class="nav-number">2.</span> <span class="nav-text">2、延伸-子线程更新UI骚操作-在子线程启动 Dialog</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LruCache-原理"><span class="nav-number">3.</span> <span class="nav-text">LruCache 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><span class="nav-number">4.</span> <span class="nav-text">3、聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、Handler-的postDelay-是怎么实现的？"><span class="nav-number">5.</span> <span class="nav-text">4、Handler 的postDelay 是怎么实现的？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、RecyclerView-的性能优化"><span class="nav-number">6.</span> <span class="nav-text">5、RecyclerView 的性能优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6、引申-如何保存嵌套rv中的滑动装填"><span class="nav-number">7.</span> <span class="nav-text">6、引申-如何保存嵌套rv中的滑动装填</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7、图片加载优化"><span class="nav-number">8.</span> <span class="nav-text">7、图片加载优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8、延伸-Bitmap大小计算方法"><span class="nav-number">9.</span> <span class="nav-text">8、延伸-Bitmap大小计算方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9、Activity生命周期"><span class="nav-number">10.</span> <span class="nav-text">9、Activity生命周期</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10、延伸-生命周期几种普通情况"><span class="nav-number">11.</span> <span class="nav-text">10、延伸-生命周期几种普通情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11、Activity的启动模式"><span class="nav-number">12.</span> <span class="nav-text">11、Activity的启动模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12、Fragment-为何不推荐使用构造方法传递参数？"><span class="nav-number">13.</span> <span class="nav-text">12、Fragment 为何不推荐使用构造方法传递参数？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#13、Context-理解"><span class="nav-number">14.</span> <span class="nav-text">13、Context 理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#14、Android-全局异常处理"><span class="nav-number">15.</span> <span class="nav-text">14、Android 全局异常处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15、谈谈你对Application类的理解"><span class="nav-number">16.</span> <span class="nav-text">15、谈谈你对Application类的理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#16、Android-中进程通信方式"><span class="nav-number">17.</span> <span class="nav-text">16、Android 中进程通信方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#17、Binder-原理"><span class="nav-number">18.</span> <span class="nav-text">17、Binder 原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么要使用Binder"><span class="nav-number">18.1.</span> <span class="nav-text">为什么要使用Binder</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IPC-原理"><span class="nav-number">18.2.</span> <span class="nav-text">IPC 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#跨进程使用服务的流程"><span class="nav-number">18.3.</span> <span class="nav-text">跨进程使用服务的流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#18、延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><span class="nav-number">19.</span> <span class="nav-text">18、延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#19、Android中IPC通信的方式有哪些？使用场景是什么"><span class="nav-number">20.</span> <span class="nav-text">19、Android中IPC通信的方式有哪些？使用场景是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#20、SharedPreference-解析"><span class="nav-number">21.</span> <span class="nav-text">20、SharedPreference 解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#获取SharedPreference-对象"><span class="nav-number">21.1.</span> <span class="nav-text">获取SharedPreference 对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SharedPreference-的值获取"><span class="nav-number">21.2.</span> <span class="nav-text">SharedPreference 的值获取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SharePreferences内部类Editor"><span class="nav-number">21.3.</span> <span class="nav-text">SharePreferences内部类Editor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#改动提交到-SharedPreference"><span class="nav-number">21.4.</span> <span class="nav-text">改动提交到 SharedPreference</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用是注意"><span class="nav-number">21.5.</span> <span class="nav-text">使用是注意</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结一下"><span class="nav-number">21.6.</span> <span class="nav-text">总结一下</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#21、常见内存泄漏场景："><span class="nav-number">22.</span> <span class="nav-text">21、常见内存泄漏场景：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#22、延伸-内存泄露检测工具"><span class="nav-number">23.</span> <span class="nav-text">22、延伸-内存泄露检测工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#23、Android应用程序启动过程"><span class="nav-number">24.</span> <span class="nav-text">23、Android应用程序启动过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#24、Apk-安装的步骤"><span class="nav-number">25.</span> <span class="nav-text">24、Apk 安装的步骤</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#25、ANR异常发生条件？如何分析ANR？"><span class="nav-number">26.</span> <span class="nav-text">25、ANR异常发生条件？如何分析ANR？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR-发生条件："><span class="nav-number">26.1.</span> <span class="nav-text">ANR 发生条件：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR-时，系统做了什么"><span class="nav-number">26.2.</span> <span class="nav-text">ANR 时，系统做了什么</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#26、Android-热修复原理"><span class="nav-number">27.</span> <span class="nav-text">26、Android 热修复原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#27、插件化技术原理"><span class="nav-number">28.</span> <span class="nav-text">27、插件化技术原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#28、轮播图实现原理？"><span class="nav-number">29.</span> <span class="nav-text">28、轮播图实现原理？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#29、ListView-原理"><span class="nav-number">30.</span> <span class="nav-text">29、ListView 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#30、android-5-0-6-0-7-0-8-0新特性"><span class="nav-number">31.</span> <span class="nav-text">30、android 5.0, 6.0, 7.0, 8.0新特性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-0"><span class="nav-number">31.1.</span> <span class="nav-text">5.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-0"><span class="nav-number">31.2.</span> <span class="nav-text">6.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-0"><span class="nav-number">31.3.</span> <span class="nav-text">7.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-0"><span class="nav-number">31.4.</span> <span class="nav-text">8.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-0"><span class="nav-number">31.5.</span> <span class="nav-text">9.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Q"><span class="nav-number">31.6.</span> <span class="nav-text">Q</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#31、如何导入外部数据库"><span class="nav-number">32.</span> <span class="nav-text">31、如何导入外部数据库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#32、Android-消息屏障"><span class="nav-number">33.</span> <span class="nav-text">32、Android 消息屏障</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#33、引申-IdelHandler"><span class="nav-number">34.</span> <span class="nav-text">33、引申-IdelHandler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#34、卡顿之-BlockCanary-原理"><span class="nav-number">35.</span> <span class="nav-text">34、卡顿之-BlockCanary 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#35、Android-跨进程通信之-Binder"><span class="nav-number">36.</span> <span class="nav-text">35、Android 跨进程通信之 Binder</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Binder-通信中的代理模式"><span class="nav-number">36.1.</span> <span class="nav-text">Binder 通信中的代理模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多进程通信方式选择"><span class="nav-number">36.2.</span> <span class="nav-text">多进程通信方式选择</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#36、事件分发"><span class="nav-number">37.</span> <span class="nav-text">36、事件分发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#37、所谓的Android-开发高手课"><span class="nav-number">38.</span> <span class="nav-text">37、所谓的Android 开发高手课</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Bitmap"><span class="nav-number">38.1.</span> <span class="nav-text">Bitmap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR"><span class="nav-number">38.2.</span> <span class="nav-text">ANR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Serializable"><span class="nav-number">38.3.</span> <span class="nav-text">Serializable</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、是否可以在子线程更新UI"><span class="nav-number">1.</span> <span class="nav-text">1、是否可以在子线程更新UI</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、延伸-子线程更新UI骚操作-在子线程启动-Dialog"><span class="nav-number">2.</span> <span class="nav-text">2、延伸-子线程更新UI骚操作-在子线程启动 Dialog</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LruCache-原理"><span class="nav-number">3.</span> <span class="nav-text">LruCache 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、聊聊handler机制？-一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？"><span class="nav-number">4.</span> <span class="nav-text">3、聊聊handler机制？ 一个线程是否只有一个Looper？如何保证一个线程只有一个Looper？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、Handler-的postDelay-是怎么实现的？"><span class="nav-number">5.</span> <span class="nav-text">4、Handler 的postDelay 是怎么实现的？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、RecyclerView-的性能优化"><span class="nav-number">6.</span> <span class="nav-text">5、RecyclerView 的性能优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6、引申-如何保存嵌套rv中的滑动装填"><span class="nav-number">7.</span> <span class="nav-text">6、引申-如何保存嵌套rv中的滑动装填</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7、图片加载优化"><span class="nav-number">8.</span> <span class="nav-text">7、图片加载优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8、延伸-Bitmap大小计算方法"><span class="nav-number">9.</span> <span class="nav-text">8、延伸-Bitmap大小计算方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9、Activity生命周期"><span class="nav-number">10.</span> <span class="nav-text">9、Activity生命周期</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10、延伸-生命周期几种普通情况"><span class="nav-number">11.</span> <span class="nav-text">10、延伸-生命周期几种普通情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11、Activity的启动模式"><span class="nav-number">12.</span> <span class="nav-text">11、Activity的启动模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12、Fragment-为何不推荐使用构造方法传递参数？"><span class="nav-number">13.</span> <span class="nav-text">12、Fragment 为何不推荐使用构造方法传递参数？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#13、Context-理解"><span class="nav-number">14.</span> <span class="nav-text">13、Context 理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#14、Android-全局异常处理"><span class="nav-number">15.</span> <span class="nav-text">14、Android 全局异常处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15、谈谈你对Application类的理解"><span class="nav-number">16.</span> <span class="nav-text">15、谈谈你对Application类的理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#16、Android-中进程通信方式"><span class="nav-number">17.</span> <span class="nav-text">16、Android 中进程通信方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#17、Binder-原理"><span class="nav-number">18.</span> <span class="nav-text">17、Binder 原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么要使用Binder"><span class="nav-number">18.1.</span> <span class="nav-text">为什么要使用Binder</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IPC-原理"><span class="nav-number">18.2.</span> <span class="nav-text">IPC 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#跨进程使用服务的流程"><span class="nav-number">18.3.</span> <span class="nav-text">跨进程使用服务的流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#18、延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递"><span class="nav-number">19.</span> <span class="nav-text">18、延伸-Android为什么要设计出Bundle而不是直接使用HashMap来进行数据传递</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#19、Android中IPC通信的方式有哪些？使用场景是什么"><span class="nav-number">20.</span> <span class="nav-text">19、Android中IPC通信的方式有哪些？使用场景是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#20、SharedPreference-解析"><span class="nav-number">21.</span> <span class="nav-text">20、SharedPreference 解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#获取SharedPreference-对象"><span class="nav-number">21.1.</span> <span class="nav-text">获取SharedPreference 对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SharedPreference-的值获取"><span class="nav-number">21.2.</span> <span class="nav-text">SharedPreference 的值获取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SharePreferences内部类Editor"><span class="nav-number">21.3.</span> <span class="nav-text">SharePreferences内部类Editor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#改动提交到-SharedPreference"><span class="nav-number">21.4.</span> <span class="nav-text">改动提交到 SharedPreference</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用是注意"><span class="nav-number">21.5.</span> <span class="nav-text">使用是注意</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结一下"><span class="nav-number">21.6.</span> <span class="nav-text">总结一下</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#21、常见内存泄漏场景："><span class="nav-number">22.</span> <span class="nav-text">21、常见内存泄漏场景：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#22、延伸-内存泄露检测工具"><span class="nav-number">23.</span> <span class="nav-text">22、延伸-内存泄露检测工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#23、Android应用程序启动过程"><span class="nav-number">24.</span> <span class="nav-text">23、Android应用程序启动过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#24、Apk-安装的步骤"><span class="nav-number">25.</span> <span class="nav-text">24、Apk 安装的步骤</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#25、ANR异常发生条件？如何分析ANR？"><span class="nav-number">26.</span> <span class="nav-text">25、ANR异常发生条件？如何分析ANR？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR-发生条件："><span class="nav-number">26.1.</span> <span class="nav-text">ANR 发生条件：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR-时，系统做了什么"><span class="nav-number">26.2.</span> <span class="nav-text">ANR 时，系统做了什么</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#26、Android-热修复原理"><span class="nav-number">27.</span> <span class="nav-text">26、Android 热修复原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#27、插件化技术原理"><span class="nav-number">28.</span> <span class="nav-text">27、插件化技术原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#28、轮播图实现原理？"><span class="nav-number">29.</span> <span class="nav-text">28、轮播图实现原理？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#29、ListView-原理"><span class="nav-number">30.</span> <span class="nav-text">29、ListView 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#30、android-5-0-6-0-7-0-8-0新特性"><span class="nav-number">31.</span> <span class="nav-text">30、android 5.0, 6.0, 7.0, 8.0新特性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-0"><span class="nav-number">31.1.</span> <span class="nav-text">5.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-0"><span class="nav-number">31.2.</span> <span class="nav-text">6.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-0"><span class="nav-number">31.3.</span> <span class="nav-text">7.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-0"><span class="nav-number">31.4.</span> <span class="nav-text">8.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-0"><span class="nav-number">31.5.</span> <span class="nav-text">9.0</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Q"><span class="nav-number">31.6.</span> <span class="nav-text">Q</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#31、如何导入外部数据库"><span class="nav-number">32.</span> <span class="nav-text">31、如何导入外部数据库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#32、Android-消息屏障"><span class="nav-number">33.</span> <span class="nav-text">32、Android 消息屏障</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#33、引申-IdelHandler"><span class="nav-number">34.</span> <span class="nav-text">33、引申-IdelHandler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#34、卡顿之-BlockCanary-原理"><span class="nav-number">35.</span> <span class="nav-text">34、卡顿之-BlockCanary 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#35、Android-跨进程通信之-Binder"><span class="nav-number">36.</span> <span class="nav-text">35、Android 跨进程通信之 Binder</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Binder-通信中的代理模式"><span class="nav-number">36.1.</span> <span class="nav-text">Binder 通信中的代理模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多进程通信方式选择"><span class="nav-number">36.2.</span> <span class="nav-text">多进程通信方式选择</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#36、事件分发"><span class="nav-number">37.</span> <span class="nav-text">36、事件分发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#37、所谓的Android-开发高手课"><span class="nav-number">38.</span> <span class="nav-text">37、所谓的Android 开发高手课</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Bitmap"><span class="nav-number">38.1.</span> <span class="nav-text">Bitmap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR"><span class="nav-number">38.2.</span> <span class="nav-text">ANR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Serializable"><span class="nav-number">38.3.</span> <span class="nav-text">Serializable</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#38、Android-中大图加载"><span class="nav-number">39.</span> <span class="nav-text">38、Android 中大图加载</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#39、关于Android绘制"><span class="nav-number">40.</span> <span class="nav-text">39、关于Android绘制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#原理"><span class="nav-number">40.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Frame-Buffer中的数据是怎么来的"><span class="nav-number">40.2.</span> <span class="nav-text">Frame Buffer中的数据是怎么来的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#丢帧是怎么发生的"><span class="nav-number">40.3.</span> <span class="nav-text">丢帧是怎么发生的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#开发者如何避免"><span class="nav-number">40.4.</span> <span class="nav-text">开发者如何避免</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#40、屏幕尺寸变化适配有什么手段"><span class="nav-number">41.</span> <span class="nav-text">40、屏幕尺寸变化适配有什么手段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#41、像素密度"><span class="nav-number">42.</span> <span class="nav-text">41、像素密度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#42、彻底理解android-应用无响应机制"><span class="nav-number">43.</span> <span class="nav-text">42、彻底理解android 应用无响应机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#回答有哪些路径会导致ANR"><span class="nav-number">43.1.</span> <span class="nav-text">回答有哪些路径会导致ANR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR-避免"><span class="nav-number">43.2.</span> <span class="nav-text">ANR 避免</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#43、为什么要使用Binder-机制进程间通信"><span class="nav-number">44.</span> <span class="nav-text">43、为什么要使用Binder 机制进程间通信</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Linux现有的IPC-方式"><span class="nav-number">44.1.</span> <span class="nav-text">Linux现有的IPC 方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么采用Binder-从5个维度"><span class="nav-number">44.2.</span> <span class="nav-text">为什么采用Binder(从5个维度)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#44、Binder-机制"><span class="nav-number">45.</span> <span class="nav-text">44、Binder 机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#45、动画"><span class="nav-number">46.</span> <span class="nav-text">45、动画</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -1119,7 +1267,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共184.9k字</span>
+  <span class="post-count">博客全站共189k字</span>
 </div>
 
 
