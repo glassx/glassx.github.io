@@ -1,6 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>高级进阶课</title>
+    <url>/2020/04/19/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/</url>
+    <content><![CDATA[<h2 id="4-1-停止线程"><a href="#4-1-停止线程" class="headerlink" title="4-1 停止线程"></a>4-1 停止线程</h2><p>有两种方法：</p><ul>
+<li>调用 interruput 方法，通过抛异常的方式触发</li>
+<li>使用boolean 标志位，注意，要使用volatile 标志位保证可见性；</li>
+</ul><p>一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。</p><a id="more"></a>
+
+
+<p>建议转移到线程安全问题上去</p>
+<h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>stop 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
+<p>为什么Thread 的run方法中执行 sleep 方法要try-catch 捕捉 InterruptedException ，这是因为在sleep 过程中，有可能这个thread 会被调用 thread.interrupt() ，此时就会触发 这个异常，我们应该在 catch 语句中 关闭打开的文件之类的。</p>
+<h2 id="4-2、如何写出线程安全的代码"><a href="#4-2、如何写出线程安全的代码" class="headerlink" title="4-2、如何写出线程安全的代码"></a>4-2、如何写出线程安全的代码</h2><p>每个线程都有一个自己的内存副本，这是java的内存模型。</p>
+<p>要么不共享，要么不可变。其次就是采取一定手段了</p>
+<p>final 其实还有一个功能就是禁止重排序。某些情况下，构造函数调用完了，非final的成员变量还没初始化完(final 是已经初始化完了)，这就会有问题了。</p>
+<p>为什么 a++ 不是原子性的，因为这个操作首先要将 a 赋值进来，int temp = a; 之后再对temp 操作：temp += 1; 最后再将 temp 的值赋回给a。</p>
+<h3 id="ThreadLocal-的使用建议"><a href="#ThreadLocal-的使用建议" class="headerlink" title="ThreadLocal 的使用建议"></a>ThreadLocal 的使用建议</h3><p>ThreadLocal 对对象也是弱引用</p>
+<ul>
+<li>声明为全局静态final 成员，避免初始化多个ThreadLocal 对象(因为设置value的时候是以ThreadLocal 为key的)        </li>
+<li>避免存储大量对象，因为hash冲突使用的是<strong>开放定址</strong> 法，这并不适合大量数据      </li>
+<li>用完后及时移除，因为它只能靠主动移除和线程退出时移除，否则线程声明周期长的时候，迟迟得不到释放。    </li>
+</ul>
+<p>禁止重排序的方法：</p>
+<ul>
+<li>final 关键字</li>
+<li>volatile关键字</li>
+<li>加锁(synchronized/Lock)</li>
+</ul>
+<p>保证可见性：</p>
+<ul>
+<li>final 关键字    </li>
+<li>volatile     </li>
+<li>加锁(释放锁之前强制刷新到主内存 )     </li>
+</ul>
+<p>保证原子性的方法：</p>
+<ul>
+<li>加锁    </li>
+<li>使用CAS 指令    </li>
+<li>使用原子类型 ，如 AtomicInteger       </li>
+<li>使用原子属性更新器    </li>
+</ul>
+<h2 id="4-3、ConcurrentHashMap"><a href="#4-3、ConcurrentHashMap" class="headerlink" title="4-3、ConcurrentHashMap"></a>4-3、ConcurrentHashMap</h2><p>从1.5 到 1.8 一直在优化</p>
+<p>jdk5：诞生，分段锁(segment)，对段加锁，必要时加锁。它的hashCode 计算方法就是，对key 求hashCode ，之后对这个hashCode 再散列得到散列码 code，之后，根据这个code 的高位 来计算segment 的值，根据低位计算在segment 中的值。<br>1.6：二次hash算法。Integer 的hashCode() 函数返回的就是它的value值。3万多以下的整数高位都是15，于是都集中在一个segment中，退化成 HashTable 了(因为对这个segment 加锁也就相当于对整个ConcurrentHashMap加锁了)<br>1.7：段(segment)懒加载，volatile &amp; CAS 操作避免加锁。一开始并不会把segment 通通new出来，需要哪个。使用volatile  来修饰 segment[] 数组，防止可见性导致的问题，比如，在某个segment 创建后，另一个线程不能马上知道。<br>8、摒弃段(segment)，基于Hashmap 原理并发。  使用    </p>
+<h3 id="求和"><a href="#求和" class="headerlink" title="求和"></a>求和</h3><p>分段计数</p>
+<h3 id="CHM-是弱一致性"><a href="#CHM-是弱一致性" class="headerlink" title="CHM 是弱一致性"></a>CHM 是弱一致性</h3><ul>
+<li>添加元素不一定马上读到。你读过这个段，然后再往这个段添加数据，那么就遗漏了</li>
+<li>同以上的理，清空之后可能还有元素；</li>
+</ul>
+<h3 id="HashTable-的问题"><a href="#HashTable-的问题" class="headerlink" title="HashTable 的问题"></a>HashTable 的问题</h3><ul>
+<li>大锁，对整个HashTable 加锁    </li>
+<li>长锁，直接对方法加锁    </li>
+<li>读写公用一把锁，读写不能同时进行</li>
+</ul>
+<h3 id="CHM-解法"><a href="#CHM-解法" class="headerlink" title="CHM 解法"></a>CHM 解法</h3><p>小锁： 分段锁(1.5<del>1.7 版本使用segment)，后来(1.8版本)桶节点锁<br>短锁：先尝试获取，失败再加锁<br>分离读写锁：读写失败再加锁(1.5</del>1.7版本)，volatile读CAS写(1.7~1.8版本)     </p>
+<h3 id="总结：如何进行锁优化"><a href="#总结：如何进行锁优化" class="headerlink" title="总结：如何进行锁优化"></a>总结：如何进行锁优化</h3><p>长锁不如短缩：尽可能只锁必要的部分<br>大锁不如小锁：对加锁的对象拆分<br>分离读写锁，读写的频次是不一样的<br>消除无用锁，尽量不加锁，使用volatile 或者 CAS </p>
+<h2 id="4-5-Android-中写出优雅的代码"><a href="#4-5-Android-中写出优雅的代码" class="headerlink" title="4-5 Android 中写出优雅的代码"></a>4-5 Android 中写出优雅的代码</h2><p>异步，不一定涉及到多线程，比如你setOnclickListener，它不是马上执行，而是等点击再相响应。异步不一定快，如果你线程一直在做运算，其实就无需太多线程，如果有很多io，被阻塞在那，那多开线程是有用的。</p>
+<p>避免回调地狱。</p>
+<h3 id="Rxjava-要注意的问题："><a href="#Rxjava-要注意的问题：" class="headerlink" title="Rxjava 要注意的问题："></a>Rxjava 要注意的问题：</h3><ul>
+<li>很多时候Rxjava 请求完数据后，要更新UI，其实本质上这还是匿名内部类，会持有 Activity 引用。更新ui的时候，ui可能已经没有了，可能出现空指针；    </li>
+<li>声明将所有任务的句柄放在 List<disposable> 列表中，在需要停止的时候，遍历执行 Disposable.dispose();     </disposable></li>
+</ul>
+<h3 id="kotlin-协程"><a href="#kotlin-协程" class="headerlink" title="kotlin 协程"></a>kotlin 协程</h3><p>协程将异步逻辑同步化，取消协程，其实是跟 view 绑定，监听它的attach 状态，在dettach 的时候，取消协程。</p>
+<h2 id="5-1-cpu-架构适配"><a href="#5-1-cpu-架构适配" class="headerlink" title="5-1 cpu 架构适配"></a>5-1 cpu 架构适配</h2><p>注意问题：</p>
+<ul>
+<li>native 开发才关注cpu架构</li>
+<li>不同架构兼容性如何    </li>
+<li>so 库太多如何优化 apk 体积     </li>
+<li>sdk 开发者应该提供哪些so 库    </li>
+</ul>
+<p>armeabi 可以兼容x86 和 arm 架构，但是不兼容 mips(mips 目前已经被Android废弃了)。但是兼容方式无法获得最优性能，性能不敏感的话，可以这么干。有哪个架构的目录，那么所有so库就要有一份这个架构。</p>
+<p>目前用得最多的可能就是 armabi-v7a 了，考虑实际情况可能使用 armabi-v7a 就可以了。</p>
+<p>但是如果你有某个compute.so  针对计算比较多，那么你可以在 armeabi 目录下存在一个 compute.so  以及 compute_v8a.so  ，其他的abi 只要提供一份就可以了(其实，微信就是这么干的)。非启动加载的so可以云端加载，从后台拉取。</p>
+<p>在gradle 中指定需要的so类型，减小apk体积</p>
+<p>sdk 开发要提供完整abi  </p>
+<h2 id="5-2-Java-native-方法怎么与Native-函数绑定"><a href="#5-2-Java-native-方法怎么与Native-函数绑定" class="headerlink" title="5-2 Java native 方法怎么与Native 函数绑定"></a>5-2 Java native 方法怎么与Native 函数绑定</h2><p>第5章的，都是jni，后面再看</p>
+<h2 id="6-1，Activity-启动流程"><a href="#6-1，Activity-启动流程" class="headerlink" title="6-1，Activity 启动流程"></a>6-1，Activity 启动流程</h2><h3 id="考察什么："><a href="#考察什么：" class="headerlink" title="考察什么："></a>考察什么：</h3><ul>
+<li>与ams 如何交互<br>参数结果如何展示</li>
+<li>Activity 如何实例化</li>
+<li>Activity 生命周期如何流转</li>
+<li>Activity 窗口如 何展示</li>
+<li>Activity转场动画实现机制</li>
+</ul>
+<h3 id="Activity-跨进程启动"><a href="#Activity-跨进程启动" class="headerlink" title="Activity 跨进程启动"></a>Activity 跨进程启动</h3><p>所有进程Zygote fork 出来，预加载到启动资源，加快速度。 </p>
+<p>插件化，要有占位Activity才能实现。只能Activity 在进程内启动另一个Activity 的时候可以，在请求ActivityManagerProxy 之前和在ActivityThread 中开始回调Activity生命周期之前进行相应处理。</p>
+<p>Activity 跨进程启动Activity ，会涉及到Binder 通信，这个Binder 缓冲区是有大小限制的(貌似是4M)，没办法传递的。如果要实现数据传递，如果在同一个进程，可以使用单例，否则呢，不在同一个进程中，可以使用Provider(而AIDL 使用的也是Binder ，同样有大小限制吧)。</p>
+<p>由于Activity 是通过反射构建出来的对象： (Activity)cl.loadClass(className).newInstance()  ，它是通过无参的构造器构造的，所以呢，我们不要去写Activity 的构造函数，这是不应该的；尤其不要只写有参数的构造函数，这样的话，就没法启动这个Activity 了，会崩溃的。</p>
+<p>Fragment 也不要自己写有参数的构造器，虽然我们自己可以把它new出来。但是当Activity 被回收，之后恢复Activity 的时候，会恢复Fragment ，当然，这个恢复也是通过反射的方式，通过无参的构造函数来构建Fragment实例的。如果你是通过有参数的构造函数自己启动Fragment的，那么在恢复的时候可能会丢失信息，<strong>这也是我们要求使用 arguments 方式而不是构造函数的参数给fragment传递数据的原因</strong>。个人猜测，这可能也是不让我们自己new Activity 的方式去构造它的原因吧。</p>
+<h3 id="Activity的窗口展示流程"><a href="#Activity的窗口展示流程" class="headerlink" title="Activity的窗口展示流程"></a>Activity的窗口展示流程</h3><p><img src alt="Activity的窗口展示流程"></p>
+<p>在Activity 启动过程中，ActivityThread 执行 handleLaunchActivity，在这个方法中，attach 的时候就会 createPhoneWindow，之后调用 create、start、restoreState、postCreate、resume 过程中，其实都在installDecor (个人觉得是初始化 DecorView)，在resume回调之后，马上调用 makeVisible 才将DecorView 展示出来(layout啊，绘制啊)，我们才能看到显示的内容。这也就是为什么在resume 之前我们无法准确地获取View 的高度的原因。</p>
+<h3 id="转场动画"><a href="#转场动画" class="headerlink" title="转场动画"></a>转场动画</h3><p>前一个页面调用 ExitTransiton，在新页面没打开之前，执行这个退出动画，进入新页面时，执行进入动画，这样就衔接上了。</p>
+]]></content>
+      <categories>
+        <category>上课笔记</category>
+      </categories>
+      <tags>
+        <tag>高级进阶课</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>面试题-算法-LeetCode-多线程</title>
     <url>/2020/04/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E5%A4%9A%E7%BA%BF%E7%A8%8B/</url>
     <content><![CDATA[<h3 id="1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？"><a href="#1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？" class="headerlink" title="1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？"></a>1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？</h3><details>
@@ -941,51 +1039,6 @@
       </tags>
   </entry>
   <entry>
-    <title>面试题-设计模式</title>
-    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<h2 id="MVC、MVP、MVVM-的理解"><a href="#MVC、MVP、MVVM-的理解" class="headerlink" title="MVC、MVP、MVVM 的理解"></a>MVC、MVP、MVVM 的理解</h2><h3 id="MVC"><a href="#MVC" class="headerlink" title="MVC"></a>MVC</h3><p>典型的MVC：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p><ul>
-<li>由view接受指令，将指令传递到Controller    </li>
-<li>Controller 完成逻辑后，要求Model 改变状态    </li>
-<li>Model 将新数据发送到View，用户得到反馈    </li>
-</ul><p>一般的流程： view 触发事件 –&gt; controller处理了业务，然后触发数据跟新–&gt; model本身不知道谁更新了数据–&gt;model 带着数据回到view –&gt; view更新</p><a id="more"></a>
-
-
-
-<h3 id="MVP"><a href="#MVP" class="headerlink" title="MVP"></a>MVP</h3><p>MVP典型的交互如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
-<p>MVP一般遵循如下规则：</p>
-<ul>
-<li>View 与 Model 不直接发生联系    </li>
-<li>View 非常薄，不做任何业务逻辑    </li>
-<li>Presenter 非常厚，所有的逻辑操作都部署在里面    </li>
-<li>可以通过 View 实现接口（这样方便将view 和 presenter 分开单独开发），或者 干脆 Presenter 持有 View的引用，这样，方便 Presenter 调用方法更新 View     </li>
-<li>当然，Presenter 可以将数据存储到 Model 或者从 Model 中取出数据</li>
-</ul>
-<h3 id="MVVM"><a href="#MVVM" class="headerlink" title="MVVM"></a>MVVM</h3><p>MVVM 典型的交互如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="MVVM交互图"></p>
-<p>它基本上与MVP 完全一致，唯一的区别是：它采用的是双向绑定（注意，是绑定，而不是接口或者持有引用）：</p>
-<ul>
-<li>当View 变动时，自动反映在ViewModel上，反之亦然。    </li>
-<li>数据和业务逻辑处于一个独立的ViewModel 中，ViewModel 只需要关注业务和数据，无需与ui打交道。 由数据自动去驱动UI自动更新，同时，UI改变又自动反馈到数据。    </li>
-<li>由于ViewModel 与ui没有任何关联，故ui的所有调整都不需要改动viewmodel。    </li>
-<li>整个过程，数据是主导因素。    </li>
-</ul>
-<h3 id="总结特性-自己胡诌的"><a href="#总结特性-自己胡诌的" class="headerlink" title="总结特性(自己胡诌的)"></a>总结特性(自己胡诌的)</h3><ul>
-<li>mvc 与 mvp 都是事件驱动，而 mvvm 是数据驱动    </li>
-<li>mvc 中，Controller 控制view的切换，处理相关控制逻辑，model 控制view的刷新。而mvp中，view 只展示，presenter 处理所有的逻辑，model 只关注数据，view更新通过Presenter 持有view的引用，或者view 实现相关接口实现。    </li>
-</ul>
-<blockquote>
-<p>以上内容，MVC部分参考自<a href="http://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html" target="_blank" rel="noopener">知乎-在远方等你</a>、<a href="http://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html" target="_blank" rel="noopener">阮一峰的博客</a></p>
-</blockquote>
-<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
-      <categories>
-        <category>面试</category>
-      </categories>
-      <tags>
-        <tag>面试题</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>面试题-虚拟机知识</title>
     <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/</url>
     <content><![CDATA[<h2 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h2><p>分为3个区域：对象头、实例数据 以及 对齐填充</p><p><strong>对象头：</strong>包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。</p><p><strong>实例数据：</strong>对象真正存储的有效信息。</p><p><strong>对齐填充：</strong>比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必需的。</p><a id="more"></a>
@@ -1023,6 +1076,51 @@
 </blockquote>
 <p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
 <h2 id="如何理解Java类加载机制"><a href="#如何理解Java类加载机制" class="headerlink" title="如何理解Java类加载机制"></a><a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247483903&idx=1&sn=c20d3172052bd7db9a1ad6a95f112bc9&chksm=96cda0b2a1ba29a4cc9912cb1bf8a955f97ee45a7b8db48e384f1694ddbabbd4d5e7fa90f880&scene=21#wechat_redirect" target="_blank" rel="noopener">如何理解Java类加载机制</a></h2>]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>面试题-设计模式</title>
+    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
+    <content><![CDATA[<h2 id="MVC、MVP、MVVM-的理解"><a href="#MVC、MVP、MVVM-的理解" class="headerlink" title="MVC、MVP、MVVM 的理解"></a>MVC、MVP、MVVM 的理解</h2><h3 id="MVC"><a href="#MVC" class="headerlink" title="MVC"></a>MVC</h3><p>典型的MVC：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p><ul>
+<li>由view接受指令，将指令传递到Controller    </li>
+<li>Controller 完成逻辑后，要求Model 改变状态    </li>
+<li>Model 将新数据发送到View，用户得到反馈    </li>
+</ul><p>一般的流程： view 触发事件 –&gt; controller处理了业务，然后触发数据跟新–&gt; model本身不知道谁更新了数据–&gt;model 带着数据回到view –&gt; view更新</p><a id="more"></a>
+
+
+
+<h3 id="MVP"><a href="#MVP" class="headerlink" title="MVP"></a>MVP</h3><p>MVP典型的交互如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
+<p>MVP一般遵循如下规则：</p>
+<ul>
+<li>View 与 Model 不直接发生联系    </li>
+<li>View 非常薄，不做任何业务逻辑    </li>
+<li>Presenter 非常厚，所有的逻辑操作都部署在里面    </li>
+<li>可以通过 View 实现接口（这样方便将view 和 presenter 分开单独开发），或者 干脆 Presenter 持有 View的引用，这样，方便 Presenter 调用方法更新 View     </li>
+<li>当然，Presenter 可以将数据存储到 Model 或者从 Model 中取出数据</li>
+</ul>
+<h3 id="MVVM"><a href="#MVVM" class="headerlink" title="MVVM"></a>MVVM</h3><p>MVVM 典型的交互如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="MVVM交互图"></p>
+<p>它基本上与MVP 完全一致，唯一的区别是：它采用的是双向绑定（注意，是绑定，而不是接口或者持有引用）：</p>
+<ul>
+<li>当View 变动时，自动反映在ViewModel上，反之亦然。    </li>
+<li>数据和业务逻辑处于一个独立的ViewModel 中，ViewModel 只需要关注业务和数据，无需与ui打交道。 由数据自动去驱动UI自动更新，同时，UI改变又自动反馈到数据。    </li>
+<li>由于ViewModel 与ui没有任何关联，故ui的所有调整都不需要改动viewmodel。    </li>
+<li>整个过程，数据是主导因素。    </li>
+</ul>
+<h3 id="总结特性-自己胡诌的"><a href="#总结特性-自己胡诌的" class="headerlink" title="总结特性(自己胡诌的)"></a>总结特性(自己胡诌的)</h3><ul>
+<li>mvc 与 mvp 都是事件驱动，而 mvvm 是数据驱动    </li>
+<li>mvc 中，Controller 控制view的切换，处理相关控制逻辑，model 控制view的刷新。而mvp中，view 只展示，presenter 处理所有的逻辑，model 只关注数据，view更新通过Presenter 持有view的引用，或者view 实现相关接口实现。    </li>
+</ul>
+<blockquote>
+<p>以上内容，MVC部分参考自<a href="http://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html" target="_blank" rel="noopener">知乎-在远方等你</a>、<a href="http://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html" target="_blank" rel="noopener">阮一峰的博客</a></p>
+</blockquote>
+<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
       <categories>
         <category>面试</category>
       </categories>
