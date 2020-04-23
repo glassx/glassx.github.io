@@ -3,16 +3,24 @@
   <entry>
     <title>高级进阶课</title>
     <url>/2020/04/19/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/</url>
-    <content><![CDATA[<h2 id="4-1-停止线程"><a href="#4-1-停止线程" class="headerlink" title="4-1 停止线程"></a>4-1 停止线程</h2><p>有两种方法：</p><ul>
+    <content><![CDATA[<h2 id="4-1-停止线程"><a href="#4-1-停止线程" class="headerlink" title="4-1 停止线程"></a>4-1 停止线程</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>有两种方法：</p>
+<ul>
 <li>调用 interruput 方法，通过抛异常的方式触发</li>
 <li>使用boolean 标志位，注意，要使用volatile 标志位保证可见性；</li>
-</ul><p>一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。</p><a id="more"></a>
-
-
+</ul>
+<p>一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。</p>
 <p>建议转移到线程安全问题上去</p>
 <h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>stop 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
 <p>为什么Thread 的run方法中执行 sleep 方法要try-catch 捕捉 InterruptedException ，这是因为在sleep 过程中，有可能这个thread 会被调用 thread.interrupt() ，此时就会触发 这个异常，我们应该在 catch 语句中 关闭打开的文件之类的。</p>
-<h2 id="4-2、如何写出线程安全的代码"><a href="#4-2、如何写出线程安全的代码" class="headerlink" title="4-2、如何写出线程安全的代码"></a>4-2、如何写出线程安全的代码</h2><p>每个线程都有一个自己的内存副本，这是java的内存模型。</p>
+</details><a id="more"></a>
+
+<h2 id="4-2、如何写出线程安全的代码"><a href="#4-2、如何写出线程安全的代码" class="headerlink" title="4-2、如何写出线程安全的代码"></a>4-2、如何写出线程安全的代码</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>每个线程都有一个自己的内存副本，这是java的内存模型。</p>
 <p>要么不共享，要么不可变。其次就是采取一定手段了</p>
 <p>final 其实还有一个功能就是禁止重排序。某些情况下，构造函数调用完了，非final的成员变量还没初始化完(final 是已经初始化完了)，这就会有问题了。</p>
 <p>为什么 a++ 不是原子性的，因为这个操作首先要将 a 赋值进来，int temp = a; 之后再对temp 操作：temp += 1; 最后再将 temp 的值赋回给a。</p>
@@ -41,7 +49,12 @@
 <li>使用原子类型 ，如 AtomicInteger       </li>
 <li>使用原子属性更新器    </li>
 </ul>
-<h2 id="4-3、ConcurrentHashMap"><a href="#4-3、ConcurrentHashMap" class="headerlink" title="4-3、ConcurrentHashMap"></a>4-3、ConcurrentHashMap</h2><p>从1.5 到 1.8 一直在优化</p>
+</details>
+
+<h2 id="4-3、ConcurrentHashMap"><a href="#4-3、ConcurrentHashMap" class="headerlink" title="4-3、ConcurrentHashMap"></a>4-3、ConcurrentHashMap</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>从1.5 到 1.8 一直在优化</p>
 <p>jdk5：诞生，分段锁(segment)，对段加锁，必要时加锁。它的hashCode 计算方法就是，对key 求hashCode ，之后对这个hashCode 再散列得到散列码 code，之后，根据这个code 的高位 来计算segment 的值，根据低位计算在segment 中的值。<br>1.6：二次hash算法。Integer 的hashCode() 函数返回的就是它的value值。3万多以下的整数高位都是15，于是都集中在一个segment中，退化成 HashTable 了(因为对这个segment 加锁也就相当于对整个ConcurrentHashMap加锁了)<br>1.7：段(segment)懒加载，volatile &amp; CAS 操作避免加锁。一开始并不会把segment 通通new出来，需要哪个。使用volatile  来修饰 segment[] 数组，防止可见性导致的问题，比如，在某个segment 创建后，另一个线程不能马上知道。<br>8、摒弃段(segment)，基于Hashmap 原理并发。  使用    </p>
 <h3 id="求和"><a href="#求和" class="headerlink" title="求和"></a>求和</h3><p>分段计数</p>
 <h3 id="CHM-是弱一致性"><a href="#CHM-是弱一致性" class="headerlink" title="CHM 是弱一致性"></a>CHM 是弱一致性</h3><ul>
@@ -55,14 +68,24 @@
 </ul>
 <h3 id="CHM-解法"><a href="#CHM-解法" class="headerlink" title="CHM 解法"></a>CHM 解法</h3><p>小锁： 分段锁(1.5<del>1.7 版本使用segment)，后来(1.8版本)桶节点锁<br>短锁：先尝试获取，失败再加锁<br>分离读写锁：读写失败再加锁(1.5</del>1.7版本)，volatile读CAS写(1.7~1.8版本)     </p>
 <h3 id="总结：如何进行锁优化"><a href="#总结：如何进行锁优化" class="headerlink" title="总结：如何进行锁优化"></a>总结：如何进行锁优化</h3><p>长锁不如短缩：尽可能只锁必要的部分<br>大锁不如小锁：对加锁的对象拆分<br>分离读写锁，读写的频次是不一样的<br>消除无用锁，尽量不加锁，使用volatile 或者 CAS </p>
-<h2 id="4-5-Android-中写出优雅的代码"><a href="#4-5-Android-中写出优雅的代码" class="headerlink" title="4-5 Android 中写出优雅的代码"></a>4-5 Android 中写出优雅的代码</h2><p>异步，不一定涉及到多线程，比如你setOnclickListener，它不是马上执行，而是等点击再相响应。异步不一定快，如果你线程一直在做运算，其实就无需太多线程，如果有很多io，被阻塞在那，那多开线程是有用的。</p>
+</details>
+
+<h2 id="4-5-Android-中写出优雅的代码"><a href="#4-5-Android-中写出优雅的代码" class="headerlink" title="4-5 Android 中写出优雅的代码"></a>4-5 Android 中写出优雅的代码</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>异步，不一定涉及到多线程，比如你setOnclickListener，它不是马上执行，而是等点击再相响应。异步不一定快，如果你线程一直在做运算，其实就无需太多线程，如果有很多io，被阻塞在那，那多开线程是有用的。</p>
 <p>避免回调地狱。</p>
 <h3 id="Rxjava-要注意的问题："><a href="#Rxjava-要注意的问题：" class="headerlink" title="Rxjava 要注意的问题："></a>Rxjava 要注意的问题：</h3><ul>
 <li>很多时候Rxjava 请求完数据后，要更新UI，其实本质上这还是匿名内部类，会持有 Activity 引用。更新ui的时候，ui可能已经没有了，可能出现空指针；    </li>
 <li>声明将所有任务的句柄放在 List<disposable> 列表中，在需要停止的时候，遍历执行 Disposable.dispose();     </disposable></li>
 </ul>
 <h3 id="kotlin-协程"><a href="#kotlin-协程" class="headerlink" title="kotlin 协程"></a>kotlin 协程</h3><p>协程将异步逻辑同步化，取消协程，其实是跟 view 绑定，监听它的attach 状态，在dettach 的时候，取消协程。</p>
-<h2 id="5-1-cpu-架构适配"><a href="#5-1-cpu-架构适配" class="headerlink" title="5-1 cpu 架构适配"></a>5-1 cpu 架构适配</h2><p>注意问题：</p>
+</details>
+
+<h2 id="5-1-cpu-架构适配"><a href="#5-1-cpu-架构适配" class="headerlink" title="5-1 cpu 架构适配"></a>5-1 cpu 架构适配</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>注意问题：</p>
 <ul>
 <li>native 开发才关注cpu架构</li>
 <li>不同架构兼容性如何    </li>
@@ -74,8 +97,13 @@
 <p>但是如果你有某个compute.so  针对计算比较多，那么你可以在 armeabi 目录下存在一个 compute.so  以及 compute_v8a.so  ，其他的abi 只要提供一份就可以了(其实，微信就是这么干的)。非启动加载的so可以云端加载，从后台拉取。</p>
 <p>在gradle 中指定需要的so类型，减小apk体积</p>
 <p>sdk 开发要提供完整abi  </p>
+</details>
+
 <h2 id="5-2-Java-native-方法怎么与Native-函数绑定"><a href="#5-2-Java-native-方法怎么与Native-函数绑定" class="headerlink" title="5-2 Java native 方法怎么与Native 函数绑定"></a>5-2 Java native 方法怎么与Native 函数绑定</h2><p>第5章的，都是jni，后面再看</p>
-<h2 id="6-1，Activity-启动流程"><a href="#6-1，Activity-启动流程" class="headerlink" title="6-1，Activity 启动流程"></a>6-1，Activity 启动流程</h2><h3 id="考察什么："><a href="#考察什么：" class="headerlink" title="考察什么："></a>考察什么：</h3><ul>
+<h2 id="6-1，Activity-启动流程"><a href="#6-1，Activity-启动流程" class="headerlink" title="6-1，Activity 启动流程"></a>6-1，Activity 启动流程</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="考察什么："><a href="#考察什么：" class="headerlink" title="考察什么："></a>考察什么：</h3><ul>
 <li>与ams 如何交互<br>参数结果如何展示</li>
 <li>Activity 如何实例化</li>
 <li>Activity 生命周期如何流转</li>
@@ -90,7 +118,34 @@
 <h3 id="Activity的窗口展示流程"><a href="#Activity的窗口展示流程" class="headerlink" title="Activity的窗口展示流程"></a>Activity的窗口展示流程</h3><p><img src alt="Activity的窗口展示流程"></p>
 <p>在Activity 启动过程中，ActivityThread 执行 handleLaunchActivity，在这个方法中，attach 的时候就会 createPhoneWindow，之后调用 create、start、restoreState、postCreate、resume 过程中，其实都在installDecor (个人觉得是初始化 DecorView)，在resume回调之后，马上调用 makeVisible 才将DecorView 展示出来(layout啊，绘制啊)，我们才能看到显示的内容。这也就是为什么在resume 之前我们无法准确地获取View 的高度的原因。</p>
 <h3 id="转场动画"><a href="#转场动画" class="headerlink" title="转场动画"></a>转场动画</h3><p>前一个页面调用 ExitTransiton，在新页面没打开之前，执行这个退出动画，进入新页面时，执行进入动画，这样就衔接上了。</p>
-]]></content>
+</details>
+
+<h2 id="6-2-如何跨App-启动Activity？有哪些注意事项？"><a href="#6-2-如何跨App-启动Activity？有哪些注意事项？" class="headerlink" title="6-2 如何跨App 启动Activity？有哪些注意事项？"></a>6-2 如何跨App 启动Activity？有哪些注意事项？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="如何启动外部应用的-Activity"><a href="#如何启动外部应用的-Activity" class="headerlink" title="如何启动外部应用的 Activity"></a>如何启动外部应用的 Activity</h3><ul>
+<li>共享uid的app(即在App的AndroidManifest文件中都注明了 android:sharedUserId=”xxx”，这个xxx 在两个应用中都是相同的) ，给 Intent 设置包名和Activity的全路径名，即可启动。    </li>
+<li>目标Activity 在AndroidManifest.xml中 设置为 exported=true，之后给Intent 设置 包名 和Activity全路径名即可。     </li>
+<li>给目标Activity 设置 action 和 category ，使用 IntentFilter 隐式启动    </li>
+</ul>
+<h3 id="为允许外部启动的-Activity-添加权限"><a href="#为允许外部启动的-Activity-添加权限" class="headerlink" title="为允许外部启动的 Activity 添加权限"></a>为允许外部启动的 Activity 添加权限</h3><p>为目标Activity 添加权限，如：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">".MainActivity"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:permission</span>=<span class="string">"com.examle.permit"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"zzz"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"zzzzz"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>那么，如果外部app要启动这个Activity，它要在 AndroidManifest 文件中声明这个权限。之后，再通过 action 和 category 方式启动。不过，这个要求含有目标Activity 的app先行安装。      </p>
+<h3 id="拒绝服务漏洞"><a href="#拒绝服务漏洞" class="headerlink" title="拒绝服务漏洞"></a>拒绝服务漏洞</h3><p>如果你的Activity 暴露出去了，那么攻击者可以来攻击，让你的Activity 拒绝服务。具体的原理如下：</p>
+<ol>
+<li>我们知道，如果Activity A 启动另一个App 的 Activity B 的时候，往Intent 里面传入一个 实现了序列化接口的对象 serializableObject ，是可以传递过去的。    </li>
+<li>在 B 中，只要你去访问了 intent.getExtra() ，那bundle 就会把序列化的数据反序列化过来。     </li>
+<li>好了，如果serializableObject 对象对应的类只在 A 中有，但是在 B 应用中并没有，这时候反序列化就会产生异常(ClassNotFoundException，类找不到异常)。</li>
+</ol>
+<p>拒绝服务异常一般发生在 Activity 启动过程中 或者在 onNewIntent 回调过程中。解决方法包括： 1、使用try-catch   2、不要暴露Activity   </p>
+</details>
+
+
+<h2 id="6-4、在代码任意位置为当前-activity-添加-view"><a href="#6-4、在代码任意位置为当前-activity-添加-view" class="headerlink" title="6-4、在代码任意位置为当前 activity 添加 view"></a>6-4、在代码任意位置为当前 activity 添加 view</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="如何在任意位置获取当前Activity"><a href="#如何在任意位置获取当前Activity" class="headerlink" title="如何在任意位置获取当前Activity"></a>如何在任意位置获取当前Activity</h3></details>]]></content>
       <categories>
         <category>上课笔记</category>
       </categories>
@@ -1161,39 +1216,41 @@
   <entry>
     <title>面试题-设计模式</title>
     <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<h2 id="MVC、MVP、MVVM-的理解"><a href="#MVC、MVP、MVVM-的理解" class="headerlink" title="MVC、MVP、MVVM 的理解"></a>MVC、MVP、MVVM 的理解</h2><h3 id="MVC"><a href="#MVC" class="headerlink" title="MVC"></a>MVC</h3><p>典型的MVC：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p><ul>
-<li>由view接受指令，将指令传递到Controller    </li>
-<li>Controller 完成逻辑后，要求Model 改变状态    </li>
-<li>Model 将新数据发送到View，用户得到反馈    </li>
-</ul><p>一般的流程： view 触发事件 –&gt; controller处理了业务，然后触发数据跟新–&gt; model本身不知道谁更新了数据–&gt;model 带着数据回到view –&gt; view更新</p><a id="more"></a>
+    <content><![CDATA[<h2 id="mvc、mvp、mvvm"><a href="#mvc、mvp、mvvm" class="headerlink" title="mvc、mvp、mvvm"></a>mvc、mvp、mvvm</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
-
-
-<h3 id="MVP"><a href="#MVP" class="headerlink" title="MVP"></a>MVP</h3><p>MVP典型的交互如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
-<p>MVP一般遵循如下规则：</p>
+<h3 id="mvc"><a href="#mvc" class="headerlink" title="mvc"></a>mvc</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p>
+<p><strong>特征：</strong></p>
 <ul>
-<li>View 与 Model 不直接发生联系    </li>
-<li>View 非常薄，不做任何业务逻辑    </li>
-<li>Presenter 非常厚，所有的逻辑操作都部署在里面    </li>
-<li>可以通过 View 实现接口（这样方便将view 和 presenter 分开单独开发），或者 干脆 Presenter 持有 View的引用，这样，方便 Presenter 调用方法更新 View     </li>
-<li>当然，Presenter 可以将数据存储到 Model 或者从 Model 中取出数据</li>
+<li>view 接收用户的输入，并且可以通知Controller 更改Model 层数据，如果没有涉及逻辑，还可以直接通知Model 更改数据。    </li>
+<li>需要ui变化，但是没有涉及业务数据，直接调用controller 即可(比如用户选择使用用户名/手机号登录)    </li>
+<li>model 数据变化时，若需要修改ui，需要通过Controller 来通知更新。</li>
 </ul>
-<h3 id="MVVM"><a href="#MVVM" class="headerlink" title="MVVM"></a>MVVM</h3><p>MVVM 典型的交互如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="MVVM交互图"></p>
-<p>它基本上与MVP 完全一致，唯一的区别是：它采用的是双向绑定（注意，是绑定，而不是接口或者持有引用）：</p>
+<p><strong>在Android中存在问题：</strong></p>
 <ul>
-<li>当View 变动时，自动反映在ViewModel上，反之亦然。    </li>
-<li>数据和业务逻辑处于一个独立的ViewModel 中，ViewModel 只需要关注业务和数据，无需与ui打交道。 由数据自动去驱动UI自动更新，同时，UI改变又自动反馈到数据。    </li>
-<li>由于ViewModel 与ui没有任何关联，故ui的所有调整都不需要改动viewmodel。    </li>
-<li>整个过程，数据是主导因素。    </li>
+<li>Activity 的职责不明，并且臃肿。Activity 除了要展示view (加载view，接收用户操作)，还要承担部分逻辑处理(比如生命周期回调)    </li>
 </ul>
-<h3 id="总结特性-自己胡诌的"><a href="#总结特性-自己胡诌的" class="headerlink" title="总结特性(自己胡诌的)"></a>总结特性(自己胡诌的)</h3><ul>
-<li>mvc 与 mvp 都是事件驱动，而 mvvm 是数据驱动    </li>
-<li>mvc 中，Controller 控制view的切换，处理相关控制逻辑，model 控制view的刷新。而mvp中，view 只展示，presenter 处理所有的逻辑，model 只关注数据，view更新通过Presenter 持有view的引用，或者view 实现相关接口实现。    </li>
+<h3 id="mvp"><a href="#mvp" class="headerlink" title="mvp"></a>mvp</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
+<p><strong>特点</strong>:</p>
+<ul>
+<li>View 层接收输入</li>
+<li>Presenter 处理业务逻辑，View 与 Model 之间必须经过 Presenter</li>
 </ul>
+<p><strong>优点(相对MVC)：</strong></p>
+<ul>
+<li>避免了View、Model 直接联系，更加解耦，通过Presenter 实现两者之间的沟通    </li>
+<li>Activity 更加简明，仅仅负责UI上的工作    </li>
+</ul>
+<h3 id="mvvm"><a href="#mvvm" class="headerlink" title="mvvm"></a>mvvm</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="mvvm示意图"></p>
+<p>可能主要关注view 通过databinding 与 viewmodel 相互绑定。</p>
+<h3 id="mvc-与-mvp-的区别"><a href="#mvc-与-mvp-的区别" class="headerlink" title="mvc 与 mvp 的区别"></a>mvc 与 mvp 的区别</h3><ul>
+<li>在mvc 中 Activity 具有 view 的功能，并且兼任部分 controller 功能，而mvp 中Activity 是纯粹的view    </li>
+<li>mvc 中view 和model 可以直接沟通(没有逻辑情况下，view直接更改model，当然，有逻辑改动的情况下经过controller)，而mvp中二者沟通必须经过presenter。    </li>
+</ul>
+</details><a id="more"></a>
+
 <blockquote>
-<p>以上内容，MVC部分参考自<a href="http://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html" target="_blank" rel="noopener">知乎-在远方等你</a>、<a href="http://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html" target="_blank" rel="noopener">阮一峰的博客</a></p>
+<p>以上内容参考自<a href="https://blog.csdn.net/carson_ho/article/details/100070713" target="_blank" rel="noopener">carson_ho的博客</a></p>
 </blockquote>
 <h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
       <categories>
@@ -3940,7 +3997,50 @@
 <blockquote>
 <p>sqlite3 /home/sample/Desktop/Cookies<br>.dump cookies   </p>
 </blockquote>
-</details>]]></content>
+</details>
+
+<h2 id="50、签名"><a href="#50、签名" class="headerlink" title="50、签名"></a>50、签名</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="APK-Signature-Scheme-v1"><a href="#APK-Signature-Scheme-v1" class="headerlink" title="APK Signature Scheme v1"></a>APK Signature Scheme v1</h3><p>解压一个签名后的 APK ，在 META-INF 目录下会有三个文件： MANIFEST.MF、CERT.SF、CERT.RSA。它们就是v1签名的关键。</p>
+<p>其中，MANIFEST.MF存储了APK中的每个文件的文件名和摘要，类似如下形式(上面是文件名，下面是文件的 SHA256 消息摘要之后进行 Base64编码)：</p>
+<blockquote>
+<p>Name: AndroidManifest.xml<br>SHA-256-Digest: bWeqbdj+sLYqFQPe/j3kjv7hGZZYFm+YheK2AwGnW90=</p>
+</blockquote>
+<p>CERT.SF 称为二次摘要文件。它的格式和 MANIFEST.MF 的一样，也是上面name，下面摘要，只不过摘要是对 MANIFEST.MF 中的摘要条目做摘要(对MANIFEST.MF摘要条目进行SHA-256摘要再base64处理,<strong>值得注意的是，CERT.SF中存储了 MANIFEST.MF 整个文件的 摘要值</strong>)：</p>
+<blockquote>
+<p>Name: AndroidManifest.xml<br>SHA-256-Digest: bQWn4Jvp6bjlQUQQ8cr1NO9nl9hrMXMTbVeXGULZwSI=</p>
+</blockquote>
+<p>最后，CERT.RSA 文件与 CERT.SF 文件是相互对应的，二者的名字一样，它里面主要存储了证书的公钥、过期日期、发行人、加密算法、CERT.CF文件的签名(使用私钥对CERT.CF文件的签名)等。</p>
+<p>从以上信息我们知道，使用不同的keystore进行签名时，除了 CERT.RSA 文件外，其余两个文件都是一样的。也就是说前两者主要保证各个文件的完整性，而 CERT.RSA 用来保证apk的来源即完整性。</p>
+<h3 id="v1-签名校验过程"><a href="#v1-签名校验过程" class="headerlink" title="v1 签名校验过程"></a>v1 签名校验过程</h3><ol>
+<li>检查apk中的文件对应的摘要值是否与 MANIFEST.MF 记录的一致    </li>
+<li>使用 CERT.RSA 文件检验签名文件 CERT.SF 文件是否被修改过    </li>
+<li>使用 CERT.SF 校验 MANIFEST.MF 文件是否被修改过    </li>
+</ol>
+<blockquote>
+<p>为什么这个顺序呢？假设一下，如果你改了apk的文件，那么在安装apk文件时，第一步通过 MANIFEST.MF 校验不通过；假如你改了文件重新计算摘要值，更新了 MANIFEST.MF 文件，那么必定与 CERT.SF 文件中计算的值不一样。最后的保障是</p>
+</blockquote>
+<h3 id="v1的缺点"><a href="#v1的缺点" class="headerlink" title="v1的缺点"></a>v1的缺点</h3><ul>
+<li>META_INF文件不在校验范围内，很容易绕过    </li>
+<li>单个文件的完整性校验在安装的时候比较耗时     </li>
+</ul>
+<h3 id="APK-Signature-Scheme-v2"><a href="#APK-Signature-Scheme-v2" class="headerlink" title="APK Signature Scheme v2"></a>APK Signature Scheme v2</h3><p>v2签名不是针对单个文件，而是将apk分成 1M 大小的块，对每个块计算摘要(<strong>由于块摘要可以并行处理，因此可以提高校验速度</strong>)，之后对所有摘要进行摘要得到顶级摘要，<strong>之后利用私钥对顶级摘要签名得到数字证书(即得到数字证书)</strong>。如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/v2%E7%AD%BE%E5%90%8D.webp" alt="v2摘要生成图"></p>
+<p>为了保护 APK 内容，整个 APK（ZIP文件格式）被分为以下 4 个区块：</p>
+<ul>
+<li>ZIP 条目的内容（从偏移量 0 处开始一直到“APK 签名分块”的起始位置)    </li>
+<li>APK 签名分块    </li>
+<li>ZIP 中央目录    </li>
+<li>ZIP 中央目录结尾    </li>
+</ul>
+<p>可以看到，Android签名存放区域是zip文件的中央目录(central Directory)之前。v2对整个apk签名，因此如果需要对齐(zipalign)的话，必须先对齐后签名。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://blog.csdn.net/freekiteyu/article/details/84849651" target="_blank" rel="noopener">csdn上的博客</a>、<a href="https://www.jianshu.com/p/95096ca209e1" target="_blank" rel="noopener">简书上的博客</a>、<a href="https://www.jb51.net/article/174939.htm" target="_blank" rel="noopener">jb51</a></p>
+</blockquote>
+]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -6191,7 +6291,7 @@
 <p>一言以蔽之： 开源节流</p>
 </blockquote>
 <ul>
-<li>开源，在manifest文件application节点加入：android:largeHeap=“true”      </li>
+<li>webview 新进程          </li>
 <li>检查内存泄漏(LeakCanery)    </li>
 <li>正确地使用引用，尤其Activity的context(尽量替换成Application 的context，Activity 的Context 一律弱引用)，以及强引用、弱引用、软引用的正确使用。       </li>
 <li>使用正确的容器，比如避免自动装箱(使用SparseArray等)、避免hashmap内存浪费(使用ArrayMap等)       </li>
@@ -6199,11 +6299,17 @@
 </ul>
 <p><strong>五、cpu 相关优化</strong>   </p>
 <ul>
-<li>解析缓存数据一律放在子线程处理</li>
+<li>解析缓存数据一律放在子线程处理    </li>
+<li>SharedPreference 存储json改动    </li>
+<li>webview预加载</li>
 </ul>
 <p><strong>六、网络优化</strong>   </p>
 <ul>
-<li>域名替换成ip(选取响应速度最快的ip)，避免劫持同时提升响应速度，webview 中的网络请求由网络框架接管。</li>
+<li>域名替换成ip(选取响应速度最快的ip)，避免劫持同时提升响应速度，webview 中的网络请求由网络框架接管。    </li>
+</ul>
+<p><strong>七、结构</strong></p>
+<ul>
+<li>mvp</li>
 </ul>
 <h2 id="引申-ArrayMap的原理、SparseArray原理"><a href="#引申-ArrayMap的原理、SparseArray原理" class="headerlink" title="引申-ArrayMap的原理、SparseArray原理"></a>引申-ArrayMap的原理、SparseArray原理</h2><p><strong>ArrayMap</strong></p>
 <p>ArrayMap 相对HashMap 而言是以时间换空间。它使用两个数组，一个整数型数组存储 key 的 hashCode，另一个Object[] 类型的数组存储 key-value键值对，如下图所示：</p>
