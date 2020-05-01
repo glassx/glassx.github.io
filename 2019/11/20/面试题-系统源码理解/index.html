@@ -62,7 +62,7 @@
 <meta property="og:description" content="1、okhttp的理解 点击看答案  首先看下okhttp 的整个工作流程：   首先通过 Builder 创建 OkhttpClient 对象     根据设定的条件，使用Request.Builder 构建request 对象       根据 OkhttpClient 与 request 创建 RealCall      不论是通过execute 还是enqueue 方式异步执行，最终都通过">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;okhttp%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png">
-<meta property="og:updated_time" content="2020-04-22T14:59:42.908Z">
+<meta property="og:updated_time" content="2020-05-01T01:37:19.890Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;okhttp%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png">
 
@@ -156,17 +156,17 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">21</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">22</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">7</span></a>
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">8</span></a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">83</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">86</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -252,7 +252,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-22 22:59:42" itemprop="dateModified" datetime="2020-04-22T22:59:42+08:00">2020-04-22</time>
+                <time title="修改时间：2020-05-01 09:37:19" itemprop="dateModified" datetime="2020-05-01T09:37:19+08:00">2020-05-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -379,6 +379,48 @@
 <blockquote>
 <p>以上内容参考自<a href="http://gityuan.com/2017/04/23/local_broadcast_manager/" target="_blank" rel="noopener">gityuan的分析</a></p>
 </blockquote>
+<h2 id="6、Java线程池ThreadPoolExecutor实现原理"><a href="#6、Java线程池ThreadPoolExecutor实现原理" class="headerlink" title="6、Java线程池ThreadPoolExecutor实现原理"></a>6、Java线程池ThreadPoolExecutor实现原理</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>ThreadPoolExecutor 构造函数参数非常多，有以下：</p>
+<ul>
+<li><p>corePoolSize： 通过 submit 或者 execute 提交任务时，如果当前线程池的线程数 n &lt; corePoolSize ，则创建一个新的线程处理任务，即使其他 core 线程是空闲的。    </p>
+</li>
+<li><p>maximumPoolSize: 如果当前线程数 n &gt; corePoolSize &amp;&amp; n &lt; maximumPoolSize ，那么不会创建新的线程；但是如果 n &gt;= maximumPoolSize 时，就会创建新的线程。如果是个无界队列(LinkedBlockingQueue)，那么不存在满的情况(n &gt;= maximumPoolSize),也就不会创建新线程。    </p>
+</li>
+<li><p>keepAliveTime: 如果当前线程池中的线程数 n &gt; corePoolSize,那么如果在 keepAliveTime 时间内没有新的任务需要处理，那么就会销毁 corePoolSize - n 个线程。    </p>
+</li>
+<li><p>handler ：异常处理策略。即当任务提交失败的时候，调用这个处理器。</p>
+</li>
+</ul>
+<h3 id="运行状态"><a href="#运行状态" class="headerlink" title="运行状态"></a>运行状态</h3><p>ThreadPoolExecutor 使用一个 AtomicInteger 的前三位表示线程池状态，后 29 位表示线程数，因此是可以支持上亿的线程计数。线程池主要有几种状态：</p>
+<ul>
+<li>Running： 线程池正在运行，可以接收新任务。    </li>
+<li>ShutDown： 不再接收新任务，但会继续处理队列中任务。    </li>
+<li>Stop： 不接受新任务，也不处理队列中任务，并且<strong>中断正在处理的任务</strong>    </li>
+<li>Tidying： 所有任务处理玩，线程数为 0(线程池为空)    </li>
+<li>Terminated： 已经执行完毕(执行了 terminated)    </li>
+</ul>
+<p>submit 执行过程 就是将 Runnable 和 Callable 封装成 RunnableFuture 之后，最终提交给execute 执行。使用 HashSet 类型的 worker 来存储正在运行的任务，只要 worker.size() &lt; corePoolSize，提交新的任务就马上开启新线程执行(上面提到过)。在提交过程中要检查线程池的状态，检查是否关闭了。</p>
+<p>worker的数目也是通过 CAS的方式 增减的。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://github.com/aCoder2013/blog/issues/28" target="_blank" rel="noopener">github上的博客</a></p>
+</blockquote>
+<h2 id="7、延伸-Java-线程池的异常处理机制"><a href="#7、延伸-Java-线程池的异常处理机制" class="headerlink" title="7、延伸-Java 线程池的异常处理机制"></a>7、延伸-Java 线程池的异常处理机制</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ul>
+<li>如果是使用submit 提交的话，可以通过继承 ThreadPoolExecutor 再重写 afterExecute 方法，得到实际的异常 (包含 Runnable 和 Throwable)    </li>
+<li>如果是调用的execute 方法提交的话，那就会抛到 dispatchUncaughtException 里面去了，这时候我们只有对线程 Thread.setUncaughtExceptionHandler(UncaughtExceptionHandler)  来捕捉。即自己写 ThreadFactory (thread 工厂类),并为创建的线程 setUncaughtExceptionHandler       </li>
+<li>还有一种，就是对 Runnable 的 run 方法里面整个 try-catch    </li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="http://ifeve.com/%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90java%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/" target="_blank" rel="noopener">并发编程网</a> 或者它<a href="https://github.com/aCoder2013/blog/issues/3" target="_blank" rel="noopener">在github上的相同文章</a></p>
+</blockquote>
 
     </div>
 
@@ -418,8 +460,8 @@
             <span class="post-nav-divider"></span>
 
             <div class="post-nav-prev post-nav-item">
-                <a href="/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E4%B8%8A%E6%90%9C%E9%9B%86%E7%9A%84%E9%A2%98%E7%9B%AE(%E4%B8%80)/" rel="prev" title="面试题-网上搜集的题目(一)">
-                  面试题-网上搜集的题目(一) <i class="fa fa-chevron-right"></i>
+                <a href="/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/" rel="prev" title="面试题-网络知识">
+                  面试题-网络知识 <i class="fa fa-chevron-right"></i>
                 </a>
             </div>
           </div>
@@ -460,7 +502,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、okhttp的理解"><span class="nav-number">1.</span> <span class="nav-text">1、okhttp的理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、谈谈对RxJava的理解"><span class="nav-number">2.</span> <span class="nav-text">2、谈谈对RxJava的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#常用操作符"><span class="nav-number">2.1.</span> <span class="nav-text">常用操作符</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何实现线程切换"><span class="nav-number">2.2.</span> <span class="nav-text">如何实现线程切换</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、fresco的理解"><span class="nav-number">3.</span> <span class="nav-text">3、fresco的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么使用fresco"><span class="nav-number">3.1.</span> <span class="nav-text">为什么使用fresco</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fresco-原理解析"><span class="nav-number">3.2.</span> <span class="nav-text">fresco 原理解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、ThreadLocal-详解"><span class="nav-number">4.</span> <span class="nav-text">4、ThreadLocal 详解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、LocalBroadcastManager"><span class="nav-number">5.</span> <span class="nav-text">5、LocalBroadcastManager</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#原理分析"><span class="nav-number">5.1.</span> <span class="nav-text">原理分析</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、okhttp的理解"><span class="nav-number">1.</span> <span class="nav-text">1、okhttp的理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、谈谈对RxJava的理解"><span class="nav-number">2.</span> <span class="nav-text">2、谈谈对RxJava的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#常用操作符"><span class="nav-number">2.1.</span> <span class="nav-text">常用操作符</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何实现线程切换"><span class="nav-number">2.2.</span> <span class="nav-text">如何实现线程切换</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、fresco的理解"><span class="nav-number">3.</span> <span class="nav-text">3、fresco的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么使用fresco"><span class="nav-number">3.1.</span> <span class="nav-text">为什么使用fresco</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fresco-原理解析"><span class="nav-number">3.2.</span> <span class="nav-text">fresco 原理解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、ThreadLocal-详解"><span class="nav-number">4.</span> <span class="nav-text">4、ThreadLocal 详解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、LocalBroadcastManager"><span class="nav-number">5.</span> <span class="nav-text">5、LocalBroadcastManager</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#原理分析"><span class="nav-number">5.1.</span> <span class="nav-text">原理分析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6、Java线程池ThreadPoolExecutor实现原理"><span class="nav-number">6.</span> <span class="nav-text">6、Java线程池ThreadPoolExecutor实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#运行状态"><span class="nav-number">6.1.</span> <span class="nav-text">运行状态</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7、延伸-Java-线程池的异常处理机制"><span class="nav-number">7.</span> <span class="nav-text">7、延伸-Java 线程池的异常处理机制</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -476,20 +518,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">83</span>
+          <span class="site-state-item-count">86</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-count">22</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -562,7 +604,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共194.4k字</span>
+  <span class="post-count">博客全站共199.3k字</span>
 </div>
 
 

@@ -61,7 +61,7 @@
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="4-1 停止线程 点击看答案  有两种方法：  调用 interruput 方法，通过抛异常的方式触发 使用boolean 标志位，注意，要使用volatile 标志位保证可见性；  一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。 建议转移到线程安全问题上去 为什么停止线程会有问题stop">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-04-23T14:32:44.686Z">
+<meta property="og:updated_time" content="2020-05-01T02:05:54.883Z">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="https://glassx.gitee.io/2020/04/19/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/">
@@ -154,17 +154,17 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">21</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">22</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">7</span></a>
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">8</span></a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">83</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">86</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -250,7 +250,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-23 22:32:44" itemprop="dateModified" datetime="2020-04-23T22:32:44+08:00">2020-04-23</time>
+                <time title="修改时间：2020-05-01 10:05:54" itemprop="dateModified" datetime="2020-05-01T10:05:54+08:00">2020-05-01</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -425,6 +425,118 @@
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <h3 id="如何在任意位置获取当前Activity"><a href="#如何在任意位置获取当前Activity" class="headerlink" title="如何在任意位置获取当前Activity"></a>如何在任意位置获取当前Activity</h3></details>
+
+<h2 id="6-5、微信右滑返回效果"><a href="#6-5、微信右滑返回效果" class="headerlink" title="6-5、微信右滑返回效果"></a>6-5、微信右滑返回效果</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>Fragment中实现相对简单，Activity 实现起来复杂</p>
+<p>fragment实现： view 跟随手势移动的效果，不涉及window控制</p>
+<p>用Activity实现，前一个activity 要搞成透明的效果，windowIsTranslucent = true，window的background 设置为透明<br>多个Task情况，比如顺序启动 a、b、c 三个，a 和 c 在同一个栈，因此可以先获取b的照片放做背景<br>透明对Activity生命周期影响，设置透明的话，下面的Activity 只能是 onPause 状态，不可能stop<br>所以我们只有在滑动的时候，才要求透明，其他的时候不透明，因为透明会影响绘制效率啊。。。。    </p>
+</details>
+
+<h2 id="7-1、为什么不能在UI线程绘制"><a href="#7-1、为什么不能在UI线程绘制" class="headerlink" title="7-1、为什么不能在UI线程绘制"></a>7-1、为什么不能在UI线程绘制</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>ui线程是什么？ActivityThread 的main函数所运行的线程<br>为什么ui要设计成非线程安全的？因为加锁开销大，ui对时间敏感，ui具有高频可变性</p>
+<p>非ui线程一定不能更新吗？不是，还有surfaceView，它会对canvas 加锁 ： lockCanvas ，其次再draw ，最后 unLockCanvas，绘制放在子线程，效率提高。所以，可能app已经anr了，但是地图绘制界面还在绘制，很奇怪，这是因为地图绘制使用了 surfaceview。不过现在官方推荐使用TexutureView了，不推荐使用 SurfaceView。</p>
+</details>
+
+<h2 id="Handler-的delay-可靠吗？"><a href="#Handler-的delay-可靠吗？" class="headerlink" title="Handler 的delay 可靠吗？"></a>Handler 的delay 可靠吗？</h2><p>不可靠</p>
+<h2 id="7-3、ANR-类型"><a href="#7-3、ANR-类型" class="headerlink" title="7-3、ANR 类型"></a>7-3、ANR 类型</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>原理，就是处理事物之前 postDelay 一个事件，这个事件会导致anr窗口弹出，如果在delay的时间内完成事物，则会removeMessage ，把这个postDelay的message移除，就不会产生anr了。</p>
+<p>Looper为什么不会导致cpu占用过高？因为 epoll多路复用机制</p>
+</details>
+
+<h2 id="7-4、自己实现Handler"><a href="#7-4、自己实现Handler" class="headerlink" title="7-4、自己实现Handler"></a>7-4、自己实现Handler</h2><p>略</p>
+<h2 id="8-1、如何避免oom"><a href="#8-1、如何避免oom" class="headerlink" title="8-1、如何避免oom"></a>8-1、如何避免oom</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>native heap 在内存不够的时候，也会抛oom</p>
+<p>使用合适的数据结构<br>避免枚举-影响内存和编译出来的文件(都会增大)</p>
+<p>Bitmap： 选选择合适的分辨率，如果作为背景不要太清晰<br>不要使用帧动画<br>对Bitmap的重采样</p>
+<p>谨慎使用多进程，新进程会带有一些公共资源，是会消耗内存的。<br>谨慎使用largeHeap = true，不同的手机上不一定能实现，还有，内存太大了，gc会困难<br>使用NDK，Native Heap 优雅避免java 堆内存限制</p>
+</details>
+
+<h2 id="8-2、如何对图片缓存？"><a href="#8-2、如何对图片缓存？" class="headerlink" title="8-2、如何对图片缓存？"></a>8-2、如何对图片缓存？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>网络/磁盘/内存 进行缓存<br>缓存算法-LRU算法，或者最少使用频率的算法<br>如何验证算法的效果(命中率)</p>
+</details>
+
+<h2 id="如何计算图片占用内存的大小"><a href="#如何计算图片占用内存的大小" class="headerlink" title="如何计算图片占用内存的大小"></a>如何计算图片占用内存的大小</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>根据实图手动计算它在内存中占用的内存。</p>
+<p>首先了解dip，mdpi、hdpi、xhdpi、xxhdpi、xxxhdpi</p>
+<p>canvas 就相当于一个层，这个层根据不同手机进行缩放</p>
+<p>assets(sd卡上的文件也是一样的)：<br>如果png，采用ARGB_8888 的话呢，那就是 宽 × 高 × 4 ，因为每个像素要有4个字节，这里 4个8，每个8代表8个比特<br>如果是jpg，你没有指定加载格式，它默认还是使用 ARGB_8888，计算方式还是：宽 × 高 × 4。 其实jpg它没有透明度，那个A是没有用的，使用 RGB_565 即可，5 + 6 + 5 = 16 ，2个字节，所以就是  宽 × 高 × 2    </p>
+<p>从hdpi：</p>
+<p>假设图片的大小为 112px * 131px ,格式png，如果你图片在 hdpi 中，那么系统会认为你这个图片的密度本身就是1.5，如果你这时候有个2.75密度屏幕的手机，那么它就会换算，比如说宽度 ： 112 / 1.5 * 2.75 = 205.333…. ，系统会四舍五入取 205 ，同理高度会换算成： 131/1.5<em>2.75 = 240，所以如果使用 ARGB_8888 ，那占用内存就是  205</em>240 * 4。同理啊，如果手机屏幕大点，比如说是3，那就是 131/1.5*3  和 112 / 1.5 * 3 了。</p>
+<p>在把它放到xxhdpi，这时候密度是 3 了，这时候如果手机是 3，那就得是 131/3*3  和 112 / 3 * 3 了</p>
+<p>所以如果在 mdpi中，那默认图片密度是 1了，那么在 dpi 是 3的手机上，图片宽高应该是 131*3  和 112 * 3</p>
+<p>以此类推，其实在drawable，后面没有带dpi 的，那效果和 mdpi 一样，默认图片是 1</p>
+<p>如果是nodpi ，告诉系统不会缩放，就按照原始的像素，131 和 112 了</p>
+<p>所以宽高的计算方式 ：  图片/dpi * 屏幕dpi</p>
+<h3 id="图片体积优化"><a href="#图片体积优化" class="headerlink" title="图片体积优化"></a>图片体积优化</h3><p>跟图片存储格式无关。跟采用 ARGB_8888 或者 RGB_565<br>根据需要的尺寸<br>采样<br>使用矩阵变换来放大图片<br>不透明采用  RGB_565<br>.9 图片<br>使用VectorDrawable</p>
+</details>
+
+<h2 id="9-1、Android-p-规避访问私有api的限制"><a href="#9-1、Android-p-规避访问私有api的限制" class="headerlink" title="9-1、Android p 规避访问私有api的限制"></a>9-1、Android p 规避访问私有api的限制</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>访问私有api，我们使用的是 反射 方式</p>
+<p>反射时 setAccessible(true)  ,只是绕过语言层面，并不会更改它的 final 或者 private 属性，不会说把private 改成public。</p>
+<p>Android p中设置了 API 名单，有白名单、黑名单之类的，私有api在黑名单中，通过限制反射来限制访问 私有api</p>
+</details>
+
+<h2 id="9-2、换肤的原理"><a href="#9-2、换肤的原理" class="headerlink" title="9-2、换肤的原理"></a>9-2、换肤的原理</h2><p>略</p>
+<h2 id="9-3、virtualApk-插件化原理"><a href="#9-3、virtualApk-插件化原理" class="headerlink" title="9-3、virtualApk 插件化原理"></a>9-3、virtualApk 插件化原理</h2><p>略</p>
+<h2 id="Tinker-怎么实现热修复"><a href="#Tinker-怎么实现热修复" class="headerlink" title="Tinker 怎么实现热修复"></a>Tinker 怎么实现热修复</h2><p>略</p>
+<h2 id="10-1、如何开展优化工作"><a href="#10-1、如何开展优化工作" class="headerlink" title="10-1、如何开展优化工作"></a>10-1、如何开展优化工作</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>对整个目标是否有清晰认识</p>
+<p>重点问题拆解</p>
+<p>优化前期花 20% 的时间就能解决80%问题，剩下的 20%优化很难</p>
+<p>对比业内(tester 测试其他app的打开页面方式)</p>
+<p>指标监控，前后对比</p>
+</details>
+
+<h2 id="10-x"><a href="#10-x" class="headerlink" title="10-x"></a>10-x</h2><p>都略</p>
+<h2 id="11-1、如何设计一个系统"><a href="#11-1、如何设计一个系统" class="headerlink" title="11-1、如何设计一个系统"></a>11-1、如何设计一个系统</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>保持和面试官沟通，多确认</p>
+<p>需求-&gt; 关键流程 -&gt; 细节，明确边界</p>
+<p>细节和边界的通常问题：</p>
+<p>如何处理并发，是否有频繁io<br>网络怎么接入-短连接、长连接、连接池化，是否频繁与服务端交互(项目中的大接口)、是否有推送啊<br>保障安全性-数据是否需要加密、加密算法、</p>
+</details>
+
+<h2 id="11-2、插件化"><a href="#11-2、插件化" class="headerlink" title="11-2、插件化"></a>11-2、插件化</h2><p>略</p>
+<h2 id="11-3、设计一个短视频app"><a href="#11-3、设计一个短视频app" class="headerlink" title="11-3、设计一个短视频app"></a>11-3、设计一个短视频app</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>视频如何处理？<br>视频来源？自有还是第三方？<br>视频由用户上传还是专业供应平台<br>是否需要建立用户关系链<br>支持分享？<br>支付系统打赏啊？<br>社交。聊天<br>播放器比较耗电<br>视频防止对手获取<br>防止广告被劫持</p>
+</details>
+
+<h2 id="11-4、设计一个网络框架"><a href="#11-4、设计一个网络框架" class="headerlink" title="11-4、设计一个网络框架"></a>11-4、设计一个网络框架</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>不局限于http，还可以 websococket</p>
+<p>单向请求还是双向请求啊？</p>
+<p>支持异步请求？使用Rxjava 还是kotlin 协程？</p>
+<p>要考虑可移植性啊？</p>
+<p>缓存策略，多大啊？如何淘汰？ </p>
+<p>全局数据拦截器，对所有请求ip替换啊，对公共结果处理啊</p>
+<p>日志输出，json，pb 转换为可视化</p>
+<p>重试机制，3s、6s 之后再重试，最多重复多少次，防止死循环</p>
+<p>参数组装，bean？hashMap，或者类似Retrofit 使用注解配置</p>
+<p>协议体可以使用 Builder 模式</p>
+<p>数据传输与拦截使用责任链模式</p>
+<p>数据序列化</p>
+<p>DNS 增强-httpDnsServer ，比如google的，还有aliyun 和腾讯云有，可以默认支持几个</p>
+</details>
     </div>
 
     
@@ -463,6 +575,9 @@
             <span class="post-nav-divider"></span>
 
             <div class="post-nav-prev post-nav-item">
+                <a href="/2020/05/01/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC3%E7%AB%A0/" rel="prev" title="第3章：运输层">
+                  第3章：运输层 <i class="fa fa-chevron-right"></i>
+                </a>
             </div>
           </div>
       </footer>
@@ -502,7 +617,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1-停止线程"><span class="nav-number">1.</span> <span class="nav-text">4-1 停止线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么停止线程会有问题"><span class="nav-number">1.1.</span> <span class="nav-text">为什么停止线程会有问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2、如何写出线程安全的代码"><span class="nav-number">2.</span> <span class="nav-text">4-2、如何写出线程安全的代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ThreadLocal-的使用建议"><span class="nav-number">2.1.</span> <span class="nav-text">ThreadLocal 的使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-3、ConcurrentHashMap"><span class="nav-number">3.</span> <span class="nav-text">4-3、ConcurrentHashMap</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#求和"><span class="nav-number">3.1.</span> <span class="nav-text">求和</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CHM-是弱一致性"><span class="nav-number">3.2.</span> <span class="nav-text">CHM 是弱一致性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HashTable-的问题"><span class="nav-number">3.3.</span> <span class="nav-text">HashTable 的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CHM-解法"><span class="nav-number">3.4.</span> <span class="nav-text">CHM 解法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结：如何进行锁优化"><span class="nav-number">3.5.</span> <span class="nav-text">总结：如何进行锁优化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-5-Android-中写出优雅的代码"><span class="nav-number">4.</span> <span class="nav-text">4-5 Android 中写出优雅的代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Rxjava-要注意的问题："><span class="nav-number">4.1.</span> <span class="nav-text">Rxjava 要注意的问题：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kotlin-协程"><span class="nav-number">4.2.</span> <span class="nav-text">kotlin 协程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-1-cpu-架构适配"><span class="nav-number">5.</span> <span class="nav-text">5-1 cpu 架构适配</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-2-Java-native-方法怎么与Native-函数绑定"><span class="nav-number">6.</span> <span class="nav-text">5-2 Java native 方法怎么与Native 函数绑定</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-1，Activity-启动流程"><span class="nav-number">7.</span> <span class="nav-text">6-1，Activity 启动流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#考察什么："><span class="nav-number">7.1.</span> <span class="nav-text">考察什么：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Activity-跨进程启动"><span class="nav-number">7.2.</span> <span class="nav-text">Activity 跨进程启动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Activity的窗口展示流程"><span class="nav-number">7.3.</span> <span class="nav-text">Activity的窗口展示流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转场动画"><span class="nav-number">7.4.</span> <span class="nav-text">转场动画</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-2-如何跨App-启动Activity？有哪些注意事项？"><span class="nav-number">8.</span> <span class="nav-text">6-2 如何跨App 启动Activity？有哪些注意事项？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#如何启动外部应用的-Activity"><span class="nav-number">8.1.</span> <span class="nav-text">如何启动外部应用的 Activity</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为允许外部启动的-Activity-添加权限"><span class="nav-number">8.2.</span> <span class="nav-text">为允许外部启动的 Activity 添加权限</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#拒绝服务漏洞"><span class="nav-number">8.3.</span> <span class="nav-text">拒绝服务漏洞</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-4、在代码任意位置为当前-activity-添加-view"><span class="nav-number">9.</span> <span class="nav-text">6-4、在代码任意位置为当前 activity 添加 view</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#如何在任意位置获取当前Activity"><span class="nav-number">9.1.</span> <span class="nav-text">如何在任意位置获取当前Activity</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1-停止线程"><span class="nav-number">1.</span> <span class="nav-text">4-1 停止线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么停止线程会有问题"><span class="nav-number">1.1.</span> <span class="nav-text">为什么停止线程会有问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2、如何写出线程安全的代码"><span class="nav-number">2.</span> <span class="nav-text">4-2、如何写出线程安全的代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ThreadLocal-的使用建议"><span class="nav-number">2.1.</span> <span class="nav-text">ThreadLocal 的使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-3、ConcurrentHashMap"><span class="nav-number">3.</span> <span class="nav-text">4-3、ConcurrentHashMap</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#求和"><span class="nav-number">3.1.</span> <span class="nav-text">求和</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CHM-是弱一致性"><span class="nav-number">3.2.</span> <span class="nav-text">CHM 是弱一致性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HashTable-的问题"><span class="nav-number">3.3.</span> <span class="nav-text">HashTable 的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CHM-解法"><span class="nav-number">3.4.</span> <span class="nav-text">CHM 解法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结：如何进行锁优化"><span class="nav-number">3.5.</span> <span class="nav-text">总结：如何进行锁优化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-5-Android-中写出优雅的代码"><span class="nav-number">4.</span> <span class="nav-text">4-5 Android 中写出优雅的代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Rxjava-要注意的问题："><span class="nav-number">4.1.</span> <span class="nav-text">Rxjava 要注意的问题：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kotlin-协程"><span class="nav-number">4.2.</span> <span class="nav-text">kotlin 协程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-1-cpu-架构适配"><span class="nav-number">5.</span> <span class="nav-text">5-1 cpu 架构适配</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-2-Java-native-方法怎么与Native-函数绑定"><span class="nav-number">6.</span> <span class="nav-text">5-2 Java native 方法怎么与Native 函数绑定</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-1，Activity-启动流程"><span class="nav-number">7.</span> <span class="nav-text">6-1，Activity 启动流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#考察什么："><span class="nav-number">7.1.</span> <span class="nav-text">考察什么：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Activity-跨进程启动"><span class="nav-number">7.2.</span> <span class="nav-text">Activity 跨进程启动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Activity的窗口展示流程"><span class="nav-number">7.3.</span> <span class="nav-text">Activity的窗口展示流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#转场动画"><span class="nav-number">7.4.</span> <span class="nav-text">转场动画</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-2-如何跨App-启动Activity？有哪些注意事项？"><span class="nav-number">8.</span> <span class="nav-text">6-2 如何跨App 启动Activity？有哪些注意事项？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#如何启动外部应用的-Activity"><span class="nav-number">8.1.</span> <span class="nav-text">如何启动外部应用的 Activity</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为允许外部启动的-Activity-添加权限"><span class="nav-number">8.2.</span> <span class="nav-text">为允许外部启动的 Activity 添加权限</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#拒绝服务漏洞"><span class="nav-number">8.3.</span> <span class="nav-text">拒绝服务漏洞</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-4、在代码任意位置为当前-activity-添加-view"><span class="nav-number">9.</span> <span class="nav-text">6-4、在代码任意位置为当前 activity 添加 view</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#如何在任意位置获取当前Activity"><span class="nav-number">9.1.</span> <span class="nav-text">如何在任意位置获取当前Activity</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-5、微信右滑返回效果"><span class="nav-number">10.</span> <span class="nav-text">6-5、微信右滑返回效果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-1、为什么不能在UI线程绘制"><span class="nav-number">11.</span> <span class="nav-text">7-1、为什么不能在UI线程绘制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Handler-的delay-可靠吗？"><span class="nav-number">12.</span> <span class="nav-text">Handler 的delay 可靠吗？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-3、ANR-类型"><span class="nav-number">13.</span> <span class="nav-text">7-3、ANR 类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-4、自己实现Handler"><span class="nav-number">14.</span> <span class="nav-text">7-4、自己实现Handler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-1、如何避免oom"><span class="nav-number">15.</span> <span class="nav-text">8-1、如何避免oom</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-2、如何对图片缓存？"><span class="nav-number">16.</span> <span class="nav-text">8-2、如何对图片缓存？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何计算图片占用内存的大小"><span class="nav-number">17.</span> <span class="nav-text">如何计算图片占用内存的大小</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#图片体积优化"><span class="nav-number">17.1.</span> <span class="nav-text">图片体积优化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-1、Android-p-规避访问私有api的限制"><span class="nav-number">18.</span> <span class="nav-text">9-1、Android p 规避访问私有api的限制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-2、换肤的原理"><span class="nav-number">19.</span> <span class="nav-text">9-2、换肤的原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-3、virtualApk-插件化原理"><span class="nav-number">20.</span> <span class="nav-text">9-3、virtualApk 插件化原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Tinker-怎么实现热修复"><span class="nav-number">21.</span> <span class="nav-text">Tinker 怎么实现热修复</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-1、如何开展优化工作"><span class="nav-number">22.</span> <span class="nav-text">10-1、如何开展优化工作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-x"><span class="nav-number">23.</span> <span class="nav-text">10-x</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-1、如何设计一个系统"><span class="nav-number">24.</span> <span class="nav-text">11-1、如何设计一个系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-2、插件化"><span class="nav-number">25.</span> <span class="nav-text">11-2、插件化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-3、设计一个短视频app"><span class="nav-number">26.</span> <span class="nav-text">11-3、设计一个短视频app</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-4、设计一个网络框架"><span class="nav-number">27.</span> <span class="nav-text">11-4、设计一个网络框架</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -518,20 +633,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">83</span>
+          <span class="site-state-item-count">86</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-count">22</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -604,7 +719,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共194.4k字</span>
+  <span class="post-count">博客全站共199.3k字</span>
 </div>
 
 
