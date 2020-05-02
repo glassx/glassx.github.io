@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="第一部分：App的架构是怎么样的？ 点击看答案   为什么这样架构首屏怎么调优？内存泄漏怎么检测？LeakCanary 原理？HashMap 源码？为什么要将链表转成红黑树？红黑树特点？消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？kotlin 协程原理？怎么切换线程的？Kotlin 优点和缺点？">
+<meta name="keywords" content="他山之石">
+<meta property="og:type" content="article">
+<meta property="og:title" content="他山之石">
+<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2020&#x2F;05&#x2F;02&#x2F;%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3&#x2F;index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="第一部分：App的架构是怎么样的？ 点击看答案   为什么这样架构首屏怎么调优？内存泄漏怎么检测？LeakCanary 原理？HashMap 源码？为什么要将链表转成红黑树？红黑树特点？消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？kotlin 协程原理？怎么切换线程的？Kotlin 优点和缺点？">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-05-02T15:49:44.551Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>他山之石 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">23</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">9</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">87</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          他山之石
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-05-02 21:33:00 / 修改时间：23:49:44" itemprop="dateCreated datePublished" datetime="2020-05-02T21:33:00+08:00">2020-05-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>第一部分：</p><h2 id="App的架构是怎么样的？"><a href="#App的架构是怎么样的？" class="headerlink" title="App的架构是怎么样的？"></a>App的架构是怎么样的？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+
+<h3 id="为什么这样架构"><a href="#为什么这样架构" class="headerlink" title="为什么这样架构"></a>为什么这样架构</h3></details><h2 id="首屏怎么调优？内存泄漏怎么检测？LeakCanary-原理？"><a href="#首屏怎么调优？内存泄漏怎么检测？LeakCanary-原理？" class="headerlink" title="首屏怎么调优？内存泄漏怎么检测？LeakCanary 原理？"></a>首屏怎么调优？内存泄漏怎么检测？LeakCanary 原理？</h2><h2 id="HashMap-源码？为什么要将链表转成红黑树？红黑树特点？"><a href="#HashMap-源码？为什么要将链表转成红黑树？红黑树特点？" class="headerlink" title="HashMap 源码？为什么要将链表转成红黑树？红黑树特点？"></a>HashMap 源码？为什么要将链表转成红黑树？红黑树特点？</h2><h2 id="消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？"><a href="#消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？" class="headerlink" title="消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？"></a>消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？</h2><h2 id="kotlin-协程原理？怎么切换线程的？Kotlin-优点和缺点？"><a href="#kotlin-协程原理？怎么切换线程的？Kotlin-优点和缺点？" class="headerlink" title="kotlin 协程原理？怎么切换线程的？Kotlin 优点和缺点？"></a>kotlin 协程原理？怎么切换线程的？Kotlin 优点和缺点？</h2><a id="more"></a>
+
+
+<h2 id="一个无序，实际上是逆序的数组排序用什么算法好？"><a href="#一个无序，实际上是逆序的数组排序用什么算法好？" class="headerlink" title="一个无序，实际上是逆序的数组排序用什么算法好？"></a>一个无序，实际上是逆序的数组排序用什么算法好？</h2><h2 id="调优、怎么瘦身，打包流程，模块化"><a href="#调优、怎么瘦身，打包流程，模块化" class="headerlink" title="调优、怎么瘦身，打包流程，模块化"></a>调优、怎么瘦身，打包流程，模块化</h2><h2 id="开发者模式中，GPUInfo-中柱状图颜色代表的含义；命令dumpsys-meminfo中VSS、PSS、GSS、USS代表什么意思"><a href="#开发者模式中，GPUInfo-中柱状图颜色代表的含义；命令dumpsys-meminfo中VSS、PSS、GSS、USS代表什么意思" class="headerlink" title="开发者模式中，GPUInfo 中柱状图颜色代表的含义；命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思"></a>开发者模式中，GPUInfo 中柱状图颜色代表的含义；命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思</h2><h2 id="Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的"><a href="#Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的" class="headerlink" title="Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的"></a>Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的</h2><h2 id="物理内存与虚拟内存的关系、Android-Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域"><a href="#物理内存与虚拟内存的关系、Android-Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域" class="headerlink" title="物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域"></a>物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域</h2><h2 id="binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体"><a href="#binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体" class="headerlink" title="binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体"></a>binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体</h2><h2 id="广度、深度搜索，拓朴排序、最短路径算法"><a href="#广度、深度搜索，拓朴排序、最短路径算法" class="headerlink" title="广度、深度搜索，拓朴排序、最短路径算法"></a>广度、深度搜索，拓朴排序、最短路径算法</h2><p>第二部分：</p>
+<h2 id="讲个项目你负责的模块"><a href="#讲个项目你负责的模块" class="headerlink" title="讲个项目你负责的模块"></a>讲个项目你负责的模块</h2><h2 id="多个Fragment在销毁后重建之后重叠怎么办"><a href="#多个Fragment在销毁后重建之后重叠怎么办" class="headerlink" title="多个Fragment在销毁后重建之后重叠怎么办"></a>多个Fragment在销毁后重建之后重叠怎么办</h2><h2 id="设计一个图片缓存框架"><a href="#设计一个图片缓存框架" class="headerlink" title="设计一个图片缓存框架"></a>设计一个图片缓存框架</h2><h2 id="缓存算法用什么"><a href="#缓存算法用什么" class="headerlink" title="缓存算法用什么"></a>缓存算法用什么</h2><h2 id="有个ListView快速滑动-如何优化Bitmap的显示"><a href="#有个ListView快速滑动-如何优化Bitmap的显示" class="headerlink" title="有个ListView快速滑动 如何优化Bitmap的显示"></a>有个ListView快速滑动 如何优化Bitmap的显示</h2><h2 id="Bitmap的复用听过没有"><a href="#Bitmap的复用听过没有" class="headerlink" title="Bitmap的复用听过没有"></a>Bitmap的复用听过没有</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a>中38题的内容</p>
+</details>
+
+<h2 id="如何进行内存优化-减少内存消耗"><a href="#如何进行内存优化-减少内存消耗" class="headerlink" title="如何进行内存优化 减少内存消耗"></a>如何进行内存优化 减少内存消耗</h2><p>第三部分(shopee)：</p>
+<h2 id="算法-最大子序和"><a href="#算法-最大子序和" class="headerlink" title="算法 最大子序和"></a>算法 最大子序和</h2><h2 id="try-catch-finally关于return的执行结果"><a href="#try-catch-finally关于return的执行结果" class="headerlink" title="try catch finally关于return的执行结果"></a>try catch finally关于return的执行结果</h2><h2 id="hashmap源码-treemap如何对两个元素进行比较-非compareble对象比较"><a href="#hashmap源码-treemap如何对两个元素进行比较-非compareble对象比较" class="headerlink" title="hashmap源码 treemap如何对两个元素进行比较 非compareble对象比较"></a>hashmap源码 treemap如何对两个元素进行比较 非compareble对象比较</h2><h2 id="hashcode-equals区别"><a href="#hashcode-equals区别" class="headerlink" title="hashcode equals区别"></a>hashcode equals区别</h2><h2 id="object有什么方法"><a href="#object有什么方法" class="headerlink" title="object有什么方法"></a>object有什么方法</h2><h2 id="讲讲Android存在的设计模式"><a href="#讲讲Android存在的设计模式" class="headerlink" title="讲讲Android存在的设计模式"></a>讲讲Android存在的设计模式</h2><h2 id="android的消息机制"><a href="#android的消息机制" class="headerlink" title="android的消息机制"></a>android的消息机制</h2><h2 id="android的事件分发"><a href="#android的事件分发" class="headerlink" title="android的事件分发"></a>android的事件分发</h2><h2 id="讲个android的源码-自选"><a href="#讲个android的源码-自选" class="headerlink" title="讲个android的源码 自选"></a>讲个android的源码 自选</h2><h2 id="LeakCanary"><a href="#LeakCanary" class="headerlink" title="LeakCanary"></a>LeakCanary</h2><h2 id="设计模式讲讲有什么认识的，代理模式优缺点"><a href="#设计模式讲讲有什么认识的，代理模式优缺点" class="headerlink" title="设计模式讲讲有什么认识的，代理模式优缺点"></a>设计模式讲讲有什么认识的，代理模式优缺点</h2><h2 id="图片-缓存机制"><a href="#图片-缓存机制" class="headerlink" title="图片 缓存机制"></a>图片 缓存机制</h2><h2 id="首屏调优-内存调优"><a href="#首屏调优-内存调优" class="headerlink" title="首屏调优 内存调优"></a>首屏调优 内存调优</h2>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/" rel="tag"># 他山之石</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2020/05/01/Android%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/" rel="next" title="Android开发技巧">
+                  <i class="fa fa-chevron-left"></i> Android开发技巧
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#App的架构是怎么样的？"><span class="nav-number">1.</span> <span class="nav-text">App的架构是怎么样的？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么这样架构"><span class="nav-number">1.1.</span> <span class="nav-text">为什么这样架构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#首屏怎么调优？内存泄漏怎么检测？LeakCanary-原理？"><span class="nav-number">2.</span> <span class="nav-text">首屏怎么调优？内存泄漏怎么检测？LeakCanary 原理？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HashMap-源码？为什么要将链表转成红黑树？红黑树特点？"><span class="nav-number">3.</span> <span class="nav-text">HashMap 源码？为什么要将链表转成红黑树？红黑树特点？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？"><span class="nav-number">4.</span> <span class="nav-text">消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kotlin-协程原理？怎么切换线程的？Kotlin-优点和缺点？"><span class="nav-number">5.</span> <span class="nav-text">kotlin 协程原理？怎么切换线程的？Kotlin 优点和缺点？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#一个无序，实际上是逆序的数组排序用什么算法好？"><span class="nav-number">6.</span> <span class="nav-text">一个无序，实际上是逆序的数组排序用什么算法好？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#调优、怎么瘦身，打包流程，模块化"><span class="nav-number">7.</span> <span class="nav-text">调优、怎么瘦身，打包流程，模块化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#开发者模式中，GPUInfo-中柱状图颜色代表的含义；命令dumpsys-meminfo中VSS、PSS、GSS、USS代表什么意思"><span class="nav-number">8.</span> <span class="nav-text">开发者模式中，GPUInfo 中柱状图颜色代表的含义；命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的"><span class="nav-number">9.</span> <span class="nav-text">Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#物理内存与虚拟内存的关系、Android-Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域"><span class="nav-number">10.</span> <span class="nav-text">物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体"><span class="nav-number">11.</span> <span class="nav-text">binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#广度、深度搜索，拓朴排序、最短路径算法"><span class="nav-number">12.</span> <span class="nav-text">广度、深度搜索，拓朴排序、最短路径算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#讲个项目你负责的模块"><span class="nav-number">13.</span> <span class="nav-text">讲个项目你负责的模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#多个Fragment在销毁后重建之后重叠怎么办"><span class="nav-number">14.</span> <span class="nav-text">多个Fragment在销毁后重建之后重叠怎么办</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#设计一个图片缓存框架"><span class="nav-number">15.</span> <span class="nav-text">设计一个图片缓存框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#缓存算法用什么"><span class="nav-number">16.</span> <span class="nav-text">缓存算法用什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#有个ListView快速滑动-如何优化Bitmap的显示"><span class="nav-number">17.</span> <span class="nav-text">有个ListView快速滑动 如何优化Bitmap的显示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Bitmap的复用听过没有"><span class="nav-number">18.</span> <span class="nav-text">Bitmap的复用听过没有</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何进行内存优化-减少内存消耗"><span class="nav-number">19.</span> <span class="nav-text">如何进行内存优化 减少内存消耗</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#算法-最大子序和"><span class="nav-number">20.</span> <span class="nav-text">算法 最大子序和</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#try-catch-finally关于return的执行结果"><span class="nav-number">21.</span> <span class="nav-text">try catch finally关于return的执行结果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hashmap源码-treemap如何对两个元素进行比较-非compareble对象比较"><span class="nav-number">22.</span> <span class="nav-text">hashmap源码 treemap如何对两个元素进行比较 非compareble对象比较</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hashcode-equals区别"><span class="nav-number">23.</span> <span class="nav-text">hashcode equals区别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#object有什么方法"><span class="nav-number">24.</span> <span class="nav-text">object有什么方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#讲讲Android存在的设计模式"><span class="nav-number">25.</span> <span class="nav-text">讲讲Android存在的设计模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#android的消息机制"><span class="nav-number">26.</span> <span class="nav-text">android的消息机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#android的事件分发"><span class="nav-number">27.</span> <span class="nav-text">android的事件分发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#讲个android的源码-自选"><span class="nav-number">28.</span> <span class="nav-text">讲个android的源码 自选</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LeakCanary"><span class="nav-number">29.</span> <span class="nav-text">LeakCanary</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#设计模式讲讲有什么认识的，代理模式优缺点"><span class="nav-number">30.</span> <span class="nav-text">设计模式讲讲有什么认识的，代理模式优缺点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#图片-缓存机制"><span class="nav-number">31.</span> <span class="nav-text">图片 缓存机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#首屏调优-内存调优"><span class="nav-number">32.</span> <span class="nav-text">首屏调优 内存调优</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">87</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">23</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共200.3k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/schemes/pisces.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'f55c4efe7ff435a42ff5b1a9ef18e2fa',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
