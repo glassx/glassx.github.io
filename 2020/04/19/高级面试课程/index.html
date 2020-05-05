@@ -53,15 +53,15 @@
   };
 </script>
 
-  <meta name="description" content="4-1 停止线程 点击看答案  有两种方法：  调用 interruput 方法，通过抛异常的方式触发 使用boolean 标志位，注意，要使用volatile 标志位保证可见性；  一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。 建议转移到线程安全问题上去 为什么停止线程会有问题stop">
+  <meta name="description" content="4-1 停止线程 点击看答案  有两种方法：  调用 interruput 方法，通过抛异常的方式触发 使用boolean 标志位，注意，要使用volatile 标志位保证可见性；  一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。 建议转移到线程安全问题上去 为什么停止线程会有问题suspe">
 <meta name="keywords" content="高级进阶课">
 <meta property="og:type" content="article">
 <meta property="og:title" content="高级进阶课">
 <meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2020&#x2F;04&#x2F;19&#x2F;%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B&#x2F;index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="4-1 停止线程 点击看答案  有两种方法：  调用 interruput 方法，通过抛异常的方式触发 使用boolean 标志位，注意，要使用volatile 标志位保证可见性；  一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。 建议转移到线程安全问题上去 为什么停止线程会有问题stop">
+<meta property="og:description" content="4-1 停止线程 点击看答案  有两种方法：  调用 interruput 方法，通过抛异常的方式触发 使用boolean 标志位，注意，要使用volatile 标志位保证可见性；  一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。 建议转移到线程安全问题上去 为什么停止线程会有问题suspe">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-05-01T02:05:54.883Z">
+<meta property="og:updated_time" content="2020-05-05T12:55:29.149Z">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="https://glassx.gitee.io/2020/04/19/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/">
@@ -250,7 +250,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-05-01 10:05:54" itemprop="dateModified" datetime="2020-05-01T10:05:54+08:00">2020-05-01</time>
+                <time title="修改时间：2020-05-05 20:55:29" itemprop="dateModified" datetime="2020-05-05T20:55:29+08:00">2020-05-05</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -292,7 +292,7 @@
 </ul>
 <p>一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。</p>
 <p>建议转移到线程安全问题上去</p>
-<h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>stop 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
+<h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>suspend 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
 <p>为什么Thread 的run方法中执行 sleep 方法要try-catch 捕捉 InterruptedException ，这是因为在sleep 过程中，有可能这个thread 会被调用 thread.interrupt() ，此时就会触发 这个异常，我们应该在 catch 语句中 关闭打开的文件之类的。</p>
 </details><a id="more"></a>
 
@@ -719,7 +719,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共202.7k字</span>
+  <span class="post-count">博客全站共202.8k字</span>
 </div>
 
 

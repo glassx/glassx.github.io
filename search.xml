@@ -257,7 +257,7 @@
 </ul>
 <p>一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。</p>
 <p>建议转移到线程安全问题上去</p>
-<h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>stop 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
+<h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>suspend 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
 <p>为什么Thread 的run方法中执行 sleep 方法要try-catch 捕捉 InterruptedException ，这是因为在sleep 过程中，有可能这个thread 会被调用 thread.interrupt() ，此时就会触发 这个异常，我们应该在 catch 语句中 关闭打开的文件之类的。</p>
 </details><a id="more"></a>
 
@@ -6421,22 +6421,21 @@
 <p>别漏了BroadCastReceiver</p>
 </details><blockquote>
 <p>参考链接：<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">ipc机制</a></p>
-</blockquote><h2 id="Activity-的生命周期，启动模式-1"><a href="#Activity-的生命周期，启动模式-1" class="headerlink" title="Activity 的生命周期，启动模式"></a>Activity 的生命周期，启动模式</h2><details>
+</blockquote><h2 id="零散的知识点"><a href="#零散的知识点" class="headerlink" title="零散的知识点"></a>零散的知识点</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
-<p>别漏了BroadCastReceiver</p>
-</details><a id="more"></a>
-
-
-
-
-
-
-
-<blockquote>
-<p>参考链接：<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">ipc机制</a></p>
-</blockquote>
-]]></content>
+<ul>
+<li>Service 多次启动， onStartCommand 会多次    </li>
+<li>本地广播无法通过静态方式注册    </li>
+<li>RemoteViews 通过id来给特定的view更新UI     </li>
+<li>为毛Thread 废弃 suspend 方法，因为如果被suspend 了一直持有锁，那就可能导致死锁了      </li>
+<li>stop 方法废弃，主要是防止数据写了一半，导致后期数据不一致问题     </li>
+<li>在sleep过程中，有可能会执行 thread.interrupt 方法，所以要try-catch      </li>
+<li>如何禁止指令重排和可见性：final、volatile、加锁    </li>
+<li>保证原子性：加锁、CAS、原子类型(AtomicInteger等)     </li>
+<li></li>
+</ul>
+</details>]]></content>
       <categories>
         <category>阶段</category>
       </categories>
@@ -8078,7 +8077,7 @@
 <li>其他的程序无法将广播发送到我们程序内部，因此不用担心会有安全漏洞隐患。</li>
 <li>发送本地广播比发送系统全局广播更加高效。</li>
 </ul>
-<p><strong>另有一点需要说明：本地广播是无法通过静态注册方式来接收的，其实这也完全可以理解，因为静态注册主要就是为了让程序在未启动的情况下也能接收广播，而发送本地广播时，我们的程序肯定是已经启动了；此外，不要再onReceive方法中添加过多的逻辑或者进行任何耗时的操作，因为广播接收器中是不允许开启线程的，当onReceive方法运行了较长时间而没有结束时，程序就会报错。因此它更多的知识扮演一种打开程序其他组件的角色，如弹一条通知，或者启动一个服务等。</strong></p>
+<p><strong>另有一点需要说明：本地广播是无法通过静态注册方式来接收的，其实这也完全可以理解，因为静态注册主要就是为了让程序在未启动的情况下也能接收广播，而发送本地广播时，我们的程序肯定是已经启动了；此外，不要再onReceive方法中添加过多的逻辑或者进行任何耗时的操作，因为广播接收器中是不允许开启线程的，当onReceive方法运行了较长时间而没有结束时，程序就会报错。因此它更多的只是扮演一种打开程序其他组件的角色，如弹一条通知，或者启动一个服务等。</strong></p>
 ]]></content>
       <categories>
         <category>读书笔记</category>
