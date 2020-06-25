@@ -1,6 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>第21课-UI优化-优化UI渲染</title>
+    <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="UI优化-lt-下-gt"><a href="#UI优化-lt-下-gt" class="headerlink" title="UI优化&lt;下&gt;"></a>UI优化&lt;下&gt;</h2><h3 id="ui渲染测量"><a href="#ui渲染测量" class="headerlink" title="ui渲染测量"></a>ui渲染测量</h3><p>测试工具： Profile GPU Rendeing 和 Show GPU Overdraw ，定位方法可以参考<a href="https://developer.android.com/studio/profile/inspect-gpu-rendering" target="_blank" rel="noopener">官方文档，检查GPU渲染速度和过度绘制</a></p><p>问题定位工具可以使用 Systrace 和 Tracer for OpenGL ES，具体可以参考<a href="https://developer.android.google.cn/topic/performance/vitals/render" target="_blank" rel="noopener">官方文档：渲染速度慢</a></p><a id="more"></a>
+
+<h3 id="适用于自动化测试场景的测试方式-自己加的标题"><a href="#适用于自动化测试场景的测试方式-自己加的标题" class="headerlink" title="适用于自动化测试场景的测试方式(自己加的标题)"></a>适用于自动化测试场景的测试方式(自己加的标题)</h3><p>虽然图形化界面工具非常好用，但是难以用在自动化测试场景，以下测量方式可以用于自动化测试：</p>
+<h4 id="gfxinfo"><a href="#gfxinfo" class="headerlink" title="gfxinfo"></a>gfxinfo</h4><p>gfxinfo 可以输出包含各个阶段发生的动画以及帧相关的性能信息，以及渲染相关的内存和View hierachy 信息，命令如下：</p>
+<blockquote>
+<p>adb shell dumpsys gfxinfo <packagename></packagename></p>
+</blockquote>
+<p>在Android 6.0 之后，gxfinfo 命令新增了 framestats 参数，可以拿到最近120帧每个绘制阶段的耗时信息：</p>
+<blockquote>
+<p>adb shell dumpsys gfxinfo <packagename> framestats</packagename></p>
+</blockquote>
+<h4 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h4><p>除了耗时，还需要关心渲染使用的内存，4.1以后每个 Surface 都会有 3个 Graphic Buffer，那如何查看 Graphic Buffer 占用的内存，可以通过如下命令查看相应信息：</p>
+<blockquote>
+<p>adb shell dumpsys SurfaceFlinger</p>
+</blockquote>
+<p>这部分内存大小和 屏幕分辨率，以及Surface的个数有关。</p>
+<h3 id="UI优化的常用手段"><a href="#UI优化的常用手段" class="headerlink" title="UI优化的常用手段"></a>UI优化的常用手段</h3><p>我们的目标是实现app的帧率达到 60fps，意味着所有操作要在 16.7 ms 内完成，这期间要做的事情如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/UI%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B.png" alt="UI渲染流程"></p>
+<p>我们优化，就是拆解渲染的各个阶段耗时，找到瓶颈，加以优化。ui优化的方法如下：</p>
+<h4 id="1、尽量使用硬件加速。"><a href="#1、尽量使用硬件加速。" class="headerlink" title="1、尽量使用硬件加速。"></a>1、尽量使用硬件加速。</h4><p>硬件加速绘制的性能是远远高于软件绘制的，所以ui优化第一个手段应该尽量使用硬件加速。但是有些api不支持硬件加速，这个需要注意，比如 渐变、磨砂、圆角等，它们的渲染性能比较低。</p>
+<h4 id="2、View-的创建优化"><a href="#2、View-的创建优化" class="headerlink" title="2、View 的创建优化"></a>2、View 的创建优化</h4><p>View 的创建在UI线程，对于复杂的界面，这部分耗时不容忽视。View 的创建过程中，会包括xml的读取io，解析xml 以及生成对象的时间(Framework会大量使用反射)</p>
+<p>因此建议：</p>
+<p>1、使用代码创建view 对象缺点是不能直接预览<br>2、提前创建、异步创建<br>3、View 重用(模仿ListView、RecyclerView，不过重用要注意先清空状态)。  </p>
+<p>如果异步创建，那么会导致系统抛出异常。这时候，我们可以通过非常取巧的方式来异步创建ui：<strong>先把线程的Looper的MessageQueue替换成Looper的Queue：</strong></p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AD%90%E7%BA%BF%E7%A8%8B%E5%88%9B%E5%BB%BAui.png" alt="子线程创建ui"></p>
+<p><strong>要注意的是，在创建完成view之后，需要把线程的Looper恢复成原来的。</strong></p>
+<h4 id="3、measure-layout-优化"><a href="#3、measure-layout-优化" class="headerlink" title="3、measure/layout 优化"></a>3、measure/layout 优化</h4><p>这两部分也是在ui线程执行的，一般的优化方法有：</p>
+<ul>
+<li>减少UI布局层次      </li>
+<li>优化layout开销。尽量不要使用 RelativeLayout 和 weighted LinearLayout ，它们开销很大，建议使用 ConstranLayout    </li>
+<li>背景优化。尽量不要重复设置背景，<strong>尤其注意的是主题背景，theme默认会是一个纯色背景，如果我们自定义了界面背景，那么主题背景对我们来说是无用的</strong>，由于主题背景是设置在DecorView 中的，所以会带来重复绘制，也会带来绘制性能损耗。     </li>
+</ul>
+<h4 id="4、UI优化进阶"><a href="#4、UI优化进阶" class="headerlink" title="4、UI优化进阶"></a>4、UI优化进阶</h4><p>可以采用flutter</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>第20课-UI优化-UI渲染关键概念</title>
     <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/</url>
     <content><![CDATA[<h2 id="UI优化-lt-上-gt-20讲"><a href="#UI优化-lt-上-gt-20讲" class="headerlink" title="UI优化&lt;上&gt;-20讲"></a>UI优化&lt;上&gt;-20讲</h2><h3 id="UI渲染的背景知识"><a href="#UI渲染的背景知识" class="headerlink" title="UI渲染的背景知识"></a>UI渲染的背景知识</h3><p>ppi 像素密度，每英寸包含的像素数，这是物理参数，不可改</p><p>dpi 像素密度，指的是单位尺寸像素数量。这是可以人为调整的         </p><p>density 密度，每平方英寸中包含的像素点数，density = dpi / 160    </p><p>dp ： px = dp * density</p><a id="more"></a>
@@ -137,25 +181,6 @@
 ]]></content>
   </entry>
   <entry>
-    <title>第5、6课-卡顿优化</title>
-    <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/</url>
-    <content><![CDATA[<h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化&lt;上&gt;"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></table></figure><a id="more"></a>
-
-
-<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></table></figure>
-
-<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
-<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>Android开发高手课</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>第3、4课-内存优化</title>
     <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/</url>
     <content><![CDATA[<h2 id="内存优化-lt-上-gt"><a href="#内存优化-lt-上-gt" class="headerlink" title="内存优化&lt;上&gt;"></a>内存优化&lt;上&gt;</h2><h3 id="Android中Bitmap-内存分配的变化过程"><a href="#Android中Bitmap-内存分配的变化过程" class="headerlink" title="Android中Bitmap 内存分配的变化过程"></a>Android中Bitmap 内存分配的变化过程</h3><ol>
@@ -179,6 +204,25 @@
 <p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png" alt="安装包大小和内存关系"></p>
 <p>Bitmap 可以用第三方框架来做，比如Fresco，实在要自己管理，可以向后台要求指定宽度，bitmap的inbitMap内存复用，inSample降低采样</p>
 <p>内存泄露：使用LeakCanary自动化检测方案，只可以做到Activity和Fragment的泄漏检测，如何检测其他的内存泄露呢？如何监测疑似的内存泄漏呢？</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第5、6课-卡顿优化</title>
+    <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化&lt;上&gt;"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></table></figure><a id="more"></a>
+
+
+<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></table></figure>
+
+<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
+<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
 ]]></content>
       <categories>
         <category>读书笔记</category>
