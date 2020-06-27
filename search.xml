@@ -1,41 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>第21课-UI优化-优化UI渲染</title>
-    <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/</url>
-    <content><![CDATA[<h2 id="UI优化-lt-下-gt"><a href="#UI优化-lt-下-gt" class="headerlink" title="UI优化&lt;下&gt;"></a>UI优化&lt;下&gt;</h2><h3 id="ui渲染测量"><a href="#ui渲染测量" class="headerlink" title="ui渲染测量"></a>ui渲染测量</h3><p>测试工具： Profile GPU Rendeing 和 Show GPU Overdraw ，定位方法可以参考<a href="https://developer.android.com/studio/profile/inspect-gpu-rendering" target="_blank" rel="noopener">官方文档，检查GPU渲染速度和过度绘制</a></p><p>问题定位工具可以使用 Systrace 和 Tracer for OpenGL ES，具体可以参考<a href="https://developer.android.google.cn/topic/performance/vitals/render" target="_blank" rel="noopener">官方文档：渲染速度慢</a></p><a id="more"></a>
+    <title>面试题-算法-红黑树</title>
+    <url>/2020/06/27/%E7%BA%A2%E9%BB%91%E6%A0%91/</url>
+    <content><![CDATA[<h2 id="二叉查找树-也称二叉搜索树"><a href="#二叉查找树-也称二叉搜索树" class="headerlink" title="二叉查找树(也称二叉搜索树)"></a>二叉查找树(也称二叉搜索树)</h2><ul>
+<li>左子树上的节点值都<strong>小于等于</strong>根节点的值    </li>
+<li>右子树上的节点值都<strong>大于等于</strong>根节点的值    </li>
+<li>左右子树也是二叉搜索树    </li>
+</ul><p>它是基于二分查找的思想，<strong>查找最大的次数为二叉树高度</strong>     </p><h3 id="查找代价"><a href="#查找代价" class="headerlink" title="查找代价"></a>查找代价</h3><ul>
+<li>当左右子树高度大致平衡时，时间复杂度在 O(logN)     </li>
+<li>当先后插入的关键字<strong>有序</strong>时，退化成链表，查找的时间复杂度就在 O(N)了     </li>
+</ul><a id="more"></a>
 
-<h3 id="适用于自动化测试场景的测试方式-自己加的标题"><a href="#适用于自动化测试场景的测试方式-自己加的标题" class="headerlink" title="适用于自动化测试场景的测试方式(自己加的标题)"></a>适用于自动化测试场景的测试方式(自己加的标题)</h3><p>虽然图形化界面工具非常好用，但是难以用在自动化测试场景，以下测量方式可以用于自动化测试：</p>
-<h4 id="gfxinfo"><a href="#gfxinfo" class="headerlink" title="gfxinfo"></a>gfxinfo</h4><p>gfxinfo 可以输出包含各个阶段发生的动画以及帧相关的性能信息，以及渲染相关的内存和View hierachy 信息，命令如下：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename></packagename></p>
-</blockquote>
-<p>在Android 6.0 之后，gxfinfo 命令新增了 framestats 参数，可以拿到最近120帧每个绘制阶段的耗时信息：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename> framestats</packagename></p>
-</blockquote>
-<h4 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h4><p>除了耗时，还需要关心渲染使用的内存，4.1以后每个 Surface 都会有 3个 Graphic Buffer，那如何查看 Graphic Buffer 占用的内存，可以通过如下命令查看相应信息：</p>
-<blockquote>
-<p>adb shell dumpsys SurfaceFlinger</p>
-</blockquote>
-<p>这部分内存大小和 屏幕分辨率，以及Surface的个数有关。</p>
-<h3 id="UI优化的常用手段"><a href="#UI优化的常用手段" class="headerlink" title="UI优化的常用手段"></a>UI优化的常用手段</h3><p>我们的目标是实现app的帧率达到 60fps，意味着所有操作要在 16.7 ms 内完成，这期间要做的事情如下所示：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/UI%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B.png" alt="UI渲染流程"></p>
-<p>我们优化，就是拆解渲染的各个阶段耗时，找到瓶颈，加以优化。ui优化的方法如下：</p>
-<h4 id="1、尽量使用硬件加速。"><a href="#1、尽量使用硬件加速。" class="headerlink" title="1、尽量使用硬件加速。"></a>1、尽量使用硬件加速。</h4><p>硬件加速绘制的性能是远远高于软件绘制的，所以ui优化第一个手段应该尽量使用硬件加速。但是有些api不支持硬件加速，这个需要注意，比如 渐变、磨砂、圆角等，它们的渲染性能比较低。</p>
-<h4 id="2、View-的创建优化"><a href="#2、View-的创建优化" class="headerlink" title="2、View 的创建优化"></a>2、View 的创建优化</h4><p>View 的创建在UI线程，对于复杂的界面，这部分耗时不容忽视。View 的创建过程中，会包括xml的读取io，解析xml 以及生成对象的时间(Framework会大量使用反射)</p>
-<p>因此建议：</p>
-<p>1、使用代码创建view 对象缺点是不能直接预览<br>2、提前创建、异步创建<br>3、View 重用(模仿ListView、RecyclerView，不过重用要注意先清空状态)。  </p>
-<p>如果异步创建，那么会导致系统抛出异常。这时候，我们可以通过非常取巧的方式来异步创建ui：<strong>先把线程的Looper的MessageQueue替换成Looper的Queue：</strong></p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AD%90%E7%BA%BF%E7%A8%8B%E5%88%9B%E5%BB%BAui.png" alt="子线程创建ui"></p>
-<p><strong>要注意的是，在创建完成view之后，需要把线程的Looper恢复成原来的。</strong></p>
-<h4 id="3、measure-layout-优化"><a href="#3、measure-layout-优化" class="headerlink" title="3、measure/layout 优化"></a>3、measure/layout 优化</h4><p>这两部分也是在ui线程执行的，一般的优化方法有：</p>
-<ul>
-<li>减少UI布局层次      </li>
-<li>优化layout开销。尽量不要使用 RelativeLayout 和 weighted LinearLayout ，它们开销很大，建议使用 ConstranLayout    </li>
-<li>背景优化。尽量不要重复设置背景，<strong>尤其注意的是主题背景，theme默认会是一个纯色背景，如果我们自定义了界面背景，那么主题背景对我们来说是无用的</strong>，由于主题背景是设置在DecorView 中的，所以会带来重复绘制，也会带来绘制性能损耗。     </li>
+
+<h3 id="插入代价"><a href="#插入代价" class="headerlink" title="插入代价"></a>插入代价</h3><p>新节点插入到树的叶子节点上，因此，插入节点和查找一个不存在的数据的代价相同    </p>
+<h3 id="删除代价"><a href="#删除代价" class="headerlink" title="删除代价"></a>删除代价</h3><ul>
+<li>如果被删除的节点左、右 有一个为null时，代价仅为 O(1)      </li>
+<li>如果左右子树都存在，时间复杂度最大也不会超过O(logN)      </li>
 </ul>
-<h4 id="4、UI优化进阶"><a href="#4、UI优化进阶" class="headerlink" title="4、UI优化进阶"></a>4、UI优化进阶</h4><p>可以采用flutter</p>
+<p>缺陷：</p>
+<p>极端情况可能退化成链表，时间复杂度为  n。这主要是由于树不平衡导致的</p>
+<h2 id="平衡二叉查找树-平衡二叉搜索树"><a href="#平衡二叉查找树-平衡二叉搜索树" class="headerlink" title="平衡二叉查找树(平衡二叉搜索树)"></a>平衡二叉查找树(平衡二叉搜索树)</h2><p>是严格的平衡二叉树，它是空树或者左右两个子树的高度差 <strong>小于等于1</strong>，同时，左右两个子树也是平衡二叉搜索树</p>
+<h3 id="查找代价-1"><a href="#查找代价-1" class="headerlink" title="查找代价"></a>查找代价</h3><p>时间很稳定，查找效率最好最坏都是  O(logN)</p>
+<h3 id="插入代价-1"><a href="#插入代价-1" class="headerlink" title="插入代价"></a>插入代价</h3><p>由于要保证严格的平衡，插入时可能要进行再平衡(最多旋转一次)，因此插入的整体代价还在 O(logN)</p>
+<h3 id="删除代价-1"><a href="#删除代价-1" class="headerlink" title="删除代价"></a>删除代价</h3><p>和插入一样，要考虑再平衡，但是最多需要O(logN)次旋转，所以时间复杂度为  O(2logN)</p>
+<h2 id="红黑树-Red-Black-Tree"><a href="#红黑树-Red-Black-Tree" class="headerlink" title="红黑树(Red-Black Tree)"></a>红黑树(Red-Black Tree)</h2><p>它并不严格地平衡，最长路径长度不超过最短路径长度的2倍。它删除和插入引起平衡性改变的概率要远低于平衡二叉搜索树</p>
+<h3 id="查找代价-2"><a href="#查找代价-2" class="headerlink" title="查找代价"></a>查找代价</h3><p>查找代价基本上维持在 O(logN) 级别，最差情况下肯定比平衡二叉搜索树要差，因为没有那么平衡</p>
+<h3 id="插入代价-2"><a href="#插入代价-2" class="headerlink" title="插入代价"></a>插入代价</h3><p>不容易引起失衡，整体代价和平衡二叉搜索树差不多，也是 O(logN) 级别(虽然涉及变色，但是变色的代价很小)</p>
+<h3 id="删除代价-2"><a href="#删除代价-2" class="headerlink" title="删除代价"></a>删除代价</h3><p>相对平衡二叉搜索树，不容易引起失衡，时间复杂度也在 O(logN) 级别</p>
+<h3 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h3><p>平衡二叉搜索树由于插入和删除，会引起需要调整，可以通过 ：变色、左旋转、右旋转  三种方式调整。是否需要调整要根据红黑树的特性：</p>
+<ul>
+<li>节点是红色或黑色    </li>
+<li>根节点是黑色    </li>
+<li>叶子节点都是黑色的空节点    </li>
+<li>红色节点的两个子节点都是黑的(红节点不能连续出现)    </li>
+<li>任一点到每个叶子节点的路径包含相同数目的黑节点    </li>
+</ul>
+<h2 id="B-树和B-树"><a href="#B-树和B-树" class="headerlink" title="B-树和B+ 树"></a>B-树和B+ 树</h2><p>我们所谓的B-树，其实并不是B减树，中间是横线，不是减号；B + 就是 B加树了</p>
+<p>如 os 的文件目录存储、数据库中的索引结构的存储，不可能在内存中建立查找结构，必须在磁盘中建立好结构。</p>
+<p>在磁盘组织结构下，从任何一个节点指向其他节点都可能读取一次磁盘，再将数据写入内存比较。这回带来大量的IO操作，所以我们需要新的数据结构，即 B树和B+树。</p>
+<p>B树是一种<strong>多路平衡查找树</strong>，每个节点最多包含k个孩子，k称为B树的阶。K大小取决于<strong>磁盘页的大小</strong>。</p>
+<blockquote>
+<p>以上内容参考自<a href="https://zhuanlan.zhihu.com/p/54084335" target="_blank" rel="noopener">知乎专栏</a>、<a href="https://zhuanlan.zhihu.com/p/31805309" target="_blank" rel="noopener">知乎</a>、<a href="https://blog.csdn.net/z702143700/article/details/49079107" target="_blank" rel="noopener">csdn博客</a></p>
+</blockquote>
+]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第18课-耗电优化<上></title>
+    <url>/2020/06/26/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-18%E3%80%8119%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="第18课-耗电优化-lt-上-gt"><a href="#第18课-耗电优化-lt-上-gt" class="headerlink" title="第18课-耗电优化&lt;上&gt;"></a>第18课-耗电优化&lt;上&gt;</h2><p>准确的测量电量并不是那么容易，在<a href="https://tech.meituan.com/2018/03/11/dianping-shortvideo-battery-testcase.html" target="_blank" rel="noopener">《大众点评App的短视频耗电量优化实战》</a>一文中，为我们总结了下面几种电量测试的方法:</p><p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E8%80%97%E7%94%B5%E9%87%8F%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95.png" alt="耗电量测试方法"></p><p>当测试反馈耗电问题时，<a href="https://developer.android.google.cn/studio/debug/bug-report" target="_blank" rel="noopener">bug report</a> 结合 <a href="https://github.com/google/battery-historian" target="_blank" rel="noopener">Battery Historian</a> 是最好的排除方法：</p><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line">//7.0和7.0以后</span><br><span class="line">$ adb bugreport bugreport.zip</span><br><span class="line">//6.0和6.0之前:</span><br><span class="line">$ adb bugreport &gt; bugreport.txt</span><br><span class="line">//通过historian图形化展示结果</span><br><span class="line">python historian.py -a bugreport.txt &gt; battery.html</span><br></pre></td></tr></table></figure><a id="more"></a>
+
+
+
+
+<h2 id="19讲-耗电优化-lt-下-gt"><a href="#19讲-耗电优化-lt-下-gt" class="headerlink" title="19讲-耗电优化&lt;下&gt;"></a>19讲-耗电优化&lt;下&gt;</h2><h3 id="如何优化"><a href="#如何优化" class="headerlink" title="如何优化"></a>如何优化</h3><ul>
+<li>耗电优化的第一个优化方向是优化应用后台耗电    </li>
+<li>第二个优化方向是符合系统的规则，让系统认为你的耗电是正常的。</li>
+</ul>
+<p>比如，Android P 通过 Android Vitals 监控后台耗电，所以我们需要符合它的规则，它的规则如下：</p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android-Vitals%E8%A7%84%E5%88%99.png" alt="Android-Vitals规则"></p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第16课-网络优化<中></title>
+    <url>/2020/06/26/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-16,17%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="第16课-网络优化-lt-中-gt"><a href="#第16课-网络优化-lt-中-gt" class="headerlink" title="第16课-网络优化&lt;中&gt;"></a>第16课-网络优化&lt;中&gt;</h2><p>对于速度、弱网络以及安全的优化，该从哪些方面入手，首先我们要弄清楚一个网络请求的整个过程,示意图如下：</p><p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E7%BD%91%E7%BB%9C%E8%AF%B7%E6%B1%82%E7%9A%84%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B.png" alt="网络请求的完整流程"></p><p>可以看出，整个流程分为 发起请求-&gt;DNS解析-&gt;创建连接-&gt;发送/接收数据-&gt;关闭连接    </p><h2 id="第17课-网络优化-lt-下-gt-大数据下网络如何监控"><a href="#第17课-网络优化-lt-下-gt-大数据下网络如何监控" class="headerlink" title="第17课-网络优化&lt;下&gt;-大数据下网络如何监控"></a>第17课-网络优化&lt;下&gt;-大数据下网络如何监控</h2><a id="more"></a>
+
+
+<h3 id="插桩"><a href="#插桩" class="headerlink" title="插桩"></a>插桩</h3><p>为了兼容性考虑，首先考虑插桩。如360开源的性能监控工具 ArgusAPM ，就是利用 Aspect 切换插桩，实现监控系统和 OkHttp 网络请求库的请求。</p>
+<p>系统网络库的插桩实现可以参考TraceNetTrafficMonitor，主要利用Aspect的切面功能，关于OkHttp的拦截可以参考OkHttp3Aspect，它会更加简单一些，因为OkHttp本身就有代理机制。</p>
+<h3 id="Native-Hook"><a href="#Native-Hook" class="headerlink" title="Native Hook"></a>Native Hook</h3><p>hook 本地的代码，需要考虑兼容性</p>
+<h3 id="统一网络库"><a href="#统一网络库" class="headerlink" title="统一网络库"></a>统一网络库</h3><p>ios 和Android 都统一使用同一套网络库，统一监控   </p>
+<p><strong>小技巧：1、我们可以通过Android官方的 TrafficStats 类来获取整个手机或者某个 UID 从开机算起的网络流量； 2、Android 和 Iphone 都有一个网络测试模式，可以尝试下：</strong></p>
+<blockquote>
+<p>Android手机：打开拨号界面，输入 <em>#</em>#4636#<em>#</em> ，然后按拨号键（可进入工程测试模式，部分版本可能不支持）<br>iPhone手机：打开拨号界面，输入 <em>3001#12345#</em> ，然后按拨号键。</p>
+</blockquote>
+<p>自己注：在网上找到的<a href="https://www.jianshu.com/p/da2a0030962a" target="_blank" rel="noopener">微信弱网优化方法</a></p>
 ]]></content>
       <categories>
         <category>读书笔记</category>
@@ -99,6 +151,50 @@
       </tags>
   </entry>
   <entry>
+    <title>第21课-UI优化-优化UI渲染</title>
+    <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="UI优化-lt-下-gt"><a href="#UI优化-lt-下-gt" class="headerlink" title="UI优化&lt;下&gt;"></a>UI优化&lt;下&gt;</h2><h3 id="ui渲染测量"><a href="#ui渲染测量" class="headerlink" title="ui渲染测量"></a>ui渲染测量</h3><p>测试工具： Profile GPU Rendeing 和 Show GPU Overdraw ，定位方法可以参考<a href="https://developer.android.com/studio/profile/inspect-gpu-rendering" target="_blank" rel="noopener">官方文档，检查GPU渲染速度和过度绘制</a></p><p>问题定位工具可以使用 Systrace 和 Tracer for OpenGL ES，具体可以参考<a href="https://developer.android.google.cn/topic/performance/vitals/render" target="_blank" rel="noopener">官方文档：渲染速度慢</a></p><a id="more"></a>
+
+<h3 id="适用于自动化测试场景的测试方式-自己加的标题"><a href="#适用于自动化测试场景的测试方式-自己加的标题" class="headerlink" title="适用于自动化测试场景的测试方式(自己加的标题)"></a>适用于自动化测试场景的测试方式(自己加的标题)</h3><p>虽然图形化界面工具非常好用，但是难以用在自动化测试场景，以下测量方式可以用于自动化测试：</p>
+<h4 id="gfxinfo"><a href="#gfxinfo" class="headerlink" title="gfxinfo"></a>gfxinfo</h4><p>gfxinfo 可以输出包含各个阶段发生的动画以及帧相关的性能信息，以及渲染相关的内存和View hierachy 信息，命令如下：</p>
+<blockquote>
+<p>adb shell dumpsys gfxinfo <packagename></packagename></p>
+</blockquote>
+<p>在Android 6.0 之后，gxfinfo 命令新增了 framestats 参数，可以拿到最近120帧每个绘制阶段的耗时信息：</p>
+<blockquote>
+<p>adb shell dumpsys gfxinfo <packagename> framestats</packagename></p>
+</blockquote>
+<h4 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h4><p>除了耗时，还需要关心渲染使用的内存，4.1以后每个 Surface 都会有 3个 Graphic Buffer，那如何查看 Graphic Buffer 占用的内存，可以通过如下命令查看相应信息：</p>
+<blockquote>
+<p>adb shell dumpsys SurfaceFlinger</p>
+</blockquote>
+<p>这部分内存大小和 屏幕分辨率，以及Surface的个数有关。</p>
+<h3 id="UI优化的常用手段"><a href="#UI优化的常用手段" class="headerlink" title="UI优化的常用手段"></a>UI优化的常用手段</h3><p>我们的目标是实现app的帧率达到 60fps，意味着所有操作要在 16.7 ms 内完成，这期间要做的事情如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/UI%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B.png" alt="UI渲染流程"></p>
+<p>我们优化，就是拆解渲染的各个阶段耗时，找到瓶颈，加以优化。ui优化的方法如下：</p>
+<h4 id="1、尽量使用硬件加速。"><a href="#1、尽量使用硬件加速。" class="headerlink" title="1、尽量使用硬件加速。"></a>1、尽量使用硬件加速。</h4><p>硬件加速绘制的性能是远远高于软件绘制的，所以ui优化第一个手段应该尽量使用硬件加速。但是有些api不支持硬件加速，这个需要注意，比如 渐变、磨砂、圆角等，它们的渲染性能比较低。</p>
+<h4 id="2、View-的创建优化"><a href="#2、View-的创建优化" class="headerlink" title="2、View 的创建优化"></a>2、View 的创建优化</h4><p>View 的创建在UI线程，对于复杂的界面，这部分耗时不容忽视。View 的创建过程中，会包括xml的读取io，解析xml 以及生成对象的时间(Framework会大量使用反射)</p>
+<p>因此建议：</p>
+<p>1、使用代码创建view 对象缺点是不能直接预览<br>2、提前创建、异步创建<br>3、View 重用(模仿ListView、RecyclerView，不过重用要注意先清空状态)。  </p>
+<p>如果异步创建，那么会导致系统抛出异常。这时候，我们可以通过非常取巧的方式来异步创建ui：<strong>先把线程的Looper的MessageQueue替换成Looper的Queue：</strong></p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AD%90%E7%BA%BF%E7%A8%8B%E5%88%9B%E5%BB%BAui.png" alt="子线程创建ui"></p>
+<p><strong>要注意的是，在创建完成view之后，需要把线程的Looper恢复成原来的。</strong></p>
+<h4 id="3、measure-layout-优化"><a href="#3、measure-layout-优化" class="headerlink" title="3、measure/layout 优化"></a>3、measure/layout 优化</h4><p>这两部分也是在ui线程执行的，一般的优化方法有：</p>
+<ul>
+<li>减少UI布局层次      </li>
+<li>优化layout开销。尽量不要使用 RelativeLayout 和 weighted LinearLayout ，它们开销很大，建议使用 ConstranLayout    </li>
+<li>背景优化。尽量不要重复设置背景，<strong>尤其注意的是主题背景，theme默认会是一个纯色背景，如果我们自定义了界面背景，那么主题背景对我们来说是无用的</strong>，由于主题背景是设置在DecorView 中的，所以会带来重复绘制，也会带来绘制性能损耗。     </li>
+</ul>
+<h4 id="4、UI优化进阶"><a href="#4、UI优化进阶" class="headerlink" title="4、UI优化进阶"></a>4、UI优化进阶</h4><p>可以采用flutter</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>第7、8课-启动优化</title>
     <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/</url>
     <content><![CDATA[<h2 id="启动优化-lt-上-gt-第7讲"><a href="#启动优化-lt-上-gt-第7讲" class="headerlink" title="启动优化&lt;上&gt;-第7讲"></a>启动优化&lt;上&gt;-第7讲</h2><h3 id="启动分析"><a href="#启动分析" class="headerlink" title="启动分析"></a>启动分析</h3><p>着手优化之前，首先分析启动过程。</p><ol>
@@ -136,49 +232,23 @@
       </tags>
   </entry>
   <entry>
-    <title>红黑树</title>
-    <url>/2020/05/30/%E7%BA%A2%E9%BB%91%E6%A0%91/</url>
-    <content><![CDATA[<h2 id="二叉查找树-也称二叉搜索树"><a href="#二叉查找树-也称二叉搜索树" class="headerlink" title="二叉查找树(也称二叉搜索树)"></a>二叉查找树(也称二叉搜索树)</h2><ul>
-<li>左子树上的节点值都<strong>小于等于</strong>根节点的值    </li>
-<li>右子树上的节点值都<strong>大于等于</strong>根节点的值    </li>
-<li>左右子树也是二叉搜索树    </li>
-</ul><p>它是基于二分查找的思想，<strong>查找最大的次数为二叉树高度</strong>     </p><h3 id="查找代价"><a href="#查找代价" class="headerlink" title="查找代价"></a>查找代价</h3><ul>
-<li>当左右子树高度大致平衡时，时间复杂度在 O(logN)     </li>
-<li>当先后插入的关键字<strong>有序</strong>时，退化成链表，查找的时间复杂度就在 O(N)了     </li>
-</ul><a id="more"></a>
+    <title>第5、6课-卡顿优化</title>
+    <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化&lt;上&gt;"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></table></figure><a id="more"></a>
 
 
-<h3 id="插入代价"><a href="#插入代价" class="headerlink" title="插入代价"></a>插入代价</h3><p>新节点插入到树的叶子节点上，因此，插入节点和查找一个不存在的数据的代价相同    </p>
-<h3 id="删除代价"><a href="#删除代价" class="headerlink" title="删除代价"></a>删除代价</h3><ul>
-<li>如果被删除的节点左、右 有一个为null时，代价仅为 O(1)      </li>
-<li>如果左右子树都存在，时间复杂度最大也不会超过O(logN)      </li>
-</ul>
-<p>缺陷：</p>
-<p>极端情况可能退化成链表，时间复杂度为  n。这主要是由于树不平衡导致的</p>
-<h2 id="平衡二叉查找树-平衡二叉搜索树"><a href="#平衡二叉查找树-平衡二叉搜索树" class="headerlink" title="平衡二叉查找树(平衡二叉搜索树)"></a>平衡二叉查找树(平衡二叉搜索树)</h2><p>是严格的平衡二叉树，它是空树或者左右两个子树的高度差 <strong>小于等于1</strong>，同时，左右两个子树也是平衡二叉搜索树</p>
-<h3 id="查找代价-1"><a href="#查找代价-1" class="headerlink" title="查找代价"></a>查找代价</h3><p>时间很稳定，查找效率最好最坏都是  O(logN)</p>
-<h3 id="插入代价-1"><a href="#插入代价-1" class="headerlink" title="插入代价"></a>插入代价</h3><p>由于要保证严格的平衡，插入时可能要进行再平衡(最多旋转一次)，因此插入的整体代价还在 O(logN)</p>
-<h3 id="删除代价-1"><a href="#删除代价-1" class="headerlink" title="删除代价"></a>删除代价</h3><p>和插入一样，要考虑再平衡，但是最多需要O(logN)次旋转，所以时间复杂度为  O(2logN)</p>
-<h2 id="红黑树-Red-Black-Tree"><a href="#红黑树-Red-Black-Tree" class="headerlink" title="红黑树(Red-Black Tree)"></a>红黑树(Red-Black Tree)</h2><p>它并不严格地平衡，最长路径长度不超过最短路径长度的2倍。它删除和插入引起平衡性改变的概率要远低于平衡二叉搜索树</p>
-<h3 id="查找代价-2"><a href="#查找代价-2" class="headerlink" title="查找代价"></a>查找代价</h3><p>查找代价基本上维持在 O(logN) 级别，最差情况下肯定比平衡二叉搜索树要差，因为没有那么平衡</p>
-<h3 id="插入代价-2"><a href="#插入代价-2" class="headerlink" title="插入代价"></a>插入代价</h3><p>不容易引起失衡，整体代价和平衡二叉搜索树差不多，也是 O(logN) 级别(虽然涉及变色，但是变色的代价很小)</p>
-<h3 id="删除代价-2"><a href="#删除代价-2" class="headerlink" title="删除代价"></a>删除代价</h3><p>相对平衡二叉搜索树，不容易引起失衡，时间复杂度也在 O(logN) 级别</p>
-<h3 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h3><p>平衡二叉搜索树由于插入和删除，会引起需要调整，可以通过 ：变色、左旋转、右旋转  三种方式调整。是否需要调整要根据红黑树的特性：</p>
-<ul>
-<li>节点是红色或黑色    </li>
-<li>根节点是黑色    </li>
-<li>叶子节点都是黑色的空节点    </li>
-<li>红色节点的两个子节点都是黑的(红节点不能连续出现)    </li>
-<li>任一点到每个叶子节点的路径包含相同数目的黑节点    </li>
-</ul>
-<h2 id="B-树和B-树"><a href="#B-树和B-树" class="headerlink" title="B-树和B+ 树"></a>B-树和B+ 树</h2><p>我们所谓的B-树，其实并不是B减树，中间是横线，不是减号；B + 就是 B加树了</p>
-<p>如 os 的文件目录存储、数据库中的索引结构的存储，不可能在内存中建立查找结构，必须在磁盘中建立好结构。</p>
-<p>在磁盘组织结构下，从任何一个节点指向其他节点都可能读取一次磁盘，再将数据写入内存比较。这回带来大量的IO操作，所以我们需要新的数据结构，即 B树和B+树。</p>
-<p>B树是一种<strong>多路平衡查找树</strong>，每个节点最多包含k个孩子，k称为B树的阶。K大小取决于<strong>磁盘页的大小</strong>。</p>
-<blockquote>
-<p>以上内容参考自<a href="https://zhuanlan.zhihu.com/p/54084335" target="_blank" rel="noopener">知乎专栏</a>、<a href="https://zhuanlan.zhihu.com/p/31805309" target="_blank" rel="noopener">知乎</a>、<a href="https://blog.csdn.net/z702143700/article/details/49079107" target="_blank" rel="noopener">csdn博客</a></p>
-</blockquote>
+<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></table></figure>
+
+<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
+<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
 ]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
   </entry>
   <entry>
     <title>第3、4课-内存优化</title>
@@ -204,25 +274,6 @@
 <p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png" alt="安装包大小和内存关系"></p>
 <p>Bitmap 可以用第三方框架来做，比如Fresco，实在要自己管理，可以向后台要求指定宽度，bitmap的inbitMap内存复用，inSample降低采样</p>
 <p>内存泄露：使用LeakCanary自动化检测方案，只可以做到Activity和Fragment的泄漏检测，如何检测其他的内存泄露呢？如何监测疑似的内存泄漏呢？</p>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>Android开发高手课</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>第5、6课-卡顿优化</title>
-    <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/</url>
-    <content><![CDATA[<h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化&lt;上&gt;"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></table></figure><a id="more"></a>
-
-
-<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></table></figure>
-
-<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
-<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
 ]]></content>
       <categories>
         <category>读书笔记</category>
@@ -1808,53 +1859,6 @@
       </tags>
   </entry>
   <entry>
-    <title>面试题-设计模式</title>
-    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<h2 id="mvc、mvp、mvvm"><a href="#mvc、mvp、mvvm" class="headerlink" title="mvc、mvp、mvvm"></a>mvc、mvp、mvvm</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="mvc"><a href="#mvc" class="headerlink" title="mvc"></a>mvc</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p>
-<p><strong>特征：</strong></p>
-<ul>
-<li>view 接收用户的输入，并且可以通知Controller 更改Model 层数据，如果没有涉及逻辑，还可以直接通知Model 更改数据。    </li>
-<li>需要ui变化，但是没有涉及业务数据，直接调用controller 即可(比如用户选择使用用户名/手机号登录)    </li>
-<li>model 数据变化时，若需要修改ui，需要通过Controller 来通知更新。</li>
-</ul>
-<p><strong>在Android中存在问题：</strong></p>
-<ul>
-<li>Activity 的职责不明，并且臃肿。Activity 除了要展示view (加载view，接收用户操作)，还要承担部分逻辑处理(比如生命周期回调)    </li>
-</ul>
-<h3 id="mvp"><a href="#mvp" class="headerlink" title="mvp"></a>mvp</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
-<p><strong>特点</strong>:</p>
-<ul>
-<li>View 层接收输入</li>
-<li>Presenter 处理业务逻辑，View 与 Model 之间必须经过 Presenter</li>
-</ul>
-<p><strong>优点(相对MVC)：</strong></p>
-<ul>
-<li>避免了View、Model 直接联系，更加解耦，通过Presenter 实现两者之间的沟通    </li>
-<li>Activity 更加简明，仅仅负责UI上的工作    </li>
-</ul>
-<h3 id="mvvm"><a href="#mvvm" class="headerlink" title="mvvm"></a>mvvm</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="mvvm示意图"></p>
-<p>可能主要关注view 通过databinding 与 viewmodel 相互绑定。</p>
-<h3 id="mvc-与-mvp-的区别"><a href="#mvc-与-mvp-的区别" class="headerlink" title="mvc 与 mvp 的区别"></a>mvc 与 mvp 的区别</h3><ul>
-<li>在mvc 中 Activity 具有 view 的功能，并且兼任部分 controller 功能，而mvp 中Activity 是纯粹的view    </li>
-<li>mvc 中view 和model 可以直接沟通(没有逻辑情况下，view直接更改model，当然，有逻辑改动的情况下经过controller)，而mvp中二者沟通必须经过presenter。    </li>
-</ul>
-</details><a id="more"></a>
-
-<blockquote>
-<p>以上内容参考自<a href="https://blog.csdn.net/carson_ho/article/details/100070713" target="_blank" rel="noopener">carson_ho的博客</a></p>
-</blockquote>
-<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
-      <categories>
-        <category>面试</category>
-      </categories>
-      <tags>
-        <tag>面试题</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>面试题-虚拟机知识</title>
     <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/</url>
     <content><![CDATA[<h2 id="1、对象的内存布局"><a href="#1、对象的内存布局" class="headerlink" title="1、对象的内存布局"></a>1、对象的内存布局</h2><details>
@@ -1940,6 +1944,53 @@
 </blockquote>
 <p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
 <h2 id="如何理解Java类加载机制"><a href="#如何理解Java类加载机制" class="headerlink" title="如何理解Java类加载机制"></a><a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247483903&idx=1&sn=c20d3172052bd7db9a1ad6a95f112bc9&chksm=96cda0b2a1ba29a4cc9912cb1bf8a955f97ee45a7b8db48e384f1694ddbabbd4d5e7fa90f880&scene=21#wechat_redirect" target="_blank" rel="noopener">如何理解Java类加载机制</a></h2></details>]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>面试题-设计模式</title>
+    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
+    <content><![CDATA[<h2 id="mvc、mvp、mvvm"><a href="#mvc、mvp、mvvm" class="headerlink" title="mvc、mvp、mvvm"></a>mvc、mvp、mvvm</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="mvc"><a href="#mvc" class="headerlink" title="mvc"></a>mvc</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p>
+<p><strong>特征：</strong></p>
+<ul>
+<li>view 接收用户的输入，并且可以通知Controller 更改Model 层数据，如果没有涉及逻辑，还可以直接通知Model 更改数据。    </li>
+<li>需要ui变化，但是没有涉及业务数据，直接调用controller 即可(比如用户选择使用用户名/手机号登录)    </li>
+<li>model 数据变化时，若需要修改ui，需要通过Controller 来通知更新。</li>
+</ul>
+<p><strong>在Android中存在问题：</strong></p>
+<ul>
+<li>Activity 的职责不明，并且臃肿。Activity 除了要展示view (加载view，接收用户操作)，还要承担部分逻辑处理(比如生命周期回调)    </li>
+</ul>
+<h3 id="mvp"><a href="#mvp" class="headerlink" title="mvp"></a>mvp</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
+<p><strong>特点</strong>:</p>
+<ul>
+<li>View 层接收输入</li>
+<li>Presenter 处理业务逻辑，View 与 Model 之间必须经过 Presenter</li>
+</ul>
+<p><strong>优点(相对MVC)：</strong></p>
+<ul>
+<li>避免了View、Model 直接联系，更加解耦，通过Presenter 实现两者之间的沟通    </li>
+<li>Activity 更加简明，仅仅负责UI上的工作    </li>
+</ul>
+<h3 id="mvvm"><a href="#mvvm" class="headerlink" title="mvvm"></a>mvvm</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="mvvm示意图"></p>
+<p>可能主要关注view 通过databinding 与 viewmodel 相互绑定。</p>
+<h3 id="mvc-与-mvp-的区别"><a href="#mvc-与-mvp-的区别" class="headerlink" title="mvc 与 mvp 的区别"></a>mvc 与 mvp 的区别</h3><ul>
+<li>在mvc 中 Activity 具有 view 的功能，并且兼任部分 controller 功能，而mvp 中Activity 是纯粹的view    </li>
+<li>mvc 中view 和model 可以直接沟通(没有逻辑情况下，view直接更改model，当然，有逻辑改动的情况下经过controller)，而mvp中二者沟通必须经过presenter。    </li>
+</ul>
+</details><a id="more"></a>
+
+<blockquote>
+<p>以上内容参考自<a href="https://blog.csdn.net/carson_ho/article/details/100070713" target="_blank" rel="noopener">carson_ho的博客</a></p>
+</blockquote>
+<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -2150,6 +2201,45 @@
       </tags>
   </entry>
   <entry>
+    <title>面试题-网上搜集的题目(一)</title>
+    <url>/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E4%B8%8A%E6%90%9C%E9%9B%86%E7%9A%84%E9%A2%98%E7%9B%AE(%E4%B8%80)/</url>
+    <content><![CDATA[<h2 id="谈谈对this和super的认识"><a href="#谈谈对this和super的认识" class="headerlink" title="谈谈对this和super的认识"></a>谈谈对this和super的认识</h2><h2 id="闭包和内部类的区别"><a href="#闭包和内部类的区别" class="headerlink" title="闭包和内部类的区别"></a>闭包和内部类的区别</h2><h2 id="Java-多态实现的机制是什么"><a href="#Java-多态实现的机制是什么" class="headerlink" title="Java 多态实现的机制是什么"></a>Java 多态实现的机制是什么</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>重写和重载</p>
+</details><h2 id="final-关键字的作用"><a href="#final-关键字的作用" class="headerlink" title="final 关键字的作用"></a>final 关键字的作用</h2><h2 id="多维数组在内存上是怎么存储的"><a href="#多维数组在内存上是怎么存储的" class="headerlink" title="多维数组在内存上是怎么存储的"></a>多维数组在内存上是怎么存储的</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>Java 中的多维数组就是通过一维数组来实现的，只不过这个一维数组中的元素还是多维数组，比如如下声明：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span>[][][] array = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">2</span>][<span class="number">3</span>][<span class="number">4</span>];</span><br></pre></td></tr></table></figure>
+
+<p>它实际上大致等同于如下代码：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span>[][][] a = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">2</span>][][];  </span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; a.length; i++) &#123;  </span><br><span class="line">  a[i] = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">3</span>][];  </span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; a[i].length; j++) &#123;  </span><br><span class="line">    a[i][j] = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">4</span>];  </span><br><span class="line">  &#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上代码参考自<a href="https://www.iteye.com/blog/rednaxelafx-1050144" target="_blank" rel="noopener">iteye中的博客</a></p>
+<p>如果要自己用一维数组去实现二维(或者更多维)的数组，可以使用类似规律： k = j*(j-1)/2 + i -1 来计算出在一维数组中的下标 k 值。</p>
+</details><a id="more"></a>
+
+
+
+<h2 id="Java-的异常体系的理解"><a href="#Java-的异常体系的理解" class="headerlink" title="Java 的异常体系的理解"></a>Java 的异常体系的理解</h2><h2 id="运行时异常-与-非运行时异常"><a href="#运行时异常-与-非运行时异常" class="headerlink" title="运行时异常 与 非运行时异常"></a>运行时异常 与 非运行时异常</h2><h2 id="NIO-BIO-AIO"><a href="#NIO-BIO-AIO" class="headerlink" title="NIO/BIO/AIO"></a>NIO/BIO/AIO</h2><h2 id="Collection-与-Map-的区别"><a href="#Collection-与-Map-的区别" class="headerlink" title="Collection 与 Map 的区别"></a>Collection 与 Map 的区别</h2><h2 id="如何深拷贝List-集合"><a href="#如何深拷贝List-集合" class="headerlink" title="如何深拷贝List 集合"></a>如何深拷贝List 集合</h2><h2 id="Set-如何保证唯一性的"><a href="#Set-如何保证唯一性的" class="headerlink" title="Set 如何保证唯一性的"></a>Set 如何保证唯一性的</h2><h2 id="谈谈Java集合中那些线程安全的集合-amp-实现原理"><a href="#谈谈Java集合中那些线程安全的集合-amp-实现原理" class="headerlink" title="谈谈Java集合中那些线程安全的集合 &amp; 实现原理"></a>谈谈Java集合中那些线程安全的集合 &amp; 实现原理</h2><h2 id="Collection-和-Collections-的区别"><a href="#Collection-和-Collections-的区别" class="headerlink" title="Collection 和 Collections 的区别"></a>Collection 和 Collections 的区别</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>Collection是接口，Collections 是帮助类，能实现排序(Collections.sort() )等功能</p>
+</details>
+
+<blockquote>
+<p>以上题目参考自<a href="https://gitee.com/ClAndEllen/AndroidFaceInterview?_from=gitee_search" target="_blank" rel="noopener">gitee上博客</a></p>
+</blockquote>
+]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>面试题-网络知识</title>
     <url>/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/</url>
     <content><![CDATA[<h2 id="TCP-IP-三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）"><a href="#TCP-IP-三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）" class="headerlink" title="TCP/IP 三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）"></a>TCP/IP 三次握手（为什么3次，能否2次或者4次？），四次挥手（为什么4次，3次可以吗）</h2><p><strong>首先要会画 三次握手和四次挥手 的图。很重要，画了两次错了</strong></p><h3 id="3次握手的示意图如下："><a href="#3次握手的示意图如下：" class="headerlink" title="3次握手的示意图如下："></a>3次握手的示意图如下：</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E4%B8%89%E6%AC%A1%E6%8F%A1%E6%89%8B.png" alt="三次握手"></p><p>三次握手过程：TCP发起的一方A，由操作系统生成一个序列号 n，以这个n为原点，对自己每个将要发送的数据进行编号，连接的另一方 B 会对A每次发送的数据进行确认，如果A收到B的确认编号2001，则可以认为 n~2000编号已经全部到达B。</p><a id="more"></a>
@@ -2321,45 +2411,6 @@
 > 以上内容参考自[知乎上的回答](https://www.zhihu.com/question/34074946)
 
 <h2 id="网络状态码？以-2、3、4、5-开头的代表什么意思。"><a href="#网络状态码？以-2、3、4、5-开头的代表什么意思。" class="headerlink" title="网络状态码？以 2、3、4、5 开头的代表什么意思。"></a>网络状态码？以 2、3、4、5 开头的代表什么意思。</h2></details></details>]]></content>
-      <categories>
-        <category>面试</category>
-      </categories>
-      <tags>
-        <tag>面试题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>面试题-网上搜集的题目(一)</title>
-    <url>/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E4%B8%8A%E6%90%9C%E9%9B%86%E7%9A%84%E9%A2%98%E7%9B%AE(%E4%B8%80)/</url>
-    <content><![CDATA[<h2 id="谈谈对this和super的认识"><a href="#谈谈对this和super的认识" class="headerlink" title="谈谈对this和super的认识"></a>谈谈对this和super的认识</h2><h2 id="闭包和内部类的区别"><a href="#闭包和内部类的区别" class="headerlink" title="闭包和内部类的区别"></a>闭包和内部类的区别</h2><h2 id="Java-多态实现的机制是什么"><a href="#Java-多态实现的机制是什么" class="headerlink" title="Java 多态实现的机制是什么"></a>Java 多态实现的机制是什么</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>重写和重载</p>
-</details><h2 id="final-关键字的作用"><a href="#final-关键字的作用" class="headerlink" title="final 关键字的作用"></a>final 关键字的作用</h2><h2 id="多维数组在内存上是怎么存储的"><a href="#多维数组在内存上是怎么存储的" class="headerlink" title="多维数组在内存上是怎么存储的"></a>多维数组在内存上是怎么存储的</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>Java 中的多维数组就是通过一维数组来实现的，只不过这个一维数组中的元素还是多维数组，比如如下声明：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span>[][][] array = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">2</span>][<span class="number">3</span>][<span class="number">4</span>];</span><br></pre></td></tr></table></figure>
-
-<p>它实际上大致等同于如下代码：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span>[][][] a = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">2</span>][][];  </span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; a.length; i++) &#123;  </span><br><span class="line">  a[i] = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">3</span>][];  </span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; a[i].length; j++) &#123;  </span><br><span class="line">    a[i][j] = <span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">4</span>];  </span><br><span class="line">  &#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>以上代码参考自<a href="https://www.iteye.com/blog/rednaxelafx-1050144" target="_blank" rel="noopener">iteye中的博客</a></p>
-<p>如果要自己用一维数组去实现二维(或者更多维)的数组，可以使用类似规律： k = j*(j-1)/2 + i -1 来计算出在一维数组中的下标 k 值。</p>
-</details><a id="more"></a>
-
-
-
-<h2 id="Java-的异常体系的理解"><a href="#Java-的异常体系的理解" class="headerlink" title="Java 的异常体系的理解"></a>Java 的异常体系的理解</h2><h2 id="运行时异常-与-非运行时异常"><a href="#运行时异常-与-非运行时异常" class="headerlink" title="运行时异常 与 非运行时异常"></a>运行时异常 与 非运行时异常</h2><h2 id="NIO-BIO-AIO"><a href="#NIO-BIO-AIO" class="headerlink" title="NIO/BIO/AIO"></a>NIO/BIO/AIO</h2><h2 id="Collection-与-Map-的区别"><a href="#Collection-与-Map-的区别" class="headerlink" title="Collection 与 Map 的区别"></a>Collection 与 Map 的区别</h2><h2 id="如何深拷贝List-集合"><a href="#如何深拷贝List-集合" class="headerlink" title="如何深拷贝List 集合"></a>如何深拷贝List 集合</h2><h2 id="Set-如何保证唯一性的"><a href="#Set-如何保证唯一性的" class="headerlink" title="Set 如何保证唯一性的"></a>Set 如何保证唯一性的</h2><h2 id="谈谈Java集合中那些线程安全的集合-amp-实现原理"><a href="#谈谈Java集合中那些线程安全的集合-amp-实现原理" class="headerlink" title="谈谈Java集合中那些线程安全的集合 &amp; 实现原理"></a>谈谈Java集合中那些线程安全的集合 &amp; 实现原理</h2><h2 id="Collection-和-Collections-的区别"><a href="#Collection-和-Collections-的区别" class="headerlink" title="Collection 和 Collections 的区别"></a>Collection 和 Collections 的区别</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>Collection是接口，Collections 是帮助类，能实现排序(Collections.sort() )等功能</p>
-</details>
-
-<blockquote>
-<p>以上题目参考自<a href="https://gitee.com/ClAndEllen/AndroidFaceInterview?_from=gitee_search" target="_blank" rel="noopener">gitee上博客</a></p>
-</blockquote>
-]]></content>
       <categories>
         <category>面试</category>
       </categories>
