@@ -1,6 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>第13讲-存储优化<中>-如何优化数据存储</title>
+    <url>/2020/07/04/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/</url>
+    <content><![CDATA[<h3 id="Serializable-的原理"><a href="#Serializable-的原理" class="headerlink" title="Serializable 的原理"></a>Serializable 的原理</h3><p>Serializable 的原理是<strong>通过 ObjectInputStream 和 ObjectOutputStream 来实现的</strong>，通过 Android 6.0 的源码可以看到 ObjectOutPutStream 的部分源码实现：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeFieldValues</span><span class="params">(Object obj, ObjectStreamClass classDesc)</span>  </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (ObjectStreamField fieldDesc : classDesc.fields()) &#123;</span><br><span class="line">        ...</span><br><span class="line">        Field field = classDesc.checkAndGetReflectionField(fieldDesc);</span><br><span class="line">        ...</span><br></pre></td></tr></table></figure><a id="more"></a>
+
+
+<p>整个序列化过程使用了大量反射(反射意味着效率低)和临时变量(临时变量意味着GC)，并且，<strong>在序列化对象时，不仅会序列化当前对象本身，还需要地柜序列化对象引用的其他对象</strong>。</p>
+<h3 id="Serializable-的进阶"><a href="#Serializable-的进阶" class="headerlink" title="Serializable 的进阶"></a>Serializable 的进阶</h3><p>Serializable 序列化支持使用自定义 writeObject和readObject，他会先反射判断是否存在我们自己实现的 序列化writeObject方法和反序列化readObject 方法。<strong>通过这两个方法，我们可以对某些字段做修改，也能实现序列化的加密功能。</strong></p>
+<p>还有，Serializable 的反序列默认是不会执行构造函数的</p>
+<h3 id="Parcelable-的永久存储"><a href="#Parcelable-的永久存储" class="headerlink" title="Parcelable 的永久存储"></a>Parcelable 的永久存储</h3><p>一般来说，我们使用 parcelable 只是会在内存中序列化操作，并不会存储到磁盘。其实，我们也可以存储到磁盘的：<strong>通过 Parcel.java 中的 marshall 接口获取byte 数组，然后存在文件中，从而实现 Parcelable 的永久存储。</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Returns the raw bytes of the parcel.</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] marshall() &#123;</span><br><span class="line">    <span class="keyword">return</span> nativeMarshall(mNativePtr);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// Set the bytes in data to be the raw bytes of this Parcel.</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">unmarshall</span><span class="params">(<span class="keyword">byte</span>[] data, <span class="keyword">int</span> offset, <span class="keyword">int</span> length)</span> </span>&#123;</span><br><span class="line">    nativeUnmarshall(mNativePtr, data, offset, length);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>不过，一般不推荐这样做，因为可能会有系统版本兼容性问题，因为我们无法保证所有的 Android 版本的 Parcel.cpp 实现完全一致。还有就是数据前后的兼容性，这里并没有类似 Serializable 里面有个 serialVersionUID 来保证版本一致性。</p>
+<h2 id="14-数据库优化"><a href="#14-数据库优化" class="headerlink" title="14-数据库优化"></a>14-数据库优化</h2><p>SQLite 默认支持多进程并发操作，它通过文件锁来控制多进程的并发，但是SQLite 的锁粒度并没有非常细，针对的是整个DB文件，简单来说，多进程可以同事获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库</p>
+<p>数据库使用注意：</p>
+<ul>
+<li>防止注入   </li>
+<li>防止窃取      </li>
+<li>小表无需维护索引，因为索引是需要一直维护的，有代价        </li>
+<li>慎用 “select * “ 需要多少列，就取多少列      </li>
+<li>定期删除无用数据             </li>
+</ul>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>存储优化<上>-常见的存储方式</title>
+    <url>/2020/06/28/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="Android存储安全"><a href="#Android存储安全" class="headerlink" title="Android存储安全"></a>Android存储安全</h2><p>在4.3以前，应用都在自己的沙盒里，沙盒使用标准Linux保护机制，为每个应用创建唯一 Linux UID 来定义。<strong>简单来说，就是保证微信不能访问淘宝的数据</strong>。</p><p>4.3以后引入SELinux，进一步定义应用沙盒边界。即使我们进程有root权限也不能为所欲为(想干事情必须先在安全策略配置文件中赋予权限)。</p><a id="more"></a>
+
+<p>数据加密：Android 两种加密，全盘加密和文件加密。全盘加密在4.4引入，在 5.0 后默认打开</p>
+<h2 id="常见数据存储方法"><a href="#常见数据存储方法" class="headerlink" title="常见数据存储方法"></a>常见数据存储方法</h2><p>综合来看,Android提供了 SharedPreferences /ContentProvider/文件/数据库</p>
+<h3 id="SharedPreferences"><a href="#SharedPreferences" class="headerlink" title="SharedPreferences"></a>SharedPreferences</h3><p>非常简便，但是问题比较多:</p>
+<ul>
+<li>跨进程不安全       </li>
+<li>加载缓慢(使用异步加载，且没设置线程优先级，就有可能出现主线程等待低优先级线程所问题)        </li>
+<li>全量写入(无论commit还是apply，即使只改动一个条目，也会把全部内容写入，并且多次写入一个同一文件，也不会合并为一次)       </li>
+<li>卡顿(收到系统广播或onPause等时机，系统会强制把sp文件写到磁盘，此过程或阻塞)      </li>
+<li>还有，存储json等复杂文件时，会有转义等操作，会额外耗时     </li>
+</ul>
+<p>如果我们想的话，可以使用 MMKV 替代sp，<strong>它利用文件锁保证跨进程安全</strong>，并且性能也比较好</p>
+<h3 id="ContentProvider"><a href="#ContentProvider" class="headerlink" title="ContentProvider"></a>ContentProvider</h3><p><strong>ContentProvider 的生命周期默认在 Application 的onCreate 之前，而且是在主线程的</strong>，ContentProvider 跨进程传递数据是利用 Android 的 Binder 和匿名共享内存机制。简单来说，<strong>就是通过 Binder 传递 (CusorWindow 对象内部的）匿名共享内存的文件描述符</strong>，这样数据无需跨进程。</p>
+<p>ContentProvider 主要存在以下几个问题：</p>
+<ul>
+<li>自定义的 ContentProvider 的构造函数、静态代码块、onCreate 函数尽量不要做耗时操作       </li>
+<li>性能。传输数据比较小的时候，使用 ContentProvider 不一定划算    </li>
+<li>安全：ContentProvider本身提供了很好的安全，但是如果是exported，当支持执行 sql 语句时，就要注意 sql 注入问题。     </li>
+</ul>
+<p>简而言之，ContentProvider 适合相对比较笨重，适合传输量大的数据</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>面试题-算法-红黑树</title>
     <url>/2020/06/27/%E7%BA%A2%E9%BB%91%E6%A0%91/</url>
     <content><![CDATA[<h2 id="二叉查找树-也称二叉搜索树"><a href="#二叉查找树-也称二叉搜索树" class="headerlink" title="二叉查找树(也称二叉搜索树)"></a>二叉查找树(也称二叉搜索树)</h2><ul>
@@ -1859,6 +1921,53 @@
       </tags>
   </entry>
   <entry>
+    <title>面试题-设计模式</title>
+    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
+    <content><![CDATA[<h2 id="mvc、mvp、mvvm"><a href="#mvc、mvp、mvvm" class="headerlink" title="mvc、mvp、mvvm"></a>mvc、mvp、mvvm</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="mvc"><a href="#mvc" class="headerlink" title="mvc"></a>mvc</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p>
+<p><strong>特征：</strong></p>
+<ul>
+<li>view 接收用户的输入，并且可以通知Controller 更改Model 层数据，如果没有涉及逻辑，还可以直接通知Model 更改数据。    </li>
+<li>需要ui变化，但是没有涉及业务数据，直接调用controller 即可(比如用户选择使用用户名/手机号登录)    </li>
+<li>model 数据变化时，若需要修改ui，需要通过Controller 来通知更新。</li>
+</ul>
+<p><strong>在Android中存在问题：</strong></p>
+<ul>
+<li>Activity 的职责不明，并且臃肿。Activity 除了要展示view (加载view，接收用户操作)，还要承担部分逻辑处理(比如生命周期回调)    </li>
+</ul>
+<h3 id="mvp"><a href="#mvp" class="headerlink" title="mvp"></a>mvp</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
+<p><strong>特点</strong>:</p>
+<ul>
+<li>View 层接收输入</li>
+<li>Presenter 处理业务逻辑，View 与 Model 之间必须经过 Presenter</li>
+</ul>
+<p><strong>优点(相对MVC)：</strong></p>
+<ul>
+<li>避免了View、Model 直接联系，更加解耦，通过Presenter 实现两者之间的沟通    </li>
+<li>Activity 更加简明，仅仅负责UI上的工作    </li>
+</ul>
+<h3 id="mvvm"><a href="#mvvm" class="headerlink" title="mvvm"></a>mvvm</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="mvvm示意图"></p>
+<p>可能主要关注view 通过databinding 与 viewmodel 相互绑定。</p>
+<h3 id="mvc-与-mvp-的区别"><a href="#mvc-与-mvp-的区别" class="headerlink" title="mvc 与 mvp 的区别"></a>mvc 与 mvp 的区别</h3><ul>
+<li>在mvc 中 Activity 具有 view 的功能，并且兼任部分 controller 功能，而mvp 中Activity 是纯粹的view    </li>
+<li>mvc 中view 和model 可以直接沟通(没有逻辑情况下，view直接更改model，当然，有逻辑改动的情况下经过controller)，而mvp中二者沟通必须经过presenter。    </li>
+</ul>
+</details><a id="more"></a>
+
+<blockquote>
+<p>以上内容参考自<a href="https://blog.csdn.net/carson_ho/article/details/100070713" target="_blank" rel="noopener">carson_ho的博客</a></p>
+</blockquote>
+<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>面试题</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>面试题-虚拟机知识</title>
     <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/</url>
     <content><![CDATA[<h2 id="1、对象的内存布局"><a href="#1、对象的内存布局" class="headerlink" title="1、对象的内存布局"></a>1、对象的内存布局</h2><details>
@@ -1944,53 +2053,6 @@
 </blockquote>
 <p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
 <h2 id="如何理解Java类加载机制"><a href="#如何理解Java类加载机制" class="headerlink" title="如何理解Java类加载机制"></a><a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247483903&idx=1&sn=c20d3172052bd7db9a1ad6a95f112bc9&chksm=96cda0b2a1ba29a4cc9912cb1bf8a955f97ee45a7b8db48e384f1694ddbabbd4d5e7fa90f880&scene=21#wechat_redirect" target="_blank" rel="noopener">如何理解Java类加载机制</a></h2></details>]]></content>
-      <categories>
-        <category>面试</category>
-      </categories>
-      <tags>
-        <tag>面试题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>面试题-设计模式</title>
-    <url>/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<h2 id="mvc、mvp、mvvm"><a href="#mvc、mvp、mvvm" class="headerlink" title="mvc、mvp、mvvm"></a>mvc、mvp、mvvm</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="mvc"><a href="#mvc" class="headerlink" title="mvc"></a>mvc</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvc.png" alt="mvc示意图"></p>
-<p><strong>特征：</strong></p>
-<ul>
-<li>view 接收用户的输入，并且可以通知Controller 更改Model 层数据，如果没有涉及逻辑，还可以直接通知Model 更改数据。    </li>
-<li>需要ui变化，但是没有涉及业务数据，直接调用controller 即可(比如用户选择使用用户名/手机号登录)    </li>
-<li>model 数据变化时，若需要修改ui，需要通过Controller 来通知更新。</li>
-</ul>
-<p><strong>在Android中存在问题：</strong></p>
-<ul>
-<li>Activity 的职责不明，并且臃肿。Activity 除了要展示view (加载view，接收用户操作)，还要承担部分逻辑处理(比如生命周期回调)    </li>
-</ul>
-<h3 id="mvp"><a href="#mvp" class="headerlink" title="mvp"></a>mvp</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvp.png" alt="mvp示意图"></p>
-<p><strong>特点</strong>:</p>
-<ul>
-<li>View 层接收输入</li>
-<li>Presenter 处理业务逻辑，View 与 Model 之间必须经过 Presenter</li>
-</ul>
-<p><strong>优点(相对MVC)：</strong></p>
-<ul>
-<li>避免了View、Model 直接联系，更加解耦，通过Presenter 实现两者之间的沟通    </li>
-<li>Activity 更加简明，仅仅负责UI上的工作    </li>
-</ul>
-<h3 id="mvvm"><a href="#mvvm" class="headerlink" title="mvvm"></a>mvvm</h3><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/mvvm.png" alt="mvvm示意图"></p>
-<p>可能主要关注view 通过databinding 与 viewmodel 相互绑定。</p>
-<h3 id="mvc-与-mvp-的区别"><a href="#mvc-与-mvp-的区别" class="headerlink" title="mvc 与 mvp 的区别"></a>mvc 与 mvp 的区别</h3><ul>
-<li>在mvc 中 Activity 具有 view 的功能，并且兼任部分 controller 功能，而mvp 中Activity 是纯粹的view    </li>
-<li>mvc 中view 和model 可以直接沟通(没有逻辑情况下，view直接更改model，当然，有逻辑改动的情况下经过controller)，而mvp中二者沟通必须经过presenter。    </li>
-</ul>
-</details><a id="more"></a>
-
-<blockquote>
-<p>以上内容参考自<a href="https://blog.csdn.net/carson_ho/article/details/100070713" target="_blank" rel="noopener">carson_ho的博客</a></p>
-</blockquote>
-<h3 id="实现一个线程安全的单例模式"><a href="#实现一个线程安全的单例模式" class="headerlink" title="实现一个线程安全的单例模式"></a>实现一个线程安全的单例模式</h3><h3 id="观察者模式和回调有什么区别？"><a href="#观察者模式和回调有什么区别？" class="headerlink" title="观察者模式和回调有什么区别？"></a>观察者模式和回调有什么区别？</h3>]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -3205,11 +3267,11 @@
 <li>死亡状态(Dead)：线程执行完了或者因为一场退出run()     </li>
 </ol>
 <p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%A4%9A%E7%BA%BF%E7%A8%8B/%E7%BA%BF%E7%A8%8B%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png" alt="线程生命周期"></p>
+</details>
+
 <blockquote>
 <p>以上代码参考自：<a href="https://itimetraveler.github.io/2018/02/13/%E3%80%90Java%E3%80%91%E7%BA%BF%E7%A8%8B%E6%B1%A0ThreadPoolExecutor%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99" target="_blank" rel="noopener">java线程池</a></p>
 </blockquote>
-</details>
-
 <h2 id="13、死锁条件"><a href="#13、死锁条件" class="headerlink" title="13、死锁条件"></a>13、死锁条件</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
@@ -3329,7 +3391,10 @@
 </details>
 
 
-<h2 id="20、死锁"><a href="#20、死锁" class="headerlink" title="20、死锁"></a>20、死锁</h2><p>产生死锁的四个条件（满足才会死锁）：</p>
+<h2 id="20、死锁"><a href="#20、死锁" class="headerlink" title="20、死锁"></a>20、死锁</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>产生死锁的四个条件（满足才会死锁）：</p>
 <ol>
 <li>互斥使用    </li>
 <li>不可剥夺    </li>
@@ -3337,17 +3402,17 @@
 <li>循环等待    </li>
 </ol>
 <p>破坏任意一个条件即可解锁</p>
-<h2 id="21、引申-写个简单的死锁程序"><a href="#21、引申-写个简单的死锁程序" class="headerlink" title="21、引申-写个简单的死锁程序"></a>21、引申-写个简单的死锁程序</h2><details>
+<details>
 
-  <summary>查看详情</summary>
-  <summary>
+<h2 id="21、引申-写个简单的死锁程序"><a href="#21、引申-写个简单的死锁程序" class="headerlink" title="21、引申-写个简单的死锁程序"></a>21、引申-写个简单的死锁程序</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
   <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">      Object lock1 = <span class="keyword">new</span> Object();</span><br><span class="line">      Object lock2 = <span class="keyword">new</span> Object();</span><br><span class="line"></span><br><span class="line">      Thread thread1 = <span class="keyword">new</span> Thread(<span class="string">"thread1"</span>)&#123;</span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">              <span class="keyword">super</span>.run();</span><br><span class="line">              <span class="keyword">synchronized</span> (lock1)&#123;</span><br><span class="line">                  System.out.println(Thread.currentThread().getName() + <span class="string">"进入第1层锁"</span>);</span><br><span class="line">                  <span class="keyword">try</span> &#123;</span><br><span class="line">                      sleep(<span class="number">1000</span>);</span><br><span class="line">                  &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                      e.printStackTrace();</span><br><span class="line">                  &#125;</span><br><span class="line"></span><br><span class="line">                  <span class="keyword">synchronized</span> (lock1)&#123;</span><br><span class="line">                      System.out.println(Thread.currentThread().getName() + <span class="string">"进入第2层锁"</span>);</span><br><span class="line">                  &#125;</span><br><span class="line">              &#125;</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">      Thread thread2 = <span class="keyword">new</span> Thread(<span class="string">"thread1"</span>)&#123;</span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">              <span class="keyword">super</span>.run();</span><br><span class="line">              <span class="keyword">synchronized</span> (lock2)&#123;</span><br><span class="line">                  System.out.println(Thread.currentThread().getName() + <span class="string">"进入第1层锁"</span>);</span><br><span class="line">                  <span class="keyword">try</span> &#123;</span><br><span class="line">                      sleep(<span class="number">1000</span>);</span><br><span class="line">                  &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                      e.printStackTrace();</span><br><span class="line">                  &#125;</span><br><span class="line"></span><br><span class="line">                  <span class="keyword">synchronized</span> (lock2)&#123;</span><br><span class="line">                      System.out.println(Thread.currentThread().getName() + <span class="string">"进入第2层锁"</span>);</span><br><span class="line">                  &#125;</span><br><span class="line">              &#125;</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;;</span><br><span class="line"></span><br><span class="line">      thread1.start();</span><br><span class="line">      thread2.start();</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
-</summary></details>
+
+</details>
 
 <h2 id="22、synchronized-关键字"><a href="#22、synchronized-关键字" class="headerlink" title="22、synchronized 关键字"></a>22、synchronized 关键字</h2><details>
-
-  <summary>查看详情</summary>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <p>当执行如下代码：</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">        System.out.println(<span class="string">"Method 1 start"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -3377,14 +3442,22 @@
 </blockquote>
 </details>
 
-<h2 id="23、synchronized-锁持有的object-是Thread-对象"><a href="#23、synchronized-锁持有的object-是Thread-对象" class="headerlink" title="23、synchronized 锁持有的object 是Thread 对象"></a>23、synchronized 锁持有的object 是Thread 对象</h2><p>看过上面synchronized原理，我们来看一段代码：</p>
+<h2 id="23、synchronized-锁持有的object-是Thread-对象"><a href="#23、synchronized-锁持有的object-是Thread-对象" class="headerlink" title="23、synchronized 锁持有的object 是Thread 对象"></a>23、synchronized 锁持有的object 是Thread 对象</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>看过上面synchronized原理，我们来看一段代码：</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    Thread threadTest = <span class="keyword">new</span> Thread() &#123;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            System.out.println(<span class="string">"执行线程中方法"</span>);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    threadTest.start();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span> (threadTest) &#123;<span class="comment">//这里不明白可以想象单例的 synchronized 用法</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            threadTest.wait();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    System.out.println(<span class="string">"执行到了这里"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>我们知道，wait 必须在同步块中执行，上述代码也是这样的；同时我们也知道，wait() 方法后，必须收到 notify/notifyAll 之后才能结束等待状态。但是上述代码首先输出 “执行线程中方法”  ，之后输出 “执行到了这里” ，明明没有notify ，怎么就能结束 wait 状态呢？其实这是因为synchronized 获得对象锁是 Thread 对象的锁时，当该线程执行完成后，会调用线程自身的 notifyAll() 方法，通知所有等待在该线程对象上的线程。所以，用这种方式能够实现 join 的功能，使得线程依次执行。</p>
 <blockquote>
 <p>以上内容参考自<a href="https://blog.csdn.net/chenkaibsw/article/details/80912878" target="_blank" rel="noopener">csdn上的博客</a></p>
 </blockquote>
-<h2 id="24、引申-理解Java-中的-join"><a href="#24、引申-理解Java-中的-join" class="headerlink" title="24、引申-理解Java 中的 join"></a>24、引申-理解Java 中的 join</h2><p>如果要用join 方法实现上述功能，可以这样：</p>
+<details>
+
+<h2 id="24、引申-理解Java-中的-join"><a href="#24、引申-理解Java-中的-join" class="headerlink" title="24、引申-理解Java 中的 join"></a>24、引申-理解Java 中的 join</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>如果要用join 方法实现上述功能，可以这样：</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    Thread threadTest = <span class="keyword">new</span> Thread() &#123;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            System.out.println(<span class="string">"执行线程中方法"</span>);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    threadTest.start();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        threadTest.join();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br><span class="line">    System.out.println(<span class="string">"执行到了这里"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>join 方法从字面上理解就是新线程加入进来，等新线程执行完后，老的线程才继续执行。我们日常使用 join 方法是通过 join(0) 来实现的，我们看它的源码：</p>
@@ -3395,10 +3468,15 @@
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> Thread t1 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            System.out.println(<span class="string">"t1"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    Thread t2 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                t1.join();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">            System.out.println(<span class="string">"t2"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">    t2.start();<span class="comment">//先启动t2</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    t1.start();<span class="comment">//延迟2秒后启动t1</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>这段代码看起来执行了 t1.join() ，应该要等t1执行完了才会执行t2，但是呢，这里最终输出： t2  t1 ，即 t2 还是会先执行。这是因为在执行 t1.join() 的时候，t1并没有执行 start() ，isAlive() 为false，因此不生效。</p>
+<details>
+
 <blockquote>
 <p>以上内容参考自<a href="https://blog.csdn.net/chenkaibsw/article/details/80912878" target="_blank" rel="noopener">csdn上的博客</a></p>
 </blockquote>
-<h2 id="25、wait-sleep-yield-join-方法"><a href="#25、wait-sleep-yield-join-方法" class="headerlink" title="25、wait/sleep/yield/join 方法"></a>25、wait/sleep/yield/join 方法</h2><p>wait() 方法的作用是将当前线程挂起，让其进入阻塞状态，直到 notify/notifyAll 方法来唤醒线程，很容易理解，wait 是释放了锁资源的。</p>
+<h2 id="25、wait-sleep-yield-join-方法"><a href="#25、wait-sleep-yield-join-方法" class="headerlink" title="25、wait/sleep/yield/join 方法"></a>25、wait/sleep/yield/join 方法</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>wait() 方法的作用是将当前线程挂起，让其进入阻塞状态，直到 notify/notifyAll 方法来唤醒线程，很容易理解，wait 是释放了锁资源的。</p>
 <p>wait(long timeout)方法与 wait 相似，区别在于如果再指定时间内没有被notify/notifyAll ，则自动唤醒。</p>
 <p>sleep方法只是暂时让出cpu执行权，并不释放锁，而 wait 是释放锁的。</p>
 <p>yield 方法只是暂停当前线程，以便其他线程有机会运行，不过不能指定暂停时间，也不能保证当前线程立即停止。yield 方法只是将thread 的状态由 Running 转变为 Runable 状态。不过<strong>调度器可能会忽略这个方法，并且Java官方建议只用这个方法用于调试和测试。</strong></p>
@@ -3406,7 +3484,43 @@
 <blockquote>
 <p>以上内容参考自<a href="https://www.cnblogs.com/paddix/p/5381958.html" target="_blank" rel="noopener">cnblogs的博客</a></p>
 </blockquote>
-]]></content>
+<details>
+
+<h2 id="26、Java-中锁的种类"><a href="#26、Java-中锁的种类" class="headerlink" title="26、Java 中锁的种类"></a>26、Java 中锁的种类</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>大概可以分类为：</p>
+<ul>
+<li>乐观锁、悲观锁       </li>
+<li>独享锁、共享锁          </li>
+<li>公平锁、非公平锁           </li>
+<li>互斥锁、读写锁             </li>
+<li>可重入锁             </li>
+<li>分段锁                 </li>
+</ul>
+<p>其中乐观锁认为线程基本上是没有竞争的，一般采用CAS机制实现，悲观锁认为一个线程获取数据时，一定会有其他数据对数据进行更改，它的实现就是加锁，比如 synchronize 关键字</p>
+<p>至于独享锁：一次只能被一个线程拥有，ReentrantLock 这个可重入锁也是独享锁。而共享锁可以被多个线程持有，比如：ReentrantReadWrite 中的读锁ReadLock 是共享锁，写锁WriteLock 是独享锁。</p>
+<p>互斥锁的具体实现就是 synchronized、ReentrantLock 等实现；读写锁具体实现就是 ReadWriteLock。</p>
+<p>可重入锁：对于同一个线程，在外层方法获取锁的时候，在进入内层方法也会自动获取锁。</p>
+<p>公平锁：多线程竞争时排队，按照申请顺序获取锁；非公平锁：竞争时，先尝试插队，失败再排队。</p>
+<p>分段锁：并不是一种锁，只是细化锁的粒度。</p>
+<details>
+
+<p>以上内容参考自<a href="https://zhuanlan.zhihu.com/p/112649693" target="_blank" rel="noopener">知乎上的内容</a></p>
+<h2 id="27、Java-中锁优化的方式"><a href="#27、Java-中锁优化的方式" class="headerlink" title="27、Java 中锁优化的方式"></a>27、Java 中锁优化的方式</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ul>
+<li><strong>自旋锁与自适应自旋</strong>(主要解决互斥同步挂起和恢复需要转入内核态的问题。引入的自适应自旋，意味着自旋时间不再是固定的了，而是由前一次在同一个锁上的自旋时间及锁的拥有者的状态决定的，因为如果在同一个锁对象上，自旋等待刚获得过锁，并且持有锁的线程正在运行，那么虚拟机认为当前自旋也很有可能再次成功，进而允许自旋等待更长时间)       </li>
+<li>锁消除（虚拟机对于检测到不可能存在共享的数据进行锁消除）            </li>
+<li>锁消除(一般来说，加锁同步块区域尽量小，只锁真正共享的区域，以便在锁竞争的时候，能尽快释放。但是如果一系列的连续操作对同一个对象频繁反复加锁解锁，甚至是出现在循环体中，那就会导致不必要的性能损耗，典型的就是在 循环中执行StringBuilder 的append操作)</li>
+<li>轻量级锁（如果同步对象没有被锁定，虚拟机首先将将在当前线程的栈帧中建立一个名为锁记录-Lock Record 的空间，用于存储锁对象目前的 Mark Word的拷贝，然后虚拟机使用CAS操作尝试把对象的Mark Word 更新为指向 Lock Record 的指针，如果更新成功了，则代表线程拥有了这个对象的锁，对象Mark Word的锁标志也会标记为 “00”，即轻量级锁状态。如果这个cas操作失败，则意味着至少存在一条线程竞争，此时检查Mark Word 是否指向当前线程的栈帧，如果是，则说明已经拥，有了，直接进入同步块即可。否则，如果有两条以上线程争用一个锁，则必须膨胀微重量级锁。轻量级锁的依据是，“对于绝大部分锁，在整个同步周期内是不存在竞争的”，如果没有竞争，则轻量级锁通过CAS操作避免了使用互斥量的开销；当然，如果存在竞争，除了互斥量本身之外，还发生了CAS开销，反而更慢了）    </li>
+<li>偏向锁（它的目的是在无竞争的情况下消除CAS操作，进一步提升性能。当锁对象第一次被线程获取的时候，就将对象头中的偏向模式置为 “1”,即偏向模式，同时使用CAS操作把获取这个锁的线程的ID记录在Mark word 中，如果操作成功，持有偏向锁的线程以后每次进入这个锁相关的同步块都不需要进行同步操作，不过，一旦出现另外一个线程尝试去获取这个锁的情况，偏向模式马上结束。根据锁对象目前是否处于锁定状态来决定是否撤销偏向、恢复到未锁定或者轻量级锁定状态）</li>
+</ul>
+<blockquote>
+<p>以上内容参考自《深入理解Java虚拟机-第三版》</p>
+</blockquote>
+<details></details></details></details></details></details></details></details></details></details></details></details></details>]]></content>
       <categories>
         <category>面试</category>
       </categories>
@@ -7300,7 +7414,7 @@
 </ol>
 <h3 id="Kotlin-优势"><a href="#Kotlin-优势" class="headerlink" title="Kotlin 优势"></a>Kotlin 优势</h3><p>按照官网上的说法：</p>
 <ul>
-<li>简洁。判空、getter、setter 方法、命名传参(动态改变参数)无需重载，可能结合anko 之类的更加简单    </li>
+<li>简洁。语法简单，代码很少。判空、getter、setter 方法、命名传参(动态改变参数)无需重载，可能结合anko 之类的更加简单    </li>
 <li>安全，减少空指针等错误、类型判断过后，自动类型转换      </li>
 <li>兼容java，可以混编</li>
 </ul>
@@ -7308,8 +7422,16 @@
 <li>lateinit，也容易引起空指针，即还未初始化    </li>
 <li>直接使用 ArrayList 之类的list 是不能直接添加元素的，得使用 MutableList 才行     </li>
 <li>引入了kotlin 支持库，apk包体积增加     </li>
-<li>如果某个变量设置为可空的，那么即使你在初始化后，已经不空了，你也只能使用 ? 或者  !! 操作来使用它，感觉会有点乱      </li>
+<li>如果某个变量设置为可空的，那么即使你在初始化后，已经不空了，你也只能使用 ? 或者  !! 操作来使用它，感觉会有点乱     </li>
 </ul>
+<h3 id="kotlin如何实现空安全"><a href="#kotlin如何实现空安全" class="headerlink" title="kotlin如何实现空安全"></a>kotlin如何实现空安全</h3><ul>
+<li>可空类型和不可空类型     </li>
+<li>使用 ? 进行安全调用      </li>
+<li>入参可以指定可空和非空类型     </li>
+<li>安全的类型转换，如 a as? Int      </li>
+<li>可以方便过滤非空元素，如： val intList: List<int> = nullableList.filterNotNull()      </int></li>
+</ul>
+<p>一定能避免空指针问题吗？我认为是不能，因为有 lateInit 变量存在，有可能这个变量还没初始化，就会导致是空的</p>
 </details>
 
 <h2 id="3、有自定义view的经验，那如何理解-MeasureSpec？"><a href="#3、有自定义view的经验，那如何理解-MeasureSpec？" class="headerlink" title="3、有自定义view的经验，那如何理解 MeasureSpec？"></a>3、有自定义view的经验，那如何理解 MeasureSpec？</h2><details>
