@@ -63,7 +63,9 @@
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E8%99%9A%E6%8B%9F%E6%9C%BA&#x2F;%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;dalvik%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E6%B5%81%E7%A8%8B.png">
-<meta property="og:updated_time" content="2020-05-17T14:18:46.588Z">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E8%99%9A%E6%8B%9F%E6%9C%BA&#x2F;Art%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E8%99%9A%E6%8B%9F%E6%9C%BA&#x2F;dalvik%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg">
+<meta property="og:updated_time" content="2020-07-12T01:50:33.246Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;java%E8%99%9A%E6%8B%9F%E6%9C%BA&#x2F;%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png">
 
@@ -253,7 +255,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-05-17 22:18:46" itemprop="dateModified" datetime="2020-05-17T22:18:46+08:00">2020-05-17</time>
+                <time title="修改时间：2020-07-12 09:50:33" itemprop="dateModified" datetime="2020-07-12T09:50:33+08:00">2020-07-12</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -350,24 +352,67 @@
 </blockquote>
 </details>
 
-<h2 id="5、Android的GC过程"><a href="#5、Android的GC过程" class="headerlink" title="5、Android的GC过程"></a>5、Android的GC过程</h2><details>
+<h2 id="5、Android-GC-流程"><a href="#5、Android-GC-流程" class="headerlink" title="5、Android GC 流程"></a>5、Android GC 流程</h2><h3 id="Art-虚拟机GC过程"><a href="#Art-虚拟机GC过程" class="headerlink" title="Art 虚拟机GC过程"></a>Art 虚拟机GC过程</h3><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
-<h3 id="Dalvik-虚拟机GC过程"><a href="#Dalvik-虚拟机GC过程" class="headerlink" title="Dalvik 虚拟机GC过程"></a>Dalvik 虚拟机GC过程</h3><blockquote>
-</blockquote>
-<h3 id="Art-虚拟机GC过程"><a href="#Art-虚拟机GC过程" class="headerlink" title="Art 虚拟机GC过程"></a>Art 虚拟机GC过程</h3></details>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/Art%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg" alt="Art的gc流程"></p>
+<p>由图可知，非并行GC的过程如下所示：</p>
+<ol>
+<li>挂起所有的ART运行时线程。      </li>
+<li>调用子类实现的成员函数MarkingPhase执行GC标记阶段。          </li>
+<li>调用子类实现的成员函数ReclaimPhase执行GC回收阶段。       </li>
+<li>恢复第2步挂起的ART运行时线程。          </li>
+</ol>
+<p>并行GC的过程如下所示：</p>
+<ol>
+<li>获取用于访问Java堆的锁。</li>
+<li>调用子类实现的成员函数MarkingPhase执行GC并行标记阶段。</li>
+<li>释放用于访问Java堆的锁。</li>
+<li>挂起所有的ART运行时线程。</li>
+<li>调用子类实现的成员函数HandleDirtyObjectsPhase处理在GC并行标记阶段被修改的对象。。</li>
+<li>恢复第4步挂起的ART运行时线程。</li>
+<li>重复第5到第7步，直到所有在GC并行阶段被修改的对象都处理完成。</li>
+<li>获取用于访问Java堆的锁。</li>
+<li>调用子类实现的成员函数ReclaimPhase执行GC回收阶段。</li>
+<li>释放用于访问Java堆的锁。</li>
+</ol>
+<p>从上面的分析就可以看出，并行GC和非并行GC的区别在于：</p>
+<ol>
+<li>非并行GC的标记阶段和回收阶段是在挂住所有的ART运行时线程的前提下进行的，因此，只需要执行一次标记。         </li>
+<li>并行GC的标记阶段只锁住了Java堆，因此它不能阻止那些不是正在分配对象的ART运行时线程同时运行，而这些同进运行的ART运行时线程可能会引用了一些在之前的标记阶段没有被标记的对象。如果不对这些对象进行重新标记的话，那么就会导致它们被GC回收，造成错误。因此，与非并行GC相比，并行GC多了一个处理脏对象的阶段。所谓的脏对象就是我们前面说的在GC标记阶段同时运行的ART运行时线程访问或者修改过的对象。        </li>
+<li>并行GC并不是自始至终都是并行的，例如，处理脏对象的阶段就是需要挂起除GC线程以外的其它ART运行时线程，这样才可以保证标记阶段可以结束。         </li>
+</ol>
+</details>
+
+
+<h3 id="Dalvik-虚拟机垃圾收集过程"><a href="#Dalvik-虚拟机垃圾收集过程" class="headerlink" title="Dalvik 虚拟机垃圾收集过程"></a>Dalvik 虚拟机垃圾收集过程</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>Dalvik 虚拟机使用 Mark-Sweep 算法来进行垃圾收集<br>Dalvik 执行GC 时会有一些选项：</p>
+<ul>
+<li>isPartial，为true 时，表示仅仅回收Active 堆的垃圾；为false时，表示同时回收Active 堆和Zygote 堆的垃圾    </li>
+<li>isConcurrent：为true时，表示执行并行GC，false时，表示非并行GC    </li>
+<li>doPreserve：为true的时候，表示不回收软引用的对象；false的时候，表示回收软引用对象<br>Dalvik在如下几种情况会触发GC：</li>
+<li>分配对象时，内存不足触发GC    </li>
+<li>已经分配的内存达到一定阈值时触发GC    </li>
+<li>调用 System.gc 、VMRuntime.gc 或者收到信号触发 GC    </li>
+<li>准备抛出 OOM 前而最后进行的 GC<br>GC线程在空闲达到一定时间后，会调用函数对Java堆进行裁剪，将一些没有用到的内存交还给内核。<br>dalvik 的GC 流程(并行和非并行情况)如下图所示：<br><img src="/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/dalvik%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg" alt="dalvik虚拟机gc流程"></li>
+</ul>
+<h3 id="哪些对象可以做-GC-Root"><a href="#哪些对象可以做-GC-Root" class="headerlink" title="哪些对象可以做 GC Root"></a>哪些对象可以做 GC Root</h3><ul>
+<li>虚拟机栈引用的对象    </li>
+<li>本地方法栈引用的对象     </li>
+<li>方法区中类静态属性引用的对象     </li>
+<li>方法区中常量引用的对象        </li>
+<li>Dalvik 虚拟机内部创建的部分异常对象      </li>
+<li>Dalvik 虚拟机内部创建的原子类     </li>
+<li>注册在调试器的对象</li>
+</ul>
+</details>
 
 <blockquote>
 <p>以上内容参考自以上内容参考自 <a href="https://blog.csdn.net/Luoshengyang/article/details/41822747?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522158968621519724843340084%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&request_id=158968621519724843340084&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_v2~rank_v25-6-41822747.nonecase&utm_term=dalvik" target="_blank" rel="noopener">罗升阳的博客</a>  、 <a href="https://blog.csdn.net/luoshengyang/article/details/42555483" target="_blank" rel="noopener">老罗的博客</a></p>
 </blockquote>
-<h2 id="6、Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><a href="#6、Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time" class="headerlink" title="6、Dalvik和Art区别？(Just In Time和Ahead Of Time)"></a>6、Dalvik和Art区别？(Just In Time和Ahead Of Time)</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<blockquote>
-<p>Dalvik采用JIT（just in time，即时编译），每次运行，字节码边转换为机器码边执行；Art采用AOT(Ahead-of-time，预编译)技术，在第一次安装的时候即预编译成机器码，当然，这也会导致应用安装占用的存储空间增大。<br>（<strong>关于回收，还有待看官网之后回来review</strong>）Dalvik 在Gc时，会有2次虚拟机暂停（遍历阶段和标记阶段分别暂停一次；除了GC线程外，其余线程都挂起，stop the world），而Art在Gc开始时，首先锁住java堆，扫描并标记，完成后，挂起所有线程，之后挥手垃圾，最后回复所有线程现场，即Art只有一次暂停。<br>运行时堆得区域划分不同，Dalvic 每次GC完毕后，基本上都千疮百孔，空间碎片化严重；而ART多了两个空间，即 ImageSpace 和Large Object space，前者用于预加载类，后者用于存放大对象，这样可以大大减少碎片化。<br>ART支持64位系统</p>
-</blockquote>
-<p><a href="https://source.android.google.cn/devices/tech/dalvik/gc-debug" target="_blank" rel="noopener">参考官方说明链接</a></p>
-<h2 id="如何理解Java类加载机制"><a href="#如何理解Java类加载机制" class="headerlink" title="如何理解Java类加载机制"></a><a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247483903&idx=1&sn=c20d3172052bd7db9a1ad6a95f112bc9&chksm=96cda0b2a1ba29a4cc9912cb1bf8a955f97ee45a7b8db48e384f1694ddbabbd4d5e7fa90f880&scene=21#wechat_redirect" target="_blank" rel="noopener">如何理解Java类加载机制</a></h2></details>
+<h2 id="6、如何理解Java类加载机制"><a href="#6、如何理解Java类加载机制" class="headerlink" title="6、如何理解Java类加载机制"></a>6、<a href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&mid=2247483903&idx=1&sn=c20d3172052bd7db9a1ad6a95f112bc9&chksm=96cda0b2a1ba29a4cc9912cb1bf8a955f97ee45a7b8db48e384f1694ddbabbd4d5e7fa90f880&scene=21#wechat_redirect" target="_blank" rel="noopener">如何理解Java类加载机制</a></h2>
     </div>
 
     
@@ -448,7 +493,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、对象的内存布局"><span class="nav-number">1.</span> <span class="nav-text">1、对象的内存布局</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、垃圾收集算法"><span class="nav-number">2.</span> <span class="nav-text">2、垃圾收集算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、说说四大引用？强，软，弱，虚，并说明下合适GC"><span class="nav-number">3.</span> <span class="nav-text">3、说说四大引用？强，软，弱，虚，并说明下合适GC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、Android中内存分配的执行流程"><span class="nav-number">4.</span> <span class="nav-text">4、Android中内存分配的执行流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#铺垫"><span class="nav-number">4.1.</span> <span class="nav-text">铺垫</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android中内存分配的执行流程："><span class="nav-number">4.2.</span> <span class="nav-text">Android中内存分配的执行流程：</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、Android的GC过程"><span class="nav-number">5.</span> <span class="nav-text">5、Android的GC过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Dalvik-虚拟机GC过程"><span class="nav-number">5.1.</span> <span class="nav-text">Dalvik 虚拟机GC过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Art-虚拟机GC过程"><span class="nav-number">5.2.</span> <span class="nav-text">Art 虚拟机GC过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6、Dalvik和Art区别？-Just-In-Time和Ahead-Of-Time"><span class="nav-number">6.</span> <span class="nav-text">6、Dalvik和Art区别？(Just In Time和Ahead Of Time)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何理解Java类加载机制"><span class="nav-number">7.</span> <span class="nav-text">如何理解Java类加载机制</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、对象的内存布局"><span class="nav-number">1.</span> <span class="nav-text">1、对象的内存布局</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、垃圾收集算法"><span class="nav-number">2.</span> <span class="nav-text">2、垃圾收集算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、说说四大引用？强，软，弱，虚，并说明下合适GC"><span class="nav-number">3.</span> <span class="nav-text">3、说说四大引用？强，软，弱，虚，并说明下合适GC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、Android中内存分配的执行流程"><span class="nav-number">4.</span> <span class="nav-text">4、Android中内存分配的执行流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#铺垫"><span class="nav-number">4.1.</span> <span class="nav-text">铺垫</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android中内存分配的执行流程："><span class="nav-number">4.2.</span> <span class="nav-text">Android中内存分配的执行流程：</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、Android-GC-流程"><span class="nav-number">5.</span> <span class="nav-text">5、Android GC 流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Art-虚拟机GC过程"><span class="nav-number">5.1.</span> <span class="nav-text">Art 虚拟机GC过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dalvik-虚拟机垃圾收集过程"><span class="nav-number">5.2.</span> <span class="nav-text">Dalvik 虚拟机垃圾收集过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#哪些对象可以做-GC-Root"><span class="nav-number">5.3.</span> <span class="nav-text">哪些对象可以做 GC Root</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6、如何理解Java类加载机制"><span class="nav-number">6.</span> <span class="nav-text">6、如何理解Java类加载机制</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -550,7 +595,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共219.9k字</span>
+  <span class="post-count">博客全站共220.5k字</span>
 </div>
 
 
