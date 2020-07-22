@@ -159,50 +159,6 @@
       </tags>
   </entry>
   <entry>
-    <title>第21课-UI优化-优化UI渲染</title>
-    <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/</url>
-    <content><![CDATA[<h2 id="UI优化-lt-下-gt"><a href="#UI优化-lt-下-gt" class="headerlink" title="UI优化&lt;下&gt;"></a>UI优化&lt;下&gt;</h2><h3 id="ui渲染测量"><a href="#ui渲染测量" class="headerlink" title="ui渲染测量"></a>ui渲染测量</h3><p>测试工具： Profile GPU Rendeing 和 Show GPU Overdraw ，定位方法可以参考<a href="https://developer.android.com/studio/profile/inspect-gpu-rendering" target="_blank" rel="noopener">官方文档，检查GPU渲染速度和过度绘制</a></p><p>问题定位工具可以使用 Systrace 和 Tracer for OpenGL ES，具体可以参考<a href="https://developer.android.google.cn/topic/performance/vitals/render" target="_blank" rel="noopener">官方文档：渲染速度慢</a></p><a id="more"></a>
-
-<h3 id="适用于自动化测试场景的测试方式-自己加的标题"><a href="#适用于自动化测试场景的测试方式-自己加的标题" class="headerlink" title="适用于自动化测试场景的测试方式(自己加的标题)"></a>适用于自动化测试场景的测试方式(自己加的标题)</h3><p>虽然图形化界面工具非常好用，但是难以用在自动化测试场景，以下测量方式可以用于自动化测试：</p>
-<h4 id="gfxinfo"><a href="#gfxinfo" class="headerlink" title="gfxinfo"></a>gfxinfo</h4><p>gfxinfo 可以输出包含各个阶段发生的动画以及帧相关的性能信息，以及渲染相关的内存和View hierachy 信息，命令如下：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename></packagename></p>
-</blockquote>
-<p>在Android 6.0 之后，gxfinfo 命令新增了 framestats 参数，可以拿到最近120帧每个绘制阶段的耗时信息：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename> framestats</packagename></p>
-</blockquote>
-<h4 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h4><p>除了耗时，还需要关心渲染使用的内存，4.1以后每个 Surface 都会有 3个 Graphic Buffer，那如何查看 Graphic Buffer 占用的内存，可以通过如下命令查看相应信息：</p>
-<blockquote>
-<p>adb shell dumpsys SurfaceFlinger</p>
-</blockquote>
-<p>这部分内存大小和 屏幕分辨率，以及Surface的个数有关。</p>
-<h3 id="UI优化的常用手段"><a href="#UI优化的常用手段" class="headerlink" title="UI优化的常用手段"></a>UI优化的常用手段</h3><p>我们的目标是实现app的帧率达到 60fps，意味着所有操作要在 16.7 ms 内完成，这期间要做的事情如下所示：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/UI%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B.png" alt="UI渲染流程"></p>
-<p>我们优化，就是拆解渲染的各个阶段耗时，找到瓶颈，加以优化。ui优化的方法如下：</p>
-<h4 id="1、尽量使用硬件加速。"><a href="#1、尽量使用硬件加速。" class="headerlink" title="1、尽量使用硬件加速。"></a>1、尽量使用硬件加速。</h4><p>硬件加速绘制的性能是远远高于软件绘制的，所以ui优化第一个手段应该尽量使用硬件加速。但是有些api不支持硬件加速，这个需要注意，比如 渐变、磨砂、圆角等，它们的渲染性能比较低。</p>
-<h4 id="2、View-的创建优化"><a href="#2、View-的创建优化" class="headerlink" title="2、View 的创建优化"></a>2、View 的创建优化</h4><p>View 的创建在UI线程，对于复杂的界面，这部分耗时不容忽视。View 的创建过程中，会包括xml的读取io，解析xml 以及生成对象的时间(Framework会大量使用反射)</p>
-<p>因此建议：</p>
-<p>1、使用代码创建view 对象缺点是不能直接预览<br>2、提前创建、异步创建<br>3、View 重用(模仿ListView、RecyclerView，不过重用要注意先清空状态)。  </p>
-<p>如果异步创建，那么会导致系统抛出异常。这时候，我们可以通过非常取巧的方式来异步创建ui：<strong>先把线程的Looper的MessageQueue替换成Looper的Queue：</strong></p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AD%90%E7%BA%BF%E7%A8%8B%E5%88%9B%E5%BB%BAui.png" alt="子线程创建ui"></p>
-<p><strong>要注意的是，在创建完成view之后，需要把线程的Looper恢复成原来的。</strong></p>
-<h4 id="3、measure-layout-优化"><a href="#3、measure-layout-优化" class="headerlink" title="3、measure/layout 优化"></a>3、measure/layout 优化</h4><p>这两部分也是在ui线程执行的，一般的优化方法有：</p>
-<ul>
-<li>减少UI布局层次      </li>
-<li>优化layout开销。尽量不要使用 RelativeLayout 和 weighted LinearLayout ，它们开销很大，建议使用 ConstranLayout    </li>
-<li>背景优化。尽量不要重复设置背景，<strong>尤其注意的是主题背景，theme默认会是一个纯色背景，如果我们自定义了界面背景，那么主题背景对我们来说是无用的</strong>，由于主题背景是设置在DecorView 中的，所以会带来重复绘制，也会带来绘制性能损耗。     </li>
-</ul>
-<h4 id="4、UI优化进阶"><a href="#4、UI优化进阶" class="headerlink" title="4、UI优化进阶"></a>4、UI优化进阶</h4><p>可以采用flutter</p>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>Android开发高手课</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>第20课-UI优化-UI渲染关键概念</title>
     <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/</url>
     <content><![CDATA[<h2 id="UI优化-lt-上-gt-20讲"><a href="#UI优化-lt-上-gt-20讲" class="headerlink" title="UI优化&lt;上&gt;-20讲"></a>UI优化&lt;上&gt;-20讲</h2><h3 id="UI渲染的背景知识"><a href="#UI渲染的背景知识" class="headerlink" title="UI渲染的背景知识"></a>UI渲染的背景知识</h3><p>ppi 像素密度，每英寸包含的像素数，这是物理参数，不可改</p><p>dpi 像素密度，指的是单位尺寸像素数量。这是可以人为调整的         </p><p>density 密度，每平方英寸中包含的像素点数，density = dpi / 160    </p><p>dp ： px = dp * density</p><a id="more"></a>
@@ -257,6 +213,50 @@
       </tags>
   </entry>
   <entry>
+    <title>第21课-UI优化-优化UI渲染</title>
+    <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="UI优化-lt-下-gt"><a href="#UI优化-lt-下-gt" class="headerlink" title="UI优化&lt;下&gt;"></a>UI优化&lt;下&gt;</h2><h3 id="ui渲染测量"><a href="#ui渲染测量" class="headerlink" title="ui渲染测量"></a>ui渲染测量</h3><p>测试工具： Profile GPU Rendeing 和 Show GPU Overdraw ，定位方法可以参考<a href="https://developer.android.com/studio/profile/inspect-gpu-rendering" target="_blank" rel="noopener">官方文档，检查GPU渲染速度和过度绘制</a></p><p>问题定位工具可以使用 Systrace 和 Tracer for OpenGL ES，具体可以参考<a href="https://developer.android.google.cn/topic/performance/vitals/render" target="_blank" rel="noopener">官方文档：渲染速度慢</a></p><a id="more"></a>
+
+<h3 id="适用于自动化测试场景的测试方式-自己加的标题"><a href="#适用于自动化测试场景的测试方式-自己加的标题" class="headerlink" title="适用于自动化测试场景的测试方式(自己加的标题)"></a>适用于自动化测试场景的测试方式(自己加的标题)</h3><p>虽然图形化界面工具非常好用，但是难以用在自动化测试场景，以下测量方式可以用于自动化测试：</p>
+<h4 id="gfxinfo"><a href="#gfxinfo" class="headerlink" title="gfxinfo"></a>gfxinfo</h4><p>gfxinfo 可以输出包含各个阶段发生的动画以及帧相关的性能信息，以及渲染相关的内存和View hierachy 信息，命令如下：</p>
+<blockquote>
+<p>adb shell dumpsys gfxinfo <packagename></packagename></p>
+</blockquote>
+<p>在Android 6.0 之后，gxfinfo 命令新增了 framestats 参数，可以拿到最近120帧每个绘制阶段的耗时信息：</p>
+<blockquote>
+<p>adb shell dumpsys gfxinfo <packagename> framestats</packagename></p>
+</blockquote>
+<h4 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h4><p>除了耗时，还需要关心渲染使用的内存，4.1以后每个 Surface 都会有 3个 Graphic Buffer，那如何查看 Graphic Buffer 占用的内存，可以通过如下命令查看相应信息：</p>
+<blockquote>
+<p>adb shell dumpsys SurfaceFlinger</p>
+</blockquote>
+<p>这部分内存大小和 屏幕分辨率，以及Surface的个数有关。</p>
+<h3 id="UI优化的常用手段"><a href="#UI优化的常用手段" class="headerlink" title="UI优化的常用手段"></a>UI优化的常用手段</h3><p>我们的目标是实现app的帧率达到 60fps，意味着所有操作要在 16.7 ms 内完成，这期间要做的事情如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/UI%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B.png" alt="UI渲染流程"></p>
+<p>我们优化，就是拆解渲染的各个阶段耗时，找到瓶颈，加以优化。ui优化的方法如下：</p>
+<h4 id="1、尽量使用硬件加速。"><a href="#1、尽量使用硬件加速。" class="headerlink" title="1、尽量使用硬件加速。"></a>1、尽量使用硬件加速。</h4><p>硬件加速绘制的性能是远远高于软件绘制的，所以ui优化第一个手段应该尽量使用硬件加速。但是有些api不支持硬件加速，这个需要注意，比如 渐变、磨砂、圆角等，它们的渲染性能比较低。</p>
+<h4 id="2、View-的创建优化"><a href="#2、View-的创建优化" class="headerlink" title="2、View 的创建优化"></a>2、View 的创建优化</h4><p>View 的创建在UI线程，对于复杂的界面，这部分耗时不容忽视。View 的创建过程中，会包括xml的读取io，解析xml 以及生成对象的时间(Framework会大量使用反射)</p>
+<p>因此建议：</p>
+<p>1、使用代码创建view 对象缺点是不能直接预览<br>2、提前创建、异步创建<br>3、View 重用(模仿ListView、RecyclerView，不过重用要注意先清空状态)。  </p>
+<p>如果异步创建，那么会导致系统抛出异常。这时候，我们可以通过非常取巧的方式来异步创建ui：<strong>先把线程的Looper的MessageQueue替换成Looper的Queue：</strong></p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AD%90%E7%BA%BF%E7%A8%8B%E5%88%9B%E5%BB%BAui.png" alt="子线程创建ui"></p>
+<p><strong>要注意的是，在创建完成view之后，需要把线程的Looper恢复成原来的。</strong></p>
+<h4 id="3、measure-layout-优化"><a href="#3、measure-layout-优化" class="headerlink" title="3、measure/layout 优化"></a>3、measure/layout 优化</h4><p>这两部分也是在ui线程执行的，一般的优化方法有：</p>
+<ul>
+<li>减少UI布局层次      </li>
+<li>优化layout开销。尽量不要使用 RelativeLayout 和 weighted LinearLayout ，它们开销很大，建议使用 ConstranLayout    </li>
+<li>背景优化。尽量不要重复设置背景，<strong>尤其注意的是主题背景，theme默认会是一个纯色背景，如果我们自定义了界面背景，那么主题背景对我们来说是无用的</strong>，由于主题背景是设置在DecorView 中的，所以会带来重复绘制，也会带来绘制性能损耗。     </li>
+</ul>
+<h4 id="4、UI优化进阶"><a href="#4、UI优化进阶" class="headerlink" title="4、UI优化进阶"></a>4、UI优化进阶</h4><p>可以采用flutter</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>第7、8课-启动优化</title>
     <url>/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/</url>
     <content><![CDATA[<h2 id="启动优化-lt-上-gt-第7讲"><a href="#启动优化-lt-上-gt-第7讲" class="headerlink" title="启动优化&lt;上&gt;-第7讲"></a>启动优化&lt;上&gt;-第7讲</h2><h3 id="启动分析"><a href="#启动分析" class="headerlink" title="启动分析"></a>启动分析</h3><p>着手优化之前，首先分析启动过程。</p><ol>
@@ -294,6 +294,25 @@
       </tags>
   </entry>
   <entry>
+    <title>第5、6课-卡顿优化</title>
+    <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/</url>
+    <content><![CDATA[<h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化&lt;上&gt;"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></table></figure><a id="more"></a>
+
+
+<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></table></figure>
+
+<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
+<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android开发高手课</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>第3、4课-内存优化</title>
     <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/</url>
     <content><![CDATA[<h2 id="内存优化-lt-上-gt"><a href="#内存优化-lt-上-gt" class="headerlink" title="内存优化&lt;上&gt;"></a>内存优化&lt;上&gt;</h2><h3 id="Android中Bitmap-内存分配的变化过程"><a href="#Android中Bitmap-内存分配的变化过程" class="headerlink" title="Android中Bitmap 内存分配的变化过程"></a>Android中Bitmap 内存分配的变化过程</h3><ol>
@@ -317,25 +336,6 @@
 <p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png" alt="安装包大小和内存关系"></p>
 <p>Bitmap 可以用第三方框架来做，比如Fresco，实在要自己管理，可以向后台要求指定宽度，bitmap的inbitMap内存复用，inSample降低采样</p>
 <p>内存泄露：使用LeakCanary自动化检测方案，只可以做到Activity和Fragment的泄漏检测，如何检测其他的内存泄露呢？如何监测疑似的内存泄漏呢？</p>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>Android开发高手课</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>第5、6课-卡顿优化</title>
-    <url>/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/</url>
-    <content><![CDATA[<h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化&lt;上&gt;"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></table></figure><a id="more"></a>
-
-
-<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></table></figure>
-
-<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
-<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
 ]]></content>
       <categories>
         <category>读书笔记</category>
@@ -7229,6 +7229,13 @@
 <p>Callking startActivity from outside of an Activity context requires the FLAG_ACTIVITY_NEW_TASK flag</p>
 </blockquote>
 <p>这是因为standard模式的Activity 默认会进入启动它的Activity所属的任务栈中，由于非Activity类型的Context 没有所谓的任务栈，所以会报错。解决这个问题的方法是为待启动的Activity指定 FLAG_ACTIVITY_NEW_TASK 标记，这样启动的时候会为它创建一个新的任务栈（体会下，这时候实际上是以singleTask模式启动的）</p>
+<h3 id="参考其他博客的启动模式的原理"><a href="#参考其他博客的启动模式的原理" class="headerlink" title="参考其他博客的启动模式的原理"></a>参考其他博客的启动模式的原理</h3><p>点击launcher 的startactivity 会调用到Instrumentation的execStartActivity，之后交给AMS 来处理启动操作，之后调用 ActivityStackSupervisor 的 startActivityMayWait 方来启动，而ActivityStackSupervisor 是管理Activity堆栈的类</p>
+<p>另外提一下，Activity 在AMS中的形式是 ActivityRecord，task在AMS 中的形式是 TaskRecord，进程在 AMS 中的管理形式为 ProcessRecord</p>
+<p>判断启动模式，根据当前的Activity 和 要启动的Activity 的启动模式，根据相应的启动模式设置launchFlags</p>
+<p>在Android 5.0上 在 ActivityStackSupervisor 类的startActivityUncheckedLocked  里面判断launchmode</p>
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/09365022adac" target="_blank" rel="noopener">简书的博客上的内容</a></p>
+</blockquote>
 <h3 id="Activity-的Flags"><a href="#Activity-的Flags" class="headerlink" title="Activity 的Flags"></a>Activity 的Flags</h3><p>Activity 的Flags很多，这里分析比较常用的几个:</p>
 <ul>
 <li>FLAG_ ACTIVITY_ NEW_ TASK</li>
@@ -8564,219 +8571,6 @@
       </categories>
       <tags>
         <tag>读书笔记-从小工到专家</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>第5章： 函数</title>
-    <url>/2018/10/11/%E7%AC%AC%E4%B8%80%E5%AD%A3kotlin%E5%B4%9B%E8%B5%B7-%E7%AC%AC5%E7%AB%A0/</url>
-    <content><![CDATA[<h1 id="第五章：函数"><a href="#第五章：函数" class="headerlink" title="第五章：函数"></a>第五章：函数</h1><h2 id="函数的定义和使用"><a href="#函数的定义和使用" class="headerlink" title="函数的定义和使用"></a>函数的定义和使用</h2><p>Kotlin中典型的函数如下所示：</p><figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//模板，Unit代表无须返回，花括号里不用写return语句</span></span><br><span class="line"><span class="function"><span class="title">fun</span> <span class="params">(x: <span class="type">Any</span>, y: <span class="type">Any</span>)</span></span>: <span class="built_in">Unit</span>&#123;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//实际函数</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">suare</span><span class="params">(r: <span class="type">Double</span>)</span></span> : <span class="built_in">Double</span>&#123;</span><br><span class="line">	<span class="keyword">return</span> Math.PI * r * r</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><a id="more"></a>
-
-
-<p>以上函数整体只有一条语句，只有一条语句的函数可以省略返回类型、花括号以及return关键字。从而简化成单行表达式函数：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">suare</span><span class="params">(r: <span class="type">Double</span>)</span></span> = Math.PI * r * r</span><br></pre></td></tr></table></figure>
-
-<p>如果有个函数，需要接受若干个参数，参数个数不确定，那该如何定义？只需要在参数前加一个<strong>vararg</strong>修饰符就行，如下所示：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//可变参数修饰符vararg</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">sum</span><span class="params">(<span class="keyword">vararg</span> x: <span class="type">Int</span>)</span></span>: <span class="built_in">Int</span>&#123;</span><br><span class="line">	<span class="keyword">var</span> total = <span class="number">0</span></span><br><span class="line">	<span class="keyword">for</span>(i <span class="keyword">in</span> x)&#123;</span><br><span class="line">		total += i</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> total</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//一旦定义成可变参数，调用时可以给一个对应类型的数组，数组名前加一个星号(*)</span></span><br><span class="line"><span class="keyword">val</span> a = intArrayOf(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>,<span class="number">6</span>)</span><br><span class="line">println(sum(*a))</span><br></pre></td></tr></table></figure>
-
-<p>上面的代码中，加在变量名前的星号是<strong>“展开操作符(Spread operator)”</strong>，指的是把数组a全部展开，此处星号紧跟在变量名前，所以是一元操作符，而乘法的星号是二元操作符。</p>
-<h2 id="函数的作用范围"><a href="#函数的作用范围" class="headerlink" title="函数的作用范围"></a>函数的作用范围</h2><p>Kotlin中函数根据作用范围可以分为： 成员函数、本地函数、顶层函数</p>
-<h3 id="成员函数"><a href="#成员函数" class="headerlink" title="成员函数"></a>成员函数</h3><p>跟java中一样，略过介绍。</p>
-<h3 id="本地函数-Local-function"><a href="#本地函数-Local-function" class="headerlink" title="本地函数(Local function)"></a>本地函数(Local function)</h3><p>Kotlin可以允许把小函数声明在其它函数内部，这些小函数被称为<strong>本地函数</strong>或者<strong>嵌套函数（Nested）</strong>。甚至可以多层嵌套。这样的好处是，一个大的函数可以分为很多小的函数，可以做到每一个函数只做一件事。用法如以下例子：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">printArea</span><span class="params">(w: <span class="type">Int</span>,h: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">fun</span> <span class="title">area</span><span class="params">(w: <span class="type">Int</span>,h: <span class="type">Int</span>)</span></span>: <span class="built_in">Int</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> w * h;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//也能写成这样： fun area() = w * h</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">val</span> area = area(w,h)</span><br><span class="line">	println(<span class="string">"面积=<span class="variable">$area</span>"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>当然，以上方法也能简化写成这样：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">printArea</span><span class="params">(w: <span class="type">Int</span>,h: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">fun</span> <span class="title">area</span><span class="params">(w: <span class="type">Int</span>,h: <span class="type">Int</span>)</span></span>: <span class="built_in">Int</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> w * h;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//也能写成这样： fun area() = w * h</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">val</span> area = area(w,h)</span><br><span class="line">	println(<span class="string">"面积=<span class="variable">$area</span>"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>但是看到的本地函数 area() 在 printArea()方法外部就无效了，它只服务于printArea()方法。这在实现一个大函数时隐藏实现的细节是非常有用的，虽然Kotlin中使用private声明也能达到同样的隐藏效果，但是本地函数还能直接访问主函数中的变量，减少变量传递，减少代码，如上面的例子还可以简化为：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">printArea</span><span class="params">(w: <span class="type">Int</span>,h: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">fun</span> <span class="title">area</span><span class="params">()</span></span> = w * h</span><br><span class="line"></span><br><span class="line">	<span class="keyword">val</span> area = area()</span><br><span class="line">	print(<span class="string">"面积=<span class="variable">$area</span>"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>再来一个例子，说明使用本地结合本地函数一步步精简代码（代码越少，出bug的几率就越低，这也是Kotlin奉行的准则）：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//一般写法</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">checkNumber</span><span class="params">(start: <span class="type">Int</span>, end: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	<span class="keyword">for</span>(number <span class="keyword">in</span> start..end)&#123;</span><br><span class="line">		<span class="keyword">if</span>(number % <span class="number">3</span> == <span class="number">0</span>)&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>被3整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span> <span class="keyword">if</span>(number % <span class="number">5</span> == <span class="number">0</span>)&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>被5整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span> <span class="keyword">if</span>(number % <span class="number">3</span> == <span class="number">0</span> &amp;&amp; number % <span class="number">5</span> == <span class="number">0</span>)&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>既能被3整除，也能被5整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">			println(number)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>以上的代码首先的问题是，“被3整除”这段代码重复了1次，这就意味着双倍bug的可能性（当然，例子太简单了，基本上不会出错）。现在声明本地函数，以便消除重复：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">checkNumber</span><span class="params">(start: <span class="type">Int</span>, end: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">fun</span> <span class="title">isThrees</span><span class="params">(x: <span class="type">Int</span>)</span></span> = (x % <span class="number">3</span> == <span class="number">0</span>)</span><br><span class="line">	<span class="function"><span class="keyword">fun</span> <span class="title">isFives</span><span class="params">(x: <span class="type">Int</span>)</span></span> = (x % <span class="number">5</span> == <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span>(number <span class="keyword">in</span> start..end)&#123;</span><br><span class="line">		<span class="keyword">if</span>(isThrees(number))&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>被3整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span> <span class="keyword">if</span>(isFives(number))&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>被5整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span> <span class="keyword">if</span>(isThrees(number) &amp;&amp; isFives(number))&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>既能被3整除，也能被5整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">			println(number)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>判断条件都换成本地函数了，出错的概率降低了，但是貌似重复 <strong>传递number值</strong> 多次，能不能再精简？肯定如此，把本地函数放在for循环中，代码如下：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">checkNumber</span><span class="params">(start: <span class="type">Int</span>, end: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	</span><br><span class="line">	<span class="keyword">for</span>(number <span class="keyword">in</span> start..end)&#123;</span><br><span class="line">		<span class="function"><span class="keyword">fun</span> <span class="title">isThrees</span><span class="params">()</span></span> = (number % <span class="number">3</span> == <span class="number">0</span>)</span><br><span class="line">		<span class="function"><span class="keyword">fun</span> <span class="title">isFives</span><span class="params">()</span></span> = (number % <span class="number">5</span> == <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span>(isThrees())&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>被3整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span> <span class="keyword">if</span>(isFives())&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>被5整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span> <span class="keyword">if</span>(isThrees() &amp;&amp; isFives())&#123;</span><br><span class="line">			println(<span class="string">"<span class="variable">$number</span>既能被3整除，也能被5整除"</span>)</span><br><span class="line">		&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">			println(number)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>但是怎么还有如此多的if-else，还能精简么，当然，代码如下：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">checkNumber</span><span class="params">(start: <span class="type">Int</span>, end: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	</span><br><span class="line">	<span class="keyword">for</span>(number <span class="keyword">in</span> start..end)&#123;</span><br><span class="line">		<span class="function"><span class="keyword">fun</span> <span class="title">isThrees</span><span class="params">()</span></span> = (number % <span class="number">3</span> == <span class="number">0</span>)</span><br><span class="line">		<span class="function"><span class="keyword">fun</span> <span class="title">isFives</span><span class="params">()</span></span> = (number % <span class="number">5</span> == <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">when</span>&#123;</span><br><span class="line">			isThrees() -&gt; println(<span class="string">"<span class="variable">$number</span>被3整除"</span>)</span><br><span class="line">			isFives() -&gt; println(<span class="string">"<span class="variable">$number</span>被5整除"</span>)</span><br><span class="line">			isThrees() &amp;&amp; isFives() -&gt; println(<span class="string">"<span class="variable">$number</span>既能被3整除，也能被5整除"</span>)</span><br><span class="line">			<span class="keyword">else</span> -&gt; println(number)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="顶层函数（Top-level-function）"><a href="#顶层函数（Top-level-function）" class="headerlink" title="顶层函数（Top-level function）"></a>顶层函数（Top-level function）</h3><p>书本上语焉不详，没咋看懂，后续专门了解</p>
-<h2 id="命名参数和默认参数"><a href="#命名参数和默认参数" class="headerlink" title="命名参数和默认参数"></a>命名参数和默认参数</h2><h3 id="命名参数"><a href="#命名参数" class="headerlink" title="命名参数"></a>命名参数</h3><p>有如下函数：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> book = <span class="string">"基于kotlin的Android"</span></span><br><span class="line">printlin(book.regionMatches(<span class="number">9</span>,<span class="string">"深入Android"</span>,<span class="number">2</span>,<span class="number">7</span>,<span class="literal">true</span>))</span><br></pre></td></tr></table></figure>
-
-<p>这个函数参数非常多，初看很难理解各个参数的作用，很不直观。但是使用命名参数就可以很直观，调用时把参数名写出来：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line">book.regionMatches(thisOffset = <span class="number">9</span>,</span><br><span class="line">             other = <span class="string">"深入Android"</span>,</span><br><span class="line">             length = <span class="number">2</span>,</span><br><span class="line">             otherOffset = <span class="number">7</span>,</span><br><span class="line">             ignoreCase = <span class="literal">true</span>)</span><br></pre></td></tr></table></figure>
-
-<p>这种调用可读性就强太多了，虽然稍显啰嗦，不过这点代价是值得的。使用这种写法的时候，kotlin并不强制要求写出所有参数的命名参数，比如以下示例代码（但是有个不成文的规定，如果写了命名参数，就全部写上）。</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line">delFiles(<span class="string">"*.apk"</span>,ignoreCase = <span class="literal">true</span>,includeDirs = <span class="literal">false</span>,recursive = <span class="literal">true</span>)</span><br></pre></td></tr></table></figure>
-
-<p>命名参数的另一个好处是可以更换参数的调用位置，如以下两种调用是等价的：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line">book.endsWith(suffix = <span class="string">"1"</span>,ignoreCase = <span class="literal">true</span>)</span><br><span class="line">book.endsWith(ignoreCase = <span class="literal">true</span>,suffix = <span class="string">"1"</span>)</span><br></pre></td></tr></table></figure>
-<p><strong>注：命名参数仅适用于kotlin定义的函数，并不适用java定义的函数，因为java代码编译成字节码时并不总是保存参数名称</strong></p>
-<h3 id="默认参数"><a href="#默认参数" class="headerlink" title="默认参数"></a>默认参数</h3><p>有时候需要给函数的某些参数提供默认值，当用户没有给这个参数值的时候，函数使用默认值，如String的endWith函数：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">book.endsWith(suffix = &quot;1&quot;,ignoreCase = false)</span><br><span class="line">book.endsWith(suffix = &quot;1&quot;)</span><br></pre></td></tr></table></figure>
-
-<p>如果需要严格的后缀匹配，可以忽略掉ignoreCase参数的调用，因为ignoreCase的默认值是false。kotlin中可以定义一个或者多个默认参数，在被调用时如果不指定，则使用默认值。比如，可以将默认参数用到构造函数中，从而避免产生更多的二次构造函数(当然，使用在普通函数上的效果也一样)：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//一般写法</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">User</span> </span>(<span class="keyword">val</span> name: String, <span class="keyword">val</span> isVip: <span class="built_in">Boolean</span>,credits: <span class="built_in">Int</span>)&#123;</span><br><span class="line">	<span class="keyword">constructor</span>(name: String) : <span class="keyword">this</span>(name,<span class="literal">false</span>,<span class="number">0</span>)</span><br><span class="line">	<span class="keyword">constructor</span>(name: String,isVip: <span class="built_in">Boolean</span>) : <span class="keyword">this</span>(name,isVip,<span class="number">0</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用默认参数写法</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">User</span></span>(<span class="keyword">val</span> name: String, <span class="keyword">val</span> isVip: <span class="built_in">Boolean</span> = <span class="literal">false</span>, credits: <span class="built_in">Int</span> = <span class="number">0</span>)</span><br></pre></td></tr></table></figure>
-
-<h2 id="函数操作符"><a href="#函数操作符" class="headerlink" title="函数操作符"></a>函数操作符</h2><h3 id="操作符重载"><a href="#操作符重载" class="headerlink" title="操作符重载"></a>操作符重载</h3><p>使用操作符定义函数的能力称为操作符重载，kotlin让操作重载以一个可控的方式使用，有一组固定的操作符名单可以用作函数，但禁止组合使用，要创建这样一个函数，必须冠以<strong>operator</strong>关键字且必须有对应的英文单词做函数名。<strong>注意：操作符仅可定义为成员函数或者扩展函数</strong>，以矩阵相加的例子来说明：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Matrix</span></span>(<span class="keyword">val</span> a: <span class="built_in">Int</span>, <span class="keyword">val</span> b: <span class="built_in">Int</span>, <span class="keyword">val</span> c: <span class="built_in">Int</span>, <span class="keyword">val</span> d: <span class="built_in">Int</span>)&#123;</span><br><span class="line">	<span class="keyword">operator</span> <span class="function"><span class="keyword">fun</span> <span class="title">plus</span><span class="params">(m: <span class="type">Matrix</span>)</span></span>: Matrix &#123;</span><br><span class="line">	    <span class="keyword">return</span> Matrix(a + m.a,b+m.b,c+m.c,d+m.d)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">val</span> m = Matrix(<span class="number">8</span>,<span class="number">8</span>,<span class="number">8</span>,<span class="number">8</span>)</span><br><span class="line"><span class="keyword">val</span> n = Matrix(<span class="number">9</span>,<span class="number">9</span>,<span class="number">9</span>,<span class="number">9</span>)</span><br><span class="line"><span class="keyword">val</span> mn = m.plus(n)</span><br></pre></td></tr></table></figure>
-
-<p>操作符函数不限于相同的类，如我们定义一个Array类可以用”+”添加元素或者用”-“移除元素。<strong>这一节看得云里雾里，一知半解，应该不止这么简单的使用，需要另外查资料</strong>。</p>
-<p><strong>这书看不下去了，不建议大家看了，接下来会直接看<a href="http://www.broadview.com.cn/book/4877" target="_blank" rel="noopener">《Kotlin实战》</a></strong></p>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>读书笔记-第一季kotlin崛起(次时代Android开发)</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>第3、4章： 控制流和字符串</title>
-    <url>/2018/07/27/%E7%AC%AC%E4%B8%80%E5%AD%A3kotlin%E5%B4%9B%E8%B5%B7-%E7%AC%AC3%E3%80%814%E7%AB%A0/</url>
-    <content><![CDATA[<h1 id="第三章：控制流"><a href="#第三章：控制流" class="headerlink" title="第三章：控制流"></a>第三章：控制流</h1><h2 id="if-else"><a href="#if-else" class="headerlink" title="if-else"></a>if-else</h2><p>Kotlin中if-else可以做表达式的特性，甚至可以实现一个类型不定的变量(虽然官方不建议这么做)：</p><figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> result = <span class="keyword">if</span>(a &gt; b) <span class="string">"大于"</span> <span class="keyword">else</span> b - a</span><br></pre></td></tr></table></figure><h2 id="多元判断"><a href="#多元判断" class="headerlink" title="多元判断"></a>多元判断</h2><p>针对某个值可能的多种状况，可以使用when语句做一个比较细致的判断：</p><figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">when</span>(result)&#123;</span><br><span class="line">	<span class="keyword">in</span> <span class="number">1</span>..<span class="number">5</span> -&gt; &#123;</span><br><span class="line">		printlin(<span class="string">"在1到5之间"</span>)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">in</span> <span class="number">1</span>,<span class="number">3</span>,<span class="number">5</span> -&gt; &#123;</span><br><span class="line">		printlin(<span class="string">"是1或者3或者5"</span>)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	(<span class="number">9</span> - <span class="number">6</span>) -&gt; &#123;</span><br><span class="line">		printlin(<span class="string">"值是3"</span>)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	</span><br><span class="line">	<span class="keyword">is</span> <span class="built_in">Int</span> -&gt; &#123;<span class="comment">//is用于判断是某种类型</span></span><br><span class="line">		printlin(<span class="string">"是整数"</span>)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">else</span> -&gt; &#123;</span><br><span class="line">		printlin(<span class="string">"其他情况"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><a id="more"></a>
-
-
-
-
-
-<h1 id="第四章——字符串和字符"><a href="#第四章——字符串和字符" class="headerlink" title="第四章——字符串和字符"></a>第四章——字符串和字符</h1><p> Kotlin中字符串和字符相关的方法非常丰富，字符串可以通过“+”连接，也可以往字符串中插入变量创建字符串“模板”。字符串还有常用的2个功能，判断字符串为空(isEmpty())和字符串中字符的数目(count()或者length)，字符串的一些例子如下：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line">println(name.count())<span class="comment">//字符串中字符数目</span></span><br><span class="line">println(name.isEmpty())<span class="comment">//是否为空</span></span><br><span class="line">println(name.length)<span class="comment">//这个length不是方法，而是“成员”</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//以下方法可以获取指定位置的字符</span></span><br><span class="line">println(name.<span class="keyword">get</span>(<span class="number">3</span>))</span><br><span class="line"><span class="comment">//或</span></span><br><span class="line">println(name[<span class="number">3</span>])</span><br><span class="line"><span class="comment">//或</span></span><br><span class="line">println(name.elementAt(<span class="number">3</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment">//获取头或者尾</span></span><br><span class="line">println(name.first())<span class="comment">//获取第一个字符</span></span><br><span class="line">println(name.last())<span class="comment">//获取最后一个字符</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//还有subString用法</span></span><br><span class="line">println(name.substring(<span class="number">3</span>))<span class="comment">//要注意，这是去掉字符串前面4个字符</span></span><br><span class="line"><span class="comment">//取字符串中间某一段</span></span><br><span class="line">println(name.substring(<span class="number">5</span>,<span class="number">10</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment">//索引加substring使用</span></span><br><span class="line">println(name.substring(name.indexOf(<span class="string">"好"</span>))) <span class="comment">//去掉“好”字之前的字符</span></span><br><span class="line"><span class="comment">//截取 “好”以及其后面一个字符</span></span><br><span class="line">println(name.substring(name.indexOf(<span class="string">"好"</span>),<span class="number">2</span>))</span><br><span class="line"><span class="comment">//最后一个索引</span></span><br><span class="line">println(name.lastIndex(<span class="string">"好"</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment">//indices显示索引范围</span></span><br><span class="line">println(name.indices)  <span class="comment">//获得索引区间，这是个属性，不用给任何参数，结果打印：  0..6</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//是否包含某个字符或者子串</span></span><br><span class="line">println(name.contains(<span class="string">"google"</span>))  <span class="comment">//返回true或者false</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//判断字符串内容是否相同，以下两种写法都可以</span></span><br><span class="line">println(name1 == name2)</span><br><span class="line">println(name1.contentEquals(name2))</span><br></pre></td></tr></table></figure>
-
-<p>上述代码中，两个方法是带括号”()”的，而length不带括号。带括号的称为方法或者函数；不带括号的称为属性成员，是变量。关于字符串操作，还有专业的“舍弃”系列，一般以drop开头，用它去掉字符串中的子串，有时候比substring更方便，不用跟索引打交道，看看例子：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//舍弃前3个字符</span></span><br><span class="line">println(name.drop(<span class="number">3</span>))  </span><br><span class="line"><span class="comment">//舍弃后3个字符</span></span><br><span class="line">println(name.dropLast(<span class="number">3</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment">//有条件的舍弃，去掉字符串开头的空格，中间的不会被去掉</span></span><br><span class="line"><span class="keyword">val</span> name = <span class="string">"  我前面有空格 哈哈"</span></span><br><span class="line">println(name.dropWhile &#123;it.isWhitespace()&#125;)  <span class="comment">//结果：我前面有空格 哈哈</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//当然，还能接连操作</span></span><br><span class="line">println(title.dropWhile &#123;it.isWhitespace()&#125;.</span><br><span class="line">	dropLastWhile &#123;it = <span class="string">'哈'</span> || it.isWhitespace()&#125; <span class="comment">// 结果：我前面有空格</span></span><br></pre></td></tr></table></figure>
-
-<p>上述看到，舍弃操作可以无限连接，因为drop系列完成后还是一个string，其中dropWhile 后面的 “{}” 里面的代码是判断条件，<strong>it是系统提供的变量，指的是字符串中单个的字符，”{}”本身做了一个循环，检查字符串中的每一个字符</strong>。”||”还是与Java中一样，是或操作。跟丢弃系列相对的是<strong>捡取系列</strong>，以take开头：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//取前6个</span></span><br><span class="line">println(name.take(<span class="number">6</span>))</span><br><span class="line"><span class="comment">//取后7个</span></span><br><span class="line">println(name.takeLast(<span class="number">7</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment">//顺带提一下替换功能，跟Java一样</span></span><br><span class="line">println(name.replace(<span class="string">"哈哈"</span>,<span class="string">"嘎嘎"</span>))</span><br><span class="line"><span class="comment">//这里要注意下，单个字符用单引号包含</span></span><br><span class="line">println(name.replace(<span class="string">'哈'</span>,<span class="string">'嘎'</span><span class="string">'))</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>转义字符</strong>处理：Java中会对字符串中的“控制字符”进行特殊处理，这才有了转义字符，如 println(“\n\r\&quot;&#39;“) 只会打印出 &quot;‘ ，这样写起来比较麻烦，当然Kotlin保留了这个功能，并且创新地使用三个引号来解决这个问题：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> name = <span class="string">"""\"'"""</span></span><br><span class="line">println(name)   <span class="comment">//会打印：\"'</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//顺便记下这种用法，为每个字符之间插入一个逗号</span></span><br><span class="line">name.toCharArray().forEach &#123;println(it + <span class="string">"，"</span>)&#125;  <span class="comment">//又用到 it</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="字符"><a href="#字符" class="headerlink" title="字符"></a>字符</h2><p>字符可以判断是否是数字或者文字：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line">println(five.isDigit())</span><br><span class="line">println(five.isLetter())</span><br><span class="line"></span><br><span class="line"><span class="comment">//字符的上一个/下一个字符</span></span><br><span class="line">println(five - <span class="number">1</span>)</span><br><span class="line">println(five + <span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">//转成编码</span></span><br><span class="line">println(five.toInt())</span><br><span class="line"></span><br><span class="line"><span class="comment">//“我”到“你”之间有多远</span></span><br><span class="line">println(<span class="string">'我'</span>.until(<span class="string">'你'</span>))  <span class="comment">//打印结果： 我..佟  ，即说明 '你'之前的那个字是 '佟'</span></span><br></pre></td></tr></table></figure>]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>读书笔记-第一季kotlin崛起(次时代Android开发)</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>第2章： kotlin基础</title>
-    <url>/2018/07/22/%E7%AC%AC%E4%B8%80%E5%AD%A3kotlin%E5%B4%9B%E8%B5%B7-%E7%AC%AC2%E7%AB%A0/</url>
-    <content><![CDATA[<p>Kotlin跟Java还是有很大区别的，看这一章的时候，时不时会带来惊喜： 还能有这操作 ？？？</p><h2 id="常量与变量写法（常量一旦赋值，就不能改变，不能二次赋值）："><a href="#常量与变量写法（常量一旦赋值，就不能改变，不能二次赋值）：" class="headerlink" title="常量与变量写法（常量一旦赋值，就不能改变，不能二次赋值）："></a>常量与变量写法（常量一旦赋值，就不能改变，不能二次赋值）：</h2><blockquote>
-<p>常量： val constant = 123;   变量： var a = 3;</p>
-</blockquote><h2 id="整数类型和推断类型"><a href="#整数类型和推断类型" class="headerlink" title="整数类型和推断类型"></a>整数类型和推断类型</h2><p>定义一个整数型变量的形式(注意是 Int ，首字母是大写的)：</p><a id="more"></a>
-
-
-<blockquote>
-<p>var num: Int = 3;</p>
-</blockquote>
-<p>但是Kotlin有优秀的推断系统，”:Int”可以省去不写，编译器就“知道”这是整数类型，这与C/C++/JAVA/C#等强制标明变量类型非常不同。这也是现代编程语言的一大进步，Swift等语言都吸收了这个优点，从而让语言本身变得非常简洁。定义其他类型的数字例子：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> 整数 = <span class="number">1237</span></span><br><span class="line"><span class="keyword">val</span> 长整数 = <span class="number">12666L</span></span><br><span class="line"><span class="keyword">val</span> 双精度浮点数 = <span class="number">22.64</span></span><br><span class="line"><span class="keyword">val</span> 单精度浮点数 = <span class="number">12.34F</span></span><br><span class="line"><span class="keyword">val</span> 八进制数 = <span class="number">0xACF</span></span><br><span class="line"><span class="keyword">val</span> 二进制数 = <span class="number">0b01010111</span></span><br></pre></td></tr></table></figure>
-
-<p>注意长整数数字后有后缀L，单精度小数后缀是F，如果不写，默认整数类型是Int，小数类型是Double，八进制和二进制数字分别以前缀 0x和0b开头。</p>
-<p><strong>字符串模板：</strong>就是指把一个变量插入到文本的技术，一般类似这样： “${}”，”${}”是一个变量的占位符，一个例子如下：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span>&#123;</span><br><span class="line">	<span class="keyword">var</span> run = <span class="number">5</span></span><br><span class="line">	run = <span class="number">6</span></span><br><span class="line">	print(<span class="string">"每天坚持跑<span class="subst">$&#123;run&#125;</span>公里"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><strong>Tips：如果整数位数太多，可以用下划线分割出千分位或者万分位，如： var 房贷 = 150_0000  //与 var 房贷 = 1500000等价</strong>。</p>
-<p>Kotlin不支持自动扩展数字范围，转换必须手动进行，每一种数字都有一个转换成其他数字类型的函数，例如，把普通整数转换成长整数，可以用如下代码：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> intNum = <span class="number">9999</span></span><br><span class="line"><span class="keyword">val</span> longNum = intNum.toLong();</span><br><span class="line"><span class="keyword">val</span> doubleNum = intNum.toDouble();</span><br></pre></td></tr></table></figure>
-
-<p>上面提到了二进制数字，相关的位运算操作在Kotlin中也是支持的，例如左移右移、逻辑与/或运算、异或 和 取反运算，与Java不同的是，这些不是内建运算符，而是用中缀函数来代替的：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> 左移二位 = <span class="number">1</span> shl <span class="number">2</span></span><br><span class="line"><span class="keyword">val</span> 右移三位 = <span class="number">1</span> shr <span class="number">3</span></span><br><span class="line"><span class="keyword">val</span> 无符号右移二位 = <span class="number">1</span> ushr <span class="number">2</span></span><br><span class="line"><span class="keyword">val</span> 逻辑与 = <span class="number">1</span> and <span class="number">0x00001111</span></span><br><span class="line"><span class="keyword">val</span> 逻辑或 = <span class="number">1</span> or <span class="number">0x00001111</span></span><br><span class="line"><span class="keyword">val</span> 异或 = <span class="number">1</span> xor <span class="number">0x00001111</span></span><br><span class="line"><span class="keyword">val</span> 取反 = <span class="number">1</span>.inv()</span><br></pre></td></tr></table></figure>
-
-<p>注意，取反不是中缀操作符，而是一个一元操作符。</p>
-<h2 id="小数"><a href="#小数" class="headerlink" title="小数"></a>小数</h2><p>Kotlin中小数现在默认也是Double类型（双精度），而原先的Float类型处于兼容目的而保留，但官方不建议使用。<strong>可以用Double类型的toInt将小数截成整数，注意不是四舍五入，而是把小数部分完全砍掉，如 3.14进行toInt()的结果是 3</strong>。</p>
-<h2 id="类型安全"><a href="#类型安全" class="headerlink" title="类型安全"></a>类型安全</h2><p>类型安全是指，变量一旦定义，其类型不可更改。了解C/Java语言的可能非常不适应，因为这些语言要求把类型写出来，而没有类型推断这个概念。JavaScript语言也是不写类型的，这是为了求快，语法并不严谨，而且它不但类型不用写，并且变量的类型可以任意改变，这留下了安全隐患（微软的TypeScript就是一种安全的JavaScript改进）。这个缺陷在Kotlin和Swift中得到了平衡，这两种语言同时引入了类型推断和类型安全的概念。如以下代码Kotlin会提示错误：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> 电费 = <span class="number">3.6</span></span><br><span class="line">电费 = <span class="string">"五毛"</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="布尔型"><a href="#布尔型" class="headerlink" title="布尔型"></a>布尔型</h2><p>布尔型：Boolean。Kolin中布尔型只有2个值：true 和 false。</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> isVip = <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(isVip)&#123;</span><br><span class="line">	print(<span class="string">"欢迎vip会员！"</span>)</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">	print(<span class="string">"请考虑充值成为vip！"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="元组"><a href="#元组" class="headerlink" title="元组"></a>元组</h2><p>通常情况下，变量只带一个值，但有时候为了处理更精致简单，必须把描述进行分割。例如，课程 《3天免费学会Kotlin》，这个标题可以分解成学时、动作、技术名、学费等，这时候元祖就可以派上用场了。<strong>元组(Tuple)，可以把多个值同时赋值给一个变量，或者叫给多个变量同时赋值。</strong>不过Kotlin中只有二元组(Pair)和三元组(Triple)，也就是最多一次容纳3个值。直接看个例子比较直观：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> 课程 = Triple(<span class="number">3</span>,<span class="string">"学会"</span>,<span class="string">"Kotlin"</span>)</span><br><span class="line"><span class="keyword">val</span> 费用 = Pair(<span class="string">"学费"</span>,<span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">print(<span class="string">"<span class="subst">$&#123;课程.first&#125;</span>天<span class="subst">$&#123;课程.second&#125;</span><span class="subst">$&#123;课程.third&#125;</span>"</span>)</span><br><span class="line">print(<span class="string">",<span class="subst">$&#123;费用.first&#125;</span><span class="subst">$&#123;费用.second&#125;</span>元！"</span>)</span><br></pre></td></tr></table></figure>
-<p>运行结果是：3天学会Kotlin，学费0元！   </p>
-<h2 id="可空类型——nullable"><a href="#可空类型——nullable" class="headerlink" title="可空类型——nullable"></a>可空类型——nullable</h2><p>所有“实体的”类型与空的组合，称为可空类型，写法上是在原类型名后紧跟一个问号:Int?、String?、Boolean?，这里”?”指空值null，表示什么也没有。用法示例如下（以个人资料为例）：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> addr: String? = <span class="string">"清华大学"</span></span><br><span class="line"><span class="keyword">var</span> sex: <span class="built_in">Boolean</span>?</span><br></pre></td></tr></table></figure>
-<p>假设这是某人的淘宝账号个人资料一部分，addr是选填地址信息，虽然地址可以不填，但买东西的时候要填写；虽然性别sex是二选一的，但是对于业务不重要，所以也可以写成可空类型。定义好之后，使用场景可以用如下代码表示：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line">sex = <span class="literal">false</span></span><br><span class="line"><span class="keyword">if</span>(sex != <span class="literal">null</span> &amp;&amp; sex == <span class="literal">true</span>)&#123;<span class="comment">//还需要先判空</span></span><br><span class="line">	print(<span class="string">"先生，你好"</span>)</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">	print(<span class="string">"美女，全场八折"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>还有，如果导入多个不同包的同名类，可以给某些导入起一个别名，如下所示：</p>
-<blockquote>
-<p>import com.test.MyKotlinProject.Book<br>import com.myspace.Book as SpaceBook</p>
-</blockquote>
-<h2 id="异常处理和类初始化"><a href="#异常处理和类初始化" class="headerlink" title="异常处理和类初始化"></a>异常处理和类初始化</h2><p>Kotlin中异常处理与Java几乎一模一样，只有一条不同，即<strong>Kotlin中所有异常都不是必检的。</strong>所谓必检异常，是指必须定义成方法的一部分或者在方法内部处理，一个典型例子就是IOException。Kotlin中，因为所有异常都不是必检的，所以异常不必成为函数的组成部分。如果要捕捉异常，跟java一样，使用try-catch：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">try</span>&#123;</span><br><span class="line">	<span class="keyword">var</span> byte = input.read();</span><br><span class="line">&#125;<span class="keyword">catch</span>(e: IOException)&#123;</span><br><span class="line">	println(<span class="string">"读取文件错误，因为：<span class="subst">$&#123;e.message&#125;</span>"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>关于类初始化，Java语言一般会用一个new关键字来创建类的实例，Kotlin中移除了new，对待构造函数的调用和普通函数一样，这样就不需要new了，如下所示：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> file = File(<span class="string">"/usr/bin/ruby"</span>)</span><br><span class="line"><span class="keyword">val</span> date = Date(<span class="number">20170702</span>)</span><br></pre></td></tr></table></figure>
-
-<h2 id="引用相等和结构相等"><a href="#引用相等和结构相等" class="headerlink" title="引用相等和结构相等"></a>引用相等和结构相等</h2><p>要检查两个引用是否引用相等，用<strong>“===”(类似Java的 ==)</strong>，或者用<strong>“!==”</strong>来说明不等，用”==”来检查是否结构相等（类似于java中的equals方法）：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> file1 = File(<span class="string">"/usr/bin/ruby"</span>)</span><br><span class="line"><span class="keyword">val</span> file2 = File(<span class="string">"/usr/bin/ruby"</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> sameRef = (file1 === file2)</span><br><span class="line">println(sameRef)<span class="comment">//打印false，因为 file1 与 file2 不是同一个对象</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> sameStruct = (file1 == file2)</span><br><span class="line">println(sameRef) <span class="comment">//打印true，因为两个File对象的指定的文件路径是一样的</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="区间（Range）"><a href="#区间（Range）" class="headerlink" title="区间（Range）"></a>区间（Range）</h2><p>一个区间是有一个起始值和终止值得间隔。任意可以进行比较大小的类型都可以创建一个区间，使用”..”操作符，这里的区间是数学意义上的全闭区间，包括起始和终止边界的值。以下是例子：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> a到z = <span class="string">"a"</span>..<span class="string">"z"</span></span><br><span class="line"><span class="keyword">val</span> 一到一百 = <span class="number">1</span>..<span class="number">100</span></span><br></pre></td></tr></table></figure>
-
-<p>一旦建好，就可以用in操作来测试指定的一个值是否包含在其中：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> chars = <span class="string">"a"</span>..<span class="string">"z"</span></span><br><span class="line"><span class="keyword">val</span> d在其中 = <span class="string">"d"</span> <span class="keyword">in</span> chars</span><br></pre></td></tr></table></figure>
-
-<p>围绕着区间还有更深入的函数可以用，如downTo()可以创建一个倒序排列的区间，rangeTo可以生成区间：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> 倒计时 = <span class="number">10</span>.downTo(<span class="number">0</span>)</span><br><span class="line"><span class="keyword">val</span> 一到一百 = <span class="number">1</span>.rangeTo(<span class="number">100</span>)</span><br></pre></td></tr></table></figure>
-
-<p>区间创建后可以更改，更改后的区间生成一个新区间，还可以用reversed()函数进行翻转。还可以更改区间中的每一个单向前进的幅度，即步进（step）：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> 一到一百 = <span class="number">1</span>.rangeTo(<span class="number">100</span>)</span><br><span class="line"><span class="comment">//一到一百.reversed()  如果添加这句代码，那么就是打印 99,98...1</span></span><br><span class="line"><span class="keyword">val</span> 一到一百奇数 = 一到一百.step(<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(i <span class="keyword">in</span> 一到一百奇数)&#123;</span><br><span class="line">	print(i)   <span class="comment">//会打印 1,3,5,7，...99</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="控制流作为表达式"><a href="#控制流作为表达式" class="headerlink" title="控制流作为表达式"></a>控制流作为表达式</h2><p>令常规编程语言程序员大跌眼镜的是，Kotlin中控制流语句可以做表达式，一般的语言 if-else 、try-catch等控制流表达式不会返回任何值，如java：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(x == <span class="number">0</span>)&#123;</span><br><span class="line">	isZero = <span class="keyword">true</span>;</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">	isZero = <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>但是在Kotlin中，if-else 与try-catch 控制流本身就是表达式。这种变化可以可以省了很多重复的代码模板，省了一些变量的声明，来看看例子：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> a = <span class="number">5</span></span><br><span class="line"><span class="keyword">val</span> b = <span class="number">3</span></span><br><span class="line"><span class="keyword">val</span> isLarger = <span class="keyword">if</span>(a &gt; b) <span class="literal">true</span> <span class="keyword">else</span> <span class="literal">false</span>  <span class="comment">//用if语句做表达式的时候，必须包含else语句，否则编译器无从得知if为else的情况</span></span><br><span class="line">print(isLarger)  <span class="comment">//打印true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//或者</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> readSuccess = <span class="keyword">try</span>&#123;</span><br><span class="line">	readFile(/usr/bin/ruby.md)</span><br><span class="line">	<span class="literal">true</span></span><br><span class="line">&#125;<span class="keyword">catch</span>(e: IOException)&#123;</span><br><span class="line">	<span class="literal">false</span></span><br><span class="line">&#125;</span><br><span class="line">print(readSuccess)   <span class="comment">//代码try中代码执行顺利打印true，</span></span><br></pre></td></tr></table></figure>
-
-<p>Kotlin中的 <strong>when</strong>语句是Java中的switch语句的强力升级版：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">when</span>(a)&#123;</span><br><span class="line">	<span class="number">0</span> -&gt; println(<span class="string">"a是0"</span>)</span><br><span class="line">	<span class="number">1</span> -&gt; println(<span class="string">"a是1"</span>)</span><br><span class="line">	<span class="keyword">else</span> -&gt; println(<span class="string">"a不是0或1"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>when 的最后一个分支else是所有其他情况外的处理，这样可以把a的所有情况进行列举处理。当然，when语句也是可以作为值赋予给变量的：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> isZero = <span class="keyword">when</span>(a)&#123;</span><br><span class="line">	<span class="number">0</span> -&gt; <span class="literal">true</span></span><br><span class="line">	<span class="keyword">else</span> -&gt; <span class="literal">false</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>更进一步的用法，常量可以合并在同一条分支上：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> isZeroOrOne = <span class="keyword">when</span>(a)&#123;</span><br><span class="line">	<span class="number">0</span>,<span class="number">1</span> -&gt; <span class="literal">true</span>   <span class="comment">//0 或者1 都返回true</span></span><br><span class="line">	<span class="keyword">else</span> -&gt; <span class="literal">false</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>与switch不同的是，when不限于对常量的每一种情况判断，还可以加上函数，当函数被调用后满足分支条件，这个分支就被执行了：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">isPositive</span><span class="params">(x: <span class="type">Int</span>)</span></span>: <span class="built_in">Boolean</span>&#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">when</span>(x)&#123;</span><br><span class="line">		Math.abs(x) -&gt; <span class="literal">true</span> </span><br><span class="line">		<span class="keyword">else</span> -&gt; <span class="literal">false</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">println(isPositive(<span class="number">2</span>));</span><br></pre></td></tr></table></figure>
-<p>Math.abs是数学库中的绝对值函数，这个方法用来判断一个数字是否是正数，如果输入的值与绝对值之后的值相等，说明是正数，返回true，否则返回false。当然，这段代码还可以简化：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">isPositive</span><span class="params">(x: <span class="type">Int</span>)</span></span> = <span class="comment">//这里加个等号就没有返回值类型了</span></span><br><span class="line">	<span class="keyword">when</span>(x)&#123;</span><br><span class="line">		Math.abs(x) -&gt; <span class="literal">true</span> </span><br><span class="line">		<span class="keyword">else</span> -&gt; <span class="literal">false</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">println(isPositive(<span class="number">2</span>));</span><br></pre></td></tr></table></figure>
-
-<p>当然，这也适用于区间：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">cardNum</span><span class="params">(x: <span class="type">Int</span>)</span></span>: <span class="built_in">Boolean</span>&#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">when</span>(x)&#123;</span><br><span class="line">		<span class="keyword">in</span> -<span class="number">9</span>..<span class="number">9</span> -&gt; <span class="literal">true</span> </span><br><span class="line">		<span class="comment">//in arrayOf(1,2,3,4,5,6) -&gt; true  //或者这样</span></span><br><span class="line">		<span class="keyword">else</span> -&gt; <span class="literal">false</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">println(cardNum(<span class="number">2</span>));</span><br></pre></td></tr></table></figure>
-
-<p>最后，when还可以用智能转换类型，智能转换可以让编译器在运行时校验变量类型：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">preIsKotlin</span><span class="params">(any:<span class="type">Any</span>)</span></span>: <span class="built_in">Boolean</span>&#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">when</span>(any)&#123;</span><br><span class="line">		<span class="keyword">is</span> String -&gt; any.startWith(<span class="string">"Kotlin"</span>)</span><br><span class="line">		<span class="keyword">else</span> -&gt; <span class="literal">false</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上述的函数参数是Any类型，所有对其类型实际是无任何限制的，这样类型只能在运行时检测，如果遇到输入的是String类型（is String，is的用法感觉有点像Java中的 instanceOf ），则判断String是否以Kotlin开头，如果是就返回true，不满足以上条件的都返回false。</p>
-<ul>
-<li>无参数的when语句，类似多分支的if-else</li>
-</ul>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">noParamWhen</span><span class="params">(a: <span class="type">Int</span>,b: <span class="type">Int</span>)</span></span>&#123;</span><br><span class="line">	<span class="keyword">when</span>&#123;</span><br><span class="line">		a &lt; b -&gt; println(<span class="string">"a 小于b"</span>)</span><br><span class="line">		a &gt; b -&gt; println(<span class="string">"a 大于b"</span>)</span><br><span class="line">		<span class="keyword">else</span> -&gt; println(<span class="string">"a 等于b"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="函数返回"><a href="#函数返回" class="headerlink" title="函数返回"></a>函数返回</h2><p>Kotlin的函数返回前面已经演示过：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">addNum</span><span class="params">(a: <span class="type">Int</span>,b: <span class="type">Int</span>)</span></span>: <span class="built_in">Double</span>&#123;</span><br><span class="line">	<span class="keyword">return</span> a + b;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>默认情况下，return会从最近的嵌套函数或者匿名函数返回，所以，如果在一个嵌套函数内，return只会返回最内层的函数：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">maxNum</span><span class="params">(a: <span class="type">Int</span>,b: <span class="type">Int</span>,c: <span class="type">Int</span>)</span></span>: <span class="built_in">Int</span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">maxNum</span><span class="params">(a: <span class="type">Int</span>,b :<span class="type">Int</span>)</span></span>: <span class="built_in">Int</span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(a &gt; b) <span class="keyword">return</span> a</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">return</span> b</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> maxNum(maxNum(a,b),maxNum(b,c))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在这个优点强行重名刻意为之的例子里，最后一个return调用的是最近的maxNumber()嵌套函数，如果最内层的函数是一个匿名函数，return在其中只会退出匿名函数而已：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">lessThanNine</span><span class="params">()</span></span>&#123;</span><br><span class="line">	<span class="keyword">val</span> list = listOf(-<span class="number">1</span>,<span class="number">0</span>,<span class="number">2</span>,<span class="number">5</span>,<span class="number">99</span>)</span><br><span class="line">	list.forEach(<span class="function"><span class="title">fun</span><span class="params">(x)</span></span>&#123;</span><br><span class="line">		<span class="keyword">if</span>(x &lt; <span class="number">9</span>) println(x)</span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">return</span></span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	println(<span class="string">"此行会继续执行"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="类型层级"><a href="#类型层级" class="headerlink" title="类型层级"></a>类型层级</h2><p>Kotlin中最上层的类型是Any，意为任意类型，是所有类型的父类，这与Java的Object类型相似。Any类型定义了众所周知的toString 、hashCode以及equals方法。Unit类型相当于Java中的void，但是二者间有微妙的区别，void不是一个类型，而是一个特殊的个例，Unit是一个合适的类型，如此一来，Kotlin中所有的函数都可以定义一个返回值了（至少是个Unit型）。<br>另一个显著区别于Java的地方是增加了一个最底层的类型——Nothing，它是所有类型的子类，后面可以详细了解这玩意儿。</p>
-<h2 id="循环"><a href="#循环" class="headerlink" title="循环"></a>循环</h2><p>Kotlin支持while和for循环。while循环和C语言一模一样。for循环用于迭代任何一个预定义或者扩展了iterator的函数。所有集合类型都提供了这个函数：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> listOne = listOf(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>)  <span class="comment">//链表</span></span><br><span class="line"><span class="keyword">val</span> setOne = setOf(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>)   <span class="comment">//集合</span></span><br><span class="line"><span class="keyword">val</span> arrayOne = arrayOf(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>)   <span class="comment">//数组</span></span><br><span class="line"><span class="keyword">val</span> oneToTen = <span class="number">1</span>..<span class="number">10</span>;<span class="comment">//区间</span></span><br><span class="line"><span class="keyword">val</span> slogan = <span class="string">"我爱Kotlin"</span> <span class="comment">//字符串，String中已经实现了iterator扩展函数，所以for循环可以迭代其中的单个字符</span></span><br><span class="line"><span class="keyword">for</span>(k <span class="keyword">in</span> listOne)&#123;</span><br><span class="line">	println(k)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(k <span class="keyword">in</span> setOne)&#123;</span><br><span class="line">	println(k)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(k <span class="keyword">in</span> arrayOne)&#123;</span><br><span class="line">	println(k)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(k <span class="keyword">in</span> oneToTen)&#123;</span><br><span class="line">	println(k)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(char <span class="keyword">in</span> slogan)&#123;</span><br><span class="line">	println(char)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>注意循环中in操作符，经常用于for循环中。</p>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>读书笔记-第一季kotlin崛起(次时代Android开发)</tag>
       </tags>
   </entry>
   <entry>
