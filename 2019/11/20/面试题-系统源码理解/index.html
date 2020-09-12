@@ -62,7 +62,8 @@
 <meta property="og:description" content="1、okhttp的理解 点击看答案  首先看下okhttp 的整个工作流程：   首先通过 Builder 创建 OkhttpClient 对象     根据设定的条件，使用Request.Builder 构建request 对象       根据 OkhttpClient 与 request 创建 RealCall      不论是通过execute 还是enqueue 方式异步执行，最终都通过">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;okhttp%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png">
-<meta property="og:updated_time" content="2020-07-10T14:53:01.839Z">
+<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;Toast%E6%98%BE%E7%A4%BA%E6%B5%81%E7%A8%8B.webp">
+<meta property="og:updated_time" content="2020-09-12T19:26:58.342Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;okhttp%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png">
 
@@ -252,7 +253,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-10 22:53:01" itemprop="dateModified" datetime="2020-07-10T22:53:01+08:00">2020-07-10</time>
+                <time title="修改时间：2020-09-13 03:26:58" itemprop="dateModified" datetime="2020-09-13T03:26:58+08:00">2020-09-13</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -445,6 +446,37 @@
 <blockquote>
 <p>以上内容参考自 系统源码、<a href="http://zmywly8866.github.io/2015/09/29/android-call-asynctask-excute-not-run.html" target="_blank" rel="noopener">github上的博客</a>、<a href="https://www.cnblogs.com/yanyojun/p/6414919.html" target="_blank" rel="noopener">cnblogs的博客</a>、<a href="https://blog.csdn.net/weixin_43507738/article/details/83418989" target="_blank" rel="noopener">csdn的博客</a></p>
 </blockquote>
+<h2 id="9、阿里Alpha原理"><a href="#9、阿里Alpha原理" class="headerlink" title="9、阿里Alpha原理"></a>9、阿里Alpha原理</h2><p>想象下有以下场景： </p>
+<p>有6个任务需要在Application里面执行，其中Task1，Task4，Tas6需要在主线程执行，Task2，Task3需要在Task1执行完才能执行，Task4，Task5需要Task2和Task3执行完才能执行，Task6需要Task4和Task5执行完才能执行，Task4的耗时要大于Task5，是不是顿时就乱了？其实可以通过 PERT 图来捋一捋这个关系，涉及到具体实现的话，可以参考阿里巴巴的 alpha 框架。</p>
+<p>Alpha是一个<strong>基于PERT图</strong>构建的Android异步启动框架</p>
+<p>首先解决多进程疑惑，在start方法中就首先判断了 <strong>主进程任务、非主进程任务 以及 适用于所有进程的任务</strong>，这些任务是通过 public void addProject(Task project, int mode) 方法添加进去的。</p>
+<p>在实际情况中，可能会有多个任务同时开始，并且也有可能多个任务作为结束节点，所以为了<strong>方便控制整个流程</strong>，alpha 设计了startTask 和 finishTask，标记流程的开始和结束，方便任务的监听</p>
+<p>如果Task 是在主线程执行的，那么就通过Handler 将时间传递给主线程；如果是非主线程，则通过线程池去执行。</p>
+<p>在一个Task执行完成后，就会遍历自己持有的 <strong>mSuccessorList(紧后任务列表，也就是当前任务执行完成之后可以执行的Task列表，这里面的Task会根据Priority进行排序)</strong>，并依次执行里面元素的 onPredecessorFinished 方法。</p>
+<p>mSuccessorList 列表中的Task 是通过 after 方法加入的：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//紧后任务添加</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Builder <span class="title">after</span><span class="params">(Task task)</span> </span>&#123;</span><br><span class="line">    task.addSuccessor(mCacheTask);</span><br><span class="line">    mFinishTask.removePredecessor(task);</span><br><span class="line">    mIsSetPosition = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">return</span> Builder.<span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//主要操作在这个方法里</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addSuccessor</span><span class="params">(Task task)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//task 添加紧前任务</span></span><br><span class="line">    task.addPredecessor(<span class="keyword">this</span>);</span><br><span class="line">    <span class="comment">//真正添加为紧后任务</span></span><br><span class="line">    mSuccessorList.add(task);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>意思是Task2要在Task1后面执行，这样，Task2就是Task1的紧后任务，同理，Task1也成了Task2的紧前任务，那这个紧前任务有什么用呢？试想一下，如果Task1、Task2、Task3的紧后任务都是 Task4，那么，在Task1执行完成之后，还要判断 Task2和Task3是否执行完成，然后才能决定是否执行Task4，这就是紧前任务的作用了。</p>
+<blockquote>
+<p>以上文章主要参考自：<a href="https://blog.csdn.net/liuzhengisme/article/details/106996006" target="_blank" rel="noopener">积木zz的csdn博客</a>, 有博客说，使用 <a href="https://zhuanlan.zhihu.com/p/163014950" target="_blank" rel="noopener">Anchors</a> 比使用 Alpha 更精细，后续再看</p>
+</blockquote>
+<h2 id="10、LeakCanary-原理"><a href="#10、LeakCanary-原理" class="headerlink" title="10、LeakCanary 原理"></a>10、LeakCanary 原理</h2><p>执行GC： Runtime.getRuntime().gc() ;按照源码中的注释，它比 System.gc() 更可能触发GC操作。</p>
+<p>据说 Recents.getSystemServices().gc(); 会触发强制Gc？这个得试验下</p>
+<h2 id="11、Toast显示流程"><a href="#11、Toast显示流程" class="headerlink" title="11、Toast显示流程"></a>11、Toast显示流程</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>首先，为了避免Toast显示冲突，会将要显示的Toast放在队列中，然后依次取出来展示</p>
+<ol>
+<li>makeText的时候，创建Toast对象和TN对象，Toast创建好后，加载布局，创建mNextView，然后 TN 是控制Toast的显示和隐藏以及取消的，它里面有个 Handler ，以当前线程的Looper来初始化，Toast的显示隐藏取消就是通过这个Handler来处理的。        </li>
+<li>Toast对象创建完成就 enqueueToast 到NotificationManagerService 进程中去排队的(所以这中间是有跨进程通信这个概念的)，在中间会判断是否要显示这个Toast(如果此Toast正在取消或者隐藏就不展示了)，接着就开始排队，显示的话，就是不断从队列里面取出 ToastRecord ，然后调用 Toast对应的TN 的show 方法展示Toast。</li>
+<li>TN收到显示的消息，创建WindowManager对象，然后将第一步创建的 View 添加到 WindowManager ，之后Toast 就显示出来了。          </li>
+</ol>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/Toast%E6%98%BE%E7%A4%BA%E6%B5%81%E7%A8%8B.webp" alt="Toast显示流程"></p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/7177360e3f63" target="_blank" rel="noopener">简书上的博客</a></p>
+</blockquote>
 
     </div>
 
@@ -526,7 +558,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、okhttp的理解"><span class="nav-number">1.</span> <span class="nav-text">1、okhttp的理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、谈谈对RxJava的理解"><span class="nav-number">2.</span> <span class="nav-text">2、谈谈对RxJava的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#常用操作符"><span class="nav-number">2.1.</span> <span class="nav-text">常用操作符</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何实现线程切换"><span class="nav-number">2.2.</span> <span class="nav-text">如何实现线程切换</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、fresco的理解"><span class="nav-number">3.</span> <span class="nav-text">3、fresco的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么使用fresco"><span class="nav-number">3.1.</span> <span class="nav-text">为什么使用fresco</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fresco-原理解析"><span class="nav-number">3.2.</span> <span class="nav-text">fresco 原理解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、ThreadLocal-详解"><span class="nav-number">4.</span> <span class="nav-text">4、ThreadLocal 详解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、LocalBroadcastManager"><span class="nav-number">5.</span> <span class="nav-text">5、LocalBroadcastManager</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#原理分析"><span class="nav-number">5.1.</span> <span class="nav-text">原理分析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6、Java线程池ThreadPoolExecutor实现原理"><span class="nav-number">6.</span> <span class="nav-text">6、Java线程池ThreadPoolExecutor实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#运行状态"><span class="nav-number">6.1.</span> <span class="nav-text">运行状态</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7、延伸-Java-线程池的异常处理机制"><span class="nav-number">7.</span> <span class="nav-text">7、延伸-Java 线程池的异常处理机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8、AsyncTask-解析"><span class="nav-number">8.</span> <span class="nav-text">8、AsyncTask 解析</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1、okhttp的理解"><span class="nav-number">1.</span> <span class="nav-text">1、okhttp的理解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2、谈谈对RxJava的理解"><span class="nav-number">2.</span> <span class="nav-text">2、谈谈对RxJava的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#常用操作符"><span class="nav-number">2.1.</span> <span class="nav-text">常用操作符</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何实现线程切换"><span class="nav-number">2.2.</span> <span class="nav-text">如何实现线程切换</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3、fresco的理解"><span class="nav-number">3.</span> <span class="nav-text">3、fresco的理解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么使用fresco"><span class="nav-number">3.1.</span> <span class="nav-text">为什么使用fresco</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fresco-原理解析"><span class="nav-number">3.2.</span> <span class="nav-text">fresco 原理解析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4、ThreadLocal-详解"><span class="nav-number">4.</span> <span class="nav-text">4、ThreadLocal 详解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5、LocalBroadcastManager"><span class="nav-number">5.</span> <span class="nav-text">5、LocalBroadcastManager</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#原理分析"><span class="nav-number">5.1.</span> <span class="nav-text">原理分析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6、Java线程池ThreadPoolExecutor实现原理"><span class="nav-number">6.</span> <span class="nav-text">6、Java线程池ThreadPoolExecutor实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#运行状态"><span class="nav-number">6.1.</span> <span class="nav-text">运行状态</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7、延伸-Java-线程池的异常处理机制"><span class="nav-number">7.</span> <span class="nav-text">7、延伸-Java 线程池的异常处理机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8、AsyncTask-解析"><span class="nav-number">8.</span> <span class="nav-text">8、AsyncTask 解析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9、阿里Alpha原理"><span class="nav-number">9.</span> <span class="nav-text">9、阿里Alpha原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10、LeakCanary-原理"><span class="nav-number">10.</span> <span class="nav-text">10、LeakCanary 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11、Toast显示流程"><span class="nav-number">11.</span> <span class="nav-text">11、Toast显示流程</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -628,7 +660,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共219.5k字</span>
+  <span class="post-count">博客全站共221.6k字</span>
 </div>
 
 
