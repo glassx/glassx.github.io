@@ -63,7 +63,7 @@
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;okhttp%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png">
 <meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;Android%E5%9F%BA%E7%A1%80&#x2F;Toast%E6%98%BE%E7%A4%BA%E6%B5%81%E7%A8%8B.webp">
-<meta property="og:updated_time" content="2020-09-13T13:10:08.761Z">
+<meta property="og:updated_time" content="2021-02-09T08:08:16.641Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;%E9%9D%A2%E8%AF%95&#x2F;%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;okhttp%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png">
 
@@ -253,7 +253,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-09-13 21:10:08" itemprop="dateModified" datetime="2020-09-13T21:10:08+08:00">2020-09-13</time>
+                <time title="修改时间：2021-02-09 16:08:16" itemprop="dateModified" datetime="2021-02-09T16:08:16+08:00">2021-02-09</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -446,7 +446,10 @@
 <blockquote>
 <p>以上内容参考自 系统源码、<a href="http://zmywly8866.github.io/2015/09/29/android-call-asynctask-excute-not-run.html" target="_blank" rel="noopener">github上的博客</a>、<a href="https://www.cnblogs.com/yanyojun/p/6414919.html" target="_blank" rel="noopener">cnblogs的博客</a>、<a href="https://blog.csdn.net/weixin_43507738/article/details/83418989" target="_blank" rel="noopener">csdn的博客</a></p>
 </blockquote>
-<h2 id="9、阿里Alpha原理"><a href="#9、阿里Alpha原理" class="headerlink" title="9、阿里Alpha原理"></a>9、阿里Alpha原理</h2><p>想象下有以下场景： </p>
+<h2 id="9、阿里Alpha原理"><a href="#9、阿里Alpha原理" class="headerlink" title="9、阿里Alpha原理"></a>9、阿里Alpha原理</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>想象下有以下场景： </p>
 <p>有6个任务需要在Application里面执行，其中Task1，Task4，Tas6需要在主线程执行，Task2，Task3需要在Task1执行完才能执行，Task4，Task5需要Task2和Task3执行完才能执行，Task6需要Task4和Task5执行完才能执行，Task4的耗时要大于Task5，是不是顿时就乱了？其实可以通过 PERT 图来捋一捋这个关系，涉及到具体实现的话，可以参考阿里巴巴的 alpha 框架。</p>
 <p>Alpha是一个<strong>基于PERT图</strong>构建的Android异步启动框架</p>
 <p>首先解决多进程疑惑，在start方法中就首先判断了 <strong>主进程任务、非主进程任务 以及 适用于所有进程的任务</strong>，这些任务是通过 public void addProject(Task project, int mode) 方法添加进去的。</p>
@@ -457,11 +460,78 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//紧后任务添加</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Builder <span class="title">after</span><span class="params">(Task task)</span> </span>&#123;</span><br><span class="line">    task.addSuccessor(mCacheTask);</span><br><span class="line">    mFinishTask.removePredecessor(task);</span><br><span class="line">    mIsSetPosition = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">return</span> Builder.<span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//主要操作在这个方法里</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addSuccessor</span><span class="params">(Task task)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//task 添加紧前任务</span></span><br><span class="line">    task.addPredecessor(<span class="keyword">this</span>);</span><br><span class="line">    <span class="comment">//真正添加为紧后任务</span></span><br><span class="line">    mSuccessorList.add(task);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>意思是Task2要在Task1后面执行，这样，Task2就是Task1的紧后任务，同理，Task1也成了Task2的紧前任务，那这个紧前任务有什么用呢？试想一下，如果Task1、Task2、Task3的紧后任务都是 Task4，那么，在Task1执行完成之后，还要判断 Task2和Task3是否执行完成，然后才能决定是否执行Task4，这就是紧前任务的作用了。</p>
+</details>
+
 <blockquote>
 <p>以上文章主要参考自：<a href="https://blog.csdn.net/liuzhengisme/article/details/106996006" target="_blank" rel="noopener">积木zz的csdn博客</a>, 有博客说，使用 <a href="https://zhuanlan.zhihu.com/p/163014950" target="_blank" rel="noopener">Anchors</a> 比使用 Alpha 更精细，后续再看</p>
 </blockquote>
-<h2 id="10、LeakCanary-原理"><a href="#10、LeakCanary-原理" class="headerlink" title="10、LeakCanary 原理"></a>10、LeakCanary 原理</h2><p>执行GC： Runtime.getRuntime().gc() ;按照源码中的注释，它比 System.gc() 更可能触发GC操作。</p>
-<p>据说 Recents.getSystemServices().gc(); 会触发强制Gc？这个得试验下</p>
+<h2 id="10、LeakCanary-原理"><a href="#10、LeakCanary-原理" class="headerlink" title="10、LeakCanary 原理"></a>10、LeakCanary 原理</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>原理：</p>
+<ol>
+<li>通过registerActivityLifecycleCallbacks 来监听 Activity 的生命周期 onActivityDestroyed。    </li>
+<li>即 lifecycleCallbacks 监听Activity 的 onDestroy 方法，正常情况下执行了onDestroy 后资源立即回收。    </li>
+<li>监察机制利用了 WeakReference 和 ReferenceQueue ，使用 WeakReference 对Activity 进行引用，在Activity回收的时候，就会将该WeakReference 引用放到 ReferenceQueue 中。     </li>
+<li>在onDestroy 之后，等待一段时间，再通过监测 ReferenceQueue 是否包含 WeakReference 就能检查 Activity 是否被正确回收。    </li>
+<li>如果Activity 没有被回收，就手动 GC 一次，等待若干时间，之后再次判断Activity 是否被回收，若未被回收，说明 Activity 已经泄露。    </li>
+<li>如果Activity 泄露了，则抓取 dump 信息显示出来。</li>
+</ol>
+<p>以上要注意的是：</p>
+<p>1、是使用<strong>WeakReference</strong>对Activity进行引用<br>2、LeakCanary可以配置<strong>忽略</strong>某些路径的内存泄漏<br>3、手动GC是使用的 Runtime.getRuntime().gc() 实现，代码中解释是这样触发gc的概率会比System.gc() 高一些: System.gc() does not garbage collect every time. Runtime.gc() is more likely to perform a gc.<br>4、 当Activity对象被回收时，会将 <strong>WeakReference(而不是Activity)对象</strong>放入 ReferenceQueue 中，自己写的测试代码如下：</p>
+<pre><code class="Java"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainActivity</span> <span class="keyword">extends</span> <span class="title">AppCompatActivity</span> </span>{
+    <span class="keyword">private</span> RecyclebleObject testObject;
+    <span class="keyword">private</span> WeakReference&lt;RecyclebleObject&gt; objectWeakReference;
+    <span class="keyword">private</span> ReferenceQueue&lt;RecyclebleObject&gt; referenceQueue;
+
+    <span class="meta">@Override</span>
+    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(@Nullable Bundle savedInstanceState)</span> </span>{
+        <span class="keyword">super</span>.onCreate(savedInstanceState);
+
+        setContentView(R.layout.activity_main);
+
+        testObject = <span class="keyword">new</span> RecyclebleObject();
+        referenceQueue = <span class="keyword">new</span> ReferenceQueue&lt;&gt;();
+        objectWeakReference = <span class="keyword">new</span> WeakReference&lt;&gt;(testObject, referenceQueue);
+
+        <span class="keyword">final</span> TextView btnClick = findViewById(R.id.click_view);
+
+        btnClick.setOnClickListener(<span class="keyword">new</span> View.OnClickListener() {
+            <span class="meta">@Override</span>
+            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{
+                <span class="keyword">if</span> (testObject == <span class="keyword">null</span>) {
+                    testObject = <span class="keyword">new</span> RecyclebleObject();
+                }
+
+                Log.e(<span class="string">"NullTest"</span>, <span class="string">"testObject = "</span> + testObject);
+                Log.e(<span class="string">"NullTest"</span>, <span class="string">"referenceQueue 中的内容： "</span> + referenceQueue.poll());
+                testObject = <span class="keyword">null</span>;
+                Runtime.getRuntime().gc();
+
+                btnClick.postDelayed(<span class="keyword">new</span> Runnable() {
+                    <span class="meta">@Override</span>
+                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{
+                        Log.e(<span class="string">"NullTest"</span>, <span class="string">"GC 后，testObject = "</span> + testObject);
+                        Reference result = referenceQueue.poll();
+                        Log.e(<span class="string">"NullTest"</span>, <span class="string">"GC 后，referenceQueue 的内容： "</span> + result + <span class="string">",这个对象与objectWeakReference 相等吗？ "</span> + (result == objectWeakReference));
+                    }
+                }, <span class="number">1000</span>);
+            }
+        });
+    }
+}</code></pre>
+<p>以上代码将会打印出以下结果：</p>
+<blockquote>
+<p>testObject = com.example.myapplication.RecyclebleObject@86f4db5<br>referenceQueue 中的内容： null<br>GC 后，testObject = null<br>GC 后，referenceQueue 的内容： java.lang.ref.WeakReference@f6c4a,这个对象与objectWeakReference 相等吗？ true     </p>
+</blockquote>
+<p>说明在回收后， WeakReference 对象会出现在 referenceQueue 中，而不是 testObject 本身出现在 referenceQueue  。</p>
+<hr>
+<p>有意思的是，在 LeakCanary2 时，并不需要接入者手动初始化(LeakCanary.install(this);)了，而是只需要引入即可。其根本原理是：<strong>LeakCanary 写了个 ContentProvider 并在 AndroidManifest中注册了，并在 ContentProvider 的onCreate方法中执行了 install 操作！</strong>我们知道，ContentProvider 的 onCreate 方法会在启动App的时候自动执行，并且比 Application 的 onCreate 方法还要早，因此它自动执行完全没问题。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/261e70f3083f" target="_blank" rel="noopener">JasmineBen的博客</a>、<a href="https://blog.csdn.net/braintt/article/details/99685243" target="_blank" rel="noopener">CSDN上的博客</a>、以及自己写的代码验证</p>
+</blockquote>
 <h2 id="11、Toast显示流程"><a href="#11、Toast显示流程" class="headerlink" title="11、Toast显示流程"></a>11、Toast显示流程</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
@@ -654,7 +724,7 @@
 <div class="copyright">
   
   &copy; 2015 – 
-  <span itemprop="copyrightYear">2020</span>
+  <span itemprop="copyrightYear">2021</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
@@ -683,7 +753,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共222.3k字</span>
+  <span class="post-count">博客全站共222.8k字</span>
 </div>
 
 
