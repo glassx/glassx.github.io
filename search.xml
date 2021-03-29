@@ -1,37 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>第9章：Activity的插件化解决方案</title>
-    <url>/2021/03/29/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/</url>
-    <content><![CDATA[<p>Activity的插件化需要解决3方面的技术问题：</p><ul>
-<li>宿主App可以加载插件App中的类         </li>
-<li>宿主App可以加载插件中的App资源           </li>
-<li>宿主App可以加载插件中的Activity          </li>
-</ul><h2 id="启动没有在AndroidManifest中声明的插件Activity"><a href="#启动没有在AndroidManifest中声明的插件Activity" class="headerlink" title="启动没有在AndroidManifest中声明的插件Activity"></a>启动没有在AndroidManifest中声明的插件Activity</h2><p>在5.4节介绍了启动没有在AndroidManifest 中声明的 Activity，借助宿主App中的StubActivity ，在 AMN 中欺骗，在ActivityThread 中欺骗。这种方式的代码如下：</p><a id="more"></a>
-
-
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码可以参见： https://github.com/BaoBaoJianqiang/ActivityHook1</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="基于动态替换的Activity插件化解决方案"><a href="#基于动态替换的Activity插件化解决方案" class="headerlink" title="基于动态替换的Activity插件化解决方案"></a>基于动态替换的Activity插件化解决方案</h2><p>这章节好混乱，压根就没说这里解决的是什么问题</p>
-<h2 id="加载插件中类的方案2：-合并多个dex"><a href="#加载插件中类的方案2：-合并多个dex" class="headerlink" title="加载插件中类的方案2： 合并多个dex"></a>加载插件中类的方案2： 合并多个dex</h2><h2 id="对LaunchMode的支持"><a href="#对LaunchMode的支持" class="headerlink" title="对LaunchMode的支持"></a>对LaunchMode的支持</h2><p>前面介绍的 Activity 插件化技术，对于LaunchMode 都是standard的情况是完全适用的。对于 SingleTop、SingleTask 和 SingleInstance 需要重新考虑。</p>
-<p>解决LaunchMode 的问题，适用的还是 <strong>占位Activity</strong> 的思想，即实现为这3种 LaunchMode 创建很多StubActivity，如下图所示：</p>
-<p><img src alt="占位思想解决LaunchMode问题"></p>
-<p>我们可以从服务端下载一个Json，指定插件中的Activity 对应哪种 StubActivity ，写Demo的时候，可以直接在本地 Mock 这些数据，保存在 MyApplication 中，然后再 Mock1Class 接货 startActivity 的时候，如果发现要启动的Activity 在 MyApplication 的 pluginActivities 集合中，那就使用这个插件 Activity 对应的占位 StubActivity，代码如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.3</span></span><br></pre></td></tr></table></figure>
-
-<p>接下来可以测试下。这里有个小bug，无论singleTop还是singleTask，再回到这个Activity时，并不会触发它的onCreate，而是会触发它的onNewIntent(其实这里说的bug我并没有明白，等测试后再说)。为此，我们需要在MockClass2 中，拦截onNewIntent方法，把占位 StubActivity 替换回插件Activity，代码如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码可以参考上面的链接</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="加载插件中类的方案3：修改App原生的ClassLoader"><a href="#加载插件中类的方案3：修改App原生的ClassLoader" class="headerlink" title="加载插件中类的方案3：修改App原生的ClassLoader"></a>加载插件中类的方案3：修改App原生的ClassLoader</h2><p>..</p>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>Android插件化开发指南</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>第12章：ContentProvider的插件化解决方案</title>
     <url>/2021/03/28/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC12%E7%AB%A0/</url>
     <content><![CDATA[<h2 id="ContentProvider基本概念"><a href="#ContentProvider基本概念" class="headerlink" title="ContentProvider基本概念"></a>ContentProvider基本概念</h2><p>ContentProvider 就是一个SQLite 数据库，数据提供方A和数据使用方B是通过<strong>匿名共享内存</strong>来传输数据的。B告诉A，“你把数据写在这个内存地址上”；B准备好数据，写到A要求的内存地址上，A就可以直接使用这些数据了。当数据量非常大的时候，这个数据传递速度是非常快的。</p><a id="more"></a>
@@ -98,39 +67,8 @@
       </tags>
   </entry>
   <entry>
-    <title>第8章：最简单的插件化解决方案</title>
-    <url>/2021/03/26/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/</url>
-    <content><![CDATA[<p>本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：</p><ul>
-<li>合并所有的插件dex，用以解决插件类的加载问题             </li>
-<li>在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)      </li>
-<li>把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)     </li>
-</ul><a id="more"></a>
-
-<h2 id="在AndroidManifest-中声明插件中的组件"><a href="#在AndroidManifest-中声明插件中的组件" class="headerlink" title="在AndroidManifest 中声明插件中的组件"></a>在AndroidManifest 中声明插件中的组件</h2><p>在插件中有啥，在宿主中声明啥就行     </p>
-<h2 id="宿主App加载插件中的类"><a href="#宿主App加载插件中的类" class="headerlink" title="宿主App加载插件中的类"></a>宿主App加载插件中的类</h2><p>把插件dex都合并到宿主的dex中，那么宿主App对应的ClassLoader 就可以加载插件中任意类：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码参考： https://github.com/BaoBaoJianqiang/ZeusStudy1.0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseDexClassLoaderHookHelper</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">patchClassLoder</span><span class="params">(ClassLoader cl,File apkFile,File optDexFile)</span></span>&#123;</span><br><span class="line">        <span class="comment">//获取BaseDexClassLoder: pathList</span></span><br><span class="line">        Object pathListObj = RefInvoke.getFiledObject(DexClassLoader.class.getSuperclass(), cl, <span class="string">"pathList"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取PathList: Element[] dexElements</span></span><br><span class="line">        Object[] dexElements = (Object[])RefInvoke.getFieldObject(pathListObj.getClass(), pathListObj, <span class="string">"dexElements"</span>);</span><br><span class="line"></span><br><span class="line">        ...<span class="comment">//手敲太难了，到时候复制下</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="启动插件Service"><a href="#启动插件Service" class="headerlink" title="启动插件Service"></a>启动插件Service</h2><p>根据前面两章，素组App就能启动一个插件中的Service了，代码如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">String serviceName = <span class="string">"jianqiang.com.plugin1.TestService1"</span>;</span><br><span class="line">intent.setClassName(<span class="keyword">this</span>, serviceName);</span><br><span class="line">startService(intent);</span><br></pre></td></tr></table></figure>
-
-<h2 id="加载插件中的资源"><a href="#加载插件中的资源" class="headerlink" title="加载插件中的资源"></a>加载插件中的资源</h2><p>四大组件都可以这样实现插件化方案，Service 、ContentProvider 和 Receiver 都只要合并dex就够了，他们没有资源的概念。Activity严重依赖资源，所以必须解决插件中的资源问题。前面章节介绍了AssetManager 和 Resources ，AssetManager 有个 addAssetPath 方法，可以一次性把插件的路径都“灌进去”，然后根据这个“超级” AssetManager 生成一个“超级” Resources ，以后无论是查找插件还是宿主的资源，都能通过这个“超级”Resources 找到了。上述实现如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码参考：  https://github.com/BaoBaoJianqiang/ZeusStudy1.1</span></span><br></pre></td></tr></table></figure>
-<p>至此，Activity 的“傻瓜式”插件化解决方案就完成了，我们甚至可以从插件Activity跳转到宿主中的Activity，但是这个方案有以下两个问题：</p>
-<ul>
-<li>插件的四大组件都必需先在宿主中声明，不能新增      </li>
-<li>插件和宿主的资源都合并到一起，资源id可能会有冲突     </li>
-</ul>
-]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>Android插件化开发指南</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>第10章：Service的插件化解决方案</title>
-    <url>/2021/03/25/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/</url>
+    <url>/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/</url>
     <content><![CDATA[<h2 id="Android界的荀彧和荀攸：Service和Activity"><a href="#Android界的荀彧和荀攸：Service和Activity" class="headerlink" title="Android界的荀彧和荀攸：Service和Activity"></a>Android界的荀彧和荀攸：Service和Activity</h2><p>根据Context的族谱，Service 是 Activity 的叔叔，结合作用来看，二者有太多相似，但是备份不同，类似三国时期的荀彧和荀攸。不过，二者的区别也挺明显：</p><ul>
 <li>Activity 是面向用户的，有大量的用户交互的方法，而Service 是后台运行的，生命周期函数很少    </li>
 <li>Activity 中有LaunchMode 的概念，每个Activity启动时都会放在栈顶，根据不同的 LaunchMode 可能会有复用以前的实例或者不复用以前的实例。但是Service不同，<strong>同一个 Service 调用多次startService并不会启动多个实例，只会有一个实例</strong>，所以，只用一个StubActivity 是应付不了多个插件的Service 的     </li>
@@ -178,6 +116,68 @@
 <p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/bindService%E8%BF%87%E7%A8%8BAMS%E9%80%9A%E7%9F%A5App%E8%BF%99%E4%B8%8B%E5%8D%8A%E5%9C%BA.png" alt="bindService过程AMS通知App这下半场"></p>
 <p>也就是说，bindService 先走114(handleCreateSrvice)分支，再走 121 (handleBindService) ，在 handleCreateSrvice 中已经把我们要启动的 MyService2 放到了 mService 这个集合中了，那么，在 handleBindService 和 handleUnbindService 中，都会从 mService 集合中找到 Service2 。在之前章节，为了解决 createService ，已经拦截了 114 分支把 StubService2 换回了 MyService2 了，所以我们不需要要拦截 121 和 122 了， 无需再MockClass2 添加额外代码。</p>
 <h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这里给出Service第一种解决方案——预先占位，在宿主中预先声明若干个StubService。</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android插件化开发指南</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第9章：Activity的插件化解决方案</title>
+    <url>/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/</url>
+    <content><![CDATA[<p>Activity的插件化需要解决3方面的技术问题：</p><ul>
+<li>宿主App可以加载插件App中的类         </li>
+<li>宿主App可以加载插件中的App资源           </li>
+<li>宿主App可以加载插件中的Activity          </li>
+</ul><h2 id="启动没有在AndroidManifest中声明的插件Activity"><a href="#启动没有在AndroidManifest中声明的插件Activity" class="headerlink" title="启动没有在AndroidManifest中声明的插件Activity"></a>启动没有在AndroidManifest中声明的插件Activity</h2><p>在5.4节介绍了启动没有在AndroidManifest 中声明的 Activity，借助宿主App中的StubActivity ，在 AMN 中欺骗，在ActivityThread 中欺骗。这种方式的代码如下：</p><a id="more"></a>
+
+
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码可以参见： https://github.com/BaoBaoJianqiang/ActivityHook1</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="基于动态替换的Activity插件化解决方案"><a href="#基于动态替换的Activity插件化解决方案" class="headerlink" title="基于动态替换的Activity插件化解决方案"></a>基于动态替换的Activity插件化解决方案</h2><p>这章节好混乱，压根就没说这里解决的是什么问题</p>
+<h2 id="加载插件中类的方案2：-合并多个dex"><a href="#加载插件中类的方案2：-合并多个dex" class="headerlink" title="加载插件中类的方案2： 合并多个dex"></a>加载插件中类的方案2： 合并多个dex</h2><h2 id="对LaunchMode的支持"><a href="#对LaunchMode的支持" class="headerlink" title="对LaunchMode的支持"></a>对LaunchMode的支持</h2><p>前面介绍的 Activity 插件化技术，对于LaunchMode 都是standard的情况是完全适用的。对于 SingleTop、SingleTask 和 SingleInstance 需要重新考虑。</p>
+<p>解决LaunchMode 的问题，适用的还是 <strong>占位Activity</strong> 的思想，即实现为这3种 LaunchMode 创建很多StubActivity，如下图所示：</p>
+<p><img src alt="占位思想解决LaunchMode问题"></p>
+<p>我们可以从服务端下载一个Json，指定插件中的Activity 对应哪种 StubActivity ，写Demo的时候，可以直接在本地 Mock 这些数据，保存在 MyApplication 中，然后再 Mock1Class 接货 startActivity 的时候，如果发现要启动的Activity 在 MyApplication 的 pluginActivities 集合中，那就使用这个插件 Activity 对应的占位 StubActivity，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.3</span></span><br></pre></td></tr></table></figure>
+
+<p>接下来可以测试下。这里有个小bug，无论singleTop还是singleTask，再回到这个Activity时，并不会触发它的onCreate，而是会触发它的onNewIntent(其实这里说的bug我并没有明白，等测试后再说)。为此，我们需要在MockClass2 中，拦截onNewIntent方法，把占位 StubActivity 替换回插件Activity，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码可以参考上面的链接</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="加载插件中类的方案3：修改App原生的ClassLoader"><a href="#加载插件中类的方案3：修改App原生的ClassLoader" class="headerlink" title="加载插件中类的方案3：修改App原生的ClassLoader"></a>加载插件中类的方案3：修改App原生的ClassLoader</h2><p>..</p>
+]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android插件化开发指南</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第8章：最简单的插件化解决方案</title>
+    <url>/2021/03/26/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/</url>
+    <content><![CDATA[<p>本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：</p><ul>
+<li>合并所有的插件dex，用以解决插件类的加载问题             </li>
+<li>在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)      </li>
+<li>把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)     </li>
+</ul><a id="more"></a>
+
+<h2 id="在AndroidManifest-中声明插件中的组件"><a href="#在AndroidManifest-中声明插件中的组件" class="headerlink" title="在AndroidManifest 中声明插件中的组件"></a>在AndroidManifest 中声明插件中的组件</h2><p>在插件中有啥，在宿主中声明啥就行     </p>
+<h2 id="宿主App加载插件中的类"><a href="#宿主App加载插件中的类" class="headerlink" title="宿主App加载插件中的类"></a>宿主App加载插件中的类</h2><p>把插件dex都合并到宿主的dex中，那么宿主App对应的ClassLoader 就可以加载插件中任意类：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码参考： https://github.com/BaoBaoJianqiang/ZeusStudy1.0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseDexClassLoaderHookHelper</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">patchClassLoder</span><span class="params">(ClassLoader cl,File apkFile,File optDexFile)</span></span>&#123;</span><br><span class="line">        <span class="comment">//获取BaseDexClassLoder: pathList</span></span><br><span class="line">        Object pathListObj = RefInvoke.getFiledObject(DexClassLoader.class.getSuperclass(), cl, <span class="string">"pathList"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取PathList: Element[] dexElements</span></span><br><span class="line">        Object[] dexElements = (Object[])RefInvoke.getFieldObject(pathListObj.getClass(), pathListObj, <span class="string">"dexElements"</span>);</span><br><span class="line"></span><br><span class="line">        ...<span class="comment">//手敲太难了，到时候复制下</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="启动插件Service"><a href="#启动插件Service" class="headerlink" title="启动插件Service"></a>启动插件Service</h2><p>根据前面两章，素组App就能启动一个插件中的Service了，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">String serviceName = <span class="string">"jianqiang.com.plugin1.TestService1"</span>;</span><br><span class="line">intent.setClassName(<span class="keyword">this</span>, serviceName);</span><br><span class="line">startService(intent);</span><br></pre></td></tr></table></figure>
+
+<h2 id="加载插件中的资源"><a href="#加载插件中的资源" class="headerlink" title="加载插件中的资源"></a>加载插件中的资源</h2><p>四大组件都可以这样实现插件化方案，Service 、ContentProvider 和 Receiver 都只要合并dex就够了，他们没有资源的概念。Activity严重依赖资源，所以必须解决插件中的资源问题。前面章节介绍了AssetManager 和 Resources ，AssetManager 有个 addAssetPath 方法，可以一次性把插件的路径都“灌进去”，然后根据这个“超级” AssetManager 生成一个“超级” Resources ，以后无论是查找插件还是宿主的资源，都能通过这个“超级”Resources 找到了。上述实现如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//代码参考：  https://github.com/BaoBaoJianqiang/ZeusStudy1.1</span></span><br></pre></td></tr></table></figure>
+<p>至此，Activity 的“傻瓜式”插件化解决方案就完成了，我们甚至可以从插件Activity跳转到宿主中的Activity，但是这个方案有以下两个问题：</p>
+<ul>
+<li>插件的四大组件都必需先在宿主中声明，不能新增      </li>
+<li>插件和宿主的资源都合并到一起，资源id可能会有冲突     </li>
+</ul>
 ]]></content>
       <categories>
         <category>读书笔记</category>
