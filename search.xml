@@ -1111,7 +1111,7 @@
     <content><![CDATA[<h3 id="Serializable-的原理"><a href="#Serializable-的原理" class="headerlink" title="Serializable 的原理"></a>Serializable 的原理</h3><p>Serializable 的原理是<strong>通过 ObjectInputStream 和 ObjectOutputStream 来实现的</strong>，通过 Android 6.0 的源码可以看到 ObjectOutPutStream 的部分源码实现：</p><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeFieldValues</span><span class="params">(Object obj, ObjectStreamClass classDesc)</span>  </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (ObjectStreamField fieldDesc : classDesc.fields()) &#123;</span><br><span class="line">        ...</span><br><span class="line">        Field field = classDesc.checkAndGetReflectionField(fieldDesc);</span><br><span class="line">        ...</span><br></pre></td></tr></table></figure><a id="more"></a>
 
 
-<p>整个序列化过程使用了大量反射(反射意味着效率低)和临时变量(临时变量意味着GC)，并且，<strong>在序列化对象时，不仅会序列化当前对象本身，还需要地柜序列化对象引用的其他对象</strong>。</p>
+<p>整个序列化过程使用了大量反射(比如说获取整个类的所有属性，反射意味着效率低)和临时变量(临时变量意味着GC)，并且，<strong>在序列化对象时，不仅会序列化当前对象本身，还需要地柜序列化对象引用的其他对象</strong>，可以参考<a href="https://juejin.cn/post/6844904049997774856" target="_blank" rel="noopener">别人的博客</a>。</p>
 <h3 id="Serializable-的进阶"><a href="#Serializable-的进阶" class="headerlink" title="Serializable 的进阶"></a>Serializable 的进阶</h3><p>Serializable 序列化支持使用自定义 writeObject和readObject，他会先反射判断是否存在我们自己实现的 序列化writeObject方法和反序列化readObject 方法。<strong>通过这两个方法，我们可以对某些字段做修改，也能实现序列化的加密功能。</strong></p>
 <p>还有，Serializable 的反序列默认是不会执行构造函数的</p>
 <h3 id="Parcelable-的永久存储"><a href="#Parcelable-的永久存储" class="headerlink" title="Parcelable 的永久存储"></a>Parcelable 的永久存储</h3><p>一般来说，我们使用 parcelable 只是会在内存中序列化操作，并不会存储到磁盘。其实，我们也可以存储到磁盘的：<strong>通过 Parcel.java 中的 marshall 接口获取byte 数组，然后存在文件中，从而实现 Parcelable 的永久存储。</strong></p>
@@ -8295,7 +8295,9 @@
   <entry>
     <title>总结-final</title>
     <url>/2019/07/10/%E6%80%BB%E7%BB%93-final/</url>
-    <content><![CDATA[<p>1、onCreate 中数据恢复和 onRestoreInstanceState 时恢复，<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC1%E7%AB%A0/">区别</a>？<br>2、Android中的LaunchMode是怎样在<a href="https://glassx.gitee.io/2021/05/05/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%95%AA%E5%A4%96%E7%AF%87/#more">系统源码</a>中体现的？<br>3、</p><p>事件分发-执行顺序<br>算法</p>]]></content>
+    <content><![CDATA[<p>1、onCreate 中数据恢复和 onRestoreInstanceState 时恢复，<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC1%E7%AB%A0/">区别</a>？<br>2、Android中的LaunchMode是怎样在<a href="https://glassx.gitee.io/2021/05/05/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%95%AA%E5%A4%96%E7%AF%87/#more">系统源码</a>中体现的？<br>3、Android中Bitmap内存分配的变化过程 ？以及内存占用是否越小越好？更多的内存意味着<strong>更快的缓存命中、更好的动画效果</strong>等。内存优化可以从 bitmap 优化、内存泄漏优化、<strong>设备分级</strong> 几个层次考虑。<a href="https://glassx.gitee.io/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">参考链接</a><br>4、做启动监控的时候要注意什么？实验室监控，视频录制可以非常准确记录各种时间。线上监控的话，不要使用平均法，平均法容易忽略掉性能差的手机，可以使用 <strong>2秒启动比、5秒启动比</strong>，还有一种是<strong>90% 用户启动时间</strong>，比如说90%用户的启动时间都小于5秒。<a href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/">连接</a><br>5、Serilizable效率低的<a href="https://glassx.gitee.io/2020/06/25/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">原因</a>是什么？<br>6、整个的网络请求过程是<a href="https://glassx.gitee.io/2020/06/26/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-16,17%E8%AF%BE/">怎样的</a>？<br>7、</p><a id="more"></a>
+<p>事件分发-执行顺序<br>算法<br>如何计算图片大小</p>
+]]></content>
       <categories>
         <category>阶段</category>
       </categories>
