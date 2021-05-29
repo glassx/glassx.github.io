@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.0.0">
+<meta name="generator" content="Hexo 5.4.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -54,18 +54,20 @@
 </script>
 
   <meta name="description" content="Android界的荀彧和荀攸：Service和Activity根据Context的族谱，Service 是 Activity 的叔叔，结合作用来看，二者有太多相似，但是备份不同，类似三国时期的荀彧和荀攸。不过，二者的区别也挺明显： Activity 是面向用户的，有大量的用户交互的方法，而Service 是后台运行的，生命周期函数很少     Activity 中有LaunchMode 的概念，每">
-<meta name="keywords" content="Android插件化开发指南">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第10章：Service的插件化解决方案">
-<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2021&#x2F;03&#x2F;27&#x2F;Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0&#x2F;index.html">
+<meta property="og:url" content="https://glassx.gitee.io/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="Android界的荀彧和荀攸：Service和Activity根据Context的族谱，Service 是 Activity 的叔叔，结合作用来看，二者有太多相似，但是备份不同，类似三国时期的荀彧和荀攸。不过，二者的区别也挺明显： Activity 是面向用户的，有大量的用户交互的方法，而Service 是后台运行的，生命周期函数很少     Activity 中有LaunchMode 的概念，每">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97&#x2F;%E7%AC%AC10%E7%AB%A0&#x2F;StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png">
-<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97&#x2F;%E7%AC%AC10%E7%AB%A0&#x2F;bindService%E8%BF%87%E7%A8%8BAMS%E9%80%9A%E7%9F%A5App%E8%BF%99%E4%B8%8B%E5%8D%8A%E5%9C%BA.png">
-<meta property="og:updated_time" content="2021-03-29T14:16:28.262Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/bindService%E8%BF%87%E7%A8%8BAMS%E9%80%9A%E7%9F%A5App%E8%BF%99%E4%B8%8B%E5%8D%8A%E5%9C%BA.png">
+<meta property="article:published_time" content="2021-03-27T13:29:00.000Z">
+<meta property="article:modified_time" content="2021-03-29T14:16:28.262Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android插件化开发指南">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97&#x2F;%E7%AC%AC10%E7%AB%A0&#x2F;StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png">
+<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png">
 
 <link rel="canonical" href="https://glassx.gitee.io/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/">
 
@@ -413,7 +415,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Android界的荀彧和荀攸：Service和Activity"><span class="nav-number">1.</span> <span class="nav-text">Android界的荀彧和荀攸：Service和Activity</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#预先占位"><span class="nav-number">2.</span> <span class="nav-text">预先占位</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#startService-的解决方案"><span class="nav-number">3.</span> <span class="nav-text">startService 的解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#bindService-的解决方案"><span class="nav-number">4.</span> <span class="nav-text">bindService 的解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Android%E7%95%8C%E7%9A%84%E8%8D%80%E5%BD%A7%E5%92%8C%E8%8D%80%E6%94%B8%EF%BC%9AService%E5%92%8CActivity"><span class="nav-number">1.</span> <span class="nav-text">Android界的荀彧和荀攸：Service和Activity</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%84%E5%85%88%E5%8D%A0%E4%BD%8D"><span class="nav-number">2.</span> <span class="nav-text">预先占位</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#startService-%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">3.</span> <span class="nav-text">startService 的解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#bindService-%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">4.</span> <span class="nav-text">bindService 的解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -492,7 +494,7 @@
   </span>
   <span class="author" itemprop="copyrightHolder">glassx</span>
 </div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
   </div>
   <span class="post-meta-divider">|</span>
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
@@ -560,9 +562,15 @@
 
   
   <script src="/lib/anime.min.js"></script>
+
 <script src="/js/utils.js"></script>
+
+
 <script src="/js/schemes/pisces.js"></script>
+
+
 <script src="/js/next-boot.js"></script>
+
 
 
 
@@ -573,7 +581,9 @@
 
   
 <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
-<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
 
 
 

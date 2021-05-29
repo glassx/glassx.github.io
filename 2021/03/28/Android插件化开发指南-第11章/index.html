@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.0.0">
+<meta name="generator" content="Hexo 5.4.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -54,14 +54,16 @@
 </script>
 
   <meta name="description" content="Receiver概述Receiver分为动态和静态两种，简单讨论下区别： 静态广播在 AndroidManifest 中注册，因为Android系统重启时，PMS都会解析App中的AndroidManifest，所以静态广播都存在于 PMS 中       动态广播通过 Context 的registerReceiver 方法最终调用 AMN.getDefault().registerReceiv">
-<meta name="keywords" content="Android插件化开发指南">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第11章：BroadcastReceiver的插件化解决方案">
-<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2021&#x2F;03&#x2F;28&#x2F;Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0&#x2F;index.html">
+<meta property="og:url" content="https://glassx.gitee.io/2021/03/28/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="Receiver概述Receiver分为动态和静态两种，简单讨论下区别： 静态广播在 AndroidManifest 中注册，因为Android系统重启时，PMS都会解析App中的AndroidManifest，所以静态广播都存在于 PMS 中       动态广播通过 Context 的registerReceiver 方法最终调用 AMN.getDefault().registerReceiv">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-03-28T09:03:38.250Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-03-28T03:41:00.000Z">
+<meta property="article:modified_time" content="2021-03-28T09:03:38.250Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android插件化开发指南">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="https://glassx.gitee.io/2021/03/28/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/">
@@ -384,7 +386,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Receiver概述"><span class="nav-number">1.</span> <span class="nav-text">Receiver概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#动态广播的插件化解决方案"><span class="nav-number">2.</span> <span class="nav-text">动态广播的插件化解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#静态广播解决方案"><span class="nav-number">3.</span> <span class="nav-text">静态广播解决方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#静态广播当做动态广播处理"><span class="nav-number">3.1.</span> <span class="nav-text">静态广播当做动态广播处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#静态广播的插件化终极解决方案"><span class="nav-number">3.2.</span> <span class="nav-text">静态广播的插件化终极解决方案</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Receiver%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">Receiver概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E5%B9%BF%E6%92%AD%E7%9A%84%E6%8F%92%E4%BB%B6%E5%8C%96%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">2.</span> <span class="nav-text">动态广播的插件化解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9D%99%E6%80%81%E5%B9%BF%E6%92%AD%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">3.</span> <span class="nav-text">静态广播解决方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9D%99%E6%80%81%E5%B9%BF%E6%92%AD%E5%BD%93%E5%81%9A%E5%8A%A8%E6%80%81%E5%B9%BF%E6%92%AD%E5%A4%84%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">静态广播当做动态广播处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9D%99%E6%80%81%E5%B9%BF%E6%92%AD%E7%9A%84%E6%8F%92%E4%BB%B6%E5%8C%96%E7%BB%88%E6%9E%81%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">3.2.</span> <span class="nav-text">静态广播的插件化终极解决方案</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -463,7 +465,7 @@
   </span>
   <span class="author" itemprop="copyrightHolder">glassx</span>
 </div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
   </div>
   <span class="post-meta-divider">|</span>
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
@@ -531,9 +533,15 @@
 
   
   <script src="/lib/anime.min.js"></script>
+
 <script src="/js/utils.js"></script>
+
+
 <script src="/js/schemes/pisces.js"></script>
+
+
 <script src="/js/next-boot.js"></script>
+
 
 
 
@@ -544,7 +552,9 @@
 
   
 <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
-<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
 
 
 

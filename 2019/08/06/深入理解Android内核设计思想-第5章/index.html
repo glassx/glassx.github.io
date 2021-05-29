@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.0.0">
+<meta name="generator" content="Hexo 5.4.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -54,18 +54,20 @@
 </script>
 
   <meta name="description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。">
-<meta name="keywords" content="深入理解Android内核设计思想-林学森">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第5章：Android 进程&#x2F;线程管理">
-<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;08&#x2F;06&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0&#x2F;index.html">
+<meta property="og:url" content="https://glassx.gitee.io/2019/08/06/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="Android 进程和线程进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;activity%E5%90%AF%E5%8A%A8.png">
-<meta property="og:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;%E8%BF%90%E8%A1%8C%E7%9A%84thread%E5%9B%BE.png">
-<meta property="og:updated_time" content="2019-11-17T13:48:46.555Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC5%E7%AB%A0/activity%E5%90%AF%E5%8A%A8.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC5%E7%AB%A0/%E8%BF%90%E8%A1%8C%E7%9A%84thread%E5%9B%BE.png">
+<meta property="article:published_time" content="2019-08-06T13:40:00.000Z">
+<meta property="article:modified_time" content="2019-11-17T13:48:46.555Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="深入理解Android内核设计思想-林学森">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;assets&#x2F;Book-Notes&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3&#x2F;%E7%AC%AC5%E7%AB%A0&#x2F;activity%E5%90%AF%E5%8A%A8.png">
+<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC5%E7%AB%A0/activity%E5%90%AF%E5%8A%A8.png">
 
 <link rel="canonical" href="https://glassx.gitee.io/2019/08/06/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0/">
 
@@ -454,7 +456,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Android-进程和线程"><span class="nav-number">1.</span> <span class="nav-text">Android 进程和线程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Handler、MessageQueue、Runable与Looper"><span class="nav-number">2.</span> <span class="nav-text">Handler、MessageQueue、Runable与Looper</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#UI主线程-ActivityThread"><span class="nav-number">3.</span> <span class="nav-text">UI主线程-ActivityThread</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Thread-类"><span class="nav-number">4.</span> <span class="nav-text">Thread 类</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Thread-类的内部原理"><span class="nav-number">4.1.</span> <span class="nav-text">Thread 类的内部原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#线程的休眠和唤醒"><span class="nav-number">4.2.</span> <span class="nav-text">线程的休眠和唤醒</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Thread-实例"><span class="nav-number">4.3.</span> <span class="nav-text">Thread 实例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Android-应用程序的典型启动流程"><span class="nav-number">5.</span> <span class="nav-text">Android 应用程序的典型启动流程</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Android-%E8%BF%9B%E7%A8%8B%E5%92%8C%E7%BA%BF%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">Android 进程和线程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Handler%E3%80%81MessageQueue%E3%80%81Runable%E4%B8%8ELooper"><span class="nav-number">2.</span> <span class="nav-text">Handler、MessageQueue、Runable与Looper</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#UI%E4%B8%BB%E7%BA%BF%E7%A8%8B-ActivityThread"><span class="nav-number">3.</span> <span class="nav-text">UI主线程-ActivityThread</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Thread-%E7%B1%BB"><span class="nav-number">4.</span> <span class="nav-text">Thread 类</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Thread-%E7%B1%BB%E7%9A%84%E5%86%85%E9%83%A8%E5%8E%9F%E7%90%86"><span class="nav-number">4.1.</span> <span class="nav-text">Thread 类的内部原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E7%9A%84%E4%BC%91%E7%9C%A0%E5%92%8C%E5%94%A4%E9%86%92"><span class="nav-number">4.2.</span> <span class="nav-text">线程的休眠和唤醒</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Thread-%E5%AE%9E%E4%BE%8B"><span class="nav-number">4.3.</span> <span class="nav-text">Thread 实例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Android-%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E7%9A%84%E5%85%B8%E5%9E%8B%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">5.</span> <span class="nav-text">Android 应用程序的典型启动流程</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -533,7 +535,7 @@
   </span>
   <span class="author" itemprop="copyrightHolder">glassx</span>
 </div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
   </div>
   <span class="post-meta-divider">|</span>
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
@@ -601,9 +603,15 @@
 
   
   <script src="/lib/anime.min.js"></script>
+
 <script src="/js/utils.js"></script>
+
+
 <script src="/js/schemes/pisces.js"></script>
+
+
 <script src="/js/next-boot.js"></script>
+
 
 
 
@@ -614,7 +622,9 @@
 
   
 <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
-<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
 
 
 

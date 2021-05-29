@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.0.0">
+<meta name="generator" content="Hexo 5.4.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -54,14 +54,16 @@
 </script>
 
   <meta name="description" content="Java语言的“编译期”是一段“不确定”的操作过程，它可能是指一个前端编译器把.java文件转变成 .class 的过程，也可能是指JIT编译器把字节码变成机器码的过程，还能是指 ATO编译器直接把 .java 文件编译成本地代码的过程。最符合大家认知的应该是第一类，在本章中，我们提到的 “编译期” 以及 “编译器” 都指限于第一类过程。">
-<meta name="keywords" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第10章：早期（编译期）优化">
-<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;09&#x2F;13&#x2F;%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0&#x2F;index.html">
+<meta property="og:url" content="https://glassx.gitee.io/2019/09/13/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="Java语言的“编译期”是一段“不确定”的操作过程，它可能是指一个前端编译器把.java文件转变成 .class 的过程，也可能是指JIT编译器把字节码变成机器码的过程，还能是指 ATO编译器直接把 .java 文件编译成本地代码的过程。最符合大家认知的应该是第一类，在本章中，我们提到的 “编译期” 以及 “编译器” 都指限于第一类过程。">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-03-03T13:41:44.918Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-09-13T13:10:00.000Z">
+<meta property="article:modified_time" content="2020-03-03T13:41:44.918Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="https://glassx.gitee.io/2019/09/13/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0/">
@@ -410,7 +412,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Javac-编译器"><span class="nav-number">1.</span> <span class="nav-text">Javac 编译器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Java-语法糖的味道"><span class="nav-number">2.</span> <span class="nav-text">Java 语法糖的味道</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#泛型与类型擦除"><span class="nav-number">2.1.</span> <span class="nav-text">泛型与类型擦除</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自动装箱、拆箱与遍历循环"><span class="nav-number">2.2.</span> <span class="nav-text">自动装箱、拆箱与遍历循环</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#条件编译"><span class="nav-number">2.3.</span> <span class="nav-text">条件编译</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实战：-插入式注解处理器"><span class="nav-number">3.</span> <span class="nav-text">实战： 插入式注解处理器</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Javac-%E7%BC%96%E8%AF%91%E5%99%A8"><span class="nav-number">1.</span> <span class="nav-text">Javac 编译器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Java-%E8%AF%AD%E6%B3%95%E7%B3%96%E7%9A%84%E5%91%B3%E9%81%93"><span class="nav-number">2.</span> <span class="nav-text">Java 语法糖的味道</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%9B%E5%9E%8B%E4%B8%8E%E7%B1%BB%E5%9E%8B%E6%93%A6%E9%99%A4"><span class="nav-number">2.1.</span> <span class="nav-text">泛型与类型擦除</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%8A%A8%E8%A3%85%E7%AE%B1%E3%80%81%E6%8B%86%E7%AE%B1%E4%B8%8E%E9%81%8D%E5%8E%86%E5%BE%AA%E7%8E%AF"><span class="nav-number">2.2.</span> <span class="nav-text">自动装箱、拆箱与遍历循环</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9D%A1%E4%BB%B6%E7%BC%96%E8%AF%91"><span class="nav-number">2.3.</span> <span class="nav-text">条件编译</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E6%88%98%EF%BC%9A-%E6%8F%92%E5%85%A5%E5%BC%8F%E6%B3%A8%E8%A7%A3%E5%A4%84%E7%90%86%E5%99%A8"><span class="nav-number">3.</span> <span class="nav-text">实战： 插入式注解处理器</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -489,7 +491,7 @@
   </span>
   <span class="author" itemprop="copyrightHolder">glassx</span>
 </div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
   </div>
   <span class="post-meta-divider">|</span>
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
@@ -557,9 +559,15 @@
 
   
   <script src="/lib/anime.min.js"></script>
+
 <script src="/js/utils.js"></script>
+
+
 <script src="/js/schemes/pisces.js"></script>
+
+
 <script src="/js/next-boot.js"></script>
+
 
 
 
@@ -570,7 +578,9 @@
 
   
 <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
-<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
 
 
 

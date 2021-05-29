@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.0.0">
+<meta name="generator" content="Hexo 5.4.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -54,17 +54,19 @@
 </script>
 
   <meta name="description" content="接下来章节要介绍以下概念，掌握了这些底层知识，就算是迈进了Android插件化的大门了： Binder AIDL AMS 四大组件工作原理 PMS App安装过程 ClassLoader以及双亲委托 Binder 原理对于Binder的原理，只需要了解以下过程即可： 首先，Server 在 SM 中注册 如果Client 需要调用Server 的 add 方法，就需要先获取Server 的对象，但">
-<meta name="keywords" content="Android插件化开发指南">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第2章：Android底层知识">
-<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2021&#x2F;03&#x2F;11&#x2F;Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0&#x2F;index.html">
+<meta property="og:url" content="https://glassx.gitee.io/2021/03/11/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="接下来章节要介绍以下概念，掌握了这些底层知识，就算是迈进了Android插件化的大门了： Binder AIDL AMS 四大组件工作原理 PMS App安装过程 ClassLoader以及双亲委托 Binder 原理对于Binder的原理，只需要了解以下过程即可： 首先，Server 在 SM 中注册 如果Client 需要调用Server 的 add 方法，就需要先获取Server 的对象，但">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="http:&#x2F;&#x2F;weishu1.dimensionalzone.com&#x2F;2016binder-procedure.png">
-<meta property="og:updated_time" content="2021-03-29T13:51:38.597Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://weishu1.dimensionalzone.com/2016binder-procedure.png">
+<meta property="article:published_time" content="2021-03-11T14:00:00.000Z">
+<meta property="article:modified_time" content="2021-03-29T13:51:38.597Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android插件化开发指南">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http:&#x2F;&#x2F;weishu1.dimensionalzone.com&#x2F;2016binder-procedure.png">
+<meta name="twitter:image" content="http://weishu1.dimensionalzone.com/2016binder-procedure.png">
 
 <link rel="canonical" href="https://glassx.gitee.io/2021/03/11/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/">
 
@@ -483,7 +485,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Binder-原理"><span class="nav-number">1.</span> <span class="nav-text">Binder 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AIDL原理"><span class="nav-number">2.</span> <span class="nav-text">AIDL原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AMS"><span class="nav-number">3.</span> <span class="nav-text">AMS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Activity-工作原理"><span class="nav-number">4.</span> <span class="nav-text">Activity 工作原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#App怎么启动"><span class="nav-number">4.1.</span> <span class="nav-text">App怎么启动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#启动App并非那么简单"><span class="nav-number">4.2.</span> <span class="nav-text">启动App并非那么简单</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Service-工作原理"><span class="nav-number">5.</span> <span class="nav-text">Service 工作原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#在新进程启动-service"><span class="nav-number">5.1.</span> <span class="nav-text">在新进程启动 service</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BroadCast-原理"><span class="nav-number">6.</span> <span class="nav-text">BroadCast 原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#注册过程"><span class="nav-number">6.1.</span> <span class="nav-text">注册过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#发送过程"><span class="nav-number">6.2.</span> <span class="nav-text">发送过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#广播种类"><span class="nav-number">7.</span> <span class="nav-text">广播种类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ContentProvider-工作原理"><span class="nav-number">8.</span> <span class="nav-text">ContentProvider 工作原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#匿名共享内存-ASM"><span class="nav-number">8.1.</span> <span class="nav-text">匿名共享内存(ASM)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ContentProvider-与-AMS-的通信"><span class="nav-number">8.2.</span> <span class="nav-text">ContentProvider 与 AMS 的通信</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PMS-及-App-安装过程"><span class="nav-number">9.</span> <span class="nav-text">PMS 及 App 安装过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#PMS简介"><span class="nav-number">9.1.</span> <span class="nav-text">PMS简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#App安装流程"><span class="nav-number">9.2.</span> <span class="nav-text">App安装流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PakageParser"><span class="nav-number">9.3.</span> <span class="nav-text">PakageParser</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ActivityThread-与-PackageManager"><span class="nav-number">9.4.</span> <span class="nav-text">ActivityThread 与 PackageManager</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ClassLoader-家族史"><span class="nav-number">10.</span> <span class="nav-text">ClassLoader 家族史</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MultiDex"><span class="nav-number">11.</span> <span class="nav-text">MultiDex</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Binder-%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">Binder 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AIDL%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">AIDL原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AMS"><span class="nav-number">3.</span> <span class="nav-text">AMS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Activity-%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">Activity 工作原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#App%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8"><span class="nav-number">4.1.</span> <span class="nav-text">App怎么启动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8App%E5%B9%B6%E9%9D%9E%E9%82%A3%E4%B9%88%E7%AE%80%E5%8D%95"><span class="nav-number">4.2.</span> <span class="nav-text">启动App并非那么简单</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Service-%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="nav-number">5.</span> <span class="nav-text">Service 工作原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E6%96%B0%E8%BF%9B%E7%A8%8B%E5%90%AF%E5%8A%A8-service"><span class="nav-number">5.1.</span> <span class="nav-text">在新进程启动 service</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BroadCast-%E5%8E%9F%E7%90%86"><span class="nav-number">6.</span> <span class="nav-text">BroadCast 原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E5%86%8C%E8%BF%87%E7%A8%8B"><span class="nav-number">6.1.</span> <span class="nav-text">注册过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E8%BF%87%E7%A8%8B"><span class="nav-number">6.2.</span> <span class="nav-text">发送过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B9%BF%E6%92%AD%E7%A7%8D%E7%B1%BB"><span class="nav-number">7.</span> <span class="nav-text">广播种类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ContentProvider-%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="nav-number">8.</span> <span class="nav-text">ContentProvider 工作原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8C%BF%E5%90%8D%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98-ASM"><span class="nav-number">8.1.</span> <span class="nav-text">匿名共享内存(ASM)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ContentProvider-%E4%B8%8E-AMS-%E7%9A%84%E9%80%9A%E4%BF%A1"><span class="nav-number">8.2.</span> <span class="nav-text">ContentProvider 与 AMS 的通信</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PMS-%E5%8F%8A-App-%E5%AE%89%E8%A3%85%E8%BF%87%E7%A8%8B"><span class="nav-number">9.</span> <span class="nav-text">PMS 及 App 安装过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#PMS%E7%AE%80%E4%BB%8B"><span class="nav-number">9.1.</span> <span class="nav-text">PMS简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#App%E5%AE%89%E8%A3%85%E6%B5%81%E7%A8%8B"><span class="nav-number">9.2.</span> <span class="nav-text">App安装流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PakageParser"><span class="nav-number">9.3.</span> <span class="nav-text">PakageParser</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ActivityThread-%E4%B8%8E-PackageManager"><span class="nav-number">9.4.</span> <span class="nav-text">ActivityThread 与 PackageManager</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ClassLoader-%E5%AE%B6%E6%97%8F%E5%8F%B2"><span class="nav-number">10.</span> <span class="nav-text">ClassLoader 家族史</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MultiDex"><span class="nav-number">11.</span> <span class="nav-text">MultiDex</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -562,7 +564,7 @@
   </span>
   <span class="author" itemprop="copyrightHolder">glassx</span>
 </div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
   </div>
   <span class="post-meta-divider">|</span>
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
@@ -630,9 +632,15 @@
 
   
   <script src="/lib/anime.min.js"></script>
+
 <script src="/js/utils.js"></script>
+
+
 <script src="/js/schemes/pisces.js"></script>
+
+
 <script src="/js/next-boot.js"></script>
+
 
 
 
@@ -643,7 +651,9 @@
 
   
 <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
-<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
 
 
 

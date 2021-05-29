@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.0.0">
+<meta name="generator" content="Hexo 5.4.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -54,14 +54,16 @@
 </script>
 
   <meta name="description" content="整体逻辑 通过提供的接口调用方法，打算启动  判断AppId是否为空，空则return；否则继续进入     启动跨进程的Service(如果之前没有启动的话)     根据AppId获取小程序配置(可能会在内存中有缓存，通过map存储起来，key为appId，value为配置的Bean)，如果有缓存，则先直接使用缓存进入下一步，同时网络拉取配置供下次启动使用            根据配置判断小">
-<meta name="keywords" content="项目">
 <meta property="og:type" content="article">
 <meta property="og:title" content="小程序实现">
-<meta property="og:url" content="https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2021&#x2F;03&#x2F;13&#x2F;%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0&#x2F;index.html">
+<meta property="og:url" content="https://glassx.gitee.io/2021/03/13/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="整体逻辑 通过提供的接口调用方法，打算启动  判断AppId是否为空，空则return；否则继续进入     启动跨进程的Service(如果之前没有启动的话)     根据AppId获取小程序配置(可能会在内存中有缓存，通过map存储起来，key为appId，value为配置的Bean)，如果有缓存，则先直接使用缓存进入下一步，同时网络拉取配置供下次启动使用            根据配置判断小">
-<meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-03-13T11:44:40.624Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-03-13T11:43:00.000Z">
+<meta property="article:modified_time" content="2021-03-13T11:44:40.624Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="项目">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="https://glassx.gitee.io/2021/03/13/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/">
@@ -426,7 +428,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#整体逻辑"><span class="nav-number">1.</span> <span class="nav-text">整体逻辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#细节问题"><span class="nav-number">2.</span> <span class="nav-text">细节问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#可能的问题"><span class="nav-number">3.</span> <span class="nav-text">可能的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1、为什么要跨进程？多进程带来的问题？"><span class="nav-number">3.1.</span> <span class="nav-text">1、为什么要跨进程？多进程带来的问题？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、为什么要降低主程序内存占用，或者说内存占用过大会怎么样？"><span class="nav-number">3.2.</span> <span class="nav-text">2、为什么要降低主程序内存占用，或者说内存占用过大会怎么样？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3、为什么要用-mainFragment-和-newFragment-来承载小程序？"><span class="nav-number">3.3.</span> <span class="nav-text">3、为什么要用 mainFragment 和 newFragment 来承载小程序？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4、怎样启动newFragment？"><span class="nav-number">3.4.</span> <span class="nav-text">4、怎样启动newFragment？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5、fragment的-commit-和-commitAllowLoss-的理解？"><span class="nav-number">3.5.</span> <span class="nav-text">5、fragment的 commit 和 commitAllowLoss 的理解？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6、AIDLService里面做了什么？"><span class="nav-number">3.6.</span> <span class="nav-text">6、AIDLService里面做了什么？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7、js-用来干什么"><span class="nav-number">3.7.</span> <span class="nav-text">7、js 用来干什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8、aidl-怎么使用，支持哪些数据格式"><span class="nav-number">3.8.</span> <span class="nav-text">8、aidl 怎么使用，支持哪些数据格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9、怎么为小程序-Activity-设置进程"><span class="nav-number">3.9.</span> <span class="nav-text">9、怎么为小程序 Activity 设置进程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#10、MiniAppPreService-中做了什么？为什么是-IntentService-？-IntentService-的作用-？"><span class="nav-number">3.10.</span> <span class="nav-text">10、MiniAppPreService 中做了什么？为什么是 IntentService ？  IntentService 的作用 ？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#11、授权流程怎样的"><span class="nav-number">3.11.</span> <span class="nav-text">11、授权流程怎样的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#12、如何检测是否还是当前用户？"><span class="nav-number">3.12.</span> <span class="nav-text">12、如何检测是否还是当前用户？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#13、如何反馈信息给小程序？"><span class="nav-number">3.13.</span> <span class="nav-text">13、如何反馈信息给小程序？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#14、不是会内存裁剪？提前启动-Service-会有作用吗？"><span class="nav-number">3.14.</span> <span class="nav-text">14、不是会内存裁剪？提前启动 Service 会有作用吗？</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E9%80%BB%E8%BE%91"><span class="nav-number">1.</span> <span class="nav-text">整体逻辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%86%E8%8A%82%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">细节问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%AF%E8%83%BD%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">可能的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E8%B7%A8%E8%BF%9B%E7%A8%8B%EF%BC%9F%E5%A4%9A%E8%BF%9B%E7%A8%8B%E5%B8%A6%E6%9D%A5%E7%9A%84%E9%97%AE%E9%A2%98%EF%BC%9F"><span class="nav-number">3.1.</span> <span class="nav-text">1、为什么要跨进程？多进程带来的问题？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E9%99%8D%E4%BD%8E%E4%B8%BB%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%EF%BC%8C%E6%88%96%E8%80%85%E8%AF%B4%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E8%BF%87%E5%A4%A7%E4%BC%9A%E6%80%8E%E4%B9%88%E6%A0%B7%EF%BC%9F"><span class="nav-number">3.2.</span> <span class="nav-text">2、为什么要降低主程序内存占用，或者说内存占用过大会怎么样？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E7%94%A8-mainFragment-%E5%92%8C-newFragment-%E6%9D%A5%E6%89%BF%E8%BD%BD%E5%B0%8F%E7%A8%8B%E5%BA%8F%EF%BC%9F"><span class="nav-number">3.3.</span> <span class="nav-text">3、为什么要用 mainFragment 和 newFragment 来承载小程序？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4%E3%80%81%E6%80%8E%E6%A0%B7%E5%90%AF%E5%8A%A8newFragment%EF%BC%9F"><span class="nav-number">3.4.</span> <span class="nav-text">4、怎样启动newFragment？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5%E3%80%81fragment%E7%9A%84-commit-%E5%92%8C-commitAllowLoss-%E7%9A%84%E7%90%86%E8%A7%A3%EF%BC%9F"><span class="nav-number">3.5.</span> <span class="nav-text">5、fragment的 commit 和 commitAllowLoss 的理解？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6%E3%80%81AIDLService%E9%87%8C%E9%9D%A2%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">3.6.</span> <span class="nav-text">6、AIDLService里面做了什么？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7%E3%80%81js-%E7%94%A8%E6%9D%A5%E5%B9%B2%E4%BB%80%E4%B9%88"><span class="nav-number">3.7.</span> <span class="nav-text">7、js 用来干什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8%E3%80%81aidl-%E6%80%8E%E4%B9%88%E4%BD%BF%E7%94%A8%EF%BC%8C%E6%94%AF%E6%8C%81%E5%93%AA%E4%BA%9B%E6%95%B0%E6%8D%AE%E6%A0%BC%E5%BC%8F"><span class="nav-number">3.8.</span> <span class="nav-text">8、aidl 怎么使用，支持哪些数据格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9%E3%80%81%E6%80%8E%E4%B9%88%E4%B8%BA%E5%B0%8F%E7%A8%8B%E5%BA%8F-Activity-%E8%AE%BE%E7%BD%AE%E8%BF%9B%E7%A8%8B"><span class="nav-number">3.9.</span> <span class="nav-text">9、怎么为小程序 Activity 设置进程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#10%E3%80%81MiniAppPreService-%E4%B8%AD%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F%E4%B8%BA%E4%BB%80%E4%B9%88%E6%98%AF-IntentService-%EF%BC%9F-IntentService-%E7%9A%84%E4%BD%9C%E7%94%A8-%EF%BC%9F"><span class="nav-number">3.10.</span> <span class="nav-text">10、MiniAppPreService 中做了什么？为什么是 IntentService ？  IntentService 的作用 ？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#11%E3%80%81%E6%8E%88%E6%9D%83%E6%B5%81%E7%A8%8B%E6%80%8E%E6%A0%B7%E7%9A%84"><span class="nav-number">3.11.</span> <span class="nav-text">11、授权流程怎样的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#12%E3%80%81%E5%A6%82%E4%BD%95%E6%A3%80%E6%B5%8B%E6%98%AF%E5%90%A6%E8%BF%98%E6%98%AF%E5%BD%93%E5%89%8D%E7%94%A8%E6%88%B7%EF%BC%9F"><span class="nav-number">3.12.</span> <span class="nav-text">12、如何检测是否还是当前用户？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#13%E3%80%81%E5%A6%82%E4%BD%95%E5%8F%8D%E9%A6%88%E4%BF%A1%E6%81%AF%E7%BB%99%E5%B0%8F%E7%A8%8B%E5%BA%8F%EF%BC%9F"><span class="nav-number">3.13.</span> <span class="nav-text">13、如何反馈信息给小程序？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#14%E3%80%81%E4%B8%8D%E6%98%AF%E4%BC%9A%E5%86%85%E5%AD%98%E8%A3%81%E5%89%AA%EF%BC%9F%E6%8F%90%E5%89%8D%E5%90%AF%E5%8A%A8-Service-%E4%BC%9A%E6%9C%89%E4%BD%9C%E7%94%A8%E5%90%97%EF%BC%9F"><span class="nav-number">3.14.</span> <span class="nav-text">14、不是会内存裁剪？提前启动 Service 会有作用吗？</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -505,7 +507,7 @@
   </span>
   <span class="author" itemprop="copyrightHolder">glassx</span>
 </div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.0.0
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
   </div>
   <span class="post-meta-divider">|</span>
   <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
@@ -573,9 +575,15 @@
 
   
   <script src="/lib/anime.min.js"></script>
+
 <script src="/js/utils.js"></script>
+
+
 <script src="/js/schemes/pisces.js"></script>
+
+
 <script src="/js/next-boot.js"></script>
+
 
 
 
@@ -586,7 +594,9 @@
 
   
 <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
-<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script><script src="/js/algolia-search.js"></script>
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
 
 
 
