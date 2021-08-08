@@ -276,15 +276,111 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>提到IPC的使用场景就必须提到多进程，如果只有一个进程，又何必使用进程间通信。多进程的情况分为两种：第一种是应用本身需要采用多进程模式实现（比如通过多个进程来获取多份内存空间）；第二种是当前应用需要向其他应用获取数据，由于是两个应用，因此必须采用跨进程通信方式。</p><h2 id="Android中的多进程模式"><a href="#Android中的多进程模式" class="headerlink" title="Android中的多进程模式"></a>Android中的多进程模式</h2><p>我们不讨论两个应用之间的多进程情况。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+          <html><head></head><body></body></html><html><head></head><body><p>提到IPC的使用场景就必须提到多进程，如果只有一个进程，又何必使用进程间通信。多进程的情况分为两种：第一种是应用本身需要采用多进程模式实现（比如通过多个进程来获取多份内存空间）；第二种是当前应用需要向其他应用获取数据，由于是两个应用，因此必须采用跨进程通信方式。</p>
+<h2 id="Android中的多进程模式"><a href="#Android中的多进程模式" class="headerlink" title="Android中的多进程模式"></a>Android中的多进程模式</h2><p>我们不讨论两个应用之间的多进程情况。</p>
+<h3 id="1、开启多进程"><a href="#1、开启多进程" class="headerlink" title="1、开启多进程"></a>1、开启多进程</h3><p>，Android中使用多进程有两种方法：第一种是给四大组件在AndroidManifest中指定 android:process 属性；第二种是非常规方式，通过JNI在native层去fork一个新的进程。第二种情况属于特殊情况，暂时不考虑。</p>
+<h3 id="2、多线程模式的运行机制"><a href="#2、多线程模式的运行机制" class="headerlink" title="2、多线程模式的运行机制"></a>2、多线程模式的运行机制</h3><p>如果用一句话形容多进程，那就是：“当应用开启了多进程以后，各种奇怪的现象都出现了”，开启多线程只需要给四大组件指定 android:process 属性，但是是否正常运行就是另外一回事了。看个例子：</p>
+<blockquote>
+<p>有 MainActivity 和 SecondActivity，其中 SecondActivity 指定运行在一个新的进程中，并且项目还新建一个 UserManager 类，类中有个public 的静态变量：</p>
+</blockquote>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UserManager</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> sUserId = <span class="number">1</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>在 MainActivity 的 onCreate 中把 sUserId 的值改为2，打印sUserId，之后再启动 SecondActivity ，在 SecondActivity 中打印 sUserId 。</p>
+</blockquote>
+<p><strong>可以发现在 MainActivity 中打印的值是2，在 SecondActivity 中打印的值是 1 ，看到这里，大家应该明白了多进程带来的问题，绝非只是指定一个 android:process 这么简单</strong>。</p>
+<p><strong>分析：</strong>我们知道，Android 系统为每个进程都分配一个独立的虚拟机，不同的虚拟机在内存分配上有不同的地址空间，这就导致在不同的虚拟机中访问同一个类的对象会产生<strong>多份副本</strong>。拿上面的例子来说，两个进程中都存在一个 UserManager 类，并且这两个类是互相不干扰的，在一个进程中修改 sUserId 的值只会影响当前进程，对其他进程不会造成任何影响。</p>
+<p>通过以上可以知道，运行在不同进程中的四大组件，只要他们之间需要通过内存来共享数据，都会共享失败，这也是多进程所带来的主要影响。一般来说，使用多进程会造成如下几个方面的问题：</p>
+<ul>
+<li>静态成员和单例模式完全失效  </li>
+</ul>
+<blockquote>
+<p>上面做了分析</p>
+</blockquote>
+<ul>
+<li>线程同步机制完全失效 </li>
+</ul>
+<blockquote>
+<p>既然都不是一块内存了，那么不管是锁对象还是锁全局类都无法保证线程同步，因为不同进程锁的不是同一个对象</p>
+</blockquote>
+<ul>
+<li>SharedPreference 的可靠性下降  </li>
+</ul>
+<blockquote>
+<p>是因为 SharedPreference 不支持两个进程同时去执行写操作，否则会导致可能的数据丢失（因其本质是通过读写xml文件来实现的）</p>
+</blockquote>
+<ul>
+<li>Application 会多次创建  </li>
+</ul>
+<blockquote>
+<p>这个问题是显而易见的，由于系统要在创建新的进程同时分配独立的虚拟机，所以这个过程其实就是启动一个应用的过程，因此相当于系统又把应用重新启动了一遍，自然就创建了新的Application。还可以这么理解，运行在同一个进程中的组件是属于同一个虚拟机和同一个Application的；同理，运行在不同进程中的组件是属于两个不同的虚拟机和Application。</p>
+</blockquote>
+<h2 id="IPC-基础概念介绍"><a href="#IPC-基础概念介绍" class="headerlink" title="IPC 基础概念介绍"></a>IPC 基础概念介绍</h2><p>IPC 中的基础概念包括3方面内容： Serializable 接口、Parcelable接口、Binder。</p>
+<h3 id="1、Serializable-接口"><a href="#1、Serializable-接口" class="headerlink" title="1、Serializable 接口"></a>1、Serializable 接口</h3><p>Serializable 是Java提供的一个空的序列化接口，为对象提标准的序列化和反序列化操作。使用 Serializable 实现序列化非常简单，只需要类实现 Serializable 接口，并且在类的声明中指定一个类似下面的标识：</p>
+<blockquote>
+<p>private static final long serialVersionUID = 12345L</p>
+</blockquote>
+<p>实际上，这个 serialVersionUID 也不是必需的，因为serialVersionUID 的机制是这样的： 序列化时，系统会把当前类的 serialVersionUID 写入序列化的文件中；当反序列化的时候，会去检测文件中的 serialVersionUID 是否和当前类的 serialVersionUID 一致，如果一致说明序列化的类版本和当前类的版本是相同的，就可以成功反序列化；否则的话，说明当前类和序列化的类相比发生了某些变换，就无法正常反序列化。以下例子说明 Serializable 的使用：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//序列化的类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">User</span> <span class="keyword">implements</span> <span class="title">Serializable</span></span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = <span class="number">12345L</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">int</span> id;</span><br><span class="line">    <span class="keyword">public</span> String userName;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**********使用*****************/</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//序列化</span></span><br><span class="line">User user = <span class="keyword">new</span> User(<span class="number">12</span>,<span class="string">"tom"</span>);</span><br><span class="line">ObjectOutputStream out = <span class="keyword">new</span> ObjectOutputStream(<span class="keyword">new</span> FileOutputStream(<span class="string">"cache.txt"</span>));</span><br><span class="line">out.writeObject(user);</span><br><span class="line">out.close();</span><br><span class="line"></span><br><span class="line"><span class="comment">//反序列化过程</span></span><br><span class="line">ObjectInputStream in = <span class="keyword">new</span> ObjectInputStream(<span class="keyword">new</span> FileInputStream(<span class="string">"cache.txt"</span>));</span><br><span class="line">User newUser = (User)in.readObject();</span><br><span class="line">in.close();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>另外，系统默认的序列化过程也是可以改变的，通过重写 writeObject 和 readObject 方法即可，只不过大部分情况下我们无需去重写这两个方法。</p>
+<h3 id="2、Parcelable-接口"><a href="#2、Parcelable-接口" class="headerlink" title="2、Parcelable 接口"></a>2、Parcelable 接口</h3><p>Parcelable 也是一个接口，只要实现这个接口，类的对象就可以实现序列化并通过 Intent 和 Binder 传递。</p>
+<p>具体使用方法可以查看<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/os/Parcelable.html">官方文档</a></p>
+<p>既然 Parcelable 和 Serializable 都能实现序列化并且都可用于 Intent 间的数据传递，那如何取舍呢？Serializable 是Java中的序列化接口，序列化和反序列化需要大量I/O操作；而Parcelable 是 Android 中的序列化方式，主要用在内存序列化上，使用起来稍显麻烦，但是效率高，所以这是 Android 官方推荐的序列化方式。综上所述，将对象序列化存储到设备或者通过网络传输时使用 Serializable ，否则使用 Parcelable 。</p>
+<h3 id="3、Binder"><a href="#3、Binder" class="headerlink" title="3、Binder"></a>3、Binder</h3><p>Binder 是 Android 中的一种 IPC 方式，还可以理解为一种虚拟的物理设备，它的设备驱动是 dev/binder。</p>
+<h2 id="Android-中的-IPC-方式"><a href="#Android-中的-IPC-方式" class="headerlink" title="Android 中的 IPC 方式"></a>Android 中的 IPC 方式</h2><h3 id="使用Bundle"><a href="#使用Bundle" class="headerlink" title="使用Bundle"></a>使用Bundle</h3><p>由于Bundle 实现了 Parcelable 接口，所以它可以方便地再不同的进程间传输，基于这一点，当我们在一个进程中启动了另一个进程的 Activity、Service 和 Receiver，我们就可以在Bundle 中附加我们需要传给其他进程的信息，并通过Intent 发送出去，这是一种最简单的进程间通信方式。</p>
+<h3 id="使用文件共享"><a href="#使用文件共享" class="headerlink" title="使用文件共享"></a>使用文件共享</h3><p>共享文件是一种不错的进程间通讯方式，适合在对数据同步要求不高的进程间通信。当然，SharedPreferences 是个特例，由于系统对它的读写会有一定的缓存策略，即在内存中会有一份 SharedPreferences 文件的缓存，因此在多进程模式下，面对高并发的的读写会有很大几率丢失数据，因此不建议在进程间通信中使用 SharedPreferences。</p>
+<h3 id="使用-Messenger"><a href="#使用-Messenger" class="headerlink" title="使用 Messenger"></a>使用 Messenger</h3><p>顾名思义可以翻译成信使，通过它可以在不同的进程中传递 Message 对象,它是轻量级的 IPC 方案，底层实现是 AIDL 。Messenger 只是一串行的方式处理客户端发来的消息，如果大量的消息同时发送到服务端，服务端仍然只能一个个处理。具体可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/os/Messenger">官方文档</a></p>
+<h3 id="使用-AIDL"><a href="#使用-AIDL" class="headerlink" title="使用 AIDL"></a>使用 AIDL</h3><p>由于 Messenger 服务端只能串行处理，所以可以使用 AIDL 来实现跨进程调用。具体内容可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/guide/components/aidl">官方文档</a></p>
+<h3 id="使用-ContentProvider"><a href="#使用-ContentProvider" class="headerlink" title="使用 ContentProvider"></a>使用 ContentProvider</h3><p>这是Android 中提供的专门用于不同应用建进行数据共享的方式。</p>
+<h3 id="使用-Socket"><a href="#使用-Socket" class="headerlink" title="使用 Socket"></a>使用 Socket</h3><p>Socket 是网络通信中的概念，也称为“套接字”，<strong>它分为流式套接字和用户数据报套接字两种，分别对应于网络的传输控制层中的TCP和UDP协议</strong>。</p>
+<h2 id="选择合适的-IPC-方式"><a href="#选择合适的-IPC-方式" class="headerlink" title="选择合适的 IPC 方式"></a>选择合适的 IPC 方式</h2><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Bundle</td>
+<td>简单易用</td>
+<td>只能传输Bundle支持的数据类型</td>
+<td>四大组件之间的通信</td>
+</tr>
+<tr>
+<td>文件共享</td>
+<td>简单易用</td>
+<td>不适合高并发</td>
+<td>无并发，数据实时性要求不高</td>
+</tr>
+<tr>
+<td>AIDL</td>
+<td>功能强大，支持一对多，支持实时</td>
+<td>使用复杂</td>
+<td>一对多通信且有RPC需求</td>
+</tr>
+<tr>
+<td>Messenger</td>
+<td>一对多串行通信，支持实时</td>
+<td>高并发困难，不支持RPC，只能传输Bundle支持的数据</td>
+<td>低并发的一对多通信</td>
+</tr>
+<tr>
+<td>ContentProvider</td>
+<td>数据源访问功能强大</td>
+<td>理解为受约束的AIDL，主要提供数据源的 CRUD 操作</td>
+<td>一对多的进程间数据共享</td>
+</tr>
+<tr>
+<td>Socket</td>
+<td>支持一对多并发实时通信，支持字节流</td>
+<td>实现繁琐</td>
+<td>网络数据交换</td>
+</tr>
+</tbody></table>
+</body></html>
       
     </div>
 
@@ -359,15 +455,87 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="Activity-的生命周期全面分析"><a href="#Activity-的生命周期全面分析" class="headerlink" title="Activity 的生命周期全面分析"></a>Activity 的生命周期全面分析</h2><p>本节将分为两部分内容，一部分是典型情况下的生命周期，一部分是异常情况下的生命周期（比如被系统回收或者由于当前设备Configuration 发生改变而导致 Activity 被销毁重建）。</p><h3 id="一、典型情况下的生命周期分析"><a href="#一、典型情况下的生命周期分析" class="headerlink" title="一、典型情况下的生命周期分析"></a>一、典型情况下的生命周期分析</h3><p>正常情况下，Activity 会经历如下生命周期：</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC1%E7%AB%A0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Activity-的生命周期全面分析"><a href="#Activity-的生命周期全面分析" class="headerlink" title="Activity 的生命周期全面分析"></a>Activity 的生命周期全面分析</h2><p>本节将分为两部分内容，一部分是典型情况下的生命周期，一部分是异常情况下的生命周期（比如被系统回收或者由于当前设备Configuration 发生改变而导致 Activity 被销毁重建）。</p>
+<h3 id="一、典型情况下的生命周期分析"><a href="#一、典型情况下的生命周期分析" class="headerlink" title="一、典型情况下的生命周期分析"></a>一、典型情况下的生命周期分析</h3><p>正常情况下，Activity 会经历如下生命周期：</p>
+<ol>
+<li>onCreate ： 表示Activity 正在创建，这是生命周期第一个方法。  </li>
+<li>onRestart ： 表示Activity 正在重新启动。一般情况下，当前Activity 从不可见重新变为可见时，onRestart 就会被调用。    </li>
+<li>onStart ： 表示Activity 正在被启动，这时候 Activity 已经可见了，但是还没出现在前台，无法和用户交互。<strong>可以理解为 Activity 已经显示出来了，但是我们还看不到</strong>。  </li>
+<li>onResume ： 表示 Activity 已经可见了，并且出现在前台可以交互。  </li>
+<li>onPause： 表示 Activity 正在停止，正常情况下，紧接着 onStop 会被调用；在特殊情况下，如果这个时候快速地再回到当前 Activity ，那么 onResume 将会被调用。此时可以做一些存储数据、停止动画等工作，但是注意不能太耗时，<strong>因为onPause必须先执行完，新Acitivty 的 onResume 才会执行</strong>。    </li>
+<li>onStop ： 表示 Activity 即将停止，可以做一些稍微重量级的回收工作，同样不能太耗时。  </li>
+<li>onDestroy： 表示 Activity 即将被销毁，这是Activity 生命周期中的最后一个回调，我们可以做一些回收工作和最终的资源释放。  </li>
+</ol>
+<p>以下再针对 Activity 的生命周期具体说明：  </p>
+<ul>
+<li>针对特定的Activity，第一次启动回调如下： onCreate-&gt;onStart-&gt;onResume  </li>
+<li>打开新的Activity 或者(按Home键)回到桌面的时候，回调 onPause-&gt;onStop ；这里有种特殊情况，打开的新Activity 如果是透明主题（意味着当前Activity还是可见的），那么当前Activity 不会回调 onStop 。  </li>
+<li>当用于再次回到原来的 Activity 时，回调 onRestart-&gt;onStart-&gt;onResume  </li>
+<li>当用户按返回键返回上一个页面时，回调 onPause-&gt;onStop-&gt;onDestroy  </li>
+<li>从整个生命周期来看，<strong>onCreate与onDestroy是配对的，分别标识着Activity的创建与销毁；onStart与onStop是配对的，标识着Activity是否可见；onResume 与 onPause 是配对的，标识着Activity是否在前台</strong>。 </li>
+</ul>
+<p>一个问题：当前 Activity 标识为 A，启动一个新的Activity 标识为 B，那么B的onResume 和 A 的onPause 哪个先执行？</p>
+<blockquote>
+<p>由上面的描述可知是限制性A的 onPause，再执行 B 的onResume ，具体看源码，<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/app/Activity">官方文档</a>也是这么解释(<strong>Always followed by onPause()</strong>)。 </p>
+</blockquote>
+<h3 id="二、异常情况下的生命周期分析"><a href="#二、异常情况下的生命周期分析" class="headerlink" title="二、异常情况下的生命周期分析"></a>二、异常情况下的生命周期分析</h3><h4 id="1、资源相关的系统配置发生改变导致Activity被杀死并重建"><a href="#1、资源相关的系统配置发生改变导致Activity被杀死并重建" class="headerlink" title="1、资源相关的系统配置发生改变导致Activity被杀死并重建"></a>1、资源相关的系统配置发生改变导致Activity被杀死并重建</h4><p>如果没有做特殊处理，当横竖屏切换的时候，由于系统配置发生了改变，Activity 会加载不同的资源（比如横竖屏加载两张不同图片），此时 Activity 会被销毁并且重新创建。由于 Acitivity 是在异常情况下终止的，因此在销毁Activity的时候，<strong>确切来说是在onStop之前（但是跟onPause没有顺序关系，有可能在其之前，也可能在其之后）会调用 onSaveInstanceState 来保存当前 Activity 状态</strong>；  </p>
+<p>Activity 被重新创建后，会把销毁时 onSaveInstanceState 方法保存的Bundle对象作为参数传给 onCreate 方法和 onRestoreInstanceState 方法，因此可以从这两个方法恢复之前保存的数据。<strong>从时序上来说，onRestoreInstanceState 调用时机在 onStart 之后。</strong></p>
+<blockquote>
+<p>这两个方法恢复数据的区别是：onRestoreInstanceState 一旦被调用，其参数 savedInstanceState 是一定有值的，我们不需要额外地判空；而 onCreate 中的数据是可能为空的，官方文档建议采用 onRestoreInstanceState 去恢复数据。</p>
+</blockquote>
+<p>如果没有覆写的话，onSaveInstanceState 和 onRestoreInstanceState 方法中，系统会自动为我们做一定的恢复工作。</p>
+<h4 id="2、资源内存不足导致低优先级Activity被杀死"><a href="#2、资源内存不足导致低优先级Activity被杀死" class="headerlink" title="2、资源内存不足导致低优先级Activity被杀死"></a>2、资源内存不足导致低优先级Activity被杀死</h4><p>Activity 按照优先级从高到低可以分为如下三种：</p>
+<p>（1）前台Activity——正在和用户交互的Activity，优先级最高<br>（2）可见但非前台Activity——比如Activity中弹出了dialog，导致Activity可见但是位于后台无法和用户直接交互。<br>（3）后台Activity——已经被暂停的的Activity，优先级最低。  </p>
+<p>我们知道，当系统配置发生改变时，Activity 会被销毁并重新创建，当然我们也可以通过给 Activity 指定configChanges 属性来阻止销毁重建：</p>
+<blockquote>
+<p>android:configChanges=”orientation”</p>
+</blockquote>
+<p>当然这个属性可以配置的项目还有很多，比如切换系统语言、使用了新字号、界面模式改变（比如 是否开启/关闭夜间模式）。</p>
+<h2 id="Activity-的启动模式"><a href="#Activity-的启动模式" class="headerlink" title="Activity 的启动模式"></a>Activity 的启动模式</h2><ul>
+<li>standard： 标准模式。不复用，每次请求都创建新实例，并且就运行在启动它的那个Activity所在的栈。    </li>
+<li>singleTop： 栈顶复用模式 。如果实例位于任务栈的栈顶就复用，复用时调用 onNewIntent方法，否则就创建新的实例。       </li>
+<li>singleTask： 栈内复用模式。当前栈内没有实例，则创建实例放入栈中；如果实例在当前栈内，则复用，复用时调用 onNewIntent方法，并把它之上的Activity出栈。  </li>
+<li>singleInstance： 单例模式。<strong>只能单独位于一个任务栈中</strong>，只要这个实例存在，后续的请求均不会创建新的Activity。复用时调用 onNewIntent方法。  </li>
+</ul>
+<p>在使用 ApplicationContext 启动standard 模式的Activity时会报错：</p>
+<blockquote>
+<p>Callking startActivity from outside of an Activity context requires the FLAG_ACTIVITY_NEW_TASK flag</p>
+</blockquote>
+<p>这是因为standard模式的Activity 默认会进入启动它的Activity所属的任务栈中，由于非Activity类型的Context 没有所谓的任务栈，所以会报错。解决这个问题的方法是为待启动的Activity指定 FLAG_ACTIVITY_NEW_TASK 标记，这样启动的时候会为它创建一个新的任务栈（体会下，这时候实际上是以singleTask模式启动的）</p>
+<h3 id="参考其他博客的启动模式的原理"><a href="#参考其他博客的启动模式的原理" class="headerlink" title="参考其他博客的启动模式的原理"></a>参考其他博客的启动模式的原理</h3><p>点击launcher 的startactivity 会调用到Instrumentation的execStartActivity，之后交给AMS 来处理启动操作，之后调用 ActivityStackSupervisor 的 startActivityMayWait 方来启动，而ActivityStackSupervisor 是管理Activity堆栈的类</p>
+<p>另外提一下，Activity 在AMS中的形式是 ActivityRecord，task在AMS 中的形式是 TaskRecord，进程在 AMS 中的管理形式为 ProcessRecord</p>
+<p>判断启动模式，根据当前的Activity 和 要启动的Activity 的启动模式，根据相应的启动模式设置launchFlags</p>
+<p>在Android 5.0上 在 ActivityStackSupervisor 类的startActivityUncheckedLocked  里面判断launchmode</p>
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/09365022adac">简书的博客上的内容</a></p>
+</blockquote>
+<h3 id="Activity-的Flags"><a href="#Activity-的Flags" class="headerlink" title="Activity 的Flags"></a>Activity 的Flags</h3><p>Activity 的Flags很多，这里分析比较常用的几个:</p>
+<ul>
+<li>FLAG_ ACTIVITY_ NEW_ TASK</li>
+</ul>
+<blockquote>
+<p>为Activity 指定singleTask启动模式，其效果和在XML中指定 singleTask 启动模式相同</p>
+</blockquote>
+<ul>
+<li>FLAG_ ACTIVITY_ SINGLE_ TOP</li>
+</ul>
+<blockquote>
+<p>为Activity 指定 singleTop 启动模式，其效果和在XML中指定 singleTop 启动模式相同</p>
+</blockquote>
+<ul>
+<li>FLAG_ ACTIVITY_ CLEAR_ TOP</li>
+</ul>
+<blockquote>
+<p>具有此标记的Activity，当它启动时，在同一个任务栈中所有位于它上面的Activity都要出栈，这个标记为一般会和FLAG_ACTIVITY_SINGLE_TOP标记位一起出现。由前面的分析可知，singleTask启动模式默认具有此标记位效果。</p>
+</blockquote>
+<ul>
+<li>FLAG_ ACTIVITY_ EXCLUDE_ FROM_ RECENTS</li>
+</ul>
+<blockquote>
+<p>具有这个标记位的Activity不会出现在历史Activity列表中，当某些情况下我们不希望用户通过历史列表回到我们的Activity的时候，这个标记比较有用。这个标记等同于xml中指定Activity 的属性 android:excludeFromRecents = “true”</p>
+</blockquote>
+<h4 id="IntentFilter-的匹配规则"><a href="#IntentFilter-的匹配规则" class="headerlink" title="IntentFilter 的匹配规则"></a>IntentFilter 的匹配规则</h4><p>略</p>
+</body></html>
       
     </div>
 
@@ -442,13 +610,16 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="进程间通信方式"><a href="#进程间通信方式" class="headerlink" title="进程间通信方式"></a>进程间通信方式</h2><details>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="进程间通信方式"><a href="#进程间通信方式" class="headerlink" title="进程间通信方式"></a>进程间通信方式</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <p>别漏了BroadCastReceiver</p>
-</details><blockquote>
+</details>
+
+<blockquote>
 <p>参考链接：<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">ipc机制</a></p>
-</blockquote><h2 id="零散的知识点"><a href="#零散的知识点" class="headerlink" title="零散的知识点"></a>零散的知识点</h2><details>
+</blockquote>
+<h2 id="零散的知识点"><a href="#零散的知识点" class="headerlink" title="零散的知识点"></a>零散的知识点</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <ul>
@@ -674,6 +845,7 @@
 <p>归并和快排的平均时间复杂度差不多，但是比快排最差情况要好。但是归并使用的空间比较多，因此一般情况下选择快排               </p>
 <p>不稳定的排序：希尔、堆、快排</p>
 </details>
+</body></html>
       
     </div>
 
@@ -748,15 +920,82 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="对象已死吗"><a href="#对象已死吗" class="headerlink" title="对象已死吗"></a>对象已死吗</h2><h3 id="引用计数法"><a href="#引用计数法" class="headerlink" title="引用计数法"></a>引用计数法</h3><p>很多教科书判断对象是否存活的算法是这样的：给对象中添加一个引用计数器，每当一个地方引用它时，计数器值就加1；当引用失效时，计数器值就减1；任何时刻计数器为0的对象就是不可能再被使用的。客观地说，引用计数法的实现简单，但它很难解决对象之间相互循环引用的问题，所以，主流实现中，并不使用这种方式。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+          <html><head></head><body></body></html><html><head></head><body><h2 id="对象已死吗"><a href="#对象已死吗" class="headerlink" title="对象已死吗"></a>对象已死吗</h2><h3 id="引用计数法"><a href="#引用计数法" class="headerlink" title="引用计数法"></a>引用计数法</h3><p>很多教科书判断对象是否存活的算法是这样的：给对象中添加一个引用计数器，每当一个地方引用它时，计数器值就加1；当引用失效时，计数器值就减1；任何时刻计数器为0的对象就是不可能再被使用的。客观地说，引用计数法的实现简单，但它很难解决对象之间相互循环引用的问题，所以，主流实现中，并不使用这种方式。</p>
+<h3 id="可达性分析"><a href="#可达性分析" class="headerlink" title="可达性分析"></a>可达性分析</h3><p>在主流实现中，都是通过可达性分析来判定对象是否存活。这个算法的基本思路就是通过<strong>一系列称为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索走过的路径称为“引用链”，当一个对象到GC Roots 没有任何引用链相连时，则证明此对象是不可用的</strong>。在Java语言中，可以作为 GC Roots 的对象包括下面几种：</p>
+<ul>
+<li>虚拟机栈（栈帧中的本地变量表）中引用的对象。  </li>
+<li>本地方法栈中JNI引用的对象。  </li>
+<li>方法区中类静态属性引用的对象。  </li>
+<li>方法区中常量引用的对象。  </li>
+</ul>
+<h3 id="再谈引用"><a href="#再谈引用" class="headerlink" title="再谈引用"></a>再谈引用</h3><p>JDK 1.2 以前，对象只有引用和被引用两种状态，未能描述那些“食之无味，弃之可惜”的对象，我们希望描述这样一类对象：当内存还足够时，则能保留在内存之中；如果内存空间在GC后还是非常紧张，则可以抛弃这些对象。因此，JDK 1.2以后对引用的概念进行扩充，分为：</p>
+<ul>
+<li><p>强引用。代码中普遍存在的，类似于 Object obj = new Object() ，只要强引用还在，垃圾收集器永远不会回收被引用的对象。</p>
+</li>
+<li><p>软引用。是用来描述一些还有用，但是并非必需的对象，在系统将要发生内存溢出的异常之前，将会把这些对象列进回收范围之中进行第二次回收，如果这次回收还没有足够的内存，才会抛出内存溢出异常。</p>
+</li>
+<li><p>弱引用。是用来描述非必需对象的，但是强度比软引用更弱一些，被弱引用关联的对象只能生存到下一次GC发生之前。当GC工作时，无论当前内存是否足够，都会回收掉只被弱引用关联的对象。</p>
+</li>
+<li><p>虚引用。是最弱的一种引用关系，不会对对象的生存时间构成影响，也无法通过虚引用获得对象实例。为对象设置虚引用的唯一目的就是能在这个对象被收集器回收时收到一个系统通知。</p>
+</li>
+</ul>
+<h3 id="生存还是死亡"><a href="#生存还是死亡" class="headerlink" title="生存还是死亡"></a>生存还是死亡</h3><p>即使在可达性分析算法中不可达的对象，也并非“非死不可”的。要真正宣告一个对象的死亡，至少要经历两次标记过程：如果对象在可达性分析后发现没有与GC Roots 相连接的引用链，那么它会被第一次标记，并进行筛选，筛选的条件是此对象是否有必要执行 finalize() 方法，当对象没有覆写 finalize() 方法，或者 finalize() 方法已经被虚拟机调用过，则都没有必要执行；</p>
+<p>如果对象判定有必要执行 finalize() 方法，则对象会被放入F-Queue队列中，稍后由低优先级的线程去触发 执行finalize() 方法，但不会承诺等待它运行结束。这样做的原因是防止 finalize 方法过于缓慢或者死循环。finalize() 方法是对象套多死亡命运的最后一次机会，因为稍后GC将对F-Queue中的对象进行第二次标记，如果对象要在finalize 中拯救自己————只要重新与某个引用链上的任意一个对象关联即可，那么在第二次标记的时候它将被移除出“即将回收”的集合；如果这时候对象还没逃脱，那它就会真的被回收了。</p>
+<p>说明这一过程的示例代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FinalizeEscapeGC</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> FinalizeEscapeGC SAVE_HOOK = <span class="keyword">null</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">isAlive</span><span class="params">()</span></span>{</span><br><span class="line">        System.out.println(<span class="string">"yes,i am still alive"</span>);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> finalize（） <span class="keyword">throws</span> Throwable{</span><br><span class="line">        <span class="keyword">super</span>.finalize();</span><br><span class="line">        System.out.println(<span class="string">"finalize method executed"</span>);</span><br><span class="line">        FinalizeEscapeGc. SAVE_HOOK = <span class="keyword">this</span>;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Throwable</span>{</span><br><span class="line">        SAVE_HOOK = <span class="keyword">new</span> FinalizeEscapeGC();</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//对象第一次成功拯救自己</span></span><br><span class="line">        SAVE_HOOK = <span class="keyword">null</span>;</span><br><span class="line">        System.gc();</span><br><span class="line">        <span class="comment">//因为finalize方法优先级很低，所以暂停0.5秒等待它</span></span><br><span class="line">        Thread.sleep(<span class="number">500</span>);</span><br><span class="line">        <span class="keyword">if</span>(SAVE_HOOK != <span class="keyword">null</span>){</span><br><span class="line">            SAVE_HOOK.isAlive();</span><br><span class="line">        }<span class="keyword">else</span>{</span><br><span class="line">            System.out.println(<span class="string">"no,i am dead"</span>);</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        </span><br><span class="line">        <span class="comment">//下面这段代码与上面的完全相同，但是这次自救却失败了</span></span><br><span class="line">        SAVE_HOOK = <span class="keyword">null</span>;</span><br><span class="line">        System.gc();</span><br><span class="line">        <span class="comment">//因为finalize方法优先级很低，所以暂停0.5秒等待它</span></span><br><span class="line">        Thread.sleep(<span class="number">500</span>);</span><br><span class="line">        <span class="keyword">if</span>(SAVE_HOOK != <span class="keyword">null</span>){</span><br><span class="line">            SAVE_HOOK.isAlive();</span><br><span class="line">        }<span class="keyword">else</span>{</span><br><span class="line">            System.out.println(<span class="string">"no,i am dead"</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>运行结果：</p>
+<blockquote>
+<p>finalize method executed<br>yes,i am still alive<br>no,i am dead  </p>
+</blockquote>
+<p>从结果可以看出，SAVE_HOOK 对象的 finalize 方法确实被GC收集器触发过，并且收集前成功逃脱。但两段完全一样的代码，第二次却被回收了，因为finalize 方法只会被自动调用一次，因此第二次不执行了，所以自救失败。</p>
+<p>有些教材上认为 finalize 中适合做“关闭外部资源”之类的工作，在了解以上机制之后，可以认为这完全是一种自我安慰，finalize 能做的，try-finally 或其他方法能做得更好，更及时，所以完全可以忘记这个方法存在（它也仅仅只是Java诞生时讨好C/C++程序员的一个妥协）。</p>
+<h2 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h2><h3 id="标记-清除算法"><a href="#标记-清除算法" class="headerlink" title="标记-清除算法"></a>标记-清除算法</h3><p>最基础的收集算法是 标记-清除(Mark-Sweep) 算法，它分为“标记”和“清除”两个阶段：首先标记出需要回收的对象，在标记完成后统一回收被标记的对象。它的主要不足有两个：一是效率问题，标记和清除效率都不高；二是清除后会产生大量不连续的内存碎片。</p>
+<h3 id="复制算法"><a href="#复制算法" class="headerlink" title="复制算法"></a>复制算法</h3><p>为了解决效率问题，复制算法出现了。它将可用内存分为大小相等的两块，每次只使用其中一块，当这块内存用完了，就将还存活的对象复制到另一块上，然后把当前内存空间一次清理掉。这样每次都是对整个半区回收，内存分配也不会存在碎片。缺点是可用内存缩小了一半，代价太高。</p>
+<blockquote>
+<p>现在商业虚拟机采用这种方式回收新生代。一般将内存分为较大的 Eden 和两块较小的 Survivor 空间（HotSpot中 Eden 与 Survivor大小比例为 8：1），每次使用Eden 和其中一块 Survivor，当内存回收时，将Eden和Survivor中还存活的对象一次性复制到另一块Survivor，最后清理Eden和刚才用过的Survivor空间，因此，每次只有10%的内存“被浪费”。当然这是基于统计新生代的对象生命周期都很短，差不多只有10%的对象会存活，此外，如果超出10%的存活对象，Survivor空间不够时，需要依赖老年代的空间提供担保（Survivor空间存不下的对象直接通过担保机制进入老年代），这是该分配方式能够运行下去的保障。</p>
+</blockquote>
+<p>复制收集算法在对象存活率较高时要进行较多的复制操作，效率将会变低，更关键的是，如果不想浪费50%的空间，就需要有额外的空间进行担保，防止对象100%存活的极端情况。</p>
+<h3 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h3><p>根据老年代特点，有人提出另外一种<strong>标记-整理(Mark-Compact)算法</strong>，标记过程仍与“标记-清除”算法一样，但后续不是直接清理可回收对象，而是所有存活的对象都向一端移动，然后直接清理掉端边界以外的内存。标记整理算法的示意图如下：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E6%A0%87%E8%AE%B0-%E6%95%B4%E7%90%86%E7%AE%97%E6%B3%95.png" alt="标记-整理算法"></p>
+<p>关于怎么个移动法，书上没有说明，这里个人做个推测：</p>
+<blockquote>
+<p>1、整个老年代的内存划分为 A 和 B 两个区域，区域 A 的大小是所有还存活对象的总大小，区域 B 大小是是剩余空间。<br>2、按顺序在 A 中找到第一个还存活对象，将它移动到 A 空间的最前端，接下来找第二个还存活的对象，将其移动到第一个对象的后面<br>3、以此类推，即使存活的对象在 B 中也一样顺序复制到A中，直至最后填满A空间，之后清除 B 空间。</p>
+</blockquote>
+<h3 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h3><p>商业虚拟机都采用“分代收集”，根据各个年代的特点分别采用适当的收集算法：</p>
+<ul>
+<li>在新生代中，每次垃圾收集时都会发现有大批对象死去，只有少量存活（前面提到的统计数据，大部分时候只有 10% 存活），那就选用复制算法。  </li>
+<li>而老年代中因对象存活率高，没有额外空间对它进行担保，就必须使用“标记-清理”或者“标记-整理”算法进行回收。</li>
+</ul>
+<h3 id="CMS-收集器"><a href="#CMS-收集器" class="headerlink" title="CMS 收集器"></a>CMS 收集器</h3><p>这是自己添加的这个标题，书中的结构并不是如此，因为 Android ART 虚拟机使用的也是CMS收集方式，所以这里特意抽出来理解，方便理解Android的虚拟机。 CMS (Concurrent Mark Sweep) 收集器，并发的“标记-清除”方式实现的收集器。它是一种以获取最短回收停顿时间为目标的收集器。它的整个过程分为4个步骤：</p>
+<ul>
+<li>初始标记  </li>
+<li>并发标记  </li>
+<li>重新标记  </li>
+<li>并发清除  </li>
+</ul>
+<p>其中，初始标记、重新标记 这两个步骤仍然需要“Stop The World”，初始标记仅仅只是标记一下 GC Roots 能直接关联到的对象，速度很快；并发标记就是进行 GC Roots Tracing 的过程（根据初始标记过程中标识出来的直接关联对象，并发标记存活的对象）；重新标记阶段则是为了修正并发标记期间因用户程序继续运行而导致标记产生变动的那一部分对象的标记记录；</p>
+<p>由于整个过程中好事最长的 <strong>并发标记 和 并发清除</strong> 过程收集器线程都可以与用户线程一起工作，所以，从总体上来讲，CMS收集器的内存回收过程是与用户线程一起并发执行的。</p>
+<p>CMS 是优秀的收集器，但是它也有3个明显的缺点：</p>
+<ul>
+<li><p>CMS 收集器对 CPU 资源非常敏感。与其他并发设计的程序一样，CMS收集器对 CPU 同样敏感，它虽然不会导致用户线程停顿，但是会因为占用了一部分线程而导致应用变慢。 </p>
+</li>
+<li><p>CMS 无法处理浮动垃圾(Floating Garbage,个人认为简而言之就是GC过程中用户线程产生的垃圾，类比于你妈妈在打扫房间卫生的时候，你还在继续撕的纸)。  </p>
+</li>
+<li><p>还有最后一个缺点，就是CMS本质还是“标记-清除”算法实现的，这种收集方式在结束后会产生大量的碎片化的空间。</p>
+</li>
+</ul>
+<h2 id="内存分配与回收策略"><a href="#内存分配与回收策略" class="headerlink" title="内存分配与回收策略"></a>内存分配与回收策略</h2><p>以下是几条最普遍的内存分配规则，可以通过代码去验证这些规则：</p>
+<h3 id="对象优先在-Eden-上分配"><a href="#对象优先在-Eden-上分配" class="headerlink" title="对象优先在 Eden 上分配"></a>对象优先在 Eden 上分配</h3><p>大多数情况下，对象在新生代 Eden 区中分配，当 Eden 区没有足够空间时，虚拟机将发起一次 Minor GC （新生代GC）。可以采用以下方式验证：</p>
+<p>通过 -Xms20M、-Xmx20M、-Xmn10M 三个参数限制Java 虚拟机堆大小 20MB，不可扩展，并且其中 10M 分配给新生代，剩下的 10MB 分配给老年代，-XX:SurvivorRatio=8决定新生代中 Edun 区与 一个 Survivor区的比例是 8：1，即 Eden 大小 8192K，两个 survivor 空间分别 1024K，所以新生代总共可用空间是 9216K （Eden 区 + 1个Survivor区）。<br>执行 testAllocation()尝试分配 3个 2M 的大小和1个 4MB 大小的对象。<br>代码执行完成后，可以发现 新生代Eden区被占用了 4M，而老年代被占用了 6M。<br>解释：分配前3个对象时，没有压力，均分配在Eden区域，当分配第4个对象时，内存已经不够了（可用空间是 9216K，而 2M*3 + 4M = 10），因此触发一次Minor GC，此时发现这3个对象都存活，并且 survivor 区间不够容纳存活的对象，因此这3个对象被直接通过担保机制提前转移到老年代中；这次GC结束后，第4个对象就可以顺利分配到Eden空间中。</p>
+<blockquote>
+<p>新生代GC(Minor GC):发生在新生代的垃圾收集，因为Java对象大多朝生夕死，所以Minor GC非常频繁，一般回收速度也比较快<br>老年代GC(Major GC/Full GC)：指的是老年代的GC，对于许多收集器而言，这时候都会伴随至少一次的 Minor GC，老年代的GC一般会比 Minor GC 慢10倍以上。</p>
+</blockquote>
+<h3 id="大对象直接进入老年代"><a href="#大对象直接进入老年代" class="headerlink" title="大对象直接进入老年代"></a>大对象直接进入老年代</h3><p>所谓大对象是指需要大量连续内存空间的Java对象，最典型的就是很长的字符串以及数组。当然，比大对象更糟糕的是遇到一群朝生夕死的“短命大对象”，这种应当避免。经常出现大对象容易导致内存还有不少空间就提前触发垃圾收集器以获得足够的<strong>连续空间</strong>来安置它们。</p>
+<h3 id="长期存活的对象进入老年代"><a href="#长期存活的对象进入老年代" class="headerlink" title="长期存活的对象进入老年代"></a>长期存活的对象进入老年代</h3><p>如果对象在Eden出生并经历过第一次Minor GC 后仍然存活并且能被 Survivor 容纳的话，将被移动到Survivor 中，并且年龄设置为 1，此后，每熬过一次 Minor GC ，对象的年龄就加1，当达到某个阈值（系统一般默认 15），就会被晋升到老年代中。</p>
+<h3 id="动态对象年龄判定"><a href="#动态对象年龄判定" class="headerlink" title="动态对象年龄判定"></a>动态对象年龄判定</h3><p>为了更好地适应不同程序内存状况，并不总是要求对象必须达到某个年龄才进入老年代。如果 Survivor 中同龄对象达到某个阈值（一般是一半）时，大于或者等于这个年龄的对象就会移动到老年代。</p>
+<h3 id="空间分配担保"><a href="#空间分配担保" class="headerlink" title="空间分配担保"></a>空间分配担保</h3><p>发生Minor GC 前，虚拟机会检查老年代最大可用的连续空间是否大于新生代所有对象总空间，如果条件成立，则 Minor GC 可以确保是安全的，如果不成立，则会判断是否允许担保失败，如果允许担保失败，则最终可能会触发一次Full GC。虽然绕了一圈还是有可能触发 Full GC，但是这种情况相对较少。</p>
+</body></html>
       
     </div>
 
@@ -831,15 +1070,36 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="运行时数据区域"><a href="#运行时数据区域" class="headerlink" title="运行时数据区域"></a>运行时数据区域</h2><p>根据《Java虚拟机规范(java SE 7)》规定，Java 虚拟机所管理的内存将会包括以下几个运行时数据区域：</p><p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/java%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F.png" alt="Java运行时数据区域"></p><h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>程序计数器可以看做是当前线程执行的字节码的行号指示器，它是线程私有的。在虚拟机概念模型里（具体虚拟机可能有更高效实现），字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环、跳转、异常处理、线程恢复等功能都需要依赖程序计数器来完成。如果线程在执行Java方法，计数器记录的是正在执行的虚拟机字节码指令的地址；如果正在执行Native方法，这个计数器值为Undefined。<strong>此内存区域是Java虚拟机规范中唯一一个没有规定任何 OutOfMemoryError情况的区域</strong>。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/04/02/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%AB%A0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+          <html><head></head><body></body></html><html><head></head><body><h2 id="运行时数据区域"><a href="#运行时数据区域" class="headerlink" title="运行时数据区域"></a>运行时数据区域</h2><p>根据《Java虚拟机规范(java SE 7)》规定，Java 虚拟机所管理的内存将会包括以下几个运行时数据区域：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/java%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E5%9F%9F.png" alt="Java运行时数据区域"></p>
+<h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>程序计数器可以看做是当前线程执行的字节码的行号指示器，它是线程私有的。在虚拟机概念模型里（具体虚拟机可能有更高效实现），字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环、跳转、异常处理、线程恢复等功能都需要依赖程序计数器来完成。如果线程在执行Java方法，计数器记录的是正在执行的虚拟机字节码指令的地址；如果正在执行Native方法，这个计数器值为Undefined。<strong>此内存区域是Java虚拟机规范中唯一一个没有规定任何 OutOfMemoryError情况的区域</strong>。</p>
+<h3 id="Java虚拟机栈"><a href="#Java虚拟机栈" class="headerlink" title="Java虚拟机栈"></a>Java虚拟机栈</h3><p>Java虚拟机栈也是线程私有的。它描述的是Java方法执行的内存模型：每个方法在执行的同时都会创建一个栈帧(Stack Frame)用于存储局部变量表、操作数栈、动态链接、方法出口等信息，一个方法从调用至完成，就对应一个栈帧在虚拟机栈中入栈到出栈的过程。<strong>这个区域被规定了两种异常状况：如果线程请求的栈深度大于虚拟机允许的深度，就抛出 StackOverflowError异常；如果该区域可以动态扩展，则在扩展时无法申请到足够内存，就会抛出OutOfMemoryError异常</strong>。</p>
+<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>本地方法栈与虚拟机栈类似，区别只不过是虚拟机栈为执行Java方法(即字节码)服务，而本地方法栈为Native方法服务，同样，<strong>本地方法栈也可能抛出StackOverflowError异常以及OutOfMemoryError异常</strong>.</p>
+<h3 id="Java堆"><a href="#Java堆" class="headerlink" title="Java堆"></a>Java堆</h3><p>Java堆是被所有线程共享的一块内存，虚拟机启动时创建。虚拟机规范描述是，所有对象的实例以及数组都要在堆上分配(当然，不同虚拟机实现不同)。<strong>如果堆中没有内存完成实例分配，并且堆也无法再扩展时，将会抛出OutOfMemoryError异常</strong>。</p>
+<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p>与Java堆一样，方法区也是各个线程共享的内存区域。它用于存储已经被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。<strong>当方法区无法满足内存分配需要时，将抛出OutOfMemoryError异常</strong>。</p>
+<blockquote>
+<p>提到方法区，不得不提<strong>运行时常量池</strong>，它是方法区的一个部分。Class 文件中除了有类的版本、字段、方法、接口等描述信息外，还有一项信息是信息常量池，用于存放编译期生成的各种字面量和符号引用（一般来说，翻译出来的直接引用也会存储在运行时常量池中）。</p>
+</blockquote>
+<h3 id="直接内存"><a href="#直接内存" class="headerlink" title="直接内存"></a>直接内存</h3><p>直接内存(Direct Memory)不是虚拟机运行时数据区的一部分，也不是Java虚拟机规范中定义的内存区域。在Java 1.4中新加入了NIO（New Input/Output）类，它可以使用Native函数直接分配堆外内存，然后通过一个存储在Java堆中的DirectBuffer对象作为这块内存额引用进行操作，这样能在一些场景中显著提高性能，因为它避免在 Java 堆和 Native 堆中来回复制数据。<strong>当然，该区域空间在动态扩展时也可能出现OutOfMemoryError异常</strong>。</p>
+<h2 id="HotSpot-虚拟机对象探秘"><a href="#HotSpot-虚拟机对象探秘" class="headerlink" title="HotSpot 虚拟机对象探秘"></a>HotSpot 虚拟机对象探秘</h2><h3 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h3><p>虚拟机遇到一条new指令时，首先检查这个指令的参数是否能在常量池中定位到类的符号引用，并检查这个符号引用代表的类是否已经被加载、解析和初始化过，如果没有，则必须限制性相应的类加载过程。类加载完成后，便可完全确定对象所需的内存大小，接下来为新生的对象真正分配内存。</p>
+<h3 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h3><p>对象在内存中存储的布局可以分为3块区域：对象头(Header)、实例数据(Instance Data)、和对齐填充(Padding)。</p>
+<h3 id="对象的访问定位"><a href="#对象的访问定位" class="headerlink" title="对象的访问定位"></a>对象的访问定位</h3><p>建立对象是为了使用对象，我们的Java程序需要通过栈上的refrence数据来操作堆上的具体对象。目前主流的访问方式有使用句柄和直接指针，其中前者通过句柄池间接指向堆中的对象，后者直接指向堆中的对象。</p>
+<h2 id="实战"><a href="#实战" class="headerlink" title="实战"></a>实战</h2><h3 id="OutOfMemoryError异常"><a href="#OutOfMemoryError异常" class="headerlink" title="OutOfMemoryError异常"></a>OutOfMemoryError异常</h3><p>Java虚拟机规范中，除了程序计数器之外，其他区域都可能发生 OutOfMemoryError异常。</p>
+<h3 id="JAVA堆溢出"><a href="#JAVA堆溢出" class="headerlink" title="JAVA堆溢出"></a>JAVA堆溢出</h3><p>Java堆用于存储实例对象，只要不断地创建对象，并且保证GC root 到对象之间有可达路径来避免垃圾回收，那么就能产生OutOfMemoryError异常。</p>
+<h3 id="虚拟机栈和本地方法栈溢出"><a href="#虚拟机栈和本地方法栈溢出" class="headerlink" title="虚拟机栈和本地方法栈溢出"></a>虚拟机栈和本地方法栈溢出</h3><p>虚拟机栈和本地方法栈理论上分配不到足够的内存同样会报 OutOfMemoryError异常，但是一般情况下，首先会出现StackOverflowError，OutOfMemoryError很难出现。</p>
+<h3 id="方法区和运行时常量池溢出"><a href="#方法区和运行时常量池溢出" class="headerlink" title="方法区和运行时常量池溢出"></a>方法区和运行时常量池溢出</h3><p>由于运行时常量池是方法区的一个部分，因此这两个区域的溢出测试放在一起进行。在此之前我们先了解下String.intern()方法：</p>
+<blockquote>
+<p>String.intern()是一个Native方法，它的作用是，如果字符串常量池中已经包含一个等于此String对象的字符串，则返回代表池中这个字符串的String对象；否则，将此String对象包含的字符串添加到常量池中，并返回此String对象的引用。</p>
+</blockquote>
+<p>在JDK1.6及以前，通过设置永久代区域的大小可以间接限制方法区大小，但是从JDK 1.7以后就“去永久代”了，因此以下代码只在JDK 1.6 ，并且设置了 MaxPermSize 时有效：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    <span class="comment">//使用List保持常量池的引用，避免full gc 回收常量池</span></span><br><span class="line">    List&lt;String&gt; list = <span class="keyword">new</span> ArrayList&lt;String&gt;();</span><br><span class="line">    <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">true</span>){</span><br><span class="line">        list.add(String.valueOf(i++).intern());</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>同样的原因，还可以引申一个更有意思的影响，如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    String str1 = <span class="keyword">new</span> StringBuilder(<span class="string">"计算机"</span>).append（“软件”）.toString();</span><br><span class="line">    Systemt.out.println(str1.intern() == str1);</span><br><span class="line">    </span><br><span class="line">    String str2 = <span class="keyword">new</span> StringBuilder(<span class="string">"ja"</span>).append(<span class="string">"va"</span>).toString();</span><br><span class="line">    Systemt.out.println(str2.intern() == str2);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这段代码在JDK 1.6 中运行，会得到两个false（intern 方法会把首次遇到的字符串实例复制到永久代中，而StringBuilder创建的字符串实例在Java堆上，所以必然不是同一个引用）；而在JDK 1.7 中会得到一个true（intern 实现不会再复制实例，只是在常量池中记录首次出现的实例引用，因此，intern返回的引用和由StringBuilder创建的字符串实例是同一个实例）一个false（“java”字符串在执行StringBuilder.toString()之前已经出现过，字符串常量池中已经有它的引用了，不符合首次出现，而“计算机软件”这个字符串则是首次出现的—这个解释没看懂，需要再次理解）。</p>
+<h3 id="本机直接内存溢出"><a href="#本机直接内存溢出" class="headerlink" title="本机直接内存溢出"></a>本机直接内存溢出</h3><p>直接或者间接地使用NIO，就可能出现本机直接内存溢出。虽然使用DirectByteBuffer分配内存也会抛出内存溢出异常，但是抛出异常时并没有真正向操作系统申请分配内存，而是通过计算得知内存无法分配。因此可以通过以下代码手动抛出异常，真正抛出异常的地方是unsafe.allocateMemory()。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//以下代码能够抛出异常的前提是，设置虚拟机参数 -XX: MaxDirectMemorySize 的值</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> _1MB = <span class="number">1024</span> * <span class="number">1024</span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">	Field unsafeField = Unsafe.class.getDeclaredFields()[<span class="number">0</span>];</span><br><span class="line">	unsafeField.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">	Unsafe unsafe = (Unsafe) unsafeField.get(<span class="keyword">null</span>);</span><br><span class="line">	<span class="keyword">while</span> (<span class="keyword">true</span>){</span><br><span class="line">		unsafe.allocateMemory(_1MB);</span><br><span class="line">	}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></body></html>
       
     </div>
 
@@ -914,14 +1174,17 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="704、二分查找，给定一个-n-个元素有序的（升序）整型数组-nums-和一个目标值-target-，写一个函数搜索-nums-中的-target，如果目标值存在返回下标，否则返回-1"><a href="#704、二分查找，给定一个-n-个元素有序的（升序）整型数组-nums-和一个目标值-target-，写一个函数搜索-nums-中的-target，如果目标值存在返回下标，否则返回-1" class="headerlink" title="704、二分查找，给定一个 n 个元素有序的（升序）整型数组 nums 和一个目标值 target  ，写一个函数搜索 nums 中的 target，如果目标值存在返回下标，否则返回 -1"></a>704、二分查找，给定一个 n 个元素有序的（升序）整型数组 nums 和一个目标值 target  ，写一个函数搜索 nums 中的 target，如果目标值存在返回下标，否则返回 -1</h2><details>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="704、二分查找，给定一个-n-个元素有序的（升序）整型数组-nums-和一个目标值-target-，写一个函数搜索-nums-中的-target，如果目标值存在返回下标，否则返回-1"><a href="#704、二分查找，给定一个-n-个元素有序的（升序）整型数组-nums-和一个目标值-target-，写一个函数搜索-nums-中的-target，如果目标值存在返回下标，否则返回-1" class="headerlink" title="704、二分查找，给定一个 n 个元素有序的（升序）整型数组 nums 和一个目标值 target  ，写一个函数搜索 nums 中的 target，如果目标值存在返回下标，否则返回 -1"></a>704、二分查找，给定一个 n 个元素有序的（升序）整型数组 nums 和一个目标值 target  ，写一个函数搜索 nums 中的 target，如果目标值存在返回下标，否则返回 -1</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <p>还没写。。。。。</p>
 <p>自己写的时候的问题：<strong>这题目自己写得还不错</strong></p>
-</details><blockquote>
-<p>参考链接：<a href="https://leetcode-cn.com/problems/binary-search/" target="_blank" rel="noopener">LeetCode</a></p>
+</details>
+
+<blockquote>
+<p>参考链接：<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/binary-search/">LeetCode</a></p>
 </blockquote>
+</body></html>
       
     </div>
 
@@ -996,20 +1259,60 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="进程间通信的经典实现"><a href="#进程间通信的经典实现" class="headerlink" title="进程间通信的经典实现"></a>进程间通信的经典实现</h2><h3 id="共享内存"><a href="#共享内存" class="headerlink" title="共享内存"></a>共享内存</h3><p>共享内存的工作流程：</p><ol>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="进程间通信的经典实现"><a href="#进程间通信的经典实现" class="headerlink" title="进程间通信的经典实现"></a>进程间通信的经典实现</h2><h3 id="共享内存"><a href="#共享内存" class="headerlink" title="共享内存"></a>共享内存</h3><p>共享内存的工作流程：</p>
+<ol>
 <li>创建共享区。进程1从内存中申请一块内存作为共享区域，并且将该区域与某个Key绑定  </li>
 <li>映射共享区。创建共享区之后，需要将其映射到进程1的空间中才能操作。  </li>
 <li>访问共享区。进程2利用第一步得到的Key，访问到共享区，之后将这块内存映射到进程2的空间中。  </li>
 <li>进程间通信。各进程实现了对共享内存的映射后，便可以利用该区域进行信息交换。（注意：整个内存过程都没有实现同步机制，需要进程间自己实现）  </li>
 </ol>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/03/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC4%E7%AB%A0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+<h3 id="管道"><a href="#管道" class="headerlink" title="管道"></a>管道</h3><ul>
+<li>进程A和B分立管道两端，进行数据传输通信</li>
+<li>管道是单向的，如果进程既要“读”也要“写”，就需要两根管道这点很像水管的特性  </li>
+<li>管道同时具有“读取”(read end)端和“写入”(write end)端，比如进程A从 write end 写入，进程 B 就可以从 read end 端读取到数据  </li>
+<li>管道容量有限制，当pipe满了后，写操作将阻塞；反之，pipe空了之后，读操作将会阻塞  </li>
+<li>普通的管道是<strong>匿名的</strong>，这种匿名的管道只适合有斧子关系的进程通信，如果要实现没有任何关系的管道间的通信，就需要<strong>命名管道(Named pipe)</strong></li>
+</ul>
+<h3 id="UNIX-DOMAIN-SOCKET"><a href="#UNIX-DOMAIN-SOCKET" class="headerlink" title="UNIX DOMAIN SOCKET"></a>UNIX DOMAIN SOCKET</h3><ul>
+<li>简称UDS,也可以说是IPC Socket，与普通的Socket不一样，专门针对单机进程间通信提出来的。  </li>
+<li>大家熟知的 Network Socket 是以 TCP/IP 协议栈作为基础的，需要分包、重组 等一系列操作，而 UDS 因为是本机内的“安全可靠操作”，实现机制上并不依赖于这些协议。  </li>
+<li>Android 中使用最多的一种IPC就是Binder，其次就是 UDS 。  </li>
+</ul>
+<h3 id="RPC（REMOTE-PROCEDURE-CALLS）"><a href="#RPC（REMOTE-PROCEDURE-CALLS）" class="headerlink" title="RPC（REMOTE PROCEDURE CALLS）"></a>RPC（REMOTE PROCEDURE CALLS）</h3><p>RPC 涉及通信双方通常运行于两台不同的机器中。</p>
+<h2 id="同步机制的经典实现"><a href="#同步机制的经典实现" class="headerlink" title="同步机制的经典实现"></a>同步机制的经典实现</h2><p>###信号量（SEMAPHORE）</p>
+<p>信号量与PV原语是分不开的，也是最为广泛的互斥方法之一，主要包括以下几个元素：</p>
+<ul>
+<li>Semaphore S（信号量，用于指示共享资源的可用数量）  </li>
+<li>Operation P （可以减小S计数）  </li>
+<li>Operation V （可以增加S计数）  </li>
+</ul>
+<blockquote>
+<p>P执行：S = S -1，此时判断若 S&gt;=0 ，说明资源此时允许访问，开始操作共享资源；否则，加入等待队列，待别人释放资源后唤醒。<br>V执行：S=S+1，如果此时S&gt;0，说明当前没有希望访问资源的等待者；否则，唤醒等待队列中的相关对象。<br><strong>其中，PV源于都属于原子操作，意味着他们执行过程是不允许被中断的。</strong></p>
+</blockquote>
+<h3 id="互斥体（MUTEX）"><a href="#互斥体（MUTEX）" class="headerlink" title="互斥体（MUTEX）"></a>互斥体（MUTEX）</h3><p>Mutex 是 Mutual Exclusion 的缩写，释义为 互斥体。如果资源允许多个对象同时访问，成为 Counting Semaphores；而如果只允许取值0或1（lock/unlocked）的Semaphore，则叫做 Binary Semaphore。Binary Semaphore 与Mutex有相同性质，Mutex通常是对某一排他资源的共享控制——要么这个资源被占用（locked），要么是可以访问的（unlocked）。</p>
+<h3 id="管程（MONITOR）"><a href="#管程（MONITOR）" class="headerlink" title="管程（MONITOR）"></a>管程（MONITOR）</h3><p>针对信号量机制的程序易读性较差，并且信号量管理分散在各个参与对象中，很难维护等缺点，管程被提出来了。管程是可以被多个进程/线程安全访问的对象或者模块，管程中的方法在同一时刻只允许一个范文这使用它们（方法受 mutual exclusion 保护的）。</p>
+<h2 id="操作系统内存基础"><a href="#操作系统内存基础" class="headerlink" title="操作系统内存基础"></a>操作系统内存基础</h2><p>操作系统中任何操作都与内存息息相关，内存管理的底层原理主要注意几个核心：</p>
+<ul>
+<li>虚拟内存</li>
+</ul>
+<blockquote>
+<p>内存总是“不够大”的，随着应用的增加，总会填满，虚拟内存为运行更多的程序提供了可能，其基本思想是：1.将硬盘上一部分空间作为内存的扩展；2.出现资源不足时，按照一定算法挑出优先级较低的数据块移动到第1步划出的空间；3.需要用到硬盘中的数据块时，系统将产生“缺页”，之后把硬盘中的数据交换回内存中。</p>
+</blockquote>
+<ul>
+<li>内存分配与回收</li>
+</ul>
+<blockquote>
+<p>分配、native层回收，java层回收</p>
+</blockquote>
+<ul>
+<li>内存保护</li>
+</ul>
+<blockquote>
+<p>内存分页或者分段式管理。进程的逻辑地址不是直接对应物理地址的，因此没办法访问它范围外的内存空间。</p>
+</blockquote>
+<p><strong>顺带一提，mmap函数（Memory Map）正如其名，可以将某个设备或者文件映射到应用进程的内存空间中，这样访问这块内存就相当于对设备/文件进行读写；可见，理论上mmap可以用于进程间通信，即通过映射同一块物理内存来共享内存，这种方式因为减少了复制次数，在一定程度上提高了进程间通信效率。</strong></p>
+<h2 id="Android-匿名共享内存（Ashmem）"><a href="#Android-匿名共享内存（Ashmem）" class="headerlink" title="Android 匿名共享内存（Ashmem）"></a>Android 匿名共享内存（Ashmem）</h2><p>Ashmem 全称 Anony Shared Memory，是Android 特有的内存共享机制，它可以将指定的物理内存分别映射到各个进程的地址空间，从而便捷地实现进程间的内存共享。Ashmem 是一个 misc 设备，其实现依托于 /dev/ashmem 。</p>
+</body></html>
       
     </div>
 
@@ -1084,11 +1387,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p><font color="ff0000">根据技术栈可能的提问</font></p><h2 id="1、聊聊-java-中-static-关键字"><a href="#1、聊聊-java-中-static-关键字" class="headerlink" title="1、聊聊 java 中 static 关键字"></a>1、聊聊 java 中 static 关键字</h2><details>
+          <html><head></head><body></body></html><html><head></head><body><p><font color="ff0000">根据技术栈可能的提问</font></p>
+<h2 id="1、聊聊-java-中-static-关键字"><a href="#1、聊聊-java-中-static-关键字" class="headerlink" title="1、聊聊 java 中 static 关键字"></a>1、聊聊 java 中 static 关键字</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <p>一旦什么东西设置为 static ，数据或者方法就不会同那个类的任何对象实例有联系。例如以下类：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">StaticTest</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i = <span class="number">47</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">StaticTest</span></span>{</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i = <span class="number">47</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
 <p>尽管我们可以给StaticTest 类new 出 2个对象来，但是 StaticTest.i 仍然只有一个存储空间，即两个对象共享同样的i，此时，其中一个对象执行 ++i 后，另一个对象的 i值 也会变为 48。</p>
 <p>静态的变量或者方法，可以通过对象引用，也可以直接通过类引用，如以上的i，可以使用如下两种方式引用：</p>
@@ -1096,14 +1400,430 @@
 <p>假设st 是 StaticTest 类的对象： st.i = 4   或者  StaticTest.i = 4</p>
 </blockquote>
 </details>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/03/08/%E9%9D%A2%E8%AF%95%E9%A2%98-%E9%92%88%E5%AF%B9%E7%AE%80%E5%8E%86%E7%9A%84%E9%97%AE%E9%A2%98/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+
+<h2 id="2、Kotlin-相关"><a href="#2、Kotlin-相关" class="headerlink" title="2、Kotlin 相关"></a>2、Kotlin 相关</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="Kotlin-中的协程用过吗？聊聊？"><a href="#Kotlin-中的协程用过吗？聊聊？" class="headerlink" title="Kotlin 中的协程用过吗？聊聊？"></a>Kotlin 中的协程用过吗？聊聊？</h3><p>简单使用过，但是仅仅用于线程切换，对协程有一些简单的了解：</p>
+<ul>
+<li>协程是编译器级别的，进程和线程是操作系统级的</li>
+<li>线程根据os的调度算法，当分配的时间片用完后，保存当前上下文，之后被强制挂起，开发者无法精确控制它们</li>
+<li>协程可以看做是轻量级的用户态线程</li>
+<li>协程实现的是<strong>非抢占式</strong>的调度，由当前协程控制什么时候切换到其他协程</li>
+<li>每个协程池里都有一个调度器，这个<strong>调度器是被动调度的</strong>，即当前协程主动让出cpu时调度</li>
+<li>目前的协程框架一般设计成 1:N 的模式，即一个线程作为容器，里面包含多个协程</li>
+</ul>
+<h4 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h4><ul>
+<li><p>协程轻量，创建成本小，内存消耗小    </p>
+</li>
+<li><p>协作式的用户态调度器，cpu上下文切换开销少    </p>
+<blockquote>
+<p>进程/线程 切换需要在内核完成，而协程通过用户态栈实现，速度更快，但协程也放弃了线程中优先级的概念</p>
+</blockquote>
+</li>
+<li><p>减少同步加锁，整体性能提高    </p>
+<blockquote>
+<p>协程基于事件循环，减少同步加锁的频率。但若存在竞争，该上锁的地方仍需要加上协程锁    </p>
+</blockquote>
+</li>
+<li><p>可以按照同步思维写异步代码，即用同步的逻辑，写由协程调度的回调</p>
+<blockquote>
+<p>协程可以减少callback 的使用，但是不能完全替代callback，基于事件驱动的变成用callback更合适</p>
+</blockquote>
+</li>
+</ul>
+<h4 id="缺点："><a href="#缺点：" class="headerlink" title="缺点："></a>缺点：</h4><ul>
+<li>协程中不能有阻塞操作，否则整个线程被阻塞(协程是语言级别，线程是操作系统级别)      </li>
+<li>需要特别关注全部变量、对象引用的使用    </li>
+<li>协程擅长处理IO密集型程序效率问题，但处理cpu密集型不是它的长处    <blockquote>
+<p>假设线程中有个协程是cpu密集型，但是没有io操作，也就是一时半会不会主动触发调度器调度，从而其他协程得不到执行      </p>
+</blockquote>
+</li>
+</ul>
+<h4 id="适用场景："><a href="#适用场景：" class="headerlink" title="适用场景："></a>适用场景：</h4><ol>
+<li>高性能计算，牺牲公平性换区吞吐量；          </li>
+<li>在 IO 密集型程序中。由于io密集型的程序中往往需要 CPU 频繁切换线程，带来大量性能浪费。但是协程可以很好地解决这个问题：比如把一个IO操作写成一个协程，当触发IO操作时就自动让出cpu给其他协程，协程间的切换是很轻的。      </li>
+<li>流式计算。消除Callback Hell。    </li>
+</ol>
+<h3 id="Kotlin-优势"><a href="#Kotlin-优势" class="headerlink" title="Kotlin 优势"></a>Kotlin 优势</h3><p>按照官网上的说法：</p>
+<ul>
+<li>简洁。语法简单，代码很少。判空、getter、setter 方法、命名传参(动态改变参数)无需重载，可能结合anko 之类的更加简单    </li>
+<li>安全，减少空指针等错误、类型判断过后，自动类型转换      </li>
+<li>兼容java，可以混编</li>
+</ul>
+<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><ul>
+<li>lateinit，也容易引起空指针，即还未初始化    </li>
+<li>直接使用 ArrayList 之类的list 是不能直接添加元素的，得使用 MutableList 才行     </li>
+<li>引入了kotlin 支持库，apk包体积增加     </li>
+<li>如果某个变量设置为可空的，那么即使你在初始化后，已经不空了，你也只能使用 ? 或者  !! 操作来使用它，感觉会有点乱     </li>
+</ul>
+<h3 id="kotlin如何实现空安全"><a href="#kotlin如何实现空安全" class="headerlink" title="kotlin如何实现空安全"></a>kotlin如何实现空安全</h3><ul>
+<li>可空类型和不可空类型     </li>
+<li>使用 ? 进行安全调用      </li>
+<li>入参可以指定可空和非空类型     </li>
+<li>安全的类型转换，如 a as? Int      </li>
+<li>可以方便过滤非空元素，如： val intList: List<int> = nullableList.filterNotNull()      </int></li>
+</ul>
+<p>一定能避免空指针问题吗？我认为是不能，因为有 lateInit 变量存在，有可能这个变量还没初始化，就会导致是空的</p>
+</details>
+
+<h2 id="3、有自定义view的经验，那如何理解-MeasureSpec？"><a href="#3、有自定义view的经验，那如何理解-MeasureSpec？" class="headerlink" title="3、有自定义view的经验，那如何理解 MeasureSpec？"></a>3、有自定义view的经验，那如何理解 MeasureSpec？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>MeasureSpec 的含义是：父View传递给当前 View 的一个建议值。MeasureSpec 是个int 类型的数字，转换成二进制后，前2位代表模式(mode)，后30位代表数值(size)。模式总共分为3种：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/MeasureSpec%E6%B5%8B%E9%87%8F%E6%A8%A1%E5%BC%8F.jpg" alt="MeasureSpec测量模式"></p>
+<p><strong>measureSpec &amp; MODE_MASK 即可获得mode的值；而 measureSpec &amp; ~MODE_MASK 即可获得数值</strong>。</p>
+<p>那么，measureSpec 的值到底是如何计算得到的？view的 measureSpec 根据view 的布局参数(LayoutParams) 和 父容器的 MeasureSpec 值计算得到的，计算方法如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/view%E7%9A%84measureSpec%E5%80%BC.jpg" alt="view的measureSpec值"></p>
+<p>由于UNSPECIFIED模式用于系统内部多次measure 的情况(如listview、gridview 等)，很少用到自定义view上，因此我们很少讨论。以下总结的规律也不讨论：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/measureSpec%E8%A7%84%E5%BE%8B.jpg" alt="measureSpec规律"></p>
+<p>以上总结中，父容器的剩余空间指的是父容器除了padding之外的所剩余的空间，至于<font color="ff0000">父容器的剩余空间与大小不超过父容器的剩余空间，看代码和看图都没能理解，后续再理解吧</font></p>
+<p><strong>以上内容部分<a target="_blank" rel="noopener" href="https://blog.csdn.net/carson_ho/article/details/94545178">参考自这个链接</a></strong></p>
+</details>
+
+<h2 id="4、聊聊-Android-中事件分发机制？"><a href="#4、聊聊-Android-中事件分发机制？" class="headerlink" title="4、聊聊 Android 中事件分发机制？"></a>4、聊聊 Android 中事件分发机制？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><a href="https://glassx.gitee.io/2019/02/25/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/">参考以前写的这篇文章</a></p>
+<p>上面的文章中已经写得很明白了，但是需要重点再提一下的是，如果在 onTouchEvent 中不消耗事件，则在同一个事件序列中，当前View无法再次接到事件。</p>
+</details>
+
+<h2 id="5、如何处理手势冲突？"><a href="#5、如何处理手势冲突？" class="headerlink" title="5、如何处理手势冲突？"></a>5、如何处理手势冲突？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>有外部和内部两种方式处理手势冲突。</p>
+<p><strong>外部拦截</strong>：由上面的事件分配可知，点击事件都会经过父容器拦截处理，如果父容器需要此事件就拦截，否则此事件就不拦截，这样就可以解决事件冲突。外部拦截法需要重写父容器的onInterceptTouchEvent，比较符合事件分发机制。      </p>
+<blockquote>
+<p>这里要注意的是，还是上面的原则，在 onInterceptTouchEvent 中，首先是ACTION_DOWN 这个事件，父容器必须返回false，即不拦截，因为一旦拦截了 ACTION_DOWN ,后续的 ACTION_MOVE 和 ACTION_UP 都没法再传递给子view了； <font color="ff0000">接下来的内容辩证看待：ACTION_MOVE根据需要是否拦截；ACTION_UP 必须返回false，因为如果返回true，那么子view 是接受不到 ACTION_UP 事件，onClick 事件就无法响应。</font></p>
+</blockquote>
+<p><strong>内部拦截法</strong>：</p>
+<p>可以利用view事件分发的原则，在适当的地方拦截就行。</p>
+<p>当然，也可以让父空间不拦截，如果是ViewGroup的话，可以在 onInterceptTouchEvent 方法中请求忽略外层容器拦截事件：getParent().requestDisallowInterceptTouchEvent(true) 。如果是View的话，那么把getParent().requestDisallowInterceptTouchEvent(true) 写在setOnTouchListener 方法中可能更合适。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://blog.csdn.net/u014628886/article/details/52222115">一骑绝尘</a>  和 <a target="_blank" rel="noopener" href="https://www.jianshu.com/p/4f3e7a057cd6">前行的乌龟</a></p>
+</blockquote>
+<h2 id="6、如何优化App性能？"><a href="#6、如何优化App性能？" class="headerlink" title="6、如何优化App性能？"></a>6、如何优化App性能？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><strong>一、精简资源</strong>     </p>
+<ul>
+<li>lint检测，删除无用的资源           </li>
+</ul>
+<p><strong>二、减轻Application的负担</strong></p>
+<ul>
+<li>将非紧急操作，放在子线程中处理     </li>
+<li>只在主进程中初始化app内容(因为接了百度地图等，会开启多个进程)    </li>
+</ul>
+<p><strong>三、UI绘制优化</strong></p>
+<ul>
+<li>布局优化，尽量使用 ConstraintLayout 减少布局层次(因为深度遍历)     </li>
+<li>布局复用，比如底部的布局大体相似，都使用同一个 layout     </li>
+<li>避免过度绘制。排查移除叠加的背景      </li>
+<li>减少资源数目，因为shape很难复用，故shape换成 固定的控件： ShapedTextView、ShapedConstrainLayout 等      </li>
+<li>提高显示速度</li>
+</ul>
+<blockquote>
+<p>使用 viewstub 延后显示。         </p>
+</blockquote>
+<p><strong>四、内存相关优化</strong>      </p>
+<blockquote>
+<p>一言以蔽之： 开源节流</p>
+</blockquote>
+<ul>
+<li>webview 新进程          </li>
+<li>检查内存泄漏(LeakCanery)    </li>
+<li>正确地使用引用，尤其Activity的context(尽量替换成Application 的context，Activity 的Context 一律弱引用)，以及强引用、弱引用、软引用的正确使用。       </li>
+<li>使用正确的容器，比如避免自动装箱(使用SparseArray等)、避免hashmap内存浪费(使用ArrayMap等)       </li>
+<li>枚举替换成注解。</li>
+</ul>
+<p><strong>五、cpu 相关优化</strong>   </p>
+<ul>
+<li>解析缓存数据一律放在子线程处理    </li>
+<li>SharedPreference 存储json改动    </li>
+<li>webview预加载</li>
+</ul>
+<p><strong>六、网络优化</strong>   </p>
+<ul>
+<li>域名替换成ip(选取响应速度最快的ip)，避免劫持同时提升响应速度，webview 中的网络请求由网络框架接管。    </li>
+</ul>
+<p><strong>七、结构</strong></p>
+<ul>
+<li>mvp</li>
+</ul>
+<p><strong>八、避开高峰</strong></p>
+<ul>
+<li>不要同时，充分利用IdleHandler，快速滑动的时候不加载图片</li>
+</ul>
+<p>具体优化方式：</p>
+<blockquote>
+<p>1、内存从经常性的 380M 左右降低到 330M 的水平(adb shell dumpsys com.esun.ui，现在可以使用profile)<br>2、页面秒开(talkingdata数据显示，优化前88%左右,93%的收集数据显示1秒以内打开，从onCreate 到onResume)<br>3、过度绘制(优化前几乎所有主要页面都是红色-蓝、绿、粉、红 分别代表过度绘制 1,2,3,4 次，优化后基本上都是蓝绿，粉色的比较少，红色的可能只有极少数小块)<br>4、App启动速度加快，冷启动，从3.5秒左右降低到1秒左右(录屏，记录从启动到展示flash页面，多次时间取平均值)<br>5、网络连接，网络的错误率4%(按次数统计出的)左右，dns加速后，网络错误率基本上保持，主要集中在网络超时、网络无连接两种异常，其中网络超时占了40%左右                 </p>
+</blockquote>
+</details>
+
+<h2 id="引申-adb-shell-dumpsys-meminfo-com-esun-ui-中各数据含义"><a href="#引申-adb-shell-dumpsys-meminfo-com-esun-ui-中各数据含义" class="headerlink" title="引申-adb shell dumpsys meminfo com.esun.ui 中各数据含义"></a>引申-adb shell dumpsys meminfo com.esun.ui 中各数据含义</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>Native Heap：  Native对象malloc得到的内存<br>Dalvik Heap：  Java对象new得到的内存<br>Dalvik Other： 类数据结构和索引占据的内存<br>Stack：        栈占用的内存(栈空间使用，如函数调用、局部变量等)<br>Pss Total：    在硬盘上实际占用的空间大小<br>Heap Size：   Heap总共内存大小 = Heap Alloc + Heap Free, HeapSize 有限制，超出阈值就oom<br>Heap Alloc：  应用所有实例分配的内存，包括应用从Zygote 共享分享的内存(只是分配的虚拟空间，并没有实际占用，比如：new long[1024*1024]，此时alloc就会新增了8M，但是由于没赋值，所以物理内存上并没有占用，如果针对每个元素赋值，则pss total 就会增加8M)<br>Heap Free：   堆空闲的大小<br>Objects： 统计App内部组件对象的个数，其中Views、ViewRootImpl以及Activities个数，在Activity的onDestroy之后应该都会清零，如果未清零，就可能发生了内存泄露</p>
+<p>Private Dirty： 私有的脏内存页(还在使用中)<br>Private Clean： 私有的干净内存页(现在未使用了)<br>Private Dirty + Private Clean 便是应用曾经申请过的内存空间大小</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/37539308ff32">简书上的博客</a></p>
+</blockquote>
+<h2 id="7、引申-ArrayMap的原理、SparseArray原理"><a href="#7、引申-ArrayMap的原理、SparseArray原理" class="headerlink" title="7、引申-ArrayMap的原理、SparseArray原理"></a>7、引申-ArrayMap的原理、SparseArray原理</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="ArrayMap"><a href="#ArrayMap" class="headerlink" title="ArrayMap"></a>ArrayMap</h3><p>ArrayMap 相对HashMap 而言是以时间换空间。它使用两个数组，一个整数型数组存储 key 的 hashCode，另一个Object[] 类型的数组存储 key-value键值对，如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/ArrayMap%E5%8E%9F%E7%90%86.png" alt="ArrayMap原理"></p>
+<p>这样的结构避免了为每个key创建额外的对象，也即避免了自动装箱(如需要将int包装成 Integer) ，每次put新元素时，key的hashcode 在hashCode的数组中按照顺序存储，object数组中存储key和value。查询元素时，首先获取key的hashCode，然后用二分法查找该hashCode 在第一个数组中的index，则在object 数组中，key的位置在 index&lt;&lt;1 处，而value在 index&lt;&lt;1 + 1 处，如果此时的key并不是当前的key，则认为发生了冲突，此时以该key为中心点，分别上下匹配，直到匹配到为止。</p>
+<p>在插入删除元素时，由于是数组组织形式，因此需要移动相关的元素，因此效率并不高；但是在数据量相对较少的情况下(有些博客说是1000条数据以下)，ArrayMap 带来的时间开销并不明显，但是节省的内存却十分可观。</p>
+<h3 id="SparseArray"><a href="#SparseArray" class="headerlink" title="SparseArray"></a>SparseArray</h3><p>SparseArray 用于key为int类型，value 为 Object 的情形，与HashMap 相比，它避免了Integer 自动装箱，并且没有依赖entry 数据结构，因此更高效。它的结构如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/SparseArray%E5%8E%9F%E7%90%86.png" alt="SparseArray原理"></p>
+<p>因为key是int类型，所以也就不需要什么hash值来计算index了，只要int值相等，就是同一个对象。插入和查找也是二分法，所以原理与ArrayMap 基本上一致，所以不多说。为了提升性能，删除元素时，并不需要马上将元素置为空，而是先将其标记为一个需要删除的元素，等真正需要删除时，才清空处理。即如果要插入新数据，如果数组已经填满了，则尝试垃圾回收一下，把标记为DELETE 的对象回收，然后重新寻找key值对应的索引，并插入。</p>
+<p>** 除了SparseArray 可以替代 HashMap&lt;Integer,V&gt;外，还有 SparseIntArray替换HashMap&lt;Integer,Integer&gt;、SparseLongArray替换HashMap&lt;Integer,Long&gt;、LongSparseArray 替换 HashMap&lt;Long,V&gt; **</p>
+</details>
+
+<blockquote>
+<p>以上内容<a target="_blank" rel="noopener" href="https://blog.csdn.net/chewbee/article/details/72998423">可以参考这个链接</a></p>
+</blockquote>
+<h2 id="8、描述http-三次握手？为什么3次，2次或者4次不行？"><a href="#8、描述http-三次握手？为什么3次，2次或者4次不行？" class="headerlink" title="8、描述http 三次握手？为什么3次，2次或者4次不行？"></a>8、描述http 三次握手？为什么3次，2次或者4次不行？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>首先，准确地说是TCP/IP三次握手。因为http本身是应用层协议，只是因为目前http的传输层确实是TCP/IP，所以可以这么说。但是http并不依赖于tcp/ip。</p>
+<p>TCP发起连接的一方A，会随机生成一个32位的序列号，比如是1000，以该序列号为原点，对自己每个将要发送的数据进行编号，连接的另一方B会对A的每次数据进行确认，如果A收到B的确认编号是2001，则意味着 1001~2000 编号已经安全到达B。握手的示意图如下所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/tcp%E4%B8%89%E6%AC%A1%E6%8F%A1%E6%89%8B%E7%A4%BA%E6%84%8F%E5%9B%BE.jpg" alt="tcp三次握手示意图"></p>
+<p>所以我们可以总结，<strong>TCP 连接握手，握的是啥？其实就是告知双方数据原点的序列号</strong>。那为什么是3次握手呢？个人认为有两个原因：</p>
+<ul>
+<li>确认通信双方的 接收/发送 能力是正常的。第一次握手，B可以知道自己的接收能力、A的发送能力是正常的；第二次握手，A可以知道双方的收/发能力是正常的；第三次握手，B知道双方的收/发能力都正常。       </li>
+<li>节省资源。我们知道，等3次握手结束后，服务端才给这条链接分配必要端口、缓存等资源。如果是2次握手，那么在收到客户端的请求后服务端就得分配资源了，如果第2次握手由于超时丢失，那么客户端会认为服务器还未响应，可能造成两端都在等。或者客户端等到放弃这次请求，而服务端之前分配的资源会被浪费。    </li>
+</ul>
+<p>因此，3次握手是必需的，更多的请求次数可以，但是浪费资源，没必要。</p>
+</details>
+
+<blockquote>
+<p>以上内容有部分是<a target="_blank" rel="noopener" href="https://www.zhihu.com/question/67772889">参考知乎中的内容</a></p>
+</blockquote>
+<h2 id="9、延伸-http-使用80端口，如果客户端一个tcp-ip在连接，那么就无法建立其他tcp-ip连接，因为80端口在占用？"><a href="#9、延伸-http-使用80端口，如果客户端一个tcp-ip在连接，那么就无法建立其他tcp-ip连接，因为80端口在占用？" class="headerlink" title="9、延伸-http 使用80端口，如果客户端一个tcp/ip在连接，那么就无法建立其他tcp/ip连接，因为80端口在占用？"></a>9、延伸-http 使用80端口，如果客户端一个tcp/ip在连接，那么就无法建立其他tcp/ip连接，因为80端口在占用？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>不是的，80端口一般只是http应用的默认监听端口，就是说新的连接都是发送到80端口的。但是监听80端口的程序会给新建立的连接分配一个可用的端口，所以实际的这条连接可能是机那里在服务端的 10010端口，客户端的8888端口上的。而80端口会继续监听是否有新的连接到来。</p>
+</details>
+
+<h2 id="10、描述4次挥手，3次行不行？为什么？"><a href="#10、描述4次挥手，3次行不行？为什么？" class="headerlink" title="10、描述4次挥手，3次行不行？为什么？"></a>10、描述4次挥手，3次行不行？为什么？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>tcp/ip 是全双工的，client 端在没有数据需要发送给server的时候，就发送FIN 信号告知Server ，然后终止对server 的数据传输，但是server 可以继续对client 发送数据包，这时候就是4次来终止连接，过程如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/tcp%E7%9A%844%E6%AC%A1%E6%8C%A5%E6%89%8B.png" alt="tcp的4次挥手"></p>
+<p>但是，<strong>如果Server 收到client 的FIN 包之后，再也没有数据要发给Client 了，那么对Client 的ack 包和 Server 自己的FIN 包就能合并成一个包发送出去，4次挥手就能变成3次挥手。</strong></p>
+<p>关于图中的 time_await ，它的作用主要是1、为实现TCP全双工连接的可靠释放；2、为使旧的数据包在网络因过期而消失。更详细的解释可以<a href="https://glassx.gitee.io/2018/05/21/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/">参考以前的这篇文章</a></p>
+</details>
+
+<h2 id="11、了解哪些设计模式？写个单例模式？"><a href="#11、了解哪些设计模式？写个单例模式？" class="headerlink" title="11、了解哪些设计模式？写个单例模式？"></a>11、了解哪些设计模式？写个单例模式？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ul>
+<li>单例模式         </li>
+<li>建造者模式       </li>
+<li>工厂模式        </li>
+<li>适配器模式       </li>
+<li>装饰模式        </li>
+<li>观察者模式         </li>
+</ul>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//线程安全的单例模式代码</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>{</span><br><span class="line">    <span class="comment">//注意 volatitle 关键字</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> volatitle Singleton instance = <span class="keyword">null</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//构造函数私有</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">()</span></span>{</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="keyword">null</span>){</span><br><span class="line">            <span class="keyword">synchronized</span>(Singleton.class){</span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="keyword">null</span>){</span><br><span class="line">                    instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<hr>
+</details>
+
+<p><font color="ff0000">以下针对项目可能的提问</font></p>
+<h2 id="12、了解多线程使用，聊聊锁可以分为哪些种类"><a href="#12、了解多线程使用，聊聊锁可以分为哪些种类" class="headerlink" title="12、了解多线程使用，聊聊锁可以分为哪些种类"></a>12、了解多线程使用，聊聊锁可以分为哪些种类</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>大体可以分为，这不全部指锁的状态，有的指锁的特性，有的指锁的设计：</p>
+<ul>
+<li>乐观锁/悲观锁    </li>
+<li>公平锁/非公平锁     </li>
+<li>偏向锁    </li>
+<li>轻量级锁    </li>
+<li>自旋锁      </li>
+<li>可重入锁    </li>
+</ul>
+</details>
+
+<blockquote>
+<p>具体可以<a href="https://glassx.gitee.io/2019/09/14/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/">参考以前写的这篇博客</a></p>
+</blockquote>
+<h2 id="13、引申-聊聊-HandlerThread"><a href="#13、引申-聊聊-HandlerThread" class="headerlink" title="13、引申-聊聊 HandlerThread"></a>13、引申-聊聊 HandlerThread</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>HandlerThread 继承了 Thread ，所以本质上是个workThread，只不过它带了个Looper，无需开发者自己去做Looper.prepare() 操作，可以看下其关键源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        mTid = Process.myTid();</span><br><span class="line">        Looper.prepare();</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line">            mLooper = Looper.myLooper();</span><br><span class="line">            notifyAll();</span><br><span class="line">        }</span><br><span class="line">        Process.setThreadPriority(mPriority);</span><br><span class="line">        onLooperPrepared();</span><br><span class="line">        Looper.loop();</span><br><span class="line">        mTid = -<span class="number">1</span>;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以我们在使用的时候，首先new 出一个对象来，接着就要执行其start() 方法，以便完成 Looper 的初始化，其中，notifyAll() 主要用于方法 getLooper() 中通知 Looper 已经准备好，唤醒wait：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Looper <span class="title">getLooper</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (!isAlive()) {</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// If the thread has been started, wait until the looper has been created.</span></span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line">            <span class="keyword">while</span> (isAlive() &amp;&amp; mLooper == <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">try</span> {</span><br><span class="line">                    wait();</span><br><span class="line">                } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> mLooper;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在使用完成之后，需要手动退出Thread：mHandlerThread.quit();  ，其原理不用写也知道：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">quit</span><span class="params">()</span> </span>{</span><br><span class="line">    Looper looper = getLooper();</span><br><span class="line">    <span class="keyword">if</span> (looper != <span class="keyword">null</span>) {</span><br><span class="line">        looper.quit();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>从以上原理我们可以知道，HandlerThread 的使用场景就是：需要在子线程执行耗时的，并且可能有多个任务的操作(每个任务都开线程导致线程太多啊)，比如多个下载任务(非同一个任务多线程下载)，还有一个典型例子就是IntentService。</p>
+</details>
+
+<h2 id="14、延伸-IntentService"><a href="#14、延伸-IntentService" class="headerlink" title="14、延伸-IntentService"></a>14、延伸-IntentService</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>我们知道，IntentService 使用非常简单，不需要自己建立线程，执行完毕后也无需我们自己关闭Service，只需要专心在 onHandleIntent(Intent intent) 方法中实现逻辑即可。IntentService 使用<strong>工作线程</strong><font color="ff0000">逐一</font>处理所有启动请求，如果不需要在Service中执行并发任务，IntentService 是最好的选择。至于如何做到的，我们只要看关键源码即可：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">IntentService</span> <span class="keyword">extends</span> <span class="title">Service</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ServiceHandler</span> <span class="keyword">extends</span> <span class="title">Handler</span> </span>{</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">ServiceHandler</span><span class="params">(Looper looper)</span> </span>{</span><br><span class="line">            <span class="keyword">super</span>(looper);</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">            onHandleIntent((Intent)msg.obj);</span><br><span class="line">            stopSelf(msg.arg1);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.onCreate();</span><br><span class="line">        HandlerThread thread = <span class="keyword">new</span> HandlerThread(<span class="string">"IntentService["</span> + mName + <span class="string">"]"</span>);</span><br><span class="line">        thread.start();</span><br><span class="line"></span><br><span class="line">        mServiceLooper = thread.getLooper();</span><br><span class="line">        mServiceHandler = <span class="keyword">new</span> ServiceHandler(mServiceLooper);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onStart</span><span class="params">(<span class="meta">@Nullable</span> Intent intent, <span class="keyword">int</span> startId)</span> </span>{</span><br><span class="line">        Message msg = mServiceHandler.obtainMessage();</span><br><span class="line">        msg.arg1 = startId;</span><br><span class="line">        msg.obj = intent;</span><br><span class="line">        mServiceHandler.sendMessage(msg);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>IntentService onCreate 中创建了 HandlerThread 实例，mServiceHandler 创建时使用了 HandlerThread 的 Looper，这决定了最终业务是在HandlerThread 中的子线程中执行的，在 handleMessage 方法中看到了熟悉的 onHandleIntent 方法调用，待 onHandleIntent 执行完毕后，马上执行Service 的 stopSelf(msg.arg1) 关闭自己。</p>
+<p>这里使用 stopSelf(msg.arg1) 而不是 stopSelf()，而msg.arg1 即 startId，而这个 startId 就是 onStartCommand(Intent intent,int flags,int startId) 的最后一个参数。我们知道多次调用startService 来启动同一个Service ，只有第一次会执行 onCreate ，但是会多次调用onStartCommand，以及onStart(所以IntentService 中，在onStart方法里面发送Message到Handler)，并且每次 startId 并不相同，且都大于0。而stopSelf() 最终会调用 stopSelf(-1)<br>。</p>
+<p>stopSelf(int startId) 中的startId 与 onStartCommand 的startId 是一一对应的关系，所以，<strong>当我们调用stopSelf(int startId)时，系统会检测是否还有其它startId 存在，有的话就不销毁当前service，没有的话则销毁。</strong></p>
+<p>所以，为什么是调用stopSelf 而不是调用 stopSelf(int startId)，从上面的比较我们得出：这是为了提高 IntentService 的利用率，如果在 onHandleIntent 方法执行完毕前，又调用了startService 启动了同一个 IntentService ，那么我们就没必要销毁当前service了，直接继续使用当前service 对象执行任务即可，这样有利于减少对象的销毁及创建。再提及一句，由于是使用HandlerThread ，所以多个任务只能是串行方式依次执行。</p>
+</details>
+
+<blockquote>
+<p>以上内容<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/bed2efd303fe">参考俗人浮生</a> 的博客，以及 IntentService 官方源码</p>
+</blockquote>
+<h2 id="15、volatile-关键字有了解吗？"><a href="#15、volatile-关键字有了解吗？" class="headerlink" title="15、volatile 关键字有了解吗？"></a>15、volatile 关键字有了解吗？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>讲解之前，首先了解 原子性、可见性 以及 有序性 的基本概念：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%80%E5%8E%86%E9%97%AE%E9%A2%98/%E5%8E%9F%E5%AD%90%E6%80%A7-%E5%8F%AF%E8%A7%81%E6%80%A7-%E6%9C%89%E5%BA%8F%E6%80%A7%E6%A6%82%E5%BF%B5.jpg" alt="原子性-可见性-有序性概念"></p>
+<p>一言以蔽之，volatile 保证可见性、有序性，但是不保证原子性。</p>
+<p><strong>保证可见性：</strong>多个线程共享一个volatile变量k，如果一个线程在工作内存中修改k的值会立即刷新到主存，同时将其他线程中的该值设置成已过期，其他线程在下次使用k值时，需要从主内存刷新获取。<strong>在k值更改前就已经在使用的情形，比如k值在做加法的途中，如果k值改变，则是不受影响的，必须是下一次再次使用k的时候，才会从主存去刷新</strong>。还有要注意的是，子线程使用成员变量都会将变量从主存中拷贝一份，而不是直接使用。</p>
+<p><strong>保证有序性：</strong>我们知道为了提高性能，cpu或者编译器会对代码重排序，代码的执行顺序不一定和我们写的顺序是一致的，它们只保证最终结果一致。volatile 保证读/写volatile 属性时，其前面的代码必须已经执行完成，它后面的代码也不能排到前面来执行。</p>
+<p><strong>不保证原子性：</strong>也即前面提到的，比如在做加法途中，这个k值改变了，是无法改变正在做的加法中的k值的。这也是volatile 修饰变量并不是线程安全的原因。</p>
+</details>
+
+<blockquote>
+<p>如果还不太了解，可以<a href="https://glassx.gitee.io/2019/09/23/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0/">参考以前写的这篇读书笔记</a>、还可以<a target="_blank" rel="noopener" href="https://blog.csdn.net/carson_ho/article/details/83780349">参考这篇文章，讲得很透彻</a></p>
+</blockquote>
+<h2 id="16、什么是大接口？"><a href="#16、什么是大接口？" class="headerlink" title="16、什么是大接口？"></a>16、什么是大接口？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>大接口就是所看到的整个页面，都是由一个接口数据决定的。当时基于的背景有几个：      </p>
+<ul>
+<li>这个行业决定，如果有需求，可能会要求某个版本不让用户使用了。    </li>
+<li>还是行业决定，页面要求能灵活变动，随时可能某个模块没有了，或者某个tab没有了。    </li>
+<li>减少接口数量，减轻后台压力，我们知道，频繁的、少量数据的接口请求对后台不友好，可能握手、header 等就能占用很大一部分资源。           </li>
+</ul>
+<p>怎么做的：     </p>
+<p>本地有若干指定的view映射，根据后台返回，可以动态添加这些view。一般view都是占满一行，左右两边的边距确定。</p>
+</details>
+
+<h2 id="17、怎么防止劫持？"><a href="#17、怎么防止劫持？" class="headerlink" title="17、怎么防止劫持？"></a>17、怎么防止劫持？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>背景：当时有用户反馈，我们的 webview 打开慢，并且有时候弹出广告，可我们自己并没有添加广告，因此初步认定可能是运营商劫持，事实上我们在百度上搜索一下运营商劫持，就有一大把的搜索结果，看来并非我们一家。在这个基础上，分析应该是通过<strong>dns 污染导致的</strong>。</p>
+<p>所以解决方案就是不使用运营商的dns，而使用119(腾讯的 119.29.29.29) 和 114(114.114.114.114) 的dns，参考网上的方案，自己写了个实现。在获取到的ip 中，随机选中一个缓存起来，缓存有效时间为15分钟。</p>
+<p>在 API 的http 请求中，拦截请求，查询是否缓存该host的ip，如果有，判断是否过期。如果没有缓存或者过期，则会通过上面步骤获取ip，并把host 换成ip直连。</p>
+<p>针对webview的http 类型的get请求，在WebviewClient 的 shouldInterceptRequest 回调中(执行在子线程)，使用自定义构建的网络请求(根据WebResourceRequest 的 url 以及 headers 构建 okhttp 的 okHttpRequest，其中headers也加入okHttpRequest 的headers 中)。该请求会在可能的情况下，将url替换成ip直连，获取结果后，自行重新组装 WebResourceResponse 对象return。</p>
+</details>
+
+<blockquote>
+<p>https的ip直连会碰到一些问题，具体可以参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/leelit/article/details/77829196">别人的博客</a></p>
+</blockquote>
+<h2 id="18、一般走查哪些代码？"><a href="#18、一般走查哪些代码？" class="headerlink" title="18、一般走查哪些代码？"></a>18、一般走查哪些代码？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>关键代码，比如容易出现死循环的重试机制、错误上报机制、安全检测机制    </p>
+</details>
+
+<h2 id="19、如何文档归档"><a href="#19、如何文档归档" class="headerlink" title="19、如何文档归档"></a>19、如何文档归档</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>使用wiki，wiki内容包括：</p>
+<ul>
+<li>后端接口以及参数说明    </li>
+<li>前端支持的协议以及支持的格式     </li>
+<li>关键逻辑的边界和参数，如自动登录尝试的次数，防止出现死循环；网络超时时长    </li>
+</ul>
+<p>其他部门做业务的时候只需要看wiki就行，不用找具体的技术人员查看客户端代码     </p>
+</details>
+
+<h2 id="20、聊聊这个内部sdk的设计？"><a href="#20、聊聊这个内部sdk的设计？" class="headerlink" title="20、聊聊这个内部sdk的设计？"></a>20、聊聊这个内部sdk的设计？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>以前没有做过sdk，貌似也没地方可以参考，还有时间也很紧急，所以在技术上直接采用500里面的技术，并没有什么新意，做完之后，有小需求做的同时慢慢重构，自己得出一些经验吧：</p>
+<ul>
+<li>控制调用权限。只暴露几个类给用户即可，其余的类不允许用户调用。         </li>
+<li>确定回调方式。1、调用接口中需要传递 activity，业务中使用用户的activity 执行activityForResult 接受业务返回数据。  2、如果使用广播，则使用本地广播                     </li>
+<li>防止资源名称和宿主app冲突，资源名称添加特定前缀           </li>
+<li>传入的参数各种各样，需要注意判空、检验数据格式合法性等     </li>
+<li>尽量不使用第三方的类库，目前sdk中使用第三方类库，接sdk的时候要求用户添加依赖      </li>
+</ul>
+</details> 
+
+<h2 id="21、最有成就感的项目？最棘手的问题？"><a href="#21、最有成就感的项目？最棘手的问题？" class="headerlink" title="21、最有成就感的项目？最棘手的问题？"></a>21、最有成就感的项目？最棘手的问题？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>最有成就感的可能就是xx app吧，接触得比较多，虽然目前的流畅度还是一般般，但是做了比较多的努力：</p>
+<ul>
+<li>性能优化       </li>
+<li>大接口试验      </li>
+<li>在以前的基础上动过网络框架和图片框架      </li>
+<li>在安全上也做了一些努力     </li>
+</ul>
+</details> 
+
+<h2 id="22、引申-如何重新设计网络框架？"><a href="#22、引申-如何重新设计网络框架？" class="headerlink" title="22、引申-如何重新设计网络框架？"></a>22、引申-如何重新设计网络框架？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>   
+
+<ul>
+<li>调用方式改变，不需要传递2次的 responseClass    </li>
+<li>采用kotlin 的线程调度(GlobalScope.launch()) 而不是rxjava 进行线程间的切换     </li>
+</ul>
+</details> 
+
+<h2 id="23、引申-安全做了哪些努力"><a href="#23、引申-安全做了哪些努力" class="headerlink" title="23、引申-安全做了哪些努力"></a>23、引申-安全做了哪些努力</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>   
+
+<ul>
+<li>在native层做app签名校验  </li>
+<li>广播统一改为本地广播  </li>
+<li>LeakCanary防止内存泄漏  </li>
+<li>SharedPreference加密  </li>
+<li>allowBackUp = false  </li>
+<li>某些key生成在native代码中做  </li>
+<li>https证书本地验证。</li>
+</ul>
+</details> 
+
+<h2 id="24、讲一讲你看过的第三方框架的源码？"><a href="#24、讲一讲你看过的第三方框架的源码？" class="headerlink" title="24、讲一讲你看过的第三方框架的源码？"></a>24、讲一讲你看过的第三方框架的源码？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary> 
+
+<p>可以讲讲 LeakCanary 和 阿里的框架 alpha</p>
+</details>
+
+<h2 id="25、逛哪些论坛？"><a href="#25、逛哪些论坛？" class="headerlink" title="25、逛哪些论坛？"></a>25、逛哪些论坛？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>   
+
+<p>有逛csdn，gank.io(不过gank.io有时候更新得比较慢)，apkbus，androidweekly.cn 啊 等等。</p>
+</details> 
+
+<h2 id="26、平时关注什么技术？"><a href="#26、平时关注什么技术？" class="headerlink" title="26、平时关注什么技术？"></a>26、平时关注什么技术？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>   
+
+<p>目前关注的就是 flutter 了</p>
+</details> 
+
+<h2 id="27、有什么想问我的"><a href="#27、有什么想问我的" class="headerlink" title="27、有什么想问我的"></a>27、有什么想问我的</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><strong>如果是hr初面：</strong>       </p>
+<blockquote>
+<p>这个岗位是新开设的还是原岗位人离职了？<br>这个岗位可以为公司带来什么价值？<br>想了解以下公司的培训机制和学习机制     </p>
+</blockquote>
+<p><strong>如果是技术人员：</strong>      </p>
+<blockquote>
+<p>你觉得我能胜任这个职位吗(看这一关是否通过了)？<br>感觉不好，就问：你觉得我还有哪些不足？</p>
+</blockquote>
+<p><strong>终面的话：</strong>     </p>
+<blockquote>
+<p>如果顺利，问下部门、公司的发展啦<br>如果觉得基本上没戏了，就问下自己的缺陷在哪<br>如果模棱两可，问下一步流程是怎么样的    </p>
+</blockquote>
+</details>   
+
+</body></html>
       
     </div>
 
@@ -1178,23 +1898,79 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="冒泡排序算法"><a href="#冒泡排序算法" class="headerlink" title="冒泡排序算法"></a>冒泡排序算法</h2><details>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="冒泡排序算法"><a href="#冒泡排序算法" class="headerlink" title="冒泡排序算法"></a>冒泡排序算法</h2><details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <p>思路：冒泡排序基于交换排序思想。依次比较相邻的两个数，将小数放在前面，大数放在后面。</p>
 <p>即第一趟：首先比较第1个和第2个数，将小数放前，大数放后。然后比较第2个数和第3个数，将小数放前，大数放后，如此继续，直至比较最后两个数，将小数放前，大数放后。之后便是重复第一趟步骤，直至全部排序完成(或者说直到某一趟没有发生交换的时候)。每一趟完成后，最后一个数肯定是最大的那个数，所以一次for循环后，会有 len – 操作，即每趟都比上一趟少比较一次。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">bubbleSort1</span><span class="params">(<span class="keyword">int</span>[] ints)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> len = ints.length;</span><br><span class="line">    <span class="keyword">boolean</span> flag = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">while</span> (flag) &#123;</span><br><span class="line">        flag = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; len; i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (ints[i - <span class="number">1</span>] &gt; ints[i]) &#123;</span><br><span class="line">                <span class="keyword">int</span> temp = ints[i];</span><br><span class="line">                ints[i] = ints[i-<span class="number">1</span>];</span><br><span class="line">                ints[i-<span class="number">1</span>] = temp;</span><br><span class="line">                flag = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        len -- ;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">bubbleSort1</span><span class="params">(<span class="keyword">int</span>[] ints)</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> len = ints.length;</span><br><span class="line">    <span class="keyword">boolean</span> flag = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">while</span> (flag) {</span><br><span class="line">        flag = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; len; i++) {</span><br><span class="line">            <span class="keyword">if</span> (ints[i - <span class="number">1</span>] &gt; ints[i]) {</span><br><span class="line">                <span class="keyword">int</span> temp = ints[i];</span><br><span class="line">                ints[i] = ints[i-<span class="number">1</span>];</span><br><span class="line">                ints[i-<span class="number">1</span>] = temp;</span><br><span class="line">                flag = <span class="keyword">true</span>;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        len -- ;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
 <p>冒泡排序在数据有序的情况下，只需要一趟即可，时间复杂度是 O(n)，在最差的情况下，每趟都有比较，时间复杂度是 O(n^2) ，平均复杂度是 O(n^2)，适合数据量较小的情况,它是稳定的排序方法，</p>
 </details>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/03/04/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-%E5%9F%BA%E7%A1%80%E6%8E%92%E5%BA%8F/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+
+<h2 id="选择排序"><a href="#选择排序" class="headerlink" title="选择排序"></a>选择排序</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>选择排序的基本思想：每次从待排序的数据元素中选出最小(大)的一个元素，放在序列的起始位置。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">selectSort</span><span class="params">(<span class="keyword">int</span>[] a)</span></span>{</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i&lt; a.length - <span class="number">1</span>; i++){</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">int</span> index = i;<span class="comment">//当前趟最小的数所在index</span></span><br><span class="line">        </span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> j=i+<span class="number">1</span>; j &lt; a.length; j++){</span><br><span class="line">            <span class="keyword">if</span> (a[j] &lt; a[index]){</span><br><span class="line">                index = j;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (index != i){</span><br><span class="line">            <span class="keyword">int</span> temp = a[i];</span><br><span class="line">            a[i] = a[index];</span><br><span class="line">            a[index] = temp;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>它的时间复杂度是O(n^2)，因为它总是要循环那么多次，并且每次都是从待排序的数据中挑选最小的，因此它是不稳定的排序算法。</p>
+</details>
+
+<h2 id="插入排序"><a href="#插入排序" class="headerlink" title="插入排序"></a>插入排序</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+插入排序的原理类似于打牌的时候抓牌，每次抓牌上来，都按照顺序将其插入到之前排好序的牌堆中。
+
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doInsertSort</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> index = <span class="number">1</span>; index&lt;length; index++){<span class="comment">//外层向右的index，即作为比较对象的数据的index</span></span><br><span class="line">        <span class="keyword">int</span> temp = array[index];<span class="comment">//用作比较的数据</span></span><br><span class="line">        <span class="keyword">int</span> leftindex = index-<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">while</span>(leftindex&gt;=<span class="number">0</span> &amp;&amp; array[leftindex]&gt;temp){<span class="comment">//当比到最左边或者遇到比temp小的数据时，结束循环</span></span><br><span class="line">            array[leftindex+<span class="number">1</span>] = array[leftindex];</span><br><span class="line">            leftindex--;</span><br><span class="line">        }</span><br><span class="line">        array[leftindex+<span class="number">1</span>] = temp;<span class="comment">//把temp放到空位上</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>时间复杂度是O(n^2)，适用于数据量较少的情况，是稳定的排序。</p>
+</details>
+
+<h2 id="shell排序"><a href="#shell排序" class="headerlink" title="shell排序"></a>shell排序</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+原理： 严格来说是基于插入排序的思想，shell排序有点不大好理解，后续再看看
+
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 思路：三层循环</span></span><br><span class="line"><span class="comment"> * 第一层循环：控制增量-增量随着程序的进行依次递减一半</span></span><br><span class="line"><span class="comment"> * 第二层循环：遍历数组</span></span><br><span class="line"><span class="comment"> * 第三层循环：比较元素，交换元素。</span></span><br><span class="line"><span class="comment"> * 这里需要注意的是：比较的两个元素和交换的两个元素是不同的。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="title">shellSort</span><span class="params">(<span class="keyword">int</span>[] data)</span> </span>{</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> div = data.length/<span class="number">2</span>; div&gt;<span class="number">0</span>; div/=<span class="number">2</span>) {</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> j = div; j &lt; data.length; j++) {</span><br><span class="line">            <span class="keyword">int</span> temp = data[j];</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> k=j; k&gt;=div &amp;&amp; temp&lt;data[k-div] ; k-=div) {</span><br><span class="line">                data[k] = data[k-div];</span><br><span class="line">            }</span><br><span class="line">            data[k] = temp;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>shell排序最差的时间复杂度是 O(n^2)，平均复杂度是 O(nlogn)，是不稳定的排序</p>
+</details>
+
+<h2 id="快速排序"><a href="#快速排序" class="headerlink" title="快速排序"></a>快速排序</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>快速排序的思想是<strong>分治思想</strong>。假设我们现在对“6 1 2 7 9 3 4 5 10 8”这10个数进行排序。首先在这个序列中随便找一个数作为基准数，为了方便，就让第一个数6作为基准数吧。接下来，需要将这个序列中所有比基准数大的数放在6的右边，比基准数小的数放在6的左边。得到一个一个以6为中心的序列，再以6为界限，将左右两边都看成数组，分别按照刚才的方法排序。上个图会比较直观：</p>
+<p><img src="/assets/%E8%B6%A3%E5%91%B3/%E7%AE%97%E6%B3%95/%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F.png" alt="快速排序"></p>
+<p>代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">quickSort</span><span class="params">(<span class="keyword">int</span>[] arr,<span class="keyword">int</span> low,<span class="keyword">int</span> high)</span></span>{</span><br><span class="line">    <span class="keyword">int</span> i,j,temp,t;</span><br><span class="line">    <span class="keyword">if</span>(low&gt;high){</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">    i=low;</span><br><span class="line">    j=high;</span><br><span class="line">    <span class="comment">//temp就是基准位</span></span><br><span class="line">    temp = arr[low];</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">while</span> (i&lt;j) {</span><br><span class="line">        <span class="comment">//先看右边，依次往左递减</span></span><br><span class="line">        <span class="keyword">while</span> (temp&lt;=arr[j]&amp;&amp;i&lt;j) {</span><br><span class="line">            j--;</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//再看左边，依次往右递增</span></span><br><span class="line">        <span class="keyword">while</span> (temp&gt;=arr[i]&amp;&amp;i&lt;j) {</span><br><span class="line">            i++;</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//如果满足条件则交换</span></span><br><span class="line">        <span class="keyword">if</span> (i&lt;j) {</span><br><span class="line">            t = arr[j];</span><br><span class="line">            arr[j] = arr[i];</span><br><span class="line">            arr[i] = t;</span><br><span class="line">        }</span><br><span class="line"> </span><br><span class="line">    }</span><br><span class="line">    <span class="comment">//最后将基准为与i和j相等位置的数字交换</span></span><br><span class="line">     arr[low] = arr[i];</span><br><span class="line">     arr[i] = temp;</span><br><span class="line">    <span class="comment">//递归调用左半数组</span></span><br><span class="line">    quickSort(arr, low, j-<span class="number">1</span>);</span><br><span class="line">    <span class="comment">//递归调用右半数组</span></span><br><span class="line">    quickSort(arr, j+<span class="number">1</span>, high);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>快排的平均时间复杂度是 O(nlogn) ，最坏情况下为 O(n^2)，这种交换方式导致它是不稳定的排序。</p>
+</details>
+
+<h2 id="堆排序"><a href="#堆排序" class="headerlink" title="堆排序"></a>堆排序</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>堆排序是一种<strong>选择排序</strong>。</p>
+<p>堆排序时，先构建堆(假设大顶堆)，将数组转换成堆，数据在堆中是按层编号的，所以数组中一个编号为 i 的结点的子结点在 2i + 1 和 2i + 2 的位置。开始构建时，首先从最后一个非叶子结点开始(叶子结点不用调，叶子结点只是非叶子结点比较时被动移动)，最后一个非叶子节点的位置在 n/2-1。 </p>
+<p>构建了大顶堆后，堆顶元素与末尾元素交换，将大元素“沉”到末尾，将除尾部以外的元素再构建大顶堆，如此循环，每次找到最大的下沉的后面。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">heapSort</span><span class="params">(<span class="keyword">int</span>[] arr)</span></span>{</span><br><span class="line">    <span class="keyword">int</span> arrLen = arr.length;</span><br><span class="line">    <span class="keyword">int</span> temp;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//建立大顶堆</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = arrLen/<span class="number">2</span> -<span class="number">1</span>;i&gt;=<span class="number">0</span>;i--){</span><br><span class="line">        <span class="comment">//从第一个非叶子结点(在 arrLen/2 -1 处)从下至上，从右至左调整结构</span></span><br><span class="line">        adjustHeap(arr,i,arrLen);</span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> j = arrLen -<span class="number">1</span>;j &gt;= <span class="number">0</span>;j--){</span><br><span class="line">        <span class="comment">//将堆顶元素与末尾元素进行交换</span></span><br><span class="line">        temp = arr[<span class="number">0</span>];</span><br><span class="line">        arr[<span class="number">0</span>] = arr[j];</span><br><span class="line">        arr[j] = temp;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//重新对堆进行调整</span></span><br><span class="line">        adjustHeap(arr,<span class="number">0</span>,j);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">adjustHeap</span><span class="params">(<span class="keyword">int</span>[] arr,<span class="keyword">int</span> start,<span class="keyword">int</span> end)</span></span>{</span><br><span class="line">    <span class="comment">//先取出当前元素i</span></span><br><span class="line">    <span class="keyword">int</span> temp = arr[start];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> k = <span class="number">2</span>*start + <span class="number">1</span>;k &lt; end;k = <span class="number">2</span>*k + <span class="number">1</span>){<span class="comment">//从i结点的左子结点(2i+1处)开始</span></span><br><span class="line">        <span class="keyword">if</span> (k + <span class="number">1</span> &lt; end &amp;&amp; arr[k] &lt; arr[k + <span class="number">1</span>]){<span class="comment">//如果左子结点小于右子结点，k指向右子结点</span></span><br><span class="line">            k ++;</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//如果子节点大于父节点，将子节点值赋给父节点（不用进行交换）</span></span><br><span class="line">        <span class="keyword">if</span> (arr[k] &gt; temp) {</span><br><span class="line">            arr[start] = arr[k];</span><br><span class="line">            start = k;</span><br><span class="line">        }<span class="keyword">else</span> {</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//将temp值放到最终的位置</span></span><br><span class="line">    arr[start] = temp;</span><br><span class="line">} </span><br></pre></td></tr></tbody></table></figure>
+
+<p>它的最坏，最好以及平均复杂度都是 O(nlogn)，它是不稳定排序。</p>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.cnblogs.com/chengxiao/p/6129630.html">他人的博客</a></p>
+</details>
+
+<h2 id="归并排序"><a href="#归并排序" class="headerlink" title="归并排序"></a>归并排序</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>归并排序是基于 分治法 实现的。目前还看不大懂，后续再理解</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">//非递归算法实现二路归并排序，length代表数组长度，即数组最大下标是 legth - 1</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">mergeSort</span><span class="params">(<span class="keyword">int</span> List[],<span class="keyword">int</span> length)</span></span>{</span><br><span class="line">    <span class="keyword">int</span> size = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">int</span> low;</span><br><span class="line">    <span class="keyword">int</span> mid;</span><br><span class="line">    <span class="keyword">int</span> high;</span><br><span class="line">    <span class="comment">//size 是标记当前各个归并序列的high-low，从1，2，4，8，……，2*size</span></span><br><span class="line">    <span class="keyword">while</span>(size &lt;= length - <span class="number">1</span>){</span><br><span class="line">        <span class="comment">//从第一个元素开始扫描，low代表第一个分割的序列的第一个元素</span></span><br><span class="line">        low = <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//当前的归并算法结束的条件</span></span><br><span class="line">        <span class="keyword">while</span>(low + size &lt;= length - <span class="number">1</span>){</span><br><span class="line">            <span class="comment">//mid代表第一个分割的序列的最后一个元素</span></span><br><span class="line">            mid = low + size - <span class="number">1</span>;</span><br><span class="line">            <span class="comment">//high 代表第二个分割的序列的最后一个元素</span></span><br><span class="line">            high = mid + size;</span><br><span class="line">            <span class="comment">//判断一下：如果第二个序列个数不足size个</span></span><br><span class="line">            <span class="keyword">if</span>(high &gt; length - <span class="number">1</span>){</span><br><span class="line">                <span class="comment">//调整 high 为最后一个元素的下标即可</span></span><br><span class="line">                high = length - <span class="number">1</span>;</span><br><span class="line">            }</span><br><span class="line">            <span class="comment">//调用归并函数，进行分割的序列的分段排序</span></span><br><span class="line">            merge(List, low, mid, high);</span><br><span class="line">            <span class="comment">//打印出每次归并的区间</span></span><br><span class="line">            cout &lt;&lt; <span class="string">"low:"</span> &lt;&lt; low &lt;&lt; <span class="string">" mid:"</span> &lt;&lt; mid &lt;&lt; <span class="string">" high:"</span> &lt;&lt; high &lt;&lt; endl;</span><br><span class="line">            <span class="comment">//下一次归并时第一序列的第一个元素位置</span></span><br><span class="line">            low = high + <span class="number">1</span>;</span><br><span class="line">        }<span class="comment">// end of while</span></span><br><span class="line">        <span class="comment">//范围扩大一倍，二路归并的过程</span></span><br><span class="line">        size *= <span class="number">2</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>归并的思想主要用于外部排序：<br>外部排序可分两步<br>①待排序记录分批读入内存，用某种方法在内存排序，组成有序的子文件，再按某种策略存入外存。<br>②子文件多路归并，成为较长有序子文件，再记入外存，如此反复，直到整个待排序文件有序。</p>
+</blockquote>
+</details>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>上述排序，稳定的排序有：冒泡、插入、合并 ，不稳定排序：选择、shell、快排、堆排</p>
+</body></html>
       
     </div>
 
@@ -1269,24 +2045,51 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="二叉树遍历"><a href="#二叉树遍历" class="headerlink" title="二叉树遍历"></a>二叉树遍历</h2><h3 id="先序遍历"><a href="#先序遍历" class="headerlink" title="先序遍历"></a>先序遍历</h3><p><img src="/assets/%E8%B6%A3%E5%91%B3/%E7%AE%97%E6%B3%95/%E5%85%88%E5%BA%8F%E9%81%8D%E5%8E%86.png" alt="先序遍历"></p><details>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="二叉树遍历"><a href="#二叉树遍历" class="headerlink" title="二叉树遍历"></a>二叉树遍历</h2><h3 id="先序遍历"><a href="#先序遍历" class="headerlink" title="先序遍历"></a>先序遍历</h3><p><img src="/assets/%E8%B6%A3%E5%91%B3/%E7%AE%97%E6%B3%95/%E5%85%88%E5%BA%8F%E9%81%8D%E5%8E%86.png" alt="先序遍历"></p>
+<details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 
 <p>递归方法：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">pre</span><span class="params">(BTreeNode treeNode)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(treeNode != <span class="keyword">null</span>)&#123;</span><br><span class="line">        <span class="comment">//显示节点数据</span></span><br><span class="line">        showNodeValue(treeNode);</span><br><span class="line">        <span class="comment">//先序遍历左子树</span></span><br><span class="line">        pre(treeNode.left);</span><br><span class="line">        <span class="comment">//先序遍历右子树</span></span><br><span class="line">        pre(treeNode.right)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">pre</span><span class="params">(BTreeNode treeNode)</span></span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(treeNode != <span class="keyword">null</span>){</span><br><span class="line">        <span class="comment">//显示节点数据</span></span><br><span class="line">        showNodeValue(treeNode);</span><br><span class="line">        <span class="comment">//先序遍历左子树</span></span><br><span class="line">        pre(treeNode.left);</span><br><span class="line">        <span class="comment">//先序遍历右子树</span></span><br><span class="line">        pre(treeNode.right)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
 <p>非递归方法：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//非递归，手算的思想，先变访问边找，找到最左下方的，然后向上再向访问右边的</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePreOrder</span><span class="params">(TreeNode p)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty() || p != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">while</span> (p != <span class="keyword">null</span>) &#123;</span><br><span class="line">            visit(p);</span><br><span class="line">            stack.push(p);</span><br><span class="line">            p = p.left;</span><br><span class="line">        &#125;</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        p = p.right;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//栈的思想，按层次倒着进栈，利用后进先出解决顺序问题</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePreOrder_2</span><span class="params">(TreeNode p)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    stack.push(p);</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty()) &#123;</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        visit(p);</span><br><span class="line">        <span class="keyword">if</span> (p.right != <span class="keyword">null</span>) stack.push(p.right);</span><br><span class="line">        <span class="keyword">if</span> (p.left != <span class="keyword">null</span>) stack.push(p.left);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//非递归，手算的思想，先变访问边找，找到最左下方的，然后向上再向访问右边的</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePreOrder</span><span class="params">(TreeNode p)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty() || p != <span class="keyword">null</span>) {</span><br><span class="line">        <span class="keyword">while</span> (p != <span class="keyword">null</span>) {</span><br><span class="line">            visit(p);</span><br><span class="line">            stack.push(p);</span><br><span class="line">            p = p.left;</span><br><span class="line">        }</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        p = p.right;</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//栈的思想，按层次倒着进栈，利用后进先出解决顺序问题</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePreOrder_2</span><span class="params">(TreeNode p)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    stack.push(p);</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty()) {</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        visit(p);</span><br><span class="line">        <span class="keyword">if</span> (p.right != <span class="keyword">null</span>) stack.push(p.right);</span><br><span class="line">        <span class="keyword">if</span> (p.left != <span class="keyword">null</span>) stack.push(p.left);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
 </details>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/03/03/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-%E4%BA%8C%E5%8F%89%E6%A0%91%E9%81%8D%E5%8E%86/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+
+<h3 id="中序遍历"><a href="#中序遍历" class="headerlink" title="中序遍历"></a>中序遍历</h3><p><img src="/assets/%E8%B6%A3%E5%91%B3/%E7%AE%97%E6%B3%95/%E4%B8%AD%E5%BA%8F%E9%81%8D%E5%8E%86.png" alt="中序遍历"></p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>递归方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">middle</span><span class="params">(BTreeNode treeNode)</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(treeNode != <span class="keyword">null</span>){</span><br><span class="line">        <span class="comment">//中序遍历左子树</span></span><br><span class="line">        middle(treeNode.left);</span><br><span class="line">        <span class="comment">//显示节点数据</span></span><br><span class="line">        showNodeValue(treeNode);</span><br><span class="line">        <span class="comment">//中序遍历右子树</span></span><br><span class="line">        middle(treeNode.right);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>非递归方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativeInOrder</span><span class="params">(TreeNode p)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty() || p != <span class="keyword">null</span>) {</span><br><span class="line">        <span class="keyword">while</span> (p != <span class="keyword">null</span>) {</span><br><span class="line">            stack.push(p);</span><br><span class="line">            p = p.left;</span><br><span class="line">        }</span><br><span class="line">        p = stack.pop();</span><br><span class="line">        visit(p);</span><br><span class="line">        p = p.right;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+</details>
+
+<h3 id="后序遍历"><a href="#后序遍历" class="headerlink" title="后序遍历"></a>后序遍历</h3><p><img src="/assets/%E8%B6%A3%E5%91%B3/%E7%AE%97%E6%B3%95/%E5%90%8E%E5%BA%8F%E9%81%8D%E5%8E%86.png" alt="后序遍历"></p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+递归方法：
+
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">behind</span><span class="params">(BTreeNode treeNode)</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(treeNode != <span class="keyword">null</span>){</span><br><span class="line">        <span class="comment">//后序遍历左子树</span></span><br><span class="line">        behind(treeNode.left);</span><br><span class="line">        <span class="comment">//后序遍历右子树</span></span><br><span class="line">        behind(treeNode.right);</span><br><span class="line">        <span class="comment">//显示节点数据</span></span><br><span class="line">        showNodeValue(treeNode);</span><br><span class="line">        </span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>非递归方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//双栈法，易于理解</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativePostOrder_3</span><span class="params">(TreeNode p)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    Stack&lt;TreeNode&gt; stack = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    Stack&lt;TreeNode&gt; result = <span class="keyword">new</span> Stack&lt;TreeNode&gt;();</span><br><span class="line">    <span class="keyword">while</span> (!stack.empty() || p != <span class="keyword">null</span>) {</span><br><span class="line">        <span class="keyword">while</span> (p != <span class="keyword">null</span>) {</span><br><span class="line">            stack.push(p);</span><br><span class="line">            result.push(p);</span><br><span class="line">            p = p.right;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> (!stack.empty()) p = stack.pop().left;</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">while</span> (!result.empty()) {</span><br><span class="line">        p = result.pop();</span><br><span class="line">        visit(p);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+</details>
+
+<h3 id="层次遍历"><a href="#层次遍历" class="headerlink" title="层次遍历"></a>层次遍历</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">iterativeLevelOrder</span><span class="params">(TreeNode p)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) <span class="keyword">return</span>;</span><br><span class="line">    LinkedList&lt;TreeNode&gt; queue = <span class="keyword">new</span> LinkedList&lt;TreeNode&gt;();</span><br><span class="line">    queue.offer(p);</span><br><span class="line">    <span class="keyword">while</span> (!queue.isEmpty()) {</span><br><span class="line">        p = queue.poll();</span><br><span class="line">        <span class="keyword">if</span> (p.left != <span class="keyword">null</span>) queue.offer(p.left);</span><br><span class="line">        <span class="keyword">if</span> (p.right != <span class="keyword">null</span>) queue.offer(p.right);</span><br><span class="line">        visit(p);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+</details>
+
+<p>以上内容可以<a target="_blank" rel="noopener" href="https://www.cnblogs.com/songwenjie/p/8955856.html">参考这篇博客</a></p>
+</body></html>
       
     </div>
 
@@ -1437,7 +2240,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共246.9k字</span>
+  <span class="post-count">博客全站共244.9k字</span>
 </div>
 
 

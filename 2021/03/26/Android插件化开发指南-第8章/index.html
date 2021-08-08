@@ -53,15 +53,15 @@
   };
 </script>
 
-  <meta name="description" content="本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面： 合并所有的插件dex，用以解决插件类的加载问题              在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)       把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)">
+  <meta name="description" content="本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：  合并所有的插件dex，用以解决插件类的加载问题              在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)       把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)       在AndroidManifest 中声明插件中的组件">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第8章：最简单的插件化解决方案">
 <meta property="og:url" content="https://glassx.gitee.io/2021/03/26/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
-<meta property="og:description" content="本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面： 合并所有的插件dex，用以解决插件类的加载问题              在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)       把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)">
+<meta property="og:description" content="本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：  合并所有的插件dex，用以解决插件类的加载问题              在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)       把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)       在AndroidManifest 中声明插件中的组件">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-03-26T13:02:00.000Z">
-<meta property="article:modified_time" content="2021-03-29T14:03:10.052Z">
+<meta property="article:modified_time" content="2021-03-29T14:03:10.000Z">
 <meta property="article:author" content="glassx">
 <meta property="article:tag" content="Android插件化开发指南">
 <meta name="twitter:card" content="summary">
@@ -284,27 +284,27 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：</p><ul>
+        <html><head></head><body></body></html><html><head></head><body><p>本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：</p>
+<ul>
 <li>合并所有的插件dex，用以解决插件类的加载问题             </li>
 <li>在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)      </li>
 <li>把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)     </li>
-</ul><a id="more"></a>
-
+</ul>
 <h2 id="在AndroidManifest-中声明插件中的组件"><a href="#在AndroidManifest-中声明插件中的组件" class="headerlink" title="在AndroidManifest 中声明插件中的组件"></a>在AndroidManifest 中声明插件中的组件</h2><p>在插件中有啥，在宿主中声明啥就行     </p>
 <h2 id="宿主App加载插件中的类"><a href="#宿主App加载插件中的类" class="headerlink" title="宿主App加载插件中的类"></a>宿主App加载插件中的类</h2><p>把插件dex都合并到宿主的dex中，那么宿主App对应的ClassLoader 就可以加载插件中任意类：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考： https://github.com/BaoBaoJianqiang/ZeusStudy1.0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseDexClassLoaderHookHelper</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">patchClassLoder</span><span class="params">(ClassLoader cl,File apkFile,File optDexFile)</span></span>&#123;</span><br><span class="line">        <span class="comment">//获取BaseDexClassLoder: pathList</span></span><br><span class="line">        Object pathListObj = RefInvoke.getFiledObject(DexClassLoader.class.getSuperclass(), cl, <span class="string">"pathList"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取PathList: Element[] dexElements</span></span><br><span class="line">        Object[] dexElements = (Object[])RefInvoke.getFieldObject(pathListObj.getClass(), pathListObj, <span class="string">"dexElements"</span>);</span><br><span class="line"></span><br><span class="line">        ...<span class="comment">//手敲太难了，到时候复制下</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考： https://github.com/BaoBaoJianqiang/ZeusStudy1.0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseDexClassLoaderHookHelper</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">patchClassLoder</span><span class="params">(ClassLoader cl,File apkFile,File optDexFile)</span></span>{</span><br><span class="line">        <span class="comment">//获取BaseDexClassLoder: pathList</span></span><br><span class="line">        Object pathListObj = RefInvoke.getFiledObject(DexClassLoader.class.getSuperclass(), cl, <span class="string">"pathList"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取PathList: Element[] dexElements</span></span><br><span class="line">        Object[] dexElements = (Object[])RefInvoke.getFieldObject(pathListObj.getClass(), pathListObj, <span class="string">"dexElements"</span>);</span><br><span class="line"></span><br><span class="line">        ...<span class="comment">//手敲太难了，到时候复制下</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
 <h2 id="启动插件Service"><a href="#启动插件Service" class="headerlink" title="启动插件Service"></a>启动插件Service</h2><p>根据前面两章，素组App就能启动一个插件中的Service了，代码如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">String serviceName = <span class="string">"jianqiang.com.plugin1.TestService1"</span>;</span><br><span class="line">intent.setClassName(<span class="keyword">this</span>, serviceName);</span><br><span class="line">startService(intent);</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">String serviceName = <span class="string">"jianqiang.com.plugin1.TestService1"</span>;</span><br><span class="line">intent.setClassName(<span class="keyword">this</span>, serviceName);</span><br><span class="line">startService(intent);</span><br></pre></td></tr></tbody></table></figure>
 
 <h2 id="加载插件中的资源"><a href="#加载插件中的资源" class="headerlink" title="加载插件中的资源"></a>加载插件中的资源</h2><p>四大组件都可以这样实现插件化方案，Service 、ContentProvider 和 Receiver 都只要合并dex就够了，他们没有资源的概念。Activity严重依赖资源，所以必须解决插件中的资源问题。前面章节介绍了AssetManager 和 Resources ，AssetManager 有个 addAssetPath 方法，可以一次性把插件的路径都“灌进去”，然后根据这个“超级” AssetManager 生成一个“超级” Resources ，以后无论是查找插件还是宿主的资源，都能通过这个“超级”Resources 找到了。上述实现如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考：  https://github.com/BaoBaoJianqiang/ZeusStudy1.1</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考：  https://github.com/BaoBaoJianqiang/ZeusStudy1.1</span></span><br></pre></td></tr></tbody></table></figure>
 <p>至此，Activity 的“傻瓜式”插件化解决方案就完成了，我们甚至可以从插件Activity跳转到宿主中的Activity，但是这个方案有以下两个问题：</p>
 <ul>
 <li>插件的四大组件都必需先在宿主中声明，不能新增      </li>
 <li>插件和宿主的资源都合并到一起，资源id可能会有冲突     </li>
 </ul>
-
+</body></html>
     </div>
 
     
@@ -487,7 +487,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共246.9k字</span>
+  <span class="post-count">博客全站共244.9k字</span>
 </div>
 
 
