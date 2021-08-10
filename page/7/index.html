@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">106</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">107</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,128 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/09/13/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/13/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：早期（编译期）优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-13 21:10:00" itemprop="dateCreated datePublished" datetime="2019-09-13T21:10:00+08:00">2019-09-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-03-03 21:41:44" itemprop="dateModified" datetime="2020-03-03T21:41:44+08:00">2020-03-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Java语言的“编译期”是一段“不确定”的操作过程，它可能是指一个前端编译器把.java文件转变成 .class 的过程，也可能是指JIT编译器把字节码变成机器码的过程，还能是指 ATO编译器直接把 .java 文件编译成本地代码的过程。最符合大家认知的应该是第一类，在本章中，我们提到的 “编译期” 以及 “编译器” 都指限于第一类过程。</p>
+<h2 id="Javac-编译器"><a href="#Javac-编译器" class="headerlink" title="Javac 编译器"></a>Javac 编译器</h2><p>前面很多个人觉得只有写编译器才能用得着的内容，先略过。</p>
+<p><strong>标注检查：</strong>javac的编译过程包含标注检查，标注检查的内容包括诸如变量使用前是否已经被声明，变量与赋值类型是否匹配等。此外，标注检查还有一个重要动作称为<strong>常量折叠</strong>，如果我们在代码中谢了如下定义：</p>
+<blockquote>
+<p>int a = 1 + 2;</p>
+</blockquote>
+<p>那么在语法树上仍然能看到字面量“1”、“2” 以及操作符 “+”，但是经过常量折叠后，他们将会被折叠为字面量 “3”，由于编译期进行了常量折叠，因此在代码中定义 “a = 1 + 2” 与直接定义 “a = 3” 的cpu指令运算量是一样的，并不会增加额外的哪怕一个cpu指令开销。数据及控制流分析是对程序上下文逻辑的进一步验证，以下举一个关于 final 修饰符的数据及控制流分析的例子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//方法一有final修饰</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">final</span> <span class="keyword">int</span> arg)</span></span>{</span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">int</span> <span class="keyword">var</span> = <span class="number">0</span>;</span><br><span class="line">	<span class="comment">//do something</span></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//方法二没有final修饰</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> arg)</span></span>{</span><br><span class="line">	<span class="keyword">int</span> <span class="keyword">var</span> = <span class="number">0</span>;</span><br><span class="line">	<span class="comment">//do something</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这两个 foo() 方法中，在代码编写时程序肯定会受到 final 修饰符的影响，不能再改变第一个方法的 arg 和 var 变量的值，但是<strong>这两段代码编译出来的Class 文件是没有任何区别的</strong>。通过 <a target="_blank" rel="noopener" href="https://glassx.github.io/2019/07/27/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/">第六章</a> 的内容可知，局部变量与字段(实例变量、类变量) 是有区别的，前者在常量池中没 CONSTANT_Fieldref_info 符号引用，自然也没有访问标志（Access_Flags）的信息，甚至可能连名称也不会保留下来(取决于编译时的选项)，自然在Class文件中不可能知道一个布局变量是不是声明为 final 了，因此，<strong>将局部变量声明为 final 对运行是没有影响的，变量的不可变性仅仅由编译器在编译期间保障</strong>。</p>
+<h2 id="Java-语法糖的味道"><a href="#Java-语法糖的味道" class="headerlink" title="Java 语法糖的味道"></a>Java 语法糖的味道</h2><p>语法糖可以看做编译器实现的一些 “小把戏” ，这些小把戏不会提供实质性的功能改进，但它可能会使得效率“大提升”，但我们也应该去了解这些“小把戏”背后的真实世界，那样才能利用好它们，而不是被它们迷惑。</p>
+<h3 id="泛型与类型擦除"><a href="#泛型与类型擦除" class="headerlink" title="泛型与类型擦除"></a>泛型与类型擦除</h3><p>Java中的类型，本质是<strong>参数化类型(Parametersized Type)</strong>的应用，也就是说所操作的数据类型被指定为一个参数。泛型技术在Java 和 C# 之中的使用方式看似相同，但实现上却有根本性的分期，C# 中的泛型无论在程序源码中、编译后的IL（中间语言）中或是运行期的 CLR 中，都是切实存在的， List <int> 与 List <string> 就是两个不同的类型，它们在系统运行期生成，有自己的虚方法表和类型数据，这种实现方式称为类型膨胀，基于这种方法实现的泛型称为真实泛型。</string></int></p>
+<p>Java 语言中的泛型规则不一样，它们只在源码中存在，在编译后的字节码文件中就已经替换为原来的原声类型了，因此，对于运行期的Java语言来说， ArraList <integer> 与 ArrayList <string> 就是同一个类，所以泛型技术实际上是Java的一颗语法糖，这种实现方法称为“类型擦除”，基于这种方法实现的泛型称为 伪泛型。可以通过代码反编译来查看Java泛型实现过程：</string></integer></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">	Map&lt;String,String&gt; map = <span class="keyword">new</span> HashMap();</span><br><span class="line">	map.put(<span class="string">"hello"</span>,<span class="string">"你好"</span>);</span><br><span class="line">	map.put(<span class="string">"how are you"</span>,<span class="string">"吃了吗"</span>);</span><br><span class="line">	Systemt.out.println(map.get(<span class="string">"hello"</span>));</span><br><span class="line">	Systemt.out.println(map.get(<span class="string">"how are you"</span>));</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>把这段代码编译成 Class 文件，再用子界面反编译工具反编译成Java代码，会发现代码变成如下形式：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">	Map map = <span class="keyword">new</span> HashMap();</span><br><span class="line">	map.put(<span class="string">"hello"</span>,<span class="string">"你好"</span>);</span><br><span class="line">	map.put(<span class="string">"how are you"</span>,<span class="string">"吃了吗"</span>);</span><br><span class="line">	Systemt.out.println((String)map.get(<span class="string">"hello"</span>));</span><br><span class="line">	Systemt.out.println((String)map.get(<span class="string">"how are you"</span>));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>会发现，反编译回来的 Map 定义都变成了 <strong>Map map = new HashMap()</strong>，输出的时候，是靠强转实现的，也就是把object转为程序员写的实际类型。Java 的伪泛型招致很多批评的声音，不过这种实现方式在某些情况下丧失了泛型思想应有的一些优雅，比如在类中存在如下两个方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GenericTypes</span></span>{</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">(List&lt;String&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;String&gt; list)"</span>);</span><br><span class="line">	}</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">(List&lt;Integer&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;Integer&gt; list)"</span>);</span><br><span class="line">	}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>思考一下，这段代码是否正确。也许你已经知道了，这段代码是不能被编译的，因为List<string> 与 List<integer> 编译后都被擦除了，变成了一样的原生类型 List<e> ,擦除动作导致这两种方法的特征签名变得一样。初看起来，无法重载的原因找到了，但真的如此吗？其实，泛型擦除成相同的原生类型只是无法重载的原因之一，接着看下面的代码：</e></integer></string></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GenericTypes</span></span>{</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">method</span><span class="params">(List&lt;String&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;String&gt; list)"</span>);</span><br><span class="line">	    <span class="keyword">return</span> <span class="string">""</span>;</span><br><span class="line">	}</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">method</span><span class="params">(List&lt;Integer&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;Integer&gt; list)"</span>);</span><br><span class="line">	    <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">	}</span><br><span class="line">	</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">	    method(<span class="keyword">new</span> ArrayList&lt;String&gt;());</span><br><span class="line">	    method(<span class="keyword">new</span> ArrayList&lt;Integer&gt;());</span><br><span class="line">	}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>编译执行发现，不但可以编译还能正常输出结果：</p>
+<blockquote>
+<p>System.out.println(“invoke method(List <string> list)”)<br>System.out.println(“invoke method(List <integer> list)”)</integer></string></p>
+</blockquote>
+<p>为两个方法添加了不同的返回值之后，方法重载居然成功（<strong>注意，仅仅只是在jdk 1.6及以下才能编译通过，高版本是编译不通过的，但在书上是没有这个版本说明的，而我们读者只需要知道有这么个事情就行</strong>）了，这是对Java语言中返回值不参与重载选择的基本认知的挑战吗？当然不是的，之所以能够编译成功，是<strong>因为两个 method 方法加入了不同的返回值之后，能够共存在同一个 Class 文件了。</strong>由于这只是针对低版本的功能，故此处不多解释了。</p>
+<h3 id="自动装箱、拆箱与遍历循环"><a href="#自动装箱、拆箱与遍历循环" class="headerlink" title="自动装箱、拆箱与遍历循环"></a>自动装箱、拆箱与遍历循环</h3><p>这几个专门拿出来讲只是因为它们是Java语言中使用得最多的<strong>语法糖</strong>。可以通过以下代码看看这些语法糖在编译后会发生什么变化：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    List&lt;Integer&gt; list =  Arrays.asList(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>);</span><br><span class="line">    <span class="keyword">int</span> sum = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i: list){</span><br><span class="line">        sum += i;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    Systemt.out.println(sum);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码在自动装箱、拆箱与遍历循环编译后，变成以下样式：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    List&lt;Integer&gt; list = Arrays.asList(<span class="keyword">new</span> Integer[]{</span><br><span class="line">        Integer.valueOf(<span class="number">1</span>),</span><br><span class="line">        Integer.valueOf(<span class="number">2</span>),</span><br><span class="line">        Integer.valueOf(<span class="number">3</span>),</span><br><span class="line">        Integer.valueOf(<span class="number">4</span>),</span><br><span class="line">    });</span><br><span class="line">    <span class="keyword">int</span> sum = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span>(Iterator localIterator = list.iterator();localIterator.hasNext();){</span><br><span class="line">        <span class="keyword">int</span> i = ((Integer)localIterator.next()).intValue();</span><br><span class="line">        sum += i;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    Systemt.out.println(sum);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>代码一共包含自动装箱、自动拆箱、遍历循环与变长参数5种语法糖。遍历循环还原成了迭代器的实现，而变长参数则是通过数组的方式转变。语法糖看起来简单，但是也有很多需要注意的地方，如以下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Integer a = <span class="number">1</span>;</span><br><span class="line">Integer b = <span class="number">2</span>;</span><br><span class="line">Integer c = <span class="number">3</span>;</span><br><span class="line">Integer d = <span class="number">3</span>;</span><br><span class="line">Integer e = <span class="number">321</span>;</span><br><span class="line">Integer f = <span class="number">321</span>;</span><br><span class="line"></span><br><span class="line">Long g = <span class="number">3L</span>;</span><br><span class="line"></span><br><span class="line">System.out.println(c==d);  <span class="comment">//true </span></span><br><span class="line">System.out.println(e==f);  <span class="comment">//false   Interger 128限制（缓存了 -128~127的对象，超出这个值就重新new，否则就直接取）</span></span><br><span class="line">System.out.println(c==(a+b));  <span class="comment">// true</span></span><br><span class="line">System.out.println(c.equals(a+b));  <span class="comment">//true </span></span><br><span class="line">System.out.println(g==(a+b));   <span class="comment">//true   ，这个还真没找到解释的方法</span></span><br><span class="line">System.out.println(g.equals(a+ b));   <span class="comment">//false  ,因为 g  是 Long 类型，而 a + b 后是Integer类型，类型都不一样,equals 不会自动处理数据转型</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>结果和注释都已经写上了，关于Integer的128限制，再来例子说明：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Integer i=<span class="number">127</span>;</span><br><span class="line">Integer j =<span class="number">127</span>;</span><br><span class="line">System.out.println(i==j);    <span class="comment">//true</span></span><br><span class="line">i=<span class="number">128</span>;</span><br><span class="line">j=<span class="number">128</span>;</span><br><span class="line">System.out.println(i==j);   <span class="comment">//false </span></span><br><span class="line"></span><br><span class="line">i=<span class="keyword">new</span> Integer(<span class="number">127</span>);</span><br><span class="line">j=<span class="keyword">new</span> Integer(<span class="number">127</span>);</span><br><span class="line">System.out.println(i==j);  <span class="comment">//false </span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>详细解释：jvm在运行时创建了一个缓存区域，并创建了一个integer的数组。这个数组存储了-128至127的值。因此如果integer的值在-128至127之间，则是去缓存里面获取。因此上面的i和j指向的是同一个内存地址。因为128超过了这个缓存区域，因此第二次赋值的时候是重新开辟了两个内存地址。第三次因为使用了new关键字，在java中。new关键字是开辟内存空间。因此第三次赋值是开辟了新的内存空间，此时发现即便i与j都是127，但内存地址不再相同。</p>
+<blockquote>
+<p>包装类的 “==” 运算在不遇到算术运算的情况下不会自动拆箱，并且它们的 equals() 方法不处理数据转型的关系。</p>
+</blockquote>
+<h3 id="条件编译"><a href="#条件编译" class="headerlink" title="条件编译"></a>条件编译</h3><p>略</p>
+<h2 id="实战：-插入式注解处理器"><a href="#实战：-插入式注解处理器" class="headerlink" title="实战： 插入式注解处理器"></a>实战： 插入式注解处理器</h2><p>略</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1762,108 +1884,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/05/12/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC3%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/05/12/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章——View的事件体系</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-05-12 22:42:00" itemprop="dateCreated datePublished" datetime="2019-05-12T22:42:00+08:00">2019-05-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:43:42" itemprop="dateModified" datetime="2019-11-17T21:43:42+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="View-基础知识"><a href="#View-基础知识" class="headerlink" title="View 基础知识"></a>View 基础知识</h2><h3 id="1、-MotionEvent-和-TouchSlop"><a href="#1、-MotionEvent-和-TouchSlop" class="headerlink" title="1、 MotionEvent 和 TouchSlop"></a>1、 MotionEvent 和 TouchSlop</h3><h4 id="MotionEvent"><a href="#MotionEvent" class="headerlink" title="MotionEvent"></a>MotionEvent</h4><p>这里只需要注意一点，通过MotionEvent 可以获得点击事件发生的x和y坐标，系统提供了两组方法，getX/getY 和 getRawX/getRawY ，他们的区别很简单，前者返回的是相对于当前View的左上角的 x 和 y 坐标，后者返回的是相对于手机屏幕左上角的 x和y 坐标。</p>
-<h4 id="TouchSlop"><a href="#TouchSlop" class="headerlink" title="TouchSlop"></a>TouchSlop</h4><p>TouchSlop 是系统所能识别出的被认为是滑动的最小距离，小于这个值就不认为是滑动操作。TouchSlop 是一个常量，和设备有关，在不同的设备上这个值可能是不同的。通过如下方式可以获取这个常量：</p>
-<blockquote>
-<p>ViewConfiguration.get(context).getScaledTouchSlop()</p>
-</blockquote>
-<h3 id="2、VelocityTracker、GestureDetector-和-Scroller"><a href="#2、VelocityTracker、GestureDetector-和-Scroller" class="headerlink" title="2、VelocityTracker、GestureDetector 和 Scroller"></a>2、VelocityTracker、GestureDetector 和 Scroller</h3><h4 id="VelocityTracker"><a href="#VelocityTracker" class="headerlink" title="VelocityTracker"></a>VelocityTracker</h4><p>用于追踪手指在滑动过程中的速度，包括水平和竖直方向的速度。它的使用过程很简单，首先在 View 的 onTouchEvent 方法中追踪当前单击事件的速度：</p>
-<blockquote>
-<p>VelocityTracker velocityTracker = VelocityTracker.obtain();<br>velocityTracker.addMovement(event);</p>
-</blockquote>
-<p>接着，当我们想知道当前的滑动速度时，可以采用如下方法获得：</p>
-<blockquote>
-<p>velocityTracker.computeCurrentVelocity(1000);<br>int xVelocity = (int)velocityTracker.getXVelocity();<br>int yVelocity = (int)velocityTracker.getYVelocity();</p>
-</blockquote>
-<p>这里需要注意的是： 一、获取速度之前必须先计算速度；二、这里的速度是指一段时间内手指所划过的像素数，比如将时间间隔设置为 1000ms，在 1s 内水平从左至右滑过100像素，那么水平速度就是100 。如果将时间间隔设置为100ms，在这100ms 内滑过10像素，则水平速度会变成 10 。此外，这个速度是可以为负值的，当水平方向从右往左滑动时，水平方向的速度即为负值。</p>
-<h4 id="GestureDetector"><a href="#GestureDetector" class="headerlink" title="GestureDetector"></a>GestureDetector</h4><p>手势检测，用于辅助检测用户的单击、滑动、长按、双击等行为。比如要监听双击行为，代码如下：</p>
-<blockquote>
-<p>GestureDetector mGestureDetector = new GestureDetector(listener);<br>//再加上这行可以解决长按屏幕后无法拖动的现象<br>mGestureDetector.setIsLongpressEnabled(false);</p>
-</blockquote>
-<p>接着，接管目标View的onTouchEvent方法，在待监听View的 onTouchEvent 方法中如下实现：</p>
-<blockquote>
-<p>boolean consume = mGestureDetector.onTouchEvent(event);<br>return consume;</p>
-</blockquote>
-<p>OnGestureListener 与 OnDoubleTapListener 里面的方法有很多，常用的有：onSingleTapUp（单击）、onScroll（拖动）、onLongPress（长按）、onFling（快速滑动）、onScroll（拖动）、onDoubleTap（双击）。</p>
-<h4 id="Scroller"><a href="#Scroller" class="headerlink" title="Scroller"></a>Scroller</h4><p>弹性滑动对象，用于实现View的弹性滑动，我们知道，当使用View的scrollTo/scrollBy方法来进行滑动时，其过程是瞬间完成的，这时候就可以使用 Scroller 来实现有过渡效果的滑动，它需要和View的conputeScroll方法配合使用才能共同完成这个功能，典型的使用如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Scroller mScroller = newScroller(context);</span><br><span class="line"></span><br><span class="line"><span class="comment">//缓慢滑动到指定位置</span></span><br><span class="line"><span class="function">privte <span class="keyword">void</span> <span class="title">smoothScrollTo</span><span class="params">(<span class="keyword">int</span> destX,<span class="keyword">int</span> destY)</span></span>{</span><br><span class="line">    <span class="keyword">int</span> scrollX = getScrollX();</span><br><span class="line">    <span class="keyword">int</span> delta = destX - scrollX;</span><br><span class="line">    <span class="comment">//1000ms内滑向destX就是，效果就是慢慢滑动</span></span><br><span class="line">    mScroller.startScroll(scrollX,<span class="number">0</span>,delta,<span class="number">0</span>,<span class="number">1000</span>);</span><br><span class="line">    invalidate();</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">computeScroll</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(mScroller.computeScrollOffset()){</span><br><span class="line">        scrollTo(mScroller.getCurrX(), mScroller.getCurrY());</span><br><span class="line">        postInvalidate()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="View-的滑动"><a href="#View-的滑动" class="headerlink" title="View 的滑动"></a>View 的滑动</h2><p>未完待续。。。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1914,7 +1934,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">106</span>
+          <span class="site-state-item-count">107</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2000,7 +2020,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共245.1k字</span>
+  <span class="post-count">博客全站共246.1k字</span>
 </div>
 
 
