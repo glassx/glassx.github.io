@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">110</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">111</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,243 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/09/26/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/26/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：进程间通信——Binder</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-26 21:36:00" itemprop="dateCreated datePublished" datetime="2019-09-26T21:36:00+08:00">2019-09-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:48:53" itemprop="dateModified" datetime="2019-11-17T21:48:53+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。</p>
+<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：</p>
+<ul>
+<li>Binder 驱动 -&gt; 路由器</li>
+<li>Service Manager（本质也是个服务器） -&gt; DNS（本质也是个服务器）</li>
+<li>Binder Client -&gt; 客户端</li>
+<li>Binder Server -&gt; 服务器</li>
+</ul>
+<p>TCP/IP中一个典型的服务连接过程如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png" alt="TCP/IP连接"></p>
+<p>这个简化的流程图有以下几个步骤：</p>
+<ul>
+<li><p>Client 向dns 查询 google.com 的ip地址。<br>显然，Client 一定得先知道DNS 的 IP地址，才能向它发起查询，DNS 服务器的ip设置是在接入网络前就已经设置完成的。当然，client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；</p>
+</li>
+<li><p>DNS 将查询结果返回 Client。<br>Client的Ip地址对于 DNS 是必须的，不过这些信息会封装在 TCP/IP 包中。</p>
+</li>
+<li><p>Client 发起连接。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
+</li>
+</ul>
+<p>而对于Binder来说，Binder的 DNS (Service Manager)也不是必须的——前提是客户端能记住它要访问的进程的 Binder 标志（IP地址），<strong>尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取</strong>。因此，Service Manager 这个 DNS 的还是挺有必要的。</p>
+<blockquote>
+<p>既然Service Manager是 DNS 服务器，那么它的 IP 地址是多少呢？Binder 机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
+</blockquote>
+<h2 id="智能指针"><a href="#智能指针" class="headerlink" title="智能指针"></a>智能指针</h2><p>略</p>
+<h2 id="进程间的数据传递载体——Parcel"><a href="#进程间的数据传递载体——Parcel" class="headerlink" title="进程间的数据传递载体——Parcel"></a>进程间的数据传递载体——Parcel</h2><p>关于进程间如何传递，我们可以使用2个生活例子来类比：</p>
+<ul>
+<li>用快递寄衣服：虽然快递种类比较多，但是无论用哪个快递，用哪种运输方式，“衣服”本身始终是没有变过的，接收人拿到的还是原来那件衣服。    </li>
+<li>通过电子邮件发送图片：在接收人看到邮件中的图片时，我们无法确认这张图片在传输过程中被复制了多少次，但是可以肯定的是，对方看到的图片和原始图片是一样的。</li>
+</ul>
+<p>进程间通信的数据传递类似于第2种情况，如果只是一个int型数值，不断复制直到目标进程即可；如果是一个对象呢？我们直到，同一个进程中对象的传递实质上是传递了一个内存地址，但是在跨进程的情况下就无能为力了，因为采用了虚拟内存机制，两个进程都有自己独立的内存地址空间，所以跨进程传递的地址空间是无效的。</p>
+<p>进程间的数据传递是Binder 机制中的重要环节，而担负这一重任的就是Parcel。 Parcel 的直译是 “打包” ，上面提到，进程间数据传递直接传送对象的地址是行不通的，那把对象在进程 A 中占据的内存相关数据打包起来，然后寄送到内存 B 中，由 B 在自己的进程空间中“复现”这个对象，是否可行？ Parcel 就具有这种打包能力。</p>
+<p>Parcel 提供了很多接口方便程序使用，他可以存储多种类型的数据：</p>
+<ul>
+<li>原始数据类型 以及 原始数据类型数组     </li>
+<li>Parcelable    </li>
+<li>Bundle    </li>
+<li>Active Objects    </li>
+</ul>
+<blockquote>
+<p>通常我们存入Parcel 的是对象的内容，而 Active Objects 写入的则是他们的特殊标志引用。所以从 Parcel 中读取这些对象时，大家看到的并不是重新创建的对象实例，而是原来那个被写入的实例，能够以这种方式传递的对象目前主要有两类： Binder 以及 FileDescriptor (Linux 中的文件描述符)。</p>
+</blockquote>
+<ul>
+<li>Untyped Containers    </li>
+</ul>
+<blockquote>
+<p>它是用于读写标准的任意类型的 Java 容器，包括 ： writeArray(Object[])/readArray(ClassLoader)、writeList(list)/readList(list)</p>
+</blockquote>
+<p>Parcel 可以用集装箱来类比，理由如下：</p>
+<ul>
+<li>货物无关性： 不排斥运输的货物种类，电子产品、汽车等都可以    </li>
+<li>不同的货物需要不同的打包和卸货方案： 比如运载易碎物品和坚硬物品的装箱和卸货方式就有很大的不同。</li>
+</ul>
+<blockquote>
+<p>值得注意的是，Parcel 存/取 数据的方式都是一一对应的，如 writeByte(byte)/readByte() </p>
+</blockquote>
+<ul>
+<li>远程运输和组装： 集装箱的货物一般需要跨洋，这类似于 Parcel 的跨进程。不过集装箱运输公司本身并不负责所运输货物的组装，而 Parcel 会依据协议为接收方提供还原冤死数据对象的业务。   </li>
+</ul>
+<h3 id="Parcel-的工作方式（书上没有，自己添加）"><a href="#Parcel-的工作方式（书上没有，自己添加）" class="headerlink" title="Parcel 的工作方式（书上没有，自己添加）"></a>Parcel 的工作方式（书上没有，自己添加）</h3><p> Parcel 的 Parcel.obtain() 方法可以获取一个Parcel 对象，系统预先产生了一个大小为6的 Parcel 池 sOwnedPool，在obtain 操作时，如果 sOwnedPool 中还有现成的 Parcel 对象，则直接利用，否则通过 new Parcel(0) 创建 Parcel 对象。</p>
+<p> Parcel.java 实际上只是一个简单的中介，它的主要内容都是 JNI 层的 Parcel 实现的。Parcel 对象的初始化过程只是简单地给各个变量赋初始值，并没有设想中的内存分配动作，因为 Parcel 遵循的是“动态扩展”的内存申请原则，只有在需要时才申请内存，避免资源浪费。</p>
+<blockquote>
+<p>Parcel 提供数据当前位置的值 dataPosition，类似于游标。每当存储新数据时，都是从 dataPosition 位置接着往后存储，存储新数据时，会判断当前空间是否足够，如果不足，则申请新的空间（个人根据文中内容理解的，不太确定是否正确）。</p>
+</blockquote>
+<h2 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h2><p>Android 是 linux 内核的，因而 Binder 驱动也是标准的 linux 驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备。Binder 驱动运行于内核态，可提供 open()、ioctl()、mmap() 等常用文件操作。</p>
+<blockquote>
+<p>Android 系统为什么把 Binder 注册成 misc device 类型的驱动呢？因为 linux 字符设备通常要通过 alloc_chrdev_region()、cdev_init() 等操作才能在内核中注册自己；而 misc 类型驱动相对简单，只需要 misc_register() 就可轻松解决。</p>
+</blockquote>
+<p>Binder 驱动为上层提供了6个接口，但一般文件操作用到的 read() 和 write() 则没有出现，这是因为它们的功能完全可以用 ioctl() 和 mmap() 来代替，并且会更灵活。这6个接口中使用得最多的是 binder_ioctl,binder_mmap 和 binder_open，，以下分别介绍这三种接口。</p>
+<h3 id="打开Binder驱动——binder-open"><a href="#打开Binder驱动——binder-open" class="headerlink" title="打开Binder驱动——binder_open"></a>打开Binder驱动——binder_open</h3><p>上层进程在访问 Binder 驱动时，首先需要打开 /dev/binder 节点，这个操作最终的实现是在 binder_open() 中，在这个方法中，会创建一个 binder_proc 实体，这个实体用于记录各种管理数据(Binder 驱动会在 /proc 系统目录下生成各种管理信息)，并且，每个进程都有独立的记录。</p>
+<p>在完成proc 的初始化之后，就会把这个 proc 加入到 Binder 的全局管理中，这个过程涉及资源互斥，因而需要使用保护机制。到目前为止，Binder 驱动已经为用户创建了一个它自己的 binder_proc 实体，之后用户对Binder 设备的操作都以这个对象为基础。</p>
+<h3 id="binder-mmap"><a href="#binder-mmap" class="headerlink" title="binder_mmap"></a>binder_mmap</h3><p>对于 Binder 驱动来说，上层用户调用的 mmap() 最终对应了 binder_mmap()操作(<strong>应用程序最多只能申请 4M 的空间，如果超出这个大小，不会退出或者报异常，而只会满足用户 4M 的请求</strong>)，那么Binder 采用 mmap 的目的是什么呢？我们知道，mmap() 可以把设备指定的内存块直接映射到应用程序的内存空间中，但Binder 本身并不是硬件设备，而是基于内存的“伪硬件”，那么它映射了什么内存块到应用程序中呢？</p>
+<p>假设有连个进程A和B，其中进程B通过 open() 和 mmap() 与Binder驱动建立了联系，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/B-mmap.png" alt="进程B连接Binder"></p>
+<blockquote>
+<p>可以看到 ：</p>
+</blockquote>
+<blockquote>
+<ol>
+<li>对于进程B而言，通过mmap()返回值得到一个内存地址（当然是虚拟地址），这个地址最终会指向物理内存的某个位置（通过虚拟内存转换）。</li>
+</ol>
+</blockquote>
+<blockquote>
+<ol start="2">
+<li>对于Binder驱动而言，它也有个指针（binder_proc-&gt;buffer）指向某个虚拟内存地址，这个地址转换后，与进程B指向的物理内存地址位于同一个位置。</li>
+</ol>
+</blockquote>
+<p><strong>个人理解：进程B执行 mmap() ，最终是通过 Binder 的 binder_mmap() 来实现，在 B 拿到这块内存后(当然是经过虚拟内存转换后的虚拟内存地址)，Binder 驱动同时将这块内存赋值给了 binder_proc-&gt;buffer</strong>。这样，Binder和应用程序就拥有了<strong>若干公用的物理内存块</strong>，它们对着各自内存地址的操作，实际是在同一块内存中执行，这时候我们再把A进程加入进来，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/A%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE.png" alt="进程A复制数据"></p>
+<p>这时候，左半部分没有变化，右半部分Binder驱动通过copy_from_user()，把A进程中某段数据复制到其binder_proc-&gt;buffer所指向的内存空间，这时候我们惊喜发现，binder_proc-&gt;buffer在物理内存中的位置和进程B是共享的，进而，B进程可以直接访问到这段数据，<strong>也就是说，Binder驱动只用了一次复制，就实现了进程A和B之间的数据共享。</strong></p>
+<blockquote>
+<p>以上通过 mmap 映射的映射区是 <strong>只读</strong>的。</p>
+</blockquote>
+<h3 id="binder-ioctl"><a href="#binder-ioctl" class="headerlink" title="binder_ioctl"></a>binder_ioctl</h3><p>这是 Binder 接口函数中工作量最大的一个。前面提到过，Binder 并不提供 read() 和 write() 等常规文件操作，因为 ioctl 完全可以替代它们。它主要提供了以下命令：</p>
+<ul>
+<li>BINDER_WRITER_READ: 读写操作，可以用此命令向 Binder 读取或写入数据    </li>
+<li>BINDER_SET_MAX_THREAD: 设置支持的最大线程数，因为客户端可以并发向服务器端发送请求，如果Binder 驱动发现当前的线程数量已经超过设定值，就会告知 Binder server 停止启动新的线程。     </li>
+<li>BINDER_SET_CONTEXT_MGR: Service Manager 专用，让它把自己设置为“Binder”大管家。系统中只有一个 Service Manager。</li>
+</ul>
+<h3 id="Service-Manager"><a href="#Service-Manager" class="headerlink" title="Service Manager"></a>Service Manager</h3><p>Service Manager(后面简称 SM) 也就是Binder 中的 “DNS服务器”，既然是DNS，那么在用户可以浏览网页之前就必须就位，因此SM在有人使用Binder之前就处于正常工作状态。SM 的主要工作：</p>
+<ul>
+<li>从Binder驱动读取消息</li>
+<li>调用binder_parse 处理解析消息</li>
+<li>不断循环，而且永远不会主动退出，除非出现致命错误</li>
+</ul>
+<p>它提供的服务应该至少包括以下几种：</p>
+<ul>
+<li>注册——当一个Binder Server 创建后，它们要将自己的相关信息告知 SM 备案</li>
+<li>查询——应用程序可以向 SM 发起查询请求，已获知某个 Binder Server 对应的句柄。</li>
+</ul>
+<blockquote>
+<p>SM 的查询过程很简单，主要是调用 do_find_server 遍历内部列表，并返回目标 Server；注册 Binder server 也很简单，首先在 SM 维护的数据列表中查找是否已经有对应的节点存在，，如果没有，就创建一个新的节点记录这个 Server。</p>
+</blockquote>
+<p>实际上，我们获取 SM 也很简单，只需要以下几步：</p>
+<ol>
+<li>打开Binder设备</li>
+<li>执行mmap</li>
+<li>通过Binder驱动向 SM 发送请求（SM 的 handle是 0）</li>
+<li>获得结果</li>
+</ol>
+<h3 id="Binder-客户端"><a href="#Binder-客户端" class="headerlink" title="Binder 客户端"></a>Binder 客户端</h3><p>Binder 的最大消费者是Java层的应用程序，但是在各种上层的应用场景中切换“过于丝滑”，因此我们很少能感觉到Binder的存在，但是我们能够通过Android的四大组件的行为看出蛛丝马迹：</p>
+<ul>
+<li>Activity：通过 startActivity 可以启动目标进程，不论它是不是属于这个应用。</li>
+<li>Service：任何应用程序都可以通过startService 或者 bindService 来启动特定的服务，而不论后者是不是跨进程的。</li>
+<li>BroadCast：任何应用都可以通过 sendBroadcast 来发送一个广播，且无论广播接收者是不是在同一个进程中。</li>
+</ul>
+<p>组件的上述操作中，多数并不会特别指明要由哪个目标应用程序来响应请求，它们只需要通过Intent表达意愿，然后由系统找出最匹配的应用进程完成工作。为了更明确地说明个中的进程间通信，这里以binderService举例说明：</p>
+<ol>
+<li>首先Application1 填写Intent，调用 bindService 发出请求</li>
+<li>在Application1的运行空间中收到 bindService 请求，这时候会与 ActivityManagerService(AMS)，这就需要得到AMS的Binder句柄，就涉及到进程间通信了（需要ServiceManage.getService）,拿到句柄后，程序才能真正向它发起请求。</li>
+<li>AMS基于“最优匹配策略”，从其存储的所有服务组件中找到最符合Intent的一个，然后向它发送Service绑定请求（这也是进程间通信），如果目标进程还不存在的话，AMS还要负责将其启动</li>
+<li>“被绑定”的服务进程需要响应绑定，并在完成任务后通知AMS，然后由后者回调发起请求的Application1（回调接口是ServiceConnection）。</li>
+</ol>
+<h3 id="Server-服务端"><a href="#Server-服务端" class="headerlink" title="Server 服务端"></a>Server 服务端</h3><p>在建立服务之后，可以有两种方式向外面提供服务：</p>
+<ul>
+<li>Server在ServiceManager中注册，这样，调用者只需要通过 ServiceManager.getService(NAME)就可以获得句柄，随后与之通信。</li>
+<li>所谓的“匿名Server”，并不需要在ServiceManager中注册，那么Client是如何访问的呢？其实它通过其他Server作为中介，没错，就是通过一个“第三方”实名的Server，调用者首先通过ServiceManager获取这个实名的server，在由它提供匿名者的 Binder 句柄。</li>
+</ul>
+<h3 id="Binder-优点"><a href="#Binder-优点" class="headerlink" title="Binder 优点"></a>Binder 优点</h3><p>基于自己的理解而言，Binder具有以下优点：</p>
+<ul>
+<li>性能较好</li>
+</ul>
+<blockquote>
+<p>Binder只需要拷贝一次数据，仅次于共享内存（一次都不要），消息队列和管道采用存储-转发方式，即数据先从发送方缓存区拷贝到内核开辟的缓存区中，然后再从内核缓存区拷贝到接收方缓存区，至少有两次拷贝过程。</p>
+</blockquote>
+<ul>
+<li>稳定性好</li>
+</ul>
+<blockquote>
+<p>基于C/S架构在逻辑上更清晰，client有需求，Server完成。共享内存实现起来复杂，各方没有客户端与服务端之别，要考虑并发问题以及可能出现的死锁。</p>
+</blockquote>
+<ul>
+<li>安全性好</li>
+</ul>
+<blockquote>
+<p>传统 Linux IPC 的接收方要么无法获得对方进程可靠的 UID/PID ，从而无法鉴别对方身份；要么只能由用户在数据包里填入UID/PID。Android 为每个应用分配了自己的UID，前面提到 C/S 架构，Server 会根据权限控制策略判断 Client 的请求是否满足权限。并且Binder机制还有匿名 Binder ，压根无法直接获取句柄，安全性更好。</p>
+</blockquote>
+<ul>
+<li>使用简单。</li>
+</ul>
+<blockquote>
+<p>获得句柄之后，就像调用本地方法一样方便。并且Linux的IPC方式使用C语言，而Android应用层主要使用Java，这可能也是个因素。</p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1653,120 +1890,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/07/27/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/27/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章: 类文件结构</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-27 14:56:00" itemprop="dateCreated datePublished" datetime="2019-07-27T14:56:00+08:00">2019-07-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:49:25" itemprop="dateModified" datetime="2019-11-17T21:49:25+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>计算机只认识0和1，但是最近10年虚拟机以及大量建立在虚拟上的语言的发展，将我们编写的程序编译成二进制本地机器码（Native Code）已不再是唯一的选择，越来越多的程序语言选择了与操作系统和机器指令集无关的、平台中立的格式作为程序编译后的存储格式。</p>
-<h2 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h2><p>Sun公司及其他虚拟机提供商发布了许多可以运行在各种不同平台上的虚拟机，这些虚拟机都可以载入和执行同一种平台无关的字节码，从而实现程序的“一次编写，到处运行”。而各种不同平台的虚拟机以及平台无关的字节码（ByteCode）是构成平台无关性的基石。  </p>
-<p>到目前为止，或许大部分程序员都还认为Java虚拟机执行Java程序是一件理所当然的事情，但在Java发展之初，Java的规范就分为Java语言规范以及Java虚拟机规范，时至今日，Java语言之外已经有一大批语言运行在Java虚拟机之上，如 Groovy、JRuby、Jython等。  </p>
-<p>Java 虚拟机不和包括Java在内的任何语言绑定，它只与“Class 文件”这种特定的二进制文件格式所关联，任一门功能性语言都可以表示为一个能被Java虚拟机所接受的有效的Class文件。</p>
-<h2 id="Class-类文件的结构"><a href="#Class-类文件的结构" class="headerlink" title="Class 类文件的结构"></a>Class 类文件的结构</h2><p>Class 文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑地排列在Class文件中，中间没有任何分隔符。遇到需要占用8位字节以上空间的数据项时，会按照高位在前的方式分割成若干个8位字节进行存储。</p>
-<p>Class 文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构只有两种数据类型： 无符号数和表。</p>
-<p>无符号数属于基本的数据类型，以u1、u2、u4、u8分别代表1、2、4、8个字节的无符号数，无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8 编码构成的字符串值。</p>
-<p>表示由多个无符号数或者其他表作为数据项的复合数据类型，表用于描述有层次关系的复合结构的数据，整个Class文件本质就是一张表。</p>
-<h3 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h3><p>Class文件的头4个字节称为魔数（Magic Number），它的唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件。Class 文件的魔数值为 0xCAFEBABE (咖啡宝贝？)，很有浪漫气息。紧接着魔数的4个字节存储着Class文件的版本号，高版本的JDK能乡下兼容以前版本的Class文件，但不能运行以后版本的Class文件。</p>
-<blockquote>
-<p>很多文件存储标准中都使用魔数来进行身份识别，如gif和jpeg等在文件头中都存有魔数。使用魔数而不是扩展名来识别主要是基于安全考虑： 文件扩展可以随意改动。</p>
-</blockquote>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC6%E7%AB%A0/%E9%AD%94%E6%95%B0.png" alt="魔数示意图"></p>
-<h3 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h3><p>版本号之后是常量池入口，该区域可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，由于常量池中常量的数量是不固定的，所以在常量池的入口需要放置一项u2类型的数据，代表常量池容量计数值。</p>
-<p>常量池中主要存放两大类常量：字面量（Literal） 和 符号引用（Symbolic References）。<strong>字面量比较接近于Java语言层面的常量概念，如 文本字符串、声明为final的常量值等</strong>，而符号引用则属于编译原理方面的概念，包括了下面三类常量：</p>
-<ul>
-<li>类和接口的全限定名(Fully Qualified Name)</li>
-<li>字段的名称和描述符(Descriptor)</li>
-<li>方法的名称和描述符</li>
-</ul>
-<p>Java代码在javac编译的时候，并不像c和c++那样有“连接”这一步骤，而是在虚拟机加载 Class 文件的时候进行动态连接，也就是说，在Class文件中不会保存各个方法、字段的最终内存布局信息。虚拟机运行时，需要从常量池获得对应的符号引用，再在类创建时解析、翻译到具体的内存地址中。</p>
-<h3 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h3><p>常量池结束后，紧接着2个字节代表访问标志（access_flags<br>），这个标志用于识别一些类或者接口层次的访问信息，包括： 这个Class 是类还是接口；是否定义为public类型；是否定义为abstract类型；如果是类的话，是否被声明为final等等。</p>
-<h3 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h3><p>类索引（this_class） 和父类索引(super_class)都是一个u2类型的数据，而接口索引集合(interfaces)是一组u2类型的数据的集合，class 文件中由这三项数据来确定这个类的继承关系。</p>
-<p>其中，类索引用于确定这个类的全限定名，父类索引用于确定这个类的父类的全限定名，由于Java不允许多重继承，所以父类索引只有一个，除了java.lang.Object之外，所有的Java类都有父类，因此，父类索引都不为0。接口索引集合用来描述这个类实现了哪些接口，按照implement语句后的接口顺序从左到右排列在接口索引集合中。</p>
-<h3 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h3><p>字段表(field_info)用于描述接口或者类中声明的变量，包括类级变量和实例级变量，不包括方法内的局部变量。这个描述可以包括的信息有： 字段的作用域(public、private、protected修饰符)、实例变量还是类变量(static修饰符)、可变性(final)、并发可见性(volatile 修饰符，是否强制从主内存读写)、可否被序列化(transient修饰符) 等等。</p>
-<h3 id="方法表集合"><a href="#方法表集合" class="headerlink" title="方法表集合"></a>方法表集合</h3><p>Class 文件存储格式中对方法的描述与对字段的描述几乎采用了完全一致的方式，方法表的结构如同字段表一样，只是些微的区别，比如volatile关键字和transient关键字不能修饰方法 。</p>
-<h3 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h3><p>在Class文件、字段表、方法表都可以携带自己的属性表集合，以用于描述某些场景专有的信息(这一块内容也没耐心看下去，下次看明白再补)。</p>
-<h2 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h2><p>这章离App开发比较远，因此第一遍的时候先略过。</p>
-<h2 id="公有设计和私有实现"><a href="#公有设计和私有实现" class="headerlink" title="公有设计和私有实现"></a>公有设计和私有实现</h2><p>理解公有设计与私有实现之间的分界线是非常有必要的，Java虚拟机实现必须能够读取Class文件并精确实现包含在其中的Java虚拟机代码的语义。按照Java虚拟机规范一成不变地逐字实现其中要求的内容是一种可行的途径，但是一个优秀的虚拟机实现，在满足虚拟机规范的约束下对具体实现做出修改和优化也是完全可行的。虚拟机实现的方式主要有以下两种：</p>
-<ul>
-<li>将输入的Java虚拟机代码在加载或执行时翻译成另外一种虚拟机的指令集。</li>
-<li>将输入的Java虚拟机代码在加载或执行翻译成宿主机CPU的本地指令集（即 JIT 代码生成技术）</li>
-</ul>
-<h2 id="Class-文件结构的发展"><a href="#Class-文件结构的发展" class="headerlink" title="Class 文件结构的发展"></a>Class 文件结构的发展</h2><p>略。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/6/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/8/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/6/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/8/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1812,7 +1940,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">110</span>
+          <span class="site-state-item-count">111</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1898,7 +2026,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共255.9k字</span>
+  <span class="post-count">博客全站共261.3k字</span>
 </div>
 
 

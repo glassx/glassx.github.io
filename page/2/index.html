@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">110</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">111</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,128 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Service的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-27 21:29:00" itemprop="dateCreated datePublished" datetime="2021-03-27T21:29:00+08:00">2021-03-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:16:28" itemprop="dateModified" datetime="2021-03-29T22:16:28+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Android界的荀彧和荀攸：Service和Activity"><a href="#Android界的荀彧和荀攸：Service和Activity" class="headerlink" title="Android界的荀彧和荀攸：Service和Activity"></a>Android界的荀彧和荀攸：Service和Activity</h2><p>根据Context的族谱，Service 是 Activity 的叔叔，结合作用来看，二者有太多相似，但是备份不同，类似三国时期的荀彧和荀攸。不过，二者的区别也挺明显：</p>
+<ul>
+<li>Activity 是面向用户的，有大量的用户交互的方法，而Service 是后台运行的，生命周期函数很少    </li>
+<li>Activity 中有LaunchMode 的概念，每个Activity启动时都会放在栈顶，根据不同的 LaunchMode 可能会有复用以前的实例或者不复用以前的实例。但是Service不同，<strong>同一个 Service 调用多次startService并不会启动多个实例，只会有一个实例</strong>，所以，只用一个StubActivity 是应付不了多个插件的Service 的     </li>
+<li>ActivityThread 最终通过Instrumentation 启动一个Activity。而ActivityThread 启动Service 并不借助于 Instrumentation ，而是直接把Service 反射出来就启动了    </li>
+</ul>
+<p>注意一点，Service 有两种形式： 由 startService 启动的服务；由 bindService 绑定的服务。二者的区别在于：startService 以及对应的 stopService ，就是简单地启动和停止 Service ；bindService 执行时会传递一个 ServiceConnection 对象给 AMS ，接下来 Service 在执行 onBind 时，可以把生成的 binder 对象返回给 App 调用端，这个值存于 ServiceConnection 对象的 onServiceConnected 回调函数的第二个参数中。       </p>
+<h2 id="预先占位"><a href="#预先占位" class="headerlink" title="预先占位"></a>预先占位</h2><p>前面说过，Service 与 Activity 不一样，它只会存在一个实例，所以只用一个StubService 是应付不了多个插件Service 的。考虑到在绝大部分App中Service 数据不会超过10个，所以我们完全可以在宿主App 中创建 10 个 StubService ，StubService1，StubService2…StubService10 ，每个 StubService 只对应插件中的一个Service，如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png" alt="StubService占位示意"></p>
+<p>接下来就是让每个插件Service匹配一个宿主中的 StubService 了，有两种匹配方式：</p>
+<ul>
+<li>服务器下发一个 JSON 字符串，给出二者的一一对应关系     </li>
+<li>在每个插件 App 的 assets 目录中，创建一个 plugin_config 配置文件，把这个 JSON 字符串放进去</li>
+</ul>
+<p>第2种做法更自然，不需要和服务器交互，json文件解析类似如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">String strJson = Utils.readZipFileString(dexFile.getAbsolutePath(), <span class="string">"assets/plugin_config.json"</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (strJson == <span class="keyword">null</span> || TextUtils.isEmpty(strJson)) {</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">JSONObject jobject = <span class="keyword">new</span> JSONObject(strJson.replaceAll(<span class="string">"\r|\n"</span>, <span class="string">""</span>));</span><br><span class="line">JSONArray jsonArray = jobject.getJSONArray(<span class="string">"plugins"</span>);</span><br><span class="line"><span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; jsonArray.length(); i++) {</span><br><span class="line">    JSONObject jsonObject = (JSONObject) jsonArray.get(i);</span><br><span class="line">    UPFApplication.pluginServices.put(</span><br><span class="line">        jsonObject.optString(<span class="string">"PluginService"</span>),</span><br><span class="line">        jsonObject.optString(<span class="string">"StubService"</span>));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们将 JSON 转化为一个 HashMap ，<strong>以插件的类名作为key，以宿主的替身作为value</strong>，这个HashMap 存放在宿主App 的 UPFApplication 的 plutinServices 中，是一个全局变量。</p>
+<h2 id="startService-的解决方案"><a href="#startService-的解决方案" class="headerlink" title="startService 的解决方案"></a>startService 的解决方案</h2><p>Service 的插件化机制和Activity 很像，因为它们是亲戚。我们首先从简单的startService 和 stopService 的插件化做起。</p>
+<p>首先，把插件和宿主的dex合并，之前有封装过 BaseDexClassLoaderHookHelper 类，合并后才能随心所欲加载类；其次，采用“欺骗AMS”方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//即 Hook AMN 的 gDefault，它是一个Singleton 对象，之后创建它的代理对象 MockClass1 ，然后替换这个字段</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//之后，再Hook 到 Handler 类型的 H 类的 mCallback 字段，替换为 MockClass2</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>主要流程分析一下：</p>
+<ol>
+<li><p>Hook AMN，让 AMS 启动 StubService，这次要拦截的是 startServcie 和 stopService 这两个方法(也即在AMN中就拦截这两个方法，将要操作的目标Service替换成相应的StubService)。不过，这次不再需要把 Intent 缓存了，因为有了 UPFApplication 中的 plutinServices ，我们可以根据插件 Service 找到对应的 StubService，也可以根据 StubService 反向找到 Service</p>
+</li>
+<li><p>AMS 被“欺骗”之后，它原本会通知App启动StubService，而我们要Hook掉ActivityThread 的 mH 对象的 mCallback 对象，仍然截获它的 handleMessage 方法，只不过这次截获的是 “CREATE_SERVICE” 分支，这个分支执行 ActivityThread 的 handleCreateService 方法。在 handleCreateService 中，并不能获取到 App 发送给 AMS 的 Intent，AMS 要启动那个Service ，这个信息是存在 handleCreateService 方法的 dat 参数中，是 CreateServiceData 类型的。Android系统的实现如下：   </p>
+</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleCreateService</span> <span class="params">(CreateServiceData data)</span> </span>{ </span><br><span class="line">    LoadedApk packageinfo = getPackageinfoNoCheck(data.info.applicationinfo, data.compatInfo);</span><br><span class="line">    Service service = <span class="keyword">null</span>; </span><br><span class="line">    java.lang.ClassLoader cl= packageinfo.getClassLoader(); </span><br><span class="line">    service = (Service) cl.loadClass(data.info.name).newinstance(); </span><br><span class="line">    <span class="comment">//省略无关代码</span></span><br><span class="line">    service . onCreate ();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上面代码中，data.info.name 就是Service 的名称，<strong>所以我们只需要将这个值 Hook 为插件的Service即可</strong>。至此，一个支持 startService 的插件化框架就完成了。</p>
+<h2 id="bindService-的解决方案"><a href="#bindService-的解决方案" class="headerlink" title="bindService 的解决方案"></a>bindService 的解决方案</h2><p>有了前面的基础，Service 的 bind 与 unbind 就非常简单了，只要在 AMN 的Hook 中添加一个分支，在 “bindService” 的时候 “欺骗AMS” 就行：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (”bindService”.equals(method . getName())) { </span><br><span class="line">    <span class="comment">//找到参数里面的第一个 Intent 对象</span></span><br><span class="line">    <span class="keyword">int</span> index = <span class="number">0</span>; </span><br><span class="line">    <span class="keyword">for</span> (inti= <span class="number">0</span>; i &lt; args . length ; i++) { </span><br><span class="line">        <span class="keyword">if</span> (args [i) <span class="keyword">instanceof</span> Intent) { </span><br><span class="line">            index = i ; </span><br><span class="line">            <span class="keyword">break</span>; </span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    Intent rawintent = (Intent) args[index); </span><br><span class="line">    String rawServiceName = rawintent.getComponent().getClassName(); </span><br><span class="line">    String stubServiceName = UPFApplication.pluginServces.get(rawServiceName)</span><br><span class="line">    <span class="comment">//替换 Plugin Service of StubService </span></span><br><span class="line">    ComponentName componentName =<span class="keyword">new</span> ComponentName(stubPackage, stubServiceName); </span><br><span class="line">    Intent newintent = <span class="keyword">new</span> Intent(); </span><br><span class="line">    newintent.setComponet(componentName);</span><br><span class="line">    <span class="comment">//替换 Intent ，欺骗 AMS</span></span><br><span class="line">    args[index] = newintent ; </span><br><span class="line">    Log.d(TAG, ” hook success <span class="string">"); </span></span><br><span class="line"><span class="string">    return method.invoke(mBase , args);</span></span><br><span class="line"><span class="string">}</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个过程就完成了，接下来就是使用：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnBind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        <span class="keyword">final</span> Intent = <span class="keyword">new</span> Intent();</span><br><span class="line">        intent.setComponent(<span class="keyword">new</span> ComponentName(<span class="string">"jianqiang.com.testservice1"</span>), <span class="string">"jianqiang.com.testservice1.MyService2"</span>);</span><br><span class="line">        bindService(intent, conn, Service.BIND_AUTO_CREATE);</span><br><span class="line">    }</span><br><span class="line">});</span><br><span class="line"></span><br><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnUnbind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        unbindService(conn);</span><br><span class="line">    }</span><br><span class="line">});</span><br></pre></td></tr></tbody></table></figure>
+<p>看了上面的使用方法，可能会有疑惑了：</p>
+<ul>
+<li>上半场，对于unbind行为，为什么不像bind一样在 unbind 的时候做“欺骗AMS”？    </li>
+<li>下半场，为什么不用在MockClass2中写代码，把StubService2 换回 MyService2？        </li>
+</ul>
+<p>关于第一个问题，因为我们 unbind 的语法是这样的 <em>unbindService(conn)</em> ，只需要一个 ServiceConnection 类型的参数 conn 即可，这个 conn 在前面的bindService 时用到了，<strong>AMS 会根据这个conn 来找到对应的Service，所以并不需要在unbind的时候去做欺骗</strong>。</p>
+<p>第二个问题，这要从Android 系统源码说起，bindService 过程在 AMS通知 App 下半场的流程图如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/bindService%E8%BF%87%E7%A8%8BAMS%E9%80%9A%E7%9F%A5App%E8%BF%99%E4%B8%8B%E5%8D%8A%E5%9C%BA.png" alt="bindService过程AMS通知App这下半场"></p>
+<p>也就是说，bindService 先走114(handleCreateSrvice)分支，再走 121 (handleBindService) ，在 handleCreateSrvice 中已经把我们要启动的 MyService2 放到了 mService 这个集合中了，那么，在 handleBindService 和 handleUnbindService 中，都会从 mService 集合中找到 Service2 。在之前章节，为了解决 createService ，已经拦截了 114 分支把 StubService2 换回了 MyService2 了，所以我们不需要要拦截 121 和 122 了， 无需再MockClass2 添加额外代码。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这里给出Service第一种解决方案——预先占位，在宿主中预先声明若干个StubService。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1302,107 +1424,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2020/06/28/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/28/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/" class="post-title-link" itemprop="url">存储优化<上>-常见的存储方式</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-28 18:36:00" itemprop="dateCreated datePublished" datetime="2020-06-28T18:36:00+08:00">2020-06-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-04 11:45:58" itemprop="dateModified" datetime="2020-07-04T11:45:58+08:00">2020-07-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="Android存储安全"><a href="#Android存储安全" class="headerlink" title="Android存储安全"></a>Android存储安全</h2><p>在4.3以前，应用都在自己的沙盒里，沙盒使用标准Linux保护机制，为每个应用创建唯一 Linux UID 来定义。<strong>简单来说，就是保证微信不能访问淘宝的数据</strong>。</p>
-<p>4.3以后引入SELinux，进一步定义应用沙盒边界。即使我们进程有root权限也不能为所欲为(想干事情必须先在安全策略配置文件中赋予权限)。</p>
-<p>数据加密：Android 两种加密，全盘加密和文件加密。全盘加密在4.4引入，在 5.0 后默认打开</p>
-<h2 id="常见数据存储方法"><a href="#常见数据存储方法" class="headerlink" title="常见数据存储方法"></a>常见数据存储方法</h2><p>综合来看,Android提供了 SharedPreferences /ContentProvider/文件/数据库</p>
-<h3 id="SharedPreferences"><a href="#SharedPreferences" class="headerlink" title="SharedPreferences"></a>SharedPreferences</h3><p>非常简便，但是问题比较多:</p>
-<ul>
-<li>跨进程不安全       </li>
-<li>加载缓慢(使用异步加载，且没设置线程优先级，就有可能出现主线程等待低优先级线程所问题)        </li>
-<li>全量写入(无论commit还是apply，即使只改动一个条目，也会把全部内容写入，并且多次写入一个同一文件，也不会合并为一次)       </li>
-<li>卡顿(收到系统广播或onPause等时机，系统会强制把sp文件写到磁盘，此过程或阻塞)      </li>
-<li>还有，存储json等复杂文件时，会有转义等操作，会额外耗时     </li>
-</ul>
-<p>如果我们想的话，可以使用 MMKV 替代sp，<strong>它利用文件锁保证跨进程安全</strong>，并且性能也比较好</p>
-<h3 id="ContentProvider"><a href="#ContentProvider" class="headerlink" title="ContentProvider"></a>ContentProvider</h3><p><strong>ContentProvider 的生命周期默认在 Application 的onCreate 之前，而且是在主线程的</strong>，ContentProvider 跨进程传递数据是利用 Android 的 Binder 和匿名共享内存机制。简单来说，<strong>就是通过 Binder 传递 (CusorWindow 对象内部的）匿名共享内存的文件描述符</strong>，这样数据无需跨进程。</p>
-<p>ContentProvider 主要存在以下几个问题：</p>
-<ul>
-<li>自定义的 ContentProvider 的构造函数、静态代码块、onCreate 函数尽量不要做耗时操作       </li>
-<li>性能。传输数据比较小的时候，使用 ContentProvider 不一定划算    </li>
-<li>安全：ContentProvider本身提供了很好的安全，但是如果是exported，当支持执行 sql 语句时，就要注意 sql 注入问题。     </li>
-</ul>
-<p>简而言之，ContentProvider 适合相对比较笨重，适合传输量大的数据</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1448,7 +1474,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">110</span>
+          <span class="site-state-item-count">111</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1534,7 +1560,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共255.9k字</span>
+  <span class="post-count">博客全站共261.3k字</span>
 </div>
 
 
