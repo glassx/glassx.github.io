@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="内存优化&lt;上&gt;Android中Bitmap 内存分配的变化过程 3.0以前，Bitmap 对象放在Java堆，像素数据存放在 Native内存中，如果不手动调用 recycle ，那么Native内存中的像素数据完全依赖于 finalize 函数，而这个函数是不可靠的          3.0~7.0,Bitmap 对象和像素数据统一放到 Java 堆，这样就算不 recycle 操作">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第3、4课-内存优化">
+<meta property="og:url" content="https://glassx.gitee.io/2020/05/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="内存优化&lt;上&gt;Android中Bitmap 内存分配的变化过程 3.0以前，Bitmap 对象放在Java堆，像素数据存放在 Native内存中，如果不手动调用 recycle ，那么Native内存中的像素数据完全依赖于 finalize 函数，而这个函数是不可靠的          3.0~7.0,Bitmap 对象和像素数据统一放到 Java 堆，这样就算不 recycle 操作">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png">
+<meta property="article:published_time" content="2020-05-27T13:43:00.000Z">
+<meta property="article:modified_time" content="2020-05-27T13:43:33.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android开发高手课">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png">
+
+<link rel="canonical" href="https://glassx.gitee.io/2020/05/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第3、4课-内存优化 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">27</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">112</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2020/05/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第3、4课-内存优化
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-05-27 21:43:00 / 修改时间：21:43:33" itemprop="dateCreated datePublished" datetime="2020-05-27T21:43:00+08:00">2020-05-27</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="内存优化-lt-上-gt"><a href="#内存优化-lt-上-gt" class="headerlink" title="内存优化<上>"></a>内存优化&lt;上&gt;</h2><h3 id="Android中Bitmap-内存分配的变化过程"><a href="#Android中Bitmap-内存分配的变化过程" class="headerlink" title="Android中Bitmap 内存分配的变化过程"></a>Android中Bitmap 内存分配的变化过程</h3><ol>
+<li>3.0以前，Bitmap 对象放在Java堆，像素数据存放在 Native内存中，如果不手动调用 recycle ，那么Native内存中的像素数据完全依赖于 finalize 函数，而这个函数是不可靠的         </li>
+<li>3.0~7.0,Bitmap 对象和像素数据统一放到 Java 堆，这样就算不 recycle 操作，像素数据也会随着一起回收，不过，这导致大量内存占用，引起大量GC。一起放在内存也有可能即使系统有大量内存没利用，但是却会导致oom了(比如给分配的最大堆只到 300M，但是用得差不多了，此时系统却还空闲有3G内存，却要引起oom了)       </li>
+<li>Android 8.0 中，NativeAllocationRegistry 可以满足Bitmap 对象存放在Java 堆，像素数据在 Native 中，还能实现一并回收对象和像素数据。(8.0还提供硬件位图(Hardware Bitmap)，减少内存占用并提升绘制效率)        </li>
+</ol>
+<h3 id="关于内存优化的两个误区"><a href="#关于内存优化的两个误区" class="headerlink" title="关于内存优化的两个误区"></a>关于内存优化的两个误区</h3><ul>
+<li>内存占用越小越好。不是这样的，更多的内存意味着更好的动画效果和更快的缓存命中，只需要做到系统内存充足时多用，系统内存紧张时少用(释放不是必须的内存)即可                </li>
+<li>Native 的内存不用管。其实，当系统内存不足的时候，就会开始依次清理 后台、桌面、服务、前台，一步步来，直到内存足够，最后直到重启手机                  </li>
+</ul>
+<h3 id="内存观测方法"><a href="#内存观测方法" class="headerlink" title="内存观测方法"></a>内存观测方法</h3><ol>
+<li>观察Log，查看GC 回收的原因            </li>
+<li>使用如下命令查看：         </li>
+</ol>
+<blockquote>
+<p>adb shell dumpsys meminfo &lt;package_name|pid&gt; [-d]</p>
+</blockquote>
+<h2 id="内存优化-lt-下-gt"><a href="#内存优化-lt-下-gt" class="headerlink" title="内存优化<下>"></a>内存优化&lt;下&gt;</h2><h3 id="内存优化探讨"><a href="#内存优化探讨" class="headerlink" title="内存优化探讨"></a>内存优化探讨</h3><p>Bigmap 优化、内存泄露优化、设备分级几个层次入手</p>
+<p>设备等级就是，在某些低性能的机器上，动画不要了，进程也不预先启动了。安装包大小也是有要求的，比如有很多app就有极速版这个概念，它们的apk很小，动画也不酷炫。apk大小跟内存的关系可以参考如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png" alt="安装包大小和内存关系"></p>
+<p>Bitmap 可以用第三方框架来做，比如Fresco，实在要自己管理，可以向后台要求指定宽度，bitmap的inbitMap内存复用，inSample降低采样</p>
+<p>内存泄露：使用LeakCanary自动化检测方案，只可以做到Activity和Fragment的泄漏检测，如何检测其他的内存泄露呢？如何监测疑似的内存泄漏呢？</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/" rel="tag"># Android开发高手课</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2020/05/02/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/" rel="next" title="他山之石">
+                  <i class="fa fa-chevron-left"></i> 他山之石
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2020/05/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/" rel="prev" title="第5、6课-卡顿优化">
+                  第5、6课-卡顿优化 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96-lt-%E4%B8%8A-gt"><span class="nav-number">1.</span> <span class="nav-text">内存优化&lt;上&gt;</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Android%E4%B8%ADBitmap-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%9A%84%E5%8F%98%E5%8C%96%E8%BF%87%E7%A8%8B"><span class="nav-number">1.1.</span> <span class="nav-text">Android中Bitmap 内存分配的变化过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%E7%9A%84%E4%B8%A4%E4%B8%AA%E8%AF%AF%E5%8C%BA"><span class="nav-number">1.2.</span> <span class="nav-text">关于内存优化的两个误区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E8%A7%82%E6%B5%8B%E6%96%B9%E6%B3%95"><span class="nav-number">1.3.</span> <span class="nav-text">内存观测方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96-lt-%E4%B8%8B-gt"><span class="nav-number">2.</span> <span class="nav-text">内存优化&lt;下&gt;</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96%E6%8E%A2%E8%AE%A8"><span class="nav-number">2.1.</span> <span class="nav-text">内存优化探讨</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">112</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共262.1k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'b039507564b24ac70e03312a5bb00cdd',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
