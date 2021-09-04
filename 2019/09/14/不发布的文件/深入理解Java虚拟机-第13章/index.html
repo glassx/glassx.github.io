@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="概述并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。 线程安全线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。 Java 线程安全为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第13章: 线程安全与锁优化">
+<meta property="og:url" content="https://glassx.gitee.io/2019/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="概述并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。 线程安全线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。 Java 线程安全为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-09-14T02:12:00.000Z">
+<meta property="article:modified_time" content="2020-03-03T15:02:38.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.gitee.io/2019/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第13章: 线程安全与锁优化 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">27</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">112</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第13章: 线程安全与锁优化
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-14 10:12:00" itemprop="dateCreated datePublished" datetime="2019-09-14T10:12:00+08:00">2019-09-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-03-03 23:02:38" itemprop="dateModified" datetime="2020-03-03T23:02:38+08:00">2020-03-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。</p>
+<h2 id="线程安全"><a href="#线程安全" class="headerlink" title="线程安全"></a>线程安全</h2><p>线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。</p>
+<h2 id="Java-线程安全"><a href="#Java-线程安全" class="headerlink" title="Java 线程安全"></a>Java 线程安全</h2><p>为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假的二元排他选项来看待。按照线程安全的“安全程度”由强至弱来排序，我们可以将Java语言各种操作共享的<strong>数据</strong>分为：不可变、绝对线程安全、相对线程安全、线程兼容和线程对立。</p>
+<h3 id="不可变"><a href="#不可变" class="headerlink" title="不可变"></a>不可变</h3><p>不可变(Immutable) 的对象一定是线程安全的，只要一个不可变对象被正确地创建构建出来(没有发生this引用逃逸的情况)，那其外部的可见状态永远也不会改变，永远也不会看到它在多个线程之中处于不一致的状态。</p>
+<p>Java 语言中，如果共享数据是一个基本数据类型，只要在定义时使用final关键字就可以保证它是不可变的；如果共享数据是一个对象，那就需要保证对象的行为不会对其状态产生任何影响，有很多途径去实现这个目的，最简单的就是把对象中带有状态的变量都声明为final，这样，在构造函数结束之后，它就是不可变的。</p>
+<blockquote>
+<p>Java API 中复合不可变要求的类型，有String、枚举类型、Long、Double以及BigInteger、BigDecimal等大数据类型，但同为Number的子类型的原子类 AtomicInteger 和 AtomicLong 则并非不可变的。</p>
+</blockquote>
+<h3 id="绝对线程安全"><a href="#绝对线程安全" class="headerlink" title="绝对线程安全"></a>绝对线程安全</h3><p>绝对线程安全通常需要付出很大的，甚至有时候是不切实际的代价。<strong>在Java API 中标注自己是线程安全的类，大多数都不是绝对的线程安全</strong>。我们可以通过一个不是“绝对线程安全”的线程安全类来看看这里的“绝对”是什么意思。</p>
+<p>Java程序员基本上都认为 java.util.Vector 是一个线程安全的容器，因为它的add、get、size等方法都被 synchronized 修饰的，尽管这样效率很低，但确实是安全的。但是，即使所有方法都被修饰成同步，也并不意味着调用它的时候永远不需要同步手段了，看如下测试代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Vector&lt;Integer&gt; vector = <span class="keyword">new</span> Vector&lt;Integer&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) {</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) {</span><br><span class="line">                vector.add(i);</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            Thread removeThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                        vector.remove(i);</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            Thread prindThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                        System.out.println(vector.get(i));</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            removeThread.start();</span><br><span class="line">            prindThread.start();</span><br><span class="line"></span><br><span class="line">            <span class="comment">//不要同时产生过多线程，否则导致操作系统假死</span></span><br><span class="line">            <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">20</span>) ;</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这段代码运行过程中会出现 ArrayIndexOutOfBoundsException，但是在我自己写代码验证的时候，感觉这个错误还是很容易被忽略的，运行了好长时间都还在一直输出，但其实早就报错了，但不知道怎么程序还是正常运行。这点在自己验证的时候要注意一下，我的运行环境是：Android studio 3.5 + jre 1.8 。</p>
+<p>可能你一开始也会和我一样懵逼了，这 Vector 里面每个方法都被 synchronized 关键字修饰，这种情况下调用方法锁定的是对象，虽说synchronized 可以重入，但是上述代码添加、删除、遍历 可是在3个线程当中啊，压根就是互斥的啊，怎么会报错呢？</p>
+<p>原来，我们忽略了一个重要因素：原子操作。在 prindThread 线程中，for 循环会读取 vector.size ，它会先获取锁，然后读取值，假设值是 10，之后释放锁(注意，问题就在这了)，接下来print的时候，假设当前i是7，通过 vector.get(i) 读取元素的时候，会再次加锁，但是由于此时 vector 的size 不知道已经变成多少了，如果此时变成了 6，那么这个 get 操作就会发生越界了。</p>
+<p>如果remove线程恰好在一个错误的时间里删除了一个元素，导致序号i已经不再可用的话，再用vector.get(i) 访问就会抛出 ArrayIndexOutOfBoundsException。如果要保证这段代码的正确运行，书上给出的方案是把两个thread改成如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">Thread removeThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">synchronized</span> (vector){</span><br><span class="line">                        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                            vector.remove(i);</span><br><span class="line">                        }</span><br><span class="line">                    }</span><br><span class="line"></span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            Thread prindThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">synchronized</span> (vector){</span><br><span class="line">                        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                            System.out.println(vector.get(i));</span><br><span class="line">                        }</span><br><span class="line">                    }</span><br><span class="line"></span><br><span class="line">                }</span><br><span class="line">            });</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="相对线程安全"><a href="#相对线程安全" class="headerlink" title="相对线程安全"></a>相对线程安全</h3><p>相对线程安全就是我们通常意义上所讲的线程安全，它需要保证这个对象单独的操作是线程安全的，我们在调用的时候无需做额外的保障措施，但是对于一些特定顺序的连续调用，就可能需要在调用端使用额外的同步手段来保证调用的正确性。Java语言中，Vector、HashTable、Collections的synchronizeCollection() 方法包装的集合等。</p>
+<h3 id="线程兼容"><a href="#线程兼容" class="headerlink" title="线程兼容"></a>线程兼容</h3><p>线程兼容指对象本身并不是线程安全的，但是可以通过在调用端正确地使用同步手段来保证对象在并发环境中可以安全地使用。Java API 中大部分类都是属于线程兼容的，如 ArrayList 和 HashMap 等。</p>
+<h3 id="线程对立"><a href="#线程对立" class="headerlink" title="线程对立"></a>线程对立</h3><p>线程对立是指无论调用端是否采取同步措施，都无法再多线程环境并发使用，如 Thread 类的suspend() 和 resume() 方法，如果两个线程同时持有一个线程对象，一个尝试去中断线程，另一个尝试去恢复线程，如果并发的话，无论是否进行了同步，都会存在死锁风险(这两个方法在jdk中已经被声明放弃了)。这类代码很少出现，我们也应该避免。</p>
+<h2 id="线程安全的实现方法"><a href="#线程安全的实现方法" class="headerlink" title="线程安全的实现方法"></a>线程安全的实现方法</h2><p>这听起来是代码编写的问题，但虚拟机提供的同步和锁机制也起到了非常重要的作用。只要读者了解了虚拟机线程安全手段的运作过程，自己去思考代码如何编写并不是一件困难的事情。</p>
+<h3 id="互斥同步"><a href="#互斥同步" class="headerlink" title="互斥同步"></a>互斥同步</h3><p>同步是指在多个线程并发访问共享数据时，保证共享数据在同一时刻只能被一个(或者是一些，使用信号量的时候)线程使用，而互斥是实现同步的一种手段。互斥是因，同步是果；互斥是方法，同步是目的。</p>
+<p>Java中最基本的互斥同步手段是 synchronize 关键字，经过编译后，会在同步快的前后分别形成 monitorenter 和 monitorexit 两个字节指令，<strong>这两个字节码都需要 reference 类型的参数来指明要锁定和解锁的对象</strong>。如果Java程序中的synchronize 指明了对象参数，那就是这个对象的 reference ；<strong>如果没有明确指定，那就根据 synchronize 修饰的是实例方法还是类方法，去取对应的对象实例或 Class 对象来作为锁对象。</strong></p>
+<p>根据虚拟机规范，执行 monitorenter 时首先尝试获取对象的锁，如果没有被锁定，或者当前线程已经拥有这个锁，就把锁的计数器 +1 ，相应地，monitorexit 时减 1 。如果获取对象锁失败，那当前线程就要阻塞等待，直到锁被释放。</p>
+<p><strong>这里有2点是要注意的：synchronize 同步块对同一条线程来说是可重入的，不会出现自己把自己锁死的问题；其次，同步块在已进入的线程执行完之前，会阻塞后面的线程，前面提到过，Java的线程是映射到操作系统的原生线程上的，如果要阻塞或者唤醒一个线程，都需要操作系统来帮忙完成，这就需要从用户态转到核心态中，因此状态转换需要耗费很多的处理器时间。对于代码简单的同步块(如被synchronize修饰的getter() 或 setter() 方法)，状态转换消费的时间可能比代码执行时间还要长，所以 synchronize 是 Java 语言中一个重量级(Heavyweight)操作。</strong></p>
+<p>还可以使用 ReetrantLock 来实现同步，它的基本用法与 synchronize 相似，<strong>都具备线程重入性</strong>，只是 ReetrantLock 表现为API语法层面的互斥锁(lock 和 unlock 方法配合 try/finally 语句块来完成)，synchronize 表现为原生语法层面的互斥锁。不过，ReetrantLock 增加了一些高级功能，主要有以下3项：</p>
+<ul>
+<li>等待可中断：指当持有锁的线程长期不释放锁的时候，正在等待的线程可以选择放弃等待。    </li>
+<li>公平锁：多个线程在等待同一个锁时，必须按照申请锁的时间顺序来依次获得锁：而非公平锁则不保证这一点，在锁被释放时，任何一个等待锁的线程都有机会获得锁。synchronize 是非公平的，ReetrantLock 默认也是非公平的。    </li>
+<li>锁绑定多个条件是指一个 ReetrantLock 对象同时可以绑定多个 Condition 对象。而synchronize 中，锁对象的 wait 、notify或者 notifyAll 方法可以实现一个隐含的条件是：如果要和多于一个的条件关联的时候，就要额外地添加一个锁。而 ReetrantLock 无需这样做，只需要多次调用 newCondition 方法即可。</li>
+</ul>
+<p>在JDK 1.6以前，synchronize 的吞吐量会随着竞争的激烈程度增加而急剧下降，但 ReetrantLock 却基本保持在平稳水平。<strong>但随着后面的优化，二者的性能基本上持平了，并且虚拟机在未来的性能改进中更倾向于原生的 synchronize ，所以还是提倡在 synchronize 能实现需求的情况下，优先考虑使用 synchronize 来同步</strong>。</p>
+<h3 id="非阻塞同步"><a href="#非阻塞同步" class="headerlink" title="非阻塞同步"></a>非阻塞同步</h3><p>互斥同步最主要的问题就是线程阻塞和唤醒带来的性能问题，因此也称为阻塞同步，这是一种悲观的并发策略，总认为不去做正确的同步措施，就肯定会出问题。随着硬件指令集的发展（因为我们需要操作和冲突检测这两个步骤具备原子性，只能靠硬件来保证，如果使用互斥同步就失去意义了），我们有了另一个选择：基于冲突检测的乐观并发策略，通俗讲就是先操作，如果没有其他线程竞争，操作就成功了；如果有竞争产生了冲突，再采取其他补偿措施（常见的措施就是不断重试，直到成功）。这种策略无需把线程挂起，因此称为非阻塞同步。</p>
+<blockquote>
+<p>指令集发展后，可以确保一个从语义上看起来需要多次操作的行为只需要一条处理器指令就能完成，其中最重要的指令为 ：比较并交换(Compare-and-Swap) ，下文简称 CAS，它的语义是：内存地址V，旧的预期值 A,新值 B，当且仅当 V 符合旧预期值 A 是，处理器就用新值 B 更新 V，否则就不更新。</p>
+</blockquote>
+<p>不妨拿一段在第 12 章中没有解决的问题代码来看看如何使用CAS操作来避免阻塞同步，我们曾通过这段20个线程自增 10000 此的代码来证明 volatile 变量不具备原子性，那如何才能让它具备原子性？把 “race ++ “ 操作或 increase() 方法用同步块包裹起来当然是一个办法，但如果改成如下代码，效率会提高很多：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> AtomicInteger race = <span class="keyword">new</span> AtomicInteger(<span class="number">0</span>);</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> THREADS_COUNT = <span class="number">20</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span></span>{</span><br><span class="line">        race.incrementAndGet();</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">       Thread[] threads = <span class="keyword">new</span> Thread[THREADS_COUNT];</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; THREADS_COUNT;i++){</span><br><span class="line">        threads[i] = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; <span class="number">10000</span>;i++){</span><br><span class="line">                    increase();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        });</span><br><span class="line"></span><br><span class="line">        threads[i].start();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">1</span>){</span><br><span class="line">        Thread.yield();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    System.out.println(race);</span><br><span class="line">   }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>运算结果： 200000</p>
+<p>使用AtomicInteger代替int后，程序输出了正确地结果，一切要归功于incrementAndGet 方法的原子性，它的实现非常简单：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">incrementAndGet</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">for</span>(;;){</span><br><span class="line">        <span class="keyword">int</span> current = get();</span><br><span class="line">        <span class="keyword">int</span> next = current + <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">if</span>(compareAndSet(current,next)){</span><br><span class="line">            <span class="keyword">return</span> next;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>incrementAndGet 方法在一个无限循环中，不断尝试将一个比自己当前值大1的新值赋给自己，如果失败了，那说明在执行“获取-设置”操作的时候值已经有了修改，于是再次循环进行下一次操作，直到设置成功为止（设置成功才return 跳出循环）。</p>
+<blockquote>
+<p>如果一个变量V初次读取的时候是A值，并且在准备赋值的时候检查到它仍然为A，这就有可能是这段期间它的值曾经被改成了B，后来又被改成了A，那 CAS 操作就会误认为它从来没被改变过，这称为 “ABA” 问题。如果需要解决 “ABA” 问题，改用传统的互斥同步会比原子类更高效。</p>
+</blockquote>
+<h3 id="无同步方案"><a href="#无同步方案" class="headerlink" title="无同步方案"></a>无同步方案</h3><p>如果一个方法本来就不涉及共享数据，那它自然无需任何同步措施。这种代码是天生线程安全的，这里简单介绍其中两类：</p>
+<ul>
+<li><p>可重入代码：这种代码可以在任何时刻中断它，转而去执行另外一段代码，而在控制权返回后，原来的程序不会出现任何错误。可重入代码有一些共同特征，如 不依赖存储在堆上的数据和公用的系统资源，用到的状态量都是由参数中传入、不调用 非可重入的方法等。   </p>
+</li>
+<li><p>线程本地存储：如果一段代码中所需要的数据必须与其他代码共享，那就看这些共享数据代码是否能保证在同一个线程中执行，如果能保证，我们就可以把共享数据的可见范围限制在同一个线程之内。</p>
+</li>
+</ul>
+<blockquote>
+<p>符合这种特点的应用并不少见。一个应用实例就是web交互模型中“一个请求对应一个服务器线程”的处理方式</p>
+</blockquote>
+<h2 id="锁优化"><a href="#锁优化" class="headerlink" title="锁优化"></a>锁优化</h2><p>JDK 1.6 实现了各种锁优化技术，如适应性自旋、锁消除、锁粗化、轻量级锁 和 偏向锁 等，这些技术都是为了在线程之间更高效地共享数据。</p>
+<h3 id="自旋锁与自适应自旋"><a href="#自旋锁与自适应自旋" class="headerlink" title="自旋锁与自适应自旋"></a>自旋锁与自适应自旋</h3><p>在讨论互斥同步的时候，提到了阻塞对性能影响最大。虚拟机开发团队注意到在许多应用上，共享数据锁定状态只会持续很短时间，为这段时间去挂起和恢复线程不值得。我们可以让后面的请求锁的线程“稍等一下”，但不放弃处理器的执行时间，看锁是否被很快释放。为了让线程等待，我们只需让线程执行一个忙循环（自旋），这项技术就是所谓<strong>自旋锁</strong>。</p>
+<blockquote>
+<p>自旋本身避免了挂起和恢复过程，但是它占用cpu时间，如果锁被占用的时间很短，这是值得的；反之，如果锁被占用的时间过长，则白白消耗处理器资源，因此需要有一定限度，限定自旋次数。</p>
+</blockquote>
+<h3 id="锁消除"><a href="#锁消除" class="headerlink" title="锁消除"></a>锁消除</h3><p>如果代码上要求同步，但是被检测到不可能存在共享数据竞争，就可以对锁进行消除，锁消除的主要判定依据来源于逃逸分析的数据支持。也许读者会有疑问，变量逃逸，对于虚拟机来说需要使用数据流分析来确定，但是程序员自己应该很清楚，怎么会在明知道不存在数据竞争的情况下要求同步呢？答案是：有许多同步措施并不是程序员自己加入的，同步的代码在Java程序中普遍存在，来看看下面例子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">concatString</span><span class="params">(String s1,String s2,String s3)</span></span>{</span><br><span class="line">    <span class="keyword">return</span> s1 + s2 + s3;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们知道，String 是个不可变的类，对字符串的连接操作总是通过生成新的String来进行。JDK 1.5 前，String 连接会转化为 StringBuffer对象的连续 append 操作，1.5 及以后的版本会转化为 StringBuilder 对象的连续 append，即上述代码可能会变成以下的样子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">concatString</span><span class="params">(String s1,String s2,String s3)</span></span>{</span><br><span class="line">    StringBuffer sb = <span class="keyword">new</span> StringBuffer();</span><br><span class="line">    sb.append(s1);</span><br><span class="line">    sb.append(s2);</span><br><span class="line">    sb.append(s3);</span><br><span class="line">    <span class="keyword">return</span> sb.toString();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>现在大家还认为这段代码没有涉及同步吗？每个 StringBuffer.append 方法中都有一个同步块，锁就是sb对象。虚拟机很快会发现它的动态作用域被限制在 concatString 方法内部，永远不会被逃逸到方法外，因此，虽然这里有锁，也可以被安全地消除。</p>
+<h3 id="锁粗化"><a href="#锁粗化" class="headerlink" title="锁粗化"></a>锁粗化</h3><p>原则上，编写代码的时候，总是推荐将同步块的作用范围限制得尽量小，<strong>这是为了使需要同步的操作数量尽可能变小，让等待的线程尽快拿到锁。</strong>大部分情况下这原则是正确的。</p>
+<p>但是，如果一系列连续操作都是对同一个对象反复加锁和解锁，甚至加锁操作是在循环体中，频繁地进行互斥同步操作会导致不必要的性能消耗。上述代码中连续的 append 方法就属于此类范围，虚拟机会把加锁同步的范围扩展(粗化)到整个操作序列的外部，就是扩展到第一个 append() 操作之前直至最后一个 append() 操作之后，这样只需要加锁一次就可以了。</p>
+<h3 id="轻量级锁"><a href="#轻量级锁" class="headerlink" title="轻量级锁"></a>轻量级锁</h3><p>轻量级锁是相对于传统的锁机制而言的，首先强调的一点是，<strong>轻量级锁并不是用来代替重量级锁的，它的本意是在没有多线程竞争的前提下，减少传统的重量级锁使用操作系统互斥量产生的性能消耗。</strong></p>
+<p>要理解轻量级锁，必须从HotSpot虚拟机的对象（对象头部分）的内存布局开始介绍。HotSpot虚拟机的对象头分为两部分：第一部分用于存储对象自身的运行时数据，如哈希码、GC分代年龄等，官方称为 “Mark Word”，它是实现轻量级锁和偏向锁的关键。第二部分用于存储指向方法区对象类型数据的指针。</p>
+<p>在代码进入同步块的时候，如果此同步对象没有被锁定——Mark Word 中锁标记位为 “01”，则虚拟机首先将在当前线程的栈帧中建立一个名为<strong>锁记录(Lock Record)</strong>的空间，用于存储锁对象目前的 Mark Word 的拷贝，然后，虚拟机将使用 CAS 操作尝试将对象的 Mark Word 更新为指向 Lock Record 的指针，如果这个更新动作成功了，那么这个县城就拥有了该对象的锁，并且将对象的 Mark Word 的锁标志位转变为 “00” ，表示对象处于轻量级锁定状态。</p>
+<p>如果这个更新操作失败了，虚拟机首先会检查对象的 Mark Word 是否指向当前线程的栈帧，如果只说明当前线程已经拥有了这个对象的锁，那就可以直接进入同步块继续执行，否则说明这个锁对象已经被其他线程抢占了。如果有两条以上的线程争用同一个锁，那轻量级锁就不再有效，要膨胀为重量级锁，锁标志位变为 “10” ，后面等待锁的线程也要进入阻塞状态。</p>
+<p>上面描述的是加锁过程，解锁过程也是通过CAS 操作来进行的，如果对象的 Mark Word 仍然指向线程的锁记录，那就用 CAS 操作把当前对象的的 Mark Word 和 线程中复制的 Mark Word 替换，如果替换成功，整个同步过程完成。如果替换失败，说明其他线程尝试过获取该锁，那么在释放锁的同时，唤醒被挂起的线程。</p>
+<blockquote>
+<p>轻量锁的依据是“绝大部分锁，在整个同步周期内都是不存在竞争的”，这是经验数据，如果没有竞争，轻量级锁使用CAS 操作避免了使用互斥量的开销；如果存在锁竞争，除了互斥量的开销外，还额外发生了 CAS 操作，因此会比传统重量级锁更慢。</p>
+</blockquote>
+<h3 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h3><p>如果说轻量级锁是在无竞争情况下使用CAS操作去消除同步使用的互斥量，那偏向锁就是在无竞争的情况下把整个同步都消除掉，连CAS操作都不做了。</p>
+<p>假设当前虚拟机启用了偏向锁，那么当锁对象第一次被线程获取的时候，虚拟机会把对象头中的标志位设置为 “01”，即偏向模式。同时，使用CAS操作把获取到这个锁的线程ID记录在对象的 Mark Word 之中，如果 CAS 操作成功，持有偏向锁的线程以后每次进入这个锁相关的同步块时，虚拟机都可以不再进行任何同步操作。</p>
+<p>当另外一个线程去尝试获取这个锁时，偏向模式就结束。根据锁对象目前是否处于被锁定状态，撤销偏向后恢复到 未锁定(标志位 01) 或 轻量级锁定(标志位 00)的状态，后续的同步操作就如上面介绍的轻量级锁执行。</p>
+<blockquote>
+<p>偏向锁可以提高带有同步但无竞争的程序的性能，它不一定总是对程序运行有利。如果程序中大多数的锁总是被多个不同的线程访问，那偏向模式就是多余的。因此，有时候禁止使用偏向锁反而可以提升性能。</p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-JVM%E9%AB%98%E7%BA%A7%E7%89%B9%E6%80%A7%E4%B8%8E%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E7%AC%AC2%E7%89%88/" rel="tag"># 深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2019/09/13/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0/" rel="next" title="第10章：早期（编译期）优化">
+                  <i class="fa fa-chevron-left"></i> 第10章：早期（编译期）优化
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2019/09/15/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E7%B3%BB%E7%BB%9F%E6%BA%90%E4%BB%A3%E7%A0%81%E6%83%85%E6%99%AF%E5%88%86%E6%9E%90-%E7%AC%AC5%E7%AB%A0/" rel="prev" title="第5章：Binder进程间通信系统">
+                  第5章：Binder进程间通信系统 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8"><span class="nav-number">2.</span> <span class="nav-text">线程安全</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Java-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8"><span class="nav-number">3.</span> <span class="nav-text">Java 线程安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E5%8F%AF%E5%8F%98"><span class="nav-number">3.1.</span> <span class="nav-text">不可变</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%9D%E5%AF%B9%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8"><span class="nav-number">3.2.</span> <span class="nav-text">绝对线程安全</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%B8%E5%AF%B9%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8"><span class="nav-number">3.3.</span> <span class="nav-text">相对线程安全</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%85%BC%E5%AE%B9"><span class="nav-number">3.4.</span> <span class="nav-text">线程兼容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%AF%B9%E7%AB%8B"><span class="nav-number">3.5.</span> <span class="nav-text">线程对立</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">线程安全的实现方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%92%E6%96%A5%E5%90%8C%E6%AD%A5"><span class="nav-number">4.1.</span> <span class="nav-text">互斥同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9D%9E%E9%98%BB%E5%A1%9E%E5%90%8C%E6%AD%A5"><span class="nav-number">4.2.</span> <span class="nav-text">非阻塞同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A0%E5%90%8C%E6%AD%A5%E6%96%B9%E6%A1%88"><span class="nav-number">4.3.</span> <span class="nav-text">无同步方案</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%94%81%E4%BC%98%E5%8C%96"><span class="nav-number">5.</span> <span class="nav-text">锁优化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E6%97%8B%E9%94%81%E4%B8%8E%E8%87%AA%E9%80%82%E5%BA%94%E8%87%AA%E6%97%8B"><span class="nav-number">5.1.</span> <span class="nav-text">自旋锁与自适应自旋</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%94%81%E6%B6%88%E9%99%A4"><span class="nav-number">5.2.</span> <span class="nav-text">锁消除</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%94%81%E7%B2%97%E5%8C%96"><span class="nav-number">5.3.</span> <span class="nav-text">锁粗化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%BB%E9%87%8F%E7%BA%A7%E9%94%81"><span class="nav-number">5.4.</span> <span class="nav-text">轻量级锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%81%8F%E5%90%91%E9%94%81"><span class="nav-number">5.5.</span> <span class="nav-text">偏向锁</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">112</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共262.1k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'd6d8400e7c3e8f7e9447f97f8689a8c0',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

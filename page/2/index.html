@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">111</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">112</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -220,7 +220,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/28/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -234,7 +234,103 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Service的插件化解决方案</a>
+            <a href="/2021/03/28/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/" class="post-title-link" itemprop="url">第11章：BroadcastReceiver的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-03-28 11:41:00 / 修改时间：17:03:38" itemprop="dateCreated datePublished" datetime="2021-03-28T11:41:00+08:00">2021-03-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Receiver概述"><a href="#Receiver概述" class="headerlink" title="Receiver概述"></a>Receiver概述</h2><p>Receiver分为动态和静态两种，简单讨论下区别：</p>
+<ul>
+<li>静态广播在 AndroidManifest 中注册，因为Android系统重启时，PMS都会解析App中的AndroidManifest，所以<strong>静态广播都存在于 PMS 中</strong>      </li>
+<li>动态广播通过 Context 的registerReceiver 方法最终调用 AMN.getDefault().registerReceiver 方法，所以，<strong>动态广播的注册信息存在于 AMS 中</strong>       </li>
+</ul>
+<p>除了注册方式不一样，后续发送和接收的过程就一样了。整个过程简单如下：1、Context 发送广播，最终通过 AMN.getDefault().broadcastIntent，把要发送的广播告诉AMS。2、AMS收到消息后，根据intent-filter 筛选 PMS 和 AMS (即静态广播和动态广播)中符合条件的接收器，通知App进程启动这些广播(调用这些广播的 onReceive)。</p>
+<h2 id="动态广播的插件化解决方案"><a href="#动态广播的插件化解决方案" class="headerlink" title="动态广播的插件化解决方案"></a>动态广播的插件化解决方案</h2><p>对于动态广播，我们只需要确保宿主App能加载插件中的这个动态广播类就行(因为这里并不需要直接与AMS打交道，只是个类而已)。通过9.3节的dex合并技术，就能做到了。</p>
+<h2 id="静态广播解决方案"><a href="#静态广播解决方案" class="headerlink" title="静态广播解决方案"></a>静态广播解决方案</h2><p>静态广播无法像Activity那样，即使没在AndroidManifest 中注册也能生效，因为无论是注册还是发送广播，都必须有 IntentFilter，其中的action是可以随意设置的，所以我们对于 Receiver 压根就不能通过类似 Activity 的插桩方式。只有另辟蹊径。</p>
+<h3 id="静态广播当做动态广播处理"><a href="#静态广播当做动态广播处理" class="headerlink" title="静态广播当做动态广播处理"></a>静态广播当做动态广播处理</h3><p>具体分为两步：</p>
+<ol>
+<li>PMS 只能读取宿主 App 的AndroidManifest 文件，读取其中的静态广播并注册。我们可以反射，手动控制PMS读取插件AndroidManifest 中声明的静态广播列表。     </li>
+<li>遍历这个静态广播列表，使用 classLoader 加载列表中每个广播类，实例化成一个对象，<strong>然后作为动态广播注册到AMS中</strong>           </li>
+</ol>
+<h3 id="静态广播的插件化终极解决方案"><a href="#静态广播的插件化终极解决方案" class="headerlink" title="静态广播的插件化终极解决方案"></a>静态广播的插件化终极解决方案</h3><p>上述静态广播当做动态广播的方案，这丧失了静态广播的特性——不需要启动App就可以启动一个静态广播。所以我们仍要探寻如何不启动App也能和插件中的静态广播通信。</p>
+<p>回忆一下前面介绍的Activity 和 Service 插件化的占位思想：</p>
+<ul>
+<li>Activity 只需要一个占位 StubActivity 就能面对大部分插件Activity了，对于LaunchMode 的其他三种形式，则需要更多的占位 StubActivity 应对     </li>
+<li>Service 也需要占位 StubService ，但是一个 StubService 只能对应一个插件中的Service，所以我们需要在宿主App中占位多个 StubService，通过json来配置映射关系。    </li>
+</ul>
+<p>如果也用占位的思想，每个静态广播需要携带一个或者多个Action，StubReceiver 也不例外，如果 StubReceiver 和插件中的静态广播是一对多的关系，那么从外界发送一个广播到App，<strong>就会触发插件中的所有静态广播</strong>。由此得出：<strong>StubReceiver 和插件中的广播只能是一对一的关系</strong>。</p>
+<p>不过，我们可以为一个广播设置多个Action，这样我们就不需要预先创建很多个StubReceiver用来面对插件中的静态广播了，只需要一个 StubReceiver ，为它配置很多个 action 即可。这样，插件中的静态广播就要和这些 action 建立一对一的关系，还是以前的思路，使用<strong>Json配置映射关系就行</strong>。</p>
+<p>还有，AndroidManifest 中<strong>支持为每个组件配置 metadata</strong>，利用这个特性，为插件中每个静态广播配置对应的 StubReceiver 中的 action ，如下所示：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">receiver</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">".MyReceiver"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span> &gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">baobao/</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span> <span class="attr">android:name</span>=<span class="string">"oldAction"</span> <span class="attr">android:value</span>=<span class="string">"jianqiang1"</span>&gt;</span><span class="tag">&lt;/<span class="name">meta-data</span>&gt;</span> </span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br><span class="line"> </span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">".MyReceiver2"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span> &gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"baobao2"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span> <span class="attr">android:name</span>=<span class="string">"oldAction"</span> <span class="attr">android:value</span>=<span class="string">"jianqiang2"</span>&gt;</span>&lt;/meta-data&gt; </span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>解析插件中的 AndroidManifest 文件，可以借助11.3章节介绍的ReceiverHelper 类的 preLoadReceiver 方法，在遍历插件中的每个静态的 Receiver 时，去除Receiver 的metadata 数据，根据oldAction值，对应到Receiver，比如 MyReceiver 对应 jianqiang1，MyReceiver2 对应 jianqiang2 。</p>
+<p>之后，把插件中的Receiver 手动注册为动态广播。宿主中定义的<strong>StubReceiver占位广播的作用是分发</strong>。</p>
+<p>这就解决了静态广播的问题，<strong>我们可以在App没启动的时候，就启动插件中的静态广播</strong>(我其实还是没看懂怎么在没有启动App的情况，就能启动这个静态广播，后续长丝下)。美中不足的是，这个StubReceiver 需要配置很多个 Action 。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Service的插件化解决方案</a>
         </h1>
 
         <div class="post-meta">
@@ -342,7 +438,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -356,7 +452,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/27/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/" class="post-title-link" itemprop="url">第9章：Activity的插件化解决方案</a>
+            <a href="/2021/03/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/" class="post-title-link" itemprop="url">第9章：Activity的插件化解决方案</a>
         </h1>
 
         <div class="post-meta">
@@ -437,7 +533,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/26/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/26/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -451,7 +547,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/26/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/" class="post-title-link" itemprop="url">第8章：最简单的插件化解决方案</a>
+            <a href="/2021/03/26/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/" class="post-title-link" itemprop="url">第8章：最简单的插件化解决方案</a>
         </h1>
 
         <div class="post-meta">
@@ -532,7 +628,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/25/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/25/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -546,7 +642,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/25/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：资源初探</a>
+            <a href="/2021/03/25/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：资源初探</a>
         </h1>
 
         <div class="post-meta">
@@ -663,7 +759,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/21/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -677,7 +773,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/21/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：插件化技术基础知识</a>
+            <a href="/2021/03/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：插件化技术基础知识</a>
         </h1>
 
         <div class="post-meta">
@@ -777,7 +873,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/21/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -791,7 +887,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/21/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：对startActivity 方法进行Hook</a>
+            <a href="/2021/03/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：对startActivity 方法进行Hook</a>
         </h1>
 
         <div class="post-meta">
@@ -896,7 +992,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/21/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -910,7 +1006,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/21/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：代理模式</a>
+            <a href="/2021/03/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：代理模式</a>
         </h1>
 
         <div class="post-meta">
@@ -991,7 +1087,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/13/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/13/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -1005,7 +1101,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/13/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/" class="post-title-link" itemprop="url">小程序实现</a>
+            <a href="/2021/03/13/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/" class="post-title-link" itemprop="url">小程序实现</a>
         </h1>
 
         <div class="post-meta">
@@ -1129,7 +1225,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/11/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -1143,7 +1239,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/11/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/" class="post-title-link" itemprop="url">第2章：Android底层知识</a>
+            <a href="/2021/03/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/" class="post-title-link" itemprop="url">第2章：Android底层知识</a>
         </h1>
 
         <div class="post-meta">
@@ -1340,90 +1436,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/11/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC1%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/11/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章：插件化昨天、今天与明天</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-11 21:30:00" itemprop="dateCreated datePublished" datetime="2021-03-11T21:30:00+08:00">2021-03-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-03-21 22:36:34" itemprop="dateModified" datetime="2021-03-21T22:36:34+08:00">2021-03-21</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="插件化是什么"><a href="#插件化是什么" class="headerlink" title="插件化是什么"></a>插件化是什么</h2><p>如果做一个游戏平台，不可能把所有的游戏都包含进去，因为这样体积太大，浪费流量，浪费用户存储空间。只有用户需要玩什么游戏的时候，再动态下载安装某个游戏，这就是插件化的思想。</p>
-<h2 id="为什么需要插件化"><a href="#为什么需要插件化" class="headerlink" title="为什么需要插件化"></a>为什么需要插件化</h2><p>如果某个插件功能有问题，则只需要改好bug打包这个插件就ok，不需要发版，用户不需要去应用商店更新App，就能够修复好的版本。这样，交易不会丢失。</p>
-<p>此外，对于和竞争对手抢占市场的情况下，需要不断迭代发布新版本，发版周期太长，用户体验不到新功能；太短会引起用户反感，如果有插件化技术，做完新功能就能让用户看到新功能，这样就非常具有竞争力了。</p>
-<h2 id="后续发展趋势"><a href="#后续发展趋势" class="headerlink" title="后续发展趋势"></a>后续发展趋势</h2><p>在插件化风行一段时间之后，Android热修复技术和 React Native 开始出现，与Android的插件化平分秋色，插件化技术不再是唯一选择。</p>
-<h2 id="插件化的用途"><a href="#插件化的用途" class="headerlink" title="插件化的用途"></a>插件化的用途</h2><p>真是场景下，<strong>插件化 80% 的应用场景是为了修复线上bug</strong>，在这一点上，插件化与 Tinker、Robust 这类修复工具有相同的能力，甚至更出色。</p>
-<p>其实，插件化更适合游戏领域，游戏经常上线新英雄，或者新的皮肤，这些都不用发版。</p>
-<p>还有一个很好的场景： <strong>ABTest</strong>，当产品为两种风格的设计举棋不定的时候，那么把两种策略做成两个插件包，让 50% 的用户下载A策略，另外 50% 下载B策略，一周后看数据即可。</p>
-<h2 id="更好的替代品：React-Native"><a href="#更好的替代品：React-Native" class="headerlink" title="更好的替代品：React Native"></a>更好的替代品：React Native</h2><p>React Native 这种映射思路(Android 和 ios 中的控件在RN中都能找到映射)，能够跨越 Android 和 ios 的系统差别。使用RN和纯原生相比，性能差距不大，在两个平台都很流畅。对于中小型企业来说，还能节省一端人力。</p>
-<p>在jsPatch 被禁止后，RN 其实是ios 上最合适的热修复方案了。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1474,7 +1486,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">111</span>
+          <span class="site-state-item-count">112</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1560,7 +1572,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共261.3k字</span>
+  <span class="post-count">博客全站共262.1k字</span>
 </div>
 
 

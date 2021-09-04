@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">111</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">112</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -220,7 +220,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E4%B8%8A%E6%90%9C%E9%9B%86%E7%9A%84%E9%A2%98%E7%9B%AE(%E4%B8%80)/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/22/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC2%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -234,7 +234,195 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E4%B8%8A%E6%90%9C%E9%9B%86%E7%9A%84%E9%A2%98%E7%9B%AE(%E4%B8%80)/" class="post-title-link" itemprop="url">面试题-网上搜集的题目(一)</a>
+            <a href="/2019/11/22/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC2%E7%AB%A0/" class="post-title-link" itemprop="url">第2章：Android系统启动</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-22 15:10:00" itemprop="dateCreated datePublished" datetime="2019-11-22T15:10:00+08:00">2019-11-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-03 21:22:20" itemprop="dateModified" datetime="2019-12-03T21:22:20+08:00">2019-12-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="init-进程启动过程"><a href="#init-进程启动过程" class="headerlink" title="init 进程启动过程"></a>init 进程启动过程</h2><p>init进程是Android系统中<strong>用户空间的第一个进程</strong>，进程号为1，它被赋予了很多重要职责，比如创建 Zygote 和属性服务等。</p>
+<h3 id="引入init进程"><a href="#引入init进程" class="headerlink" title="引入init进程"></a>引入init进程</h3><p>了解Android系统启动流程的前几步，可以有助于引入init进程：</p>
+<ol>
+<li>启动电源以及系统启动。当电源按下时，引导芯片代码从预定义的地方(固化在ROM中)开始执行，<strong>加载引导程序到RAM中</strong>，然后执行。    </li>
+<li>引导程序BootLoader。它是Android操作系统开始运行前的一个小程序，主要作用是把系统OS拉起来。    </li>
+<li>Linux 内核启动。linux内核启动完成系统设置后，<strong>它首先在系统文件中寻找init.rc，并启动init进程。</strong>     </li>
+<li>init进程启动。init进程的工作比较多，主要用于初始化、启动属性服务 以及 启动Zygote进程。</li>
+</ol>
+<h3 id="init进程入口"><a href="#init进程入口" class="headerlink" title="init进程入口"></a>init进程入口</h3><p>在Linux内核加载完成后，首先在系统文件中查找init.rc，并启动init进程。init的main函数中做了很多事情，我们主要了解以下几点：</p>
+<ul>
+<li>调用property_init 函数对属性初始化，调用 start_property_service函数启动属性服务。    </li>
+<li>调用 signal_handler_init <strong>设置子进程信号处理函数，主要用于防止init进程的子进程成为僵尸进程。</strong>为了防止僵尸进程的出现，系统会在子进程暂停和终止的时候发出 SIGCHLD信号，signal_handler_init就是用来接收这个信号的。</li>
+</ul>
+<blockquote>
+<p>僵尸进程：在linux中，父进程使用fork创建子线程，在子线程终止后，如果父进程并不知道子线程终止了，那么还会在系统进程表为它保留一定的信息。僵尸进程主要危害就是占用系统进程表，可能导致系统进程表被耗尽而无法创建新的进程。假设init的子进程Zygote终止了，signal_handler_init 函数会找到Zygote进程并移除所有Zygote进程信息，再重启Zygote。</p>
+</blockquote>
+<h3 id="解析-init-rc"><a href="#解析-init-rc" class="headerlink" title="解析 init.rc"></a>解析 init.rc</h3><p>init.rc 是一个配置文，是由Android 初始化语言编写的脚本，为了分析如何创建Zygote，我们主要查看其中的Service类型语句，在Android 8.0 及以后，每个Service 都对应一个rc 文件。init.rc 中定义Service 的格式如下：</p>
+<blockquote>
+<p>service <name> <pathname> [ <argument> ] * //&lt;service 的名字〉〈执行程序路径〉〈传递参数〉</argument></pathname></name></p>
+</blockquote>
+<p>举个栗子，zygote的Service配置文件就是：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">service zygote /system/bin/app_process64 -Xzygote /system/bin -- zygote --startsystem- server </span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">main</span> </span></span><br><span class="line"><span class="class"><span class="title">priority</span> -20 </span></span><br><span class="line"><span class="class"><span class="title">user</span> <span class="title">root</span> </span></span><br><span class="line"><span class="class"><span class="title">group</span> <span class="title">root</span> <span class="title">readproc</span> </span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>来大概分析代码意思，Service用于通知 init 进程创建名为 zygote 的进程，这个进程执行程序的路径为 /system/bin/app_process64，其中 <font color="#008000">class main</font>指的是Zygote 的classname 为 main。<strong>后面的代码是要传给 app_process64的参数。</strong></p>
+<h3 id="解析Service类型语句"><a href="#解析Service类型语句" class="headerlink" title="解析Service类型语句"></a>解析Service类型语句</h3><p>init.rc中Service类型语句使用ServiceParser类来解析，它将init.rc中的service解析生成的Service对象加入到 Service 链表中。</p>
+<h3 id="init-启动Zygote"><a href="#init-启动Zygote" class="headerlink" title="init 启动Zygote"></a>init 启动Zygote</h3><p>我们来了解init是如何启动Service的，这里主要讲解 Zygote这个Service。前面提到，在Zygote的启动脚本中描述Zygote的classname为<font color="#008000">main</font>，在init.rc中会遍历 解析Service类型语句 过程生成的Service链表，找到 classname 为main的Zygote，如果Zygote Service 已经运行，则不再启动，否则就调用fork函数创建子进程，并在子进程中调用Service的main函数，Zygote的main函数代码如下：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> main （<span class="keyword">int</span> argc, <span class="keyword">char</span>* <span class="keyword">const</span> argv []) </span><br><span class="line">{</span><br><span class="line">    <span class="keyword">if</span> (zygote) { </span><br><span class="line">        runtime.start （<span class="string">"com.android.internal.os.Zygoteinit”， args, zygote) ; //1</span></span><br><span class="line"><span class="string">    } else if (className) { </span></span><br><span class="line"><span class="string">        runtime .start （” com android nternal.os.Runtimeinit ”， args zygote) ; </span></span><br><span class="line"><span class="string">    } else{</span></span><br><span class="line"><span class="string">        ...</span></span><br><span class="line"><span class="string">    }</span></span><br><span class="line"><span class="string">}</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">...</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>从注释1处可以看到调用runtime的start函数启动了 Zygote 。</p>
+<h3 id="属性服务"><a href="#属性服务" class="headerlink" title="属性服务"></a>属性服务</h3><p>Windows上有注册表管理器以键值对的形式记录用户软件的一些使用信息，即使系统或者软件重启，其还是能够根据之前注册表中的记录进行相应初始化工作。Android中也提供了类似机制，叫做<strong>属性服务</strong>。init 进程启动时会启动属性服务，并为其分配内存存储这些属性，如果需要这些属性直接读取即可。启动属性服务的主要代码如下：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">property_set_fd =create_socket(PROP_SERVICE_NAME ,SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,<span class="number">0666</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="literal">NULL</span>); <span class="comment">//1</span></span><br><span class="line">...</span><br><span class="line">listen(property_set_fd, <span class="number">8</span>); <span class="comment">//2  </span></span><br><span class="line">register_epoll_handler(property_set_fd , handle_property_set_fd) ; <span class="comment">//3 </span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>由代码可知，首先创建非阻塞的Socket，并对property_set_fd 监听，这样创建的Socket 就成为server，也就是属性服务；listener的参数意味着可以同时为8个试图设置属性的用户服务。最后使用epoll 来监听property_set_fd ：<strong>当property_set_fd中有数据到来时，init进程将调用handle_property_set_fd函数处理。</strong></p>
+<blockquote>
+<p>epoll是linux下多路复用I/O接口，它能显著提高程序在大量并发连接中只有少量活跃的情况下的系统CPU的利用率。</p>
+</blockquote>
+<p>对属性进行修改时，首先判断属性的合法性，之后查找属性，如果属性存在就更新属性值，否则添加属性。</p>
+<h3 id="init进程启动总结"><a href="#init进程启动总结" class="headerlink" title="init进程启动总结"></a>init进程启动总结</h3><p>主要做了3件事：1、创建和挂载启动所需文件目录  2、启动服务属性  3、解析init.rc ，并启动 Zygote 进程。</p>
+<h2 id="Zygote进程启动过程"><a href="#Zygote进程启动过程" class="headerlink" title="Zygote进程启动过程"></a>Zygote进程启动过程</h2><p>在Android系统中，DVM(或者ART)、应用程序进程、SystemServer进程等都是由Zygote进程创建的。由于Zygote在启动时会创建 DVM(或者ART)，因此其fork的应用程序进程和SystemServer进程可以在内部获取一个 DVM 或者 ART。</p>
+<p>在Zygote 中通过 JNI 调用 ZygoteInit(<font color="#008000">ZygoteInit是由Java编写的</font>)的 main 方法后，Zygote 便进入了Java 框架层，<strong>此前没有任何代码进入Java框架层的。</strong>即Zygote开创了Java框架层。</p>
+<p>ZygoteInit的main方法中主要代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/com/android/internal/os/Zygotelnit.java </span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"><span class="comment">//创建一个 Server 端的 Socket socketName 的值为"zygote"</span></span><br><span class="line">zygoteServer.registerServerSocket(socketName);</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"><span class="comment">//预加载类和资源</span></span><br><span class="line">preload(b otT U.ngsTraceLog);</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"><span class="keyword">if</span> (startSystemServer) { </span><br><span class="line">    <span class="comment">//启动 SystemServer 进程</span></span><br><span class="line">    startSystermServer(abiList, socketName, zygoteServer);</span><br><span class="line">}</span><br><span class="line">／／等待 AMS 请求</span><br><span class="line">zygoteServer.runSelectLoop(abiList);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由代码可知，通过 registerServerSocket 方法创建一个Server端的Socket ，<strong><font color="#008000">这个名为 “zygote” 的Socket 用于等待 ActivityManagerService 请求 Zygote 来创建新的应用程序进程</font></strong>。总结一下，ZygoteInit 的main方法总共做了4件事：</p>
+<ol>
+<li>创建一个Server端的Socket    </li>
+<li>预加载类和资源    </li>
+<li>启动 SystemServer 进程    </li>
+<li>等待 AMS 请求创建新的应用程序进程    </li>
+</ol>
+<h3 id="Zygote-进程启动总结"><a href="#Zygote-进程启动总结" class="headerlink" title="Zygote 进程启动总结"></a>Zygote 进程启动总结</h3><p>Zygote进程启动共做了以下几件事：</p>
+<ol>
+<li>创建AppRuntime ，并调用其start方法，启动Zygote 进程    </li>
+<li>创建java虚拟机并未Java虚拟机注册 JNI 方法    </li>
+<li>通过 JNI 调用ZygoteInit 的main函数进入Zygote 的Java 框架层    </li>
+<li>通过 registerServerSocket 创建服务端 Socket ，循环等待AMS 请求来创建新的应用程序进程。    </li>
+<li>启动 SystemServer    </li>
+</ol>
+<h2 id="SystemServer-处理过程"><a href="#SystemServer-处理过程" class="headerlink" title="SystemServer 处理过程"></a>SystemServer 处理过程</h2><p>SystemServer 进程主要用于创建系统服务，如 AMS、WMS、PMS 。在 ZygoteInit.java 中启动了 SystemServer，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">startSystemServer</span><span class="params">(String abiList, String socketName)</span> <span class="keyword">throws</span> MethodAndArgsCaller, RuntimeException｛</span></span><br><span class="line"><span class="function">    <span class="comment">//当前运行在 SystemServer 进程中</span></span></span><br><span class="line"><span class="function">    <span class="title">if</span> <span class="params">(p == <span class="number">0</span>)</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (hasSecondZygote(abiList)) {</span><br><span class="line">            waitForSecondaryZygote (socketName ); </span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//关闭 Zygote 进程创建的 Socket</span></span><br><span class="line">        zygoteServer . closeServerSocket() ; <span class="comment">//1 </span></span><br><span class="line">        handleSystemServerProcess(parsedArgs) ; <span class="comment">//2 </span></span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>; </span><br></pre></td></tr></tbody></table></figure>
+
+<p>由以上代码可知，SystemServer 进程复制了 Zygote 进程的地址空间，因此也会得到Zygote 创建的 server Socket，这个socket对SystemServer 没有用处，因此在代码 1处将其关闭，之后通过 handleSystemServerProcess 方法启动 SystemServer 进程。接下来，在ZygoteInit中<strong>创建了 PathClassLoader</strong>，并且通过native 方法 ZygoteInit.nativeZygotelnit <strong>启动了Binder线程池</strong>，之后进入 SystemServer 的main 方法。</p>
+<p>SystemServer 的run 方法中用  SystemServiceManager 启动了  ActivityManagerService、 PackageManagerService 等服务。在PackageManagerService 创建完成后，将其注册到 ServiceManager 中，<font color="#008000">ServiceManager 用于管理系统中各种Service，用于系统C/S 架构中的Binder 通信机制：Client端要使用某个Service，需要先到 ServiceManager 中查询Service 的相关信息，然后与Service 所在的Server 进程建立通信通路，这样Client就可以使用Service 了</font>。</p>
+<h3 id="SystemServer-进程总结"><a href="#SystemServer-进程总结" class="headerlink" title="SystemServer 进程总结"></a>SystemServer 进程总结</h3><p>SystemServer 进程被创建后，主要工作：</p>
+<ol>
+<li>启动Binder 线程池，这样可以与其他进程通信。    </li>
+<li>创建 SystemServiceManager，创建和管理系统服务    </li>
+<li>启动各种服务    </li>
+</ol>
+<h2 id="Launcher-启动过程"><a href="#Launcher-启动过程" class="headerlink" title="Launcher 启动过程"></a>Launcher 启动过程</h2><p>系统启动的最后一步是启动一个应用程序来显示系统中已经安装的应用程序，即 Launcher。Launcher 在启动过程中请求 PackageManagerService 获取系统中已经安装的应用程序信息，并且将信息封装成一个个快捷图标列表显示在系统屏幕上，用户就可以通过点击图标来启动相应的应用程序了。Launcher 的启动过程时序图如下：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC2%E7%AB%A0/Launcher%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E6%97%B6%E5%BA%8F%E5%9B%BE.jpeg" alt="Launcher的启动过程时序图"></p>
+<p>启动Launcher的入口方法为AMS 的systemReady 方法，该方法在SystemServer 的startOtherService中被调用，之后调用 ActivityStack 的resumeTopActivityUncheckedLocked 方法，ActivityStack 用于描述Activity 栈的。最终调用到 AMS 的 startHomeActivityLocked 方法，在该方法中，创建了 Launcher 启动所需的 Intent，并且在一系列判断后，将该Intent 的 Action 设置为 Intent.ACTION_MAIN 、Category 为 Intent.CATEGORY_HOME，并且在 Launcher 的AndroidManifest 中也是这么配置的。</p>
+<p>经过以上操作，com.android.launcher3.Launcher 的Activity 就成为了主 Activity，此时，如果Launcher 还未启动，AMS 就会调用 ActivityStarter 的 startHomeActivityLocked 来启动 Launcher 。</p>
+<h2 id="Android系统启动流程"><a href="#Android系统启动流程" class="headerlink" title="Android系统启动流程"></a>Android系统启动流程</h2><p>结合前面几节内容，可以总结出Android系统启动流程：</p>
+<ol>
+<li><p>启动电源以及系统启动     </p>
+<blockquote>
+<p>按下电源键，从预定义地方开始执行，加载BootLoader 到RAM。</p>
+</blockquote>
+</li>
+<li><p>引导程序BootLoader     </p>
+<blockquote>
+<p>主要作用是拉起系统OS。</p>
+</blockquote>
+</li>
+<li><p>Linux 内核启动      </p>
+<blockquote>
+<p>内核启动，设置缓存、计划表、加载驱动等，之后寻找 init.rc 文件，并启动init 进程。</p>
+</blockquote>
+</li>
+<li><p>init 进程启动      </p>
+<blockquote>
+<p>初始化和启动属性服务，并启动 Zygote 进程。</p>
+</blockquote>
+</li>
+<li><p>Zygote进程启动     </p>
+<blockquote>
+<p>创建Java虚拟机，并未Java虚拟机注册 JNI 方法，创建服务端 Socket 循环等待AMS 请求来创建新的应用程序进程</p>
+</blockquote>
+</li>
+<li><p>SystemServer 进程启动     </p>
+<blockquote>
+<p>启动Binder 线程池 和 SystemServiceManager ，并启动各种服务。</p>
+</blockquote>
+</li>
+<li><p>Launcher启动   </p>
+<blockquote>
+<p>SystemServer 进程启动的 AMS 会启动 Launcher，Launcher 会将已安装的应用显示到界面上。</p>
+</blockquote>
+</li>
+</ol>
+<p>用图表示就是：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC2%E7%AB%A0/Android%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%9B%BE.jpeg" alt="Android系统启动流程图"></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/22/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E4%B8%8A%E6%90%9C%E9%9B%86%E7%9A%84%E9%A2%98%E7%9B%AE(%E4%B8%80)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/11/22/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E4%B8%8A%E6%90%9C%E9%9B%86%E7%9A%84%E9%A2%98%E7%9B%AE(%E4%B8%80)/" class="post-title-link" itemprop="url">面试题-网上搜集的题目(一)</a>
         </h1>
 
         <div class="post-meta">
@@ -323,7 +511,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/22/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -337,7 +525,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/" class="post-title-link" itemprop="url">面试题-网络知识</a>
+            <a href="/2019/11/22/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/" class="post-title-link" itemprop="url">面试题-网络知识</a>
         </h1>
 
         <div class="post-meta">
@@ -644,7 +832,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/20/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -658,7 +846,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/" class="post-title-link" itemprop="url">面试题-系统源码理解</a>
+            <a href="/2019/11/20/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/" class="post-title-link" itemprop="url">面试题-系统源码理解</a>
         </h1>
 
         <div class="post-meta">
@@ -1096,7 +1284,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/19/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC1%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC1%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -1110,7 +1298,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/19/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章：Android系统架构</a>
+            <a href="/2019/11/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章：Android系统架构</a>
         </h1>
 
         <div class="post-meta">
@@ -1190,7 +1378,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/18/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC10%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/18/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC10%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -1204,7 +1392,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/18/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Java虚拟机</a>
+            <a href="/2019/11/18/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Java虚拟机</a>
         </h1>
 
         <div class="post-meta">
@@ -1318,7 +1506,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/15/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E4%B9%A6%E7%B1%8D-%E5%89%91%E6%8C%87offer/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/15/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E4%B9%A6%E7%B1%8D-%E5%89%91%E6%8C%87offer/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -1332,7 +1520,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/15/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E4%B9%A6%E7%B1%8D-%E5%89%91%E6%8C%87offer/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-书籍-剑指offer</a>
+            <a href="/2019/11/15/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E4%B9%A6%E7%B1%8D-%E5%89%91%E6%8C%87offer/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-书籍-剑指offer</a>
         </h1>
 
         <div class="post-meta">
@@ -1698,7 +1886,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -1712,7 +1900,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/" class="post-title-link" itemprop="url">面试题-多线程知识</a>
+            <a href="/2019/11/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/" class="post-title-link" itemprop="url">面试题-多线程知识</a>
         </h1>
 
         <div class="post-meta">
@@ -2196,7 +2384,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/09/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -2210,7 +2398,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">面试题-Android基础</a>
+            <a href="/2019/11/09/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">面试题-Android基础</a>
         </h1>
 
         <div class="post-meta">
@@ -3337,7 +3525,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/09/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -3351,7 +3539,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">面试题-Java基础</a>
+            <a href="/2019/11/09/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">面试题-Java基础</a>
         </h1>
 
         <div class="post-meta">
@@ -3989,86 +4177,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/10/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC7%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/10/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：Android启动过程简析</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-10-09 22:00:00" itemprop="dateCreated datePublished" datetime="2019-10-09T22:00:00+08:00">2019-10-09</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:48:59" itemprop="dateModified" datetime="2019-11-17T21:48:59+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="第一个系统进程-init"><a href="#第一个系统进程-init" class="headerlink" title="第一个系统进程(init)"></a>第一个系统进程(init)</h2><p>Android设备的启动必须经历3个阶段： Boot Loader、Linux Kernel 以及 Android 系统服务，默认情况下它们都有各自的启动画面。作为Android 中第一个被启动的进程，init的 PID 的值为 0，它通过解析 init.rc 脚本来构建出系统的初始运行形态——其中最重要的就是启动 ServiceManager、Zygote 和 SystemServer。</p>
-<h3 id="Android-的“DNS服务器”——ServiceManager"><a href="#Android-的“DNS服务器”——ServiceManager" class="headerlink" title="Android 的“DNS服务器”——ServiceManager"></a>Android 的“DNS服务器”——ServiceManager</h3><p>ServiceManager 是Binder 机制中的“DNS服务器”，负责域名(某Binder服务在 ServiceManager 注册时提供的名称) 到IP地址(由底层Binder驱动分配的值)的解析。</p>
-<p>ServiceManager 所属class 是core ，并且带有 critical 选项，说明它是系统的关键进程——意味着如果进程不幸在4分钟内异常退出4次，则设备将重启并进入还原模式。当 ServiceManager 重启时，zygote、media、surfaceflinger 等都会被重启。</p>
-<h3 id="“孕育”-新的线程和进程——Zygote"><a href="#“孕育”-新的线程和进程——Zygote" class="headerlink" title="“孕育” 新的线程和进程——Zygote"></a>“孕育” 新的线程和进程——Zygote</h3><p>这个单词是”受精卵”的意思，正如其名所示，Android 中大多数的应用进程和系统进程都是通过 Zygote 来生成的。它所在的程序名叫做”app_process” ，而不像 ServiceManager 一样在一个独立的进程中。在init 进程的帮助下，通过zygote 逐步建立起 SystemServer 的运行环境。</p>
-<h3 id="Android的“系统服务”——SystemServer"><a href="#Android的“系统服务”——SystemServer" class="headerlink" title="Android的“系统服务”——SystemServer"></a>Android的“系统服务”——SystemServer</h3><p>SystemServer 是 Android 进入 Launcher 前的最后准备。ZygoteInit 通过 Zygote.forkSystemServer 来生成一个新的进程，用于承载各系统服务。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -4119,7 +4227,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">111</span>
+          <span class="site-state-item-count">112</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -4205,7 +4313,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共261.3k字</span>
+  <span class="post-count">博客全站共262.1k字</span>
 </div>
 
 

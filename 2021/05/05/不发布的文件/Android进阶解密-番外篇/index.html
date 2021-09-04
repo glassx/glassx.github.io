@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="番外篇主要是看到一篇简书上的博客后，对LauncherMode的一点补充。本文只是复制这篇博客的内容，防止这篇文章被简书屏蔽(因为他有一篇文章就已经是一直审核状态了)。 前言我们知道Activity的start是走到Instrumentation的execStartActivity方法中，而这里是调用了ActivityManagerNative的getDefault方法 来获得一个Activity">
+<meta property="og:type" content="article">
+<meta property="og:title" content="番外篇：Activity LaunchMode原理">
+<meta property="og:url" content="https://glassx.gitee.io/2021/05/05/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%95%AA%E5%A4%96%E7%AF%87/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="番外篇主要是看到一篇简书上的博客后，对LauncherMode的一点补充。本文只是复制这篇博客的内容，防止这篇文章被简书屏蔽(因为他有一篇文章就已经是一直审核状态了)。 前言我们知道Activity的start是走到Instrumentation的execStartActivity方法中，而这里是调用了ActivityManagerNative的getDefault方法 来获得一个Activity">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-d2e1e1e2859b5c86.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/726/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-e50075b5c4539486.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/777/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-59cc775b23e884c6.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-39391603929ddcc6.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-056e3a3f60d6acbb.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-1c643a3c8fae5e94.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-2419c6b8b3f4c7e7.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/755/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-888c5f5346d10e05.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-c6f1382d01eeca2e.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-2eb788c2a9a3dd9c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/577/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-ea3170a8c0b3a0b7.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-89af170c52d6ebd8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/612/format/webp">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1212336-0cc6029d58f8217d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/538/format/webp">
+<meta property="article:published_time" content="2021-05-05T08:13:00.000Z">
+<meta property="article:modified_time" content="2021-05-05T08:48:52.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android进阶解密">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://upload-images.jianshu.io/upload_images/1212336-d2e1e1e2859b5c86.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/726/format/webp">
+
+<link rel="canonical" href="https://glassx.gitee.io/2021/05/05/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%95%AA%E5%A4%96%E7%AF%87/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>番外篇：Activity LaunchMode原理 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">27</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">112</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/05/05/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%95%AA%E5%A4%96%E7%AF%87/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          番外篇：Activity LaunchMode原理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-05-05 16:13:00 / 修改时间：16:48:52" itemprop="dateCreated datePublished" datetime="2021-05-05T16:13:00+08:00">2021-05-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>番外篇主要是看到<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/09365022adac">一篇简书上的博客</a>后，对LauncherMode的一点补充。本文只是复制这篇博客的内容，防止这篇文章被简书屏蔽(因为他有一篇文章就已经是一直审核状态了)。</p>
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我们知道Activity的start是走到Instrumentation的execStartActivity方法中，而这里是调用了ActivityManagerNative的getDefault方法 来获得一个ActivityManagerService(以下简称AMS)的远程代理对象，要走到AMS的startActivity方法。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> result = ActivityManagerNative.getDefault()</span><br><span class="line">            .startActivity(whoThread, who.getBasePackageName(), intent,</span><br><span class="line">                    intent.resolveTypeIfNeeded(who.getContentResolver()),</span><br><span class="line">                    token, target != <span class="keyword">null</span> ? target.mEmbeddedID : <span class="keyword">null</span>,</span><br><span class="line">                    requestCode, <span class="number">0</span>, <span class="keyword">null</span>, <span class="keyword">null</span>, options);</span><br><span class="line">        checkStartActivityResult(result, intent);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里先解释一下startActivity方法里的一些参数:</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>whoThread    IApplicationThread的binder对象</td>
+<td>用于AMS进行进程间通信</td>
+</tr>
+<tr>
+<td>who    上下文对象</td>
+<td>其实就是Activity</td>
+</tr>
+<tr>
+<td>intent</td>
+<td>目标intent</td>
+</tr>
+<tr>
+<td>intent.resolveTypeIfneed</td>
+<td>若没有在Manifest文件里面注明Activity的mime类型，返回null</td>
+</tr>
+<tr>
+<td>token    Binder对象</td>
+<td>通过它可以获得Activity的相关信息 后边会保存到sourceRecord这个对象里面</td>
+</tr>
+<tr>
+<td>target</td>
+<td>我们调用的Activity</td>
+</tr>
+<tr>
+<td>requestCode</td>
+<td>若没有设置结果就是小于0</td>
+</tr>
+<tr>
+<td>0</td>
+<td>flags</td>
+</tr>
+<tr>
+<td>ProfilerInfo</td>
+<td>null</td>
+</tr>
+<tr>
+<td>options</td>
+<td>是一个bunder对象，记录用intent传递的信息</td>
+</tr>
+</tbody></table>
+<p>这里对应着AMS 中startactivity的参数</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">startActivity</span><span class="params">(IApplicationThread caller, String callingPackage,</span></span></span><br><span class="line"><span class="params"><span class="function">        Intent intent, String resolvedType, IBinder resultTo, String resultWho, <span class="keyword">int</span> requestCode,</span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="keyword">int</span> startFlags, ProfilerInfo profilerInfo, Bundle options)</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> startActivityAsUser(caller, callingPackage, intent, resolvedType, resultTo,</span><br><span class="line">        resultWho, requestCode, startFlags, profilerInfo, options,</span><br><span class="line">        UserHandle.getCallingUserId());</span><br><span class="line">}</span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">startActivityAsUser</span><span class="params">(IApplicationThread caller, String callingPackage,</span></span></span><br><span class="line"><span class="params"><span class="function">        Intent intent, String resolvedType, IBinder resultTo, String resultWho, <span class="keyword">int</span> requestCode,</span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="keyword">int</span> startFlags, ProfilerInfo profilerInfo, Bundle options, <span class="keyword">int</span> userId)</span> </span>{</span><br><span class="line">    enforceNotIsolatedCaller(<span class="string">"startActivity"</span>);</span><br><span class="line">    userId = handleIncomingUser(Binder.getCallingPid(), Binder.getCallingUid(), userId,</span><br><span class="line">            <span class="keyword">false</span>, ALLOW_FULL_ONLY, <span class="string">"startActivity"</span>, <span class="keyword">null</span>);</span><br><span class="line">    <span class="comment">// <span class="doctag">TODO:</span> Switch to user app stacks here.</span></span><br><span class="line">    <span class="keyword">return</span> mStackSupervisor.startActivityMayWait(caller, -<span class="number">1</span>, callingPackage, intent,</span><br><span class="line">            resolvedType, <span class="keyword">null</span>, <span class="keyword">null</span>, resultTo, resultWho, requestCode, startFlags,</span><br><span class="line">            profilerInfo, <span class="keyword">null</span>, <span class="keyword">null</span>, options, userId, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>然后会调用ActivityStackSupervisor的startActivityMayWait方法，而ActivityStackSupervisor 就是专门管理activity的堆栈的类</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-d2e1e1e2859b5c86.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/726/format/webp" alt="startActivityMayWait方法"></p>
+<p>这里会先解析我们的intent来获取信息，通过调用函数resoleActivity方法获取ActivityInfo，这里主要是activity在AndroidManifest.xml里的信息</p>
+<p>再往下看，进入到startActivityLocked 方法中</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-e50075b5c4539486.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/777/format/webp" alt="startActivityMayWait方法"></p>
+<blockquote>
+<p>另提一下activity 在 AMS 中的形式是 ActivityRecord,task 在 AMS 中的形式为TaskRecord,进程在 AMS 中的管理形式为 ProcessRecord</p>
+</blockquote>
+<p> 我们发现这里有两个ActivityRecord对象 有sourceRecord 和resultRecord</p>
+<blockquote>
+<p>sourceRecord 代表的是最开始的activity<br>这就是通过resultTo这个binder对象获得Mainactivity的相关信息然后保存到这个对象中<br>resultRecord 代表的是接受启动结果的Activity<br>因为requestcode==-1 所以这里resultRecord==null</p>
+</blockquote>
+<p>final int launchFlags = intent.getFlags();<br>这里获取Intent的启动Flag 就是我们在Intent.setFlag里面设置的标志<br>这个函数的主要作用就是处理sourceRecord和resultRecord两个对象<br>在这里sourceRecord和resultRecord指向的应该是同一个activity</p>
+<p>然后调用startActivityUncheckedLocked来处理本次的启动Activity的请求</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-59cc775b23e884c6.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-39391603929ddcc6.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p>从这里我们可以看到 获取了activity的launchModel ，也就是对launchModel的判断处理应该是在这里<br>这里先判断是否FLAG_ACTIVITY_NEW_DOCUMENT，这个平时用的比较少，在android5.0上主要是决定你的task和activity是如何展现在overview screen 中的，详细请看Android 5.0 Overview Screen–总览画面<br>再往下看</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-056e3a3f60d6acbb.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p>startFlags == 0 所以此时不会进入这个判断，没有设置这个FLAG_ACTIVITY_PREVIOUS_IS_TOP，所以我们的notTop==null<br>接着 系统默认addingToTask= false 默认是开启新的Task，从后面的判断也可以看出来</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-1c643a3c8fae5e94.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p>之前说过 sourceRecord就是最开始的activity 所以它不会为null，这样就到了else 中 inTask = null；</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-2419c6b8b3f4c7e7.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/755/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p> 在这里判断了启动模式，判断当前activity的启动模式和要启动的activity的启动模式，根据相应的启动模式设置launchFlags</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-888c5f5346d10e05.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-c6f1382d01eeca2e.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p>这里目的是判断启动的activity是否在堆栈里存在，如果存在就直接在进行相应的操作<br>在文章开头 resultRecord 默认为null而且requestCode假如没有设置的话，requestCode小于0，所以resultRecord没有被赋值，所以我们构造ActivityRecord 时传入的是null，也就是可以进入这个if判断里<br>再往里看</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-2eb788c2a9a3dd9c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/577/format/webp" alt="startActivityUncheckedLocked方法"></p>
+<p>这里会判断启动的activity是否是SingleInstance，根据此进入不同的方法，目的是找到activity，如果有就返回，如果没有就返回null，先来看findTaskLocked方法</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-ea3170a8c0b3a0b7.png?imageMogr2/auto-orient/strip%7CimageView2/2/format/webp" alt="findTaskLocked方法"></p>
+<p>stack里的findTaskLocked方法比较长，顶部activity，如果没有就返回null，从注释上来看就是返回堆栈里的activity,简单说一下就是返回发起请求的activity，也是这个函数返回的activity</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Returns the top activity in any existing task matching the given</span></span><br><span class="line"><span class="comment">     * Intent.  Returns null if no such task is found.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function">ActivityRecord <span class="title">findTaskLocked</span><span class="params">(ActivityRecord target)</span> </span>{</span><br><span class="line">        Intent intent = target.intent;</span><br><span class="line">        ActivityInfo info = target.info;</span><br><span class="line">        ComponentName cls = intent.getComponent();</span><br><span class="line">        <span class="keyword">if</span> (info.targetActivity != <span class="keyword">null</span>) {</span><br><span class="line">            cls = <span class="keyword">new</span> ComponentName(info.packageName, info.targetActivity);</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> userId = UserHandle.getUserId(info.applicationInfo.uid);</span><br><span class="line">        <span class="keyword">boolean</span> isDocument = intent != <span class="keyword">null</span> &amp; intent.isDocument();</span><br><span class="line">        <span class="comment">// If documentData is non-null then it must match the existing task data.</span></span><br><span class="line">        Uri documentData = isDocument ? intent.getData() : <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Looking for task of "</span> + target + <span class="string">" in "</span> + <span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> taskNdx = mTaskHistory.size() - <span class="number">1</span>; taskNdx &gt;= <span class="number">0</span>; --taskNdx) {</span><br><span class="line">            <span class="keyword">final</span> TaskRecord task = mTaskHistory.get(taskNdx);</span><br><span class="line">            <span class="keyword">if</span> (task.voiceSession != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="comment">// We never match voice sessions; those always run independently.</span></span><br><span class="line">                <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Skipping "</span> + task + <span class="string">": voice session"</span>);</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">if</span> (task.userId != userId) {</span><br><span class="line">                <span class="comment">// Looking for a different task.</span></span><br><span class="line">                <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Skipping "</span> + task + <span class="string">": different user"</span>);</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">final</span> ActivityRecord r = task.getTopActivity();</span><br><span class="line">            <span class="keyword">if</span> (r == <span class="keyword">null</span> || r.finishing || r.userId != userId ||</span><br><span class="line">                    r.launchMode == ActivityInfo.LAUNCH_SINGLE_INSTANCE) {</span><br><span class="line">                <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Skipping "</span> + task + <span class="string">": mismatch root "</span> + r);</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            <span class="keyword">final</span> Intent taskIntent = task.intent;</span><br><span class="line">            <span class="keyword">final</span> Intent affinityIntent = task.affinityIntent;</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">boolean</span> taskIsDocument;</span><br><span class="line">            <span class="keyword">final</span> Uri taskDocumentData;</span><br><span class="line">            <span class="keyword">if</span> (taskIntent != <span class="keyword">null</span> &amp;&amp; taskIntent.isDocument()) {</span><br><span class="line">                taskIsDocument = <span class="keyword">true</span>;</span><br><span class="line">                taskDocumentData = taskIntent.getData();</span><br><span class="line">            } <span class="keyword">else</span> <span class="keyword">if</span> (affinityIntent != <span class="keyword">null</span> &amp;&amp; affinityIntent.isDocument()) {</span><br><span class="line">                taskIsDocument = <span class="keyword">true</span>;</span><br><span class="line">                taskDocumentData = affinityIntent.getData();</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                taskIsDocument = <span class="keyword">false</span>;</span><br><span class="line">                taskDocumentData = <span class="keyword">null</span>;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Comparing existing cls="</span></span><br><span class="line">                    + taskIntent.getComponent().flattenToShortString()</span><br><span class="line">                    + <span class="string">"/aff="</span> + r.task.rootAffinity + <span class="string">" to new cls="</span></span><br><span class="line">                    + intent.getComponent().flattenToShortString() + <span class="string">"/aff="</span> + info.taskAffinity);</span><br><span class="line">            <span class="keyword">if</span> (!isDocument &amp;&amp; !taskIsDocument &amp;&amp; task.rootAffinity != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">if</span> (task.rootAffinity.equals(target.taskAffinity)) {</span><br><span class="line">                    <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Found matching affinity!"</span>);</span><br><span class="line">                    <span class="keyword">return</span> r;</span><br><span class="line">                }</span><br><span class="line">            } <span class="keyword">else</span> <span class="keyword">if</span> (taskIntent != <span class="keyword">null</span> &amp;&amp; taskIntent.getComponent() != <span class="keyword">null</span> &amp;&amp;</span><br><span class="line">                    taskIntent.getComponent().compareTo(cls) == <span class="number">0</span> &amp;&amp;</span><br><span class="line">                    Objects.equals(documentData, taskDocumentData)) {</span><br><span class="line">                <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Found matching class!"</span>);</span><br><span class="line">                <span class="comment">//dump();</span></span><br><span class="line">                <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"For Intent "</span> + intent + <span class="string">" bringing to top: "</span></span><br><span class="line">                        + r.intent);</span><br><span class="line">                <span class="keyword">return</span> r;</span><br><span class="line">            } <span class="keyword">else</span> <span class="keyword">if</span> (affinityIntent != <span class="keyword">null</span> &amp;&amp; affinityIntent.getComponent() != <span class="keyword">null</span> &amp;&amp;</span><br><span class="line">                    affinityIntent.getComponent().compareTo(cls) == <span class="number">0</span> &amp;&amp;</span><br><span class="line">                    Objects.equals(documentData, taskDocumentData)) {</span><br><span class="line">                <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"Found matching class!"</span>);</span><br><span class="line">                <span class="comment">//dump();</span></span><br><span class="line">                <span class="keyword">if</span> (DEBUG_TASKS) Slog.d(TAG, <span class="string">"For Intent "</span> + intent + <span class="string">" bringing to top: "</span></span><br><span class="line">                        + r.intent);</span><br><span class="line">                <span class="keyword">return</span> r;</span><br><span class="line">            } <span class="keyword">else</span> <span class="keyword">if</span> (DEBUG_TASKS) {</span><br><span class="line">                Slog.d(TAG, <span class="string">"Not a match: "</span> + task);</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里简单说一下，先是从mTaskHistory中遍历得到一个任务Task，并根据userid找到当前的task ，找到这个任务的顶部activity，并且保证它启动模式不是singleInstance，都满足了返回以下条件的activity</p>
+<p>再回到刚才的方法往下看</p>
+<p>这里先去activitystack里的moveToFront()方法</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// If the caller has requested that the target task be</span></span><br><span class="line"><span class="comment">// reset, then do so.</span></span><br><span class="line"><span class="keyword">if</span> ((launchFlags&amp;Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED) != <span class="number">0</span>) {</span><br><span class="line">    intentActivity = targetStack.resetTaskIfNeededLocked(intentActivity, r);</span><br><span class="line">}</span><br><span class="line"><span class="keyword">if</span> ((startFlags&amp;ActivityManager.START_FLAG_ONLY_IF_NEEDED) != <span class="number">0</span>) {</span><br><span class="line">    <span class="comment">// We don't need to start a new activity, and</span></span><br><span class="line">    <span class="comment">// the client said not to do anything if that</span></span><br><span class="line">    <span class="comment">// is the case, so this is it!  And for paranoia, make</span></span><br><span class="line">    <span class="comment">// sure we have correctly resumed the top activity.</span></span><br><span class="line">    <span class="keyword">if</span> (doResume) {</span><br><span class="line">        resumeTopActivitiesLocked(targetStack, <span class="keyword">null</span>, options);</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        ActivityOptions.abort(options);</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> ActivityManager.START_RETURN_INTENT_TO_CALLER;</span><br><span class="line">}</span><br><span class="line"><span class="keyword">if</span> ((launchFlags &amp;</span><br><span class="line">        (Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK))</span><br><span class="line">        == (Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK)) {</span><br><span class="line">    <span class="comment">// The caller has requested to completely replace any</span></span><br><span class="line">    <span class="comment">// existing task with its new activity.  Well that should</span></span><br><span class="line">    <span class="comment">// not be too hard...</span></span><br><span class="line">    reuseTask = intentActivity.task;</span><br><span class="line">    reuseTask.performClearTaskLocked();</span><br><span class="line">    reuseTask.setIntent(r);</span><br><span class="line">} <span class="keyword">else</span> <span class="keyword">if</span> ((launchFlags&amp;Intent.FLAG_ACTIVITY_CLEAR_TOP) != <span class="number">0</span></span><br><span class="line">        || launchSingleInstance || launchSingleTask) {</span><br><span class="line">    <span class="comment">// In this situation we want to remove all activities</span></span><br><span class="line">    <span class="comment">// from the task up to the one being started.  In most</span></span><br><span class="line">    <span class="comment">// cases this means we are resetting the task to its</span></span><br><span class="line">    <span class="comment">// initial state.</span></span><br><span class="line">    ActivityRecord top =</span><br><span class="line">            intentActivity.task.performClearTaskLocked(r, launchFlags);</span><br><span class="line">    <span class="keyword">if</span> (top != <span class="keyword">null</span>) {</span><br><span class="line">        <span class="keyword">if</span> (top.frontOfTask) {</span><br><span class="line">            <span class="comment">// Activity aliases may mean we use different</span></span><br><span class="line">            <span class="comment">// intents for the top activity, so make sure</span></span><br><span class="line">            <span class="comment">// the task now has the identity of the new</span></span><br><span class="line">            <span class="comment">// intent.</span></span><br><span class="line">            top.task.setIntent(r);</span><br><span class="line">        }</span><br><span class="line">        ActivityStack.logStartActivity(EventLogTags.AM_NEW_INTENT,</span><br><span class="line">                r, top.task);</span><br><span class="line">        top.deliverNewIntentLocked(callingUid, r.intent);</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        <span class="comment">// A special case: we need to</span></span><br><span class="line">        <span class="comment">// start the activity because it is not currently</span></span><br><span class="line">        <span class="comment">// running, and the caller has asked to clear the</span></span><br><span class="line">        <span class="comment">// current task to have this activity at the top.</span></span><br><span class="line">        addingToTask = <span class="keyword">true</span>;</span><br><span class="line">        <span class="comment">// Now pretend like this activity is being started</span></span><br><span class="line">        <span class="comment">// by the top of its task, so it is put in the</span></span><br><span class="line">        <span class="comment">// right place.</span></span><br><span class="line">        sourceRecord = intentActivity;</span><br><span class="line">    }</span><br><span class="line">} <span class="keyword">else</span> <span class="keyword">if</span> (r.realActivity.equals(intentActivity.task.realActivity)) {</span><br><span class="line">    <span class="comment">// In this case the top activity on the task is the</span></span><br><span class="line">    <span class="comment">// same as the one being launched, so we take that</span></span><br><span class="line">    <span class="comment">// as a request to bring the task to the foreground.</span></span><br><span class="line">    <span class="comment">// If the top activity in the task is the root</span></span><br><span class="line">    <span class="comment">// activity, deliver this new intent to it if it</span></span><br><span class="line">    <span class="comment">// desires.</span></span><br><span class="line">    <span class="keyword">if</span> (((launchFlags&amp;Intent.FLAG_ACTIVITY_SINGLE_TOP) != <span class="number">0</span> || launchSingleTop)</span><br><span class="line">            &amp;&amp; intentActivity.realActivity.equals(r.realActivity)) {</span><br><span class="line">        ActivityStack.logStartActivity(EventLogTags.AM_NEW_INTENT, r,</span><br><span class="line">                intentActivity.task);</span><br><span class="line">        <span class="keyword">if</span> (intentActivity.frontOfTask) {</span><br><span class="line">            intentActivity.task.setIntent(r);</span><br><span class="line">        }</span><br><span class="line">        intentActivity.deliverNewIntentLocked(callingUid, r.intent);</span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (!r.intent.filterEquals(intentActivity.task.intent)) {</span><br><span class="line">        <span class="comment">// In this case we are launching the root activity</span></span><br><span class="line">        <span class="comment">// of the task, but with a different intent.  We</span></span><br><span class="line">        <span class="comment">// should start a new instance on top.</span></span><br><span class="line">        addingToTask = <span class="keyword">true</span>;</span><br><span class="line">        sourceRecord = intentActivity;</span><br><span class="line">    }</span><br><span class="line">} <span class="keyword">else</span> <span class="keyword">if</span> ((launchFlags&amp;Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED) == <span class="number">0</span>) {</span><br><span class="line">    <span class="comment">// In this case an activity is being launched in to an</span></span><br><span class="line">    <span class="comment">// existing task, without resetting that task.  This</span></span><br><span class="line">    <span class="comment">// is typically the situation of launching an activity</span></span><br><span class="line">    <span class="comment">// from a notification or shortcut.  We want to place</span></span><br><span class="line">    <span class="comment">// the new activity on top of the current task.</span></span><br><span class="line">    addingToTask = <span class="keyword">true</span>;</span><br><span class="line">    sourceRecord = intentActivity;</span><br><span class="line">} <span class="keyword">else</span> <span class="keyword">if</span> (!intentActivity.task.rootWasReset) {</span><br><span class="line">    <span class="comment">// In this case we are launching in to an existing task</span></span><br><span class="line">    <span class="comment">// that has not yet been started from its front door.</span></span><br><span class="line">    <span class="comment">// The current task has been brought to the front.</span></span><br><span class="line">    <span class="comment">// Ideally, we'd probably like to place this new task</span></span><br><span class="line">    <span class="comment">// at the bottom of its stack, but that's a little hard</span></span><br><span class="line">    <span class="comment">// to do with the current organization of the code so</span></span><br><span class="line">    <span class="comment">// for now we'll just drop it.</span></span><br><span class="line">    intentActivity.task.setIntent(r);</span><br><span class="line">}</span><br><span class="line"><span class="keyword">if</span> (!addingToTask &amp;&amp; reuseTask == <span class="keyword">null</span>) {</span><br><span class="line">    <span class="comment">// We didn't do anything...  but it was needed (a.k.a., client</span></span><br><span class="line">    <span class="comment">// don't use that intent!)  And for paranoia, make</span></span><br><span class="line">    <span class="comment">// sure we have correctly resumed the top activity.</span></span><br><span class="line">    <span class="keyword">if</span> (doResume) {</span><br><span class="line">        targetStack.resumeTopActivityLocked(<span class="keyword">null</span>, options);</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        ActivityOptions.abort(options);</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> ActivityManager.START_TASK_TO_FRONT;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里主要看</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-89af170c52d6ebd8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/612/format/webp" alt="代码片段"></p>
+<p>这里走到了ActivityStack的performClearTaskLocked方法里</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    * Perform clear operation as requested by</span></span><br><span class="line"><span class="comment">    * {<span class="doctag">@link</span> Intent#FLAG_ACTIVITY_CLEAR_TOP}: search from the top of the</span></span><br><span class="line"><span class="comment">    * stack to the given task, then look for</span></span><br><span class="line"><span class="comment">    * an instance of that activity in the stack and, if found, finish all</span></span><br><span class="line"><span class="comment">    * activities on top of it and return the instance.</span></span><br><span class="line"><span class="comment">    *</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@param</span> newR Description of the new activity being started.</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@return</span> Returns the old activity that should be continued to be used,</span></span><br><span class="line"><span class="comment">    * or null if none was found.</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">   <span class="function"><span class="keyword">final</span> ActivityRecord <span class="title">performClearTaskLocked</span><span class="params">(ActivityRecord newR, <span class="keyword">int</span> launchFlags)</span> </span>{</span><br><span class="line">       <span class="keyword">int</span> numActivities = mActivities.size();</span><br><span class="line">       <span class="keyword">for</span> (<span class="keyword">int</span> activityNdx = numActivities - <span class="number">1</span>; activityNdx &gt;= <span class="number">0</span>; --activityNdx) {</span><br><span class="line">           ActivityRecord r = mActivities.get(activityNdx);</span><br><span class="line">           <span class="keyword">if</span> (r.finishing) {</span><br><span class="line">               <span class="keyword">continue</span>;</span><br><span class="line">           }</span><br><span class="line">           <span class="keyword">if</span> (r.realActivity.equals(newR.realActivity)) {</span><br><span class="line">               <span class="comment">// Here it is!  Now finish everything in front...</span></span><br><span class="line">               <span class="keyword">final</span> ActivityRecord ret = r;</span><br><span class="line"></span><br><span class="line">               <span class="keyword">for</span> (++activityNdx; activityNdx &lt; numActivities; ++activityNdx) {</span><br><span class="line">                   r = mActivities.get(activityNdx);</span><br><span class="line">                   <span class="keyword">if</span> (r.finishing) {</span><br><span class="line">                       <span class="keyword">continue</span>;</span><br><span class="line">                   }</span><br><span class="line">                   ActivityOptions opts = r.takeOptionsLocked();</span><br><span class="line">                   <span class="keyword">if</span> (opts != <span class="keyword">null</span>) {</span><br><span class="line">                       ret.updateOptionsLocked(opts);</span><br><span class="line">                   }</span><br><span class="line">                   <span class="keyword">if</span> (stack.finishActivityLocked(r, Activity.RESULT_CANCELED, <span class="keyword">null</span>, <span class="string">"clear"</span>,</span><br><span class="line">                           <span class="keyword">false</span>)) {</span><br><span class="line">                       --activityNdx;</span><br><span class="line">                       --numActivities;</span><br><span class="line">                   }</span><br><span class="line">               }</span><br><span class="line"></span><br><span class="line">               <span class="comment">// Finally, if this is a normal launch mode (that is, not</span></span><br><span class="line">               <span class="comment">// expecting onNewIntent()), then we will finish the current</span></span><br><span class="line">               <span class="comment">// instance of the activity so a new fresh one can be started.</span></span><br><span class="line">               <span class="keyword">if</span> (ret.launchMode == ActivityInfo.LAUNCH_MULTIPLE</span><br><span class="line">                       &amp;&amp; (launchFlags &amp; Intent.FLAG_ACTIVITY_SINGLE_TOP) == <span class="number">0</span>) {</span><br><span class="line">                   <span class="keyword">if</span> (!ret.finishing) {</span><br><span class="line">                       stack.finishActivityLocked(ret, Activity.RESULT_CANCELED, <span class="keyword">null</span>,</span><br><span class="line">                               <span class="string">"clear"</span>, <span class="keyword">false</span>);</span><br><span class="line">                       <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">                   }</span><br><span class="line">               }</span><br><span class="line"></span><br><span class="line">               <span class="keyword">return</span> ret;</span><br><span class="line">           }</span><br><span class="line">       }</span><br><span class="line"></span><br><span class="line">       <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">   }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里就是根据ID找到等于参数taskId的任务，然后在这个任务中查找是否已经存在即将要启动的Activity的实例，如果存在，就会把这个Actvity实例上面直到任务堆栈顶端的Activity通过调用finishActivityLocked函数将它们结束掉。</p>
+<blockquote>
+<p>在这里便引出了manifest文件中<activity>的一个重要属性，taskAffinity。在官方文档中可以得到关于taskAffinity的以下信息</activity></p>
+</blockquote>
+<ul>
+<li>taskAffinity表示当前activity具有亲和力的一个任务（原句为The task that the activity has an affinity for.），大致可以这样理解，这个 taskAffinity表示一个任务，这个任务就是当前activity所在的任务。     </li>
+</ul>
+<blockquote>
+<p>在概念上，具有相同的affinity的activity（即设置了相同taskAffinity属性的activity）属于同一个任务。    </p>
+</blockquote>
+<ul>
+<li>一个任务的affinity决定于这个任务的根activity（root activity）的taskAffinity。     </li>
+<li>这个属性决定两件事：当activity被re-parent时，它可以被re-paren哪个任务中；当activity以FLAG_ACTIVITY_NEW_TASK标志启动时，它会被启动到哪个任务中。（这个比较 难以理解，请结合<activity>中的属性allowTaskReparenting和Intent中的标志 FLAG_ACTIVITY_NEW_TASK加以理解）</activity></li>
+<li>默认情况下，一个应用中的所有activity具有相同的taskAffinity，即应用程序的包名。我们可以通过设置不同的taskAffinity属性给应用中的activity分组，也可以把不同的 应用中的activity的taskAffinity设置成相同的值。<br>为一个activity的taskAffinity设置一个空字符串，表明这个activity不属于任何task。<br>回到前面的startActivityUncheckedLocked函数中，这里的变量top就为null了，于是执行下面的else语句</li>
+</ul>
+<p><img src="https://upload-images.jianshu.io/upload_images/1212336-0cc6029d58f8217d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/538/format/webp" alt="代码片段"></p>
+<p>所以 此时将addintToTask=true 并且sourceRecord = 我们的activity，再往下看</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (r.packageName != <span class="keyword">null</span>) {</span><br><span class="line">    <span class="comment">// If the activity being launched is the same as the one currently</span></span><br><span class="line">    <span class="comment">// at the top, then we need to check if it should only be launched</span></span><br><span class="line">    <span class="comment">// once.</span></span><br><span class="line">    ActivityStack topStack = getFocusedStack();</span><br><span class="line">    ActivityRecord top = topStack.topRunningNonDelayedActivityLocked(notTop);</span><br><span class="line">    <span class="keyword">if</span> (top != <span class="keyword">null</span> &amp;&amp; r.resultTo == <span class="keyword">null</span>) {</span><br><span class="line">        <span class="keyword">if</span> (top.realActivity.equals(r.realActivity) &amp;&amp; top.userId == r.userId) {</span><br><span class="line">            <span class="keyword">if</span> (top.app != <span class="keyword">null</span> &amp;&amp; top.app.thread != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">if</span> ((launchFlags &amp; Intent.FLAG_ACTIVITY_SINGLE_TOP) != <span class="number">0</span></span><br><span class="line">                    || launchSingleTop || launchSingleTask) {</span><br><span class="line">                    ActivityStack.logStartActivity(EventLogTags.AM_NEW_INTENT, top,</span><br><span class="line">                            top.task);</span><br><span class="line">                    <span class="comment">// For paranoia, make sure we have correctly</span></span><br><span class="line">                    <span class="comment">// resumed the top activity.</span></span><br><span class="line">                    topStack.mLastPausedActivity = <span class="keyword">null</span>;</span><br><span class="line">                    <span class="keyword">if</span> (doResume) {</span><br><span class="line">                        resumeTopActivitiesLocked();</span><br><span class="line">                    }</span><br><span class="line">                    ActivityOptions.abort(options);</span><br><span class="line">                    <span class="keyword">if</span> ((startFlags&amp;ActivityManager.START_FLAG_ONLY_IF_NEEDED) != <span class="number">0</span>) {</span><br><span class="line">                        <span class="comment">// We don't need to start a new activity, and</span></span><br><span class="line">                        <span class="comment">// the client said not to do anything if that</span></span><br><span class="line">                        <span class="comment">// is the case, so this is it!</span></span><br><span class="line">                        <span class="keyword">return</span> ActivityManager.START_RETURN_INTENT_TO_CALLER;</span><br><span class="line">                    }</span><br><span class="line">                    top.deliverNewIntentLocked(callingUid, r.intent);</span><br><span class="line">                    <span class="keyword">return</span> ActivityManager.START_DELIVERED_TO_TOP;</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">} <span class="keyword">else</span> {</span><br><span class="line">    <span class="keyword">if</span> (r.resultTo != <span class="keyword">null</span>) {</span><br><span class="line">        r.resultTo.task.stack.sendActivityResultLocked(-<span class="number">1</span>, r.resultTo, r.resultWho,</span><br><span class="line">                r.requestCode, Activity.RESULT_CANCELED, <span class="keyword">null</span>);</span><br><span class="line">    }</span><br><span class="line">    ActivityOptions.abort(options);</span><br><span class="line">    <span class="keyword">return</span> ActivityManager.START_CLASS_NOT_FOUND;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>根据注释我们能看出这个方法是检查当前任务的顶端是否是我们要启动的activity，接着往下看，便是启动activity</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br></pre></td><td class="code"><pre><span class="line">    <span class="keyword">boolean</span> newTask = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">boolean</span> keepCurTransition = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    TaskRecord taskToAffiliate = launchTaskBehind &amp;&amp; sourceRecord != <span class="keyword">null</span> ?</span><br><span class="line">            sourceRecord.task : <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Should this be considered a new task?</span></span><br><span class="line">    <span class="keyword">if</span> (r.resultTo == <span class="keyword">null</span> &amp;&amp; inTask == <span class="keyword">null</span> &amp;&amp; !addingToTask</span><br><span class="line">            &amp;&amp; (launchFlags &amp; Intent.FLAG_ACTIVITY_NEW_TASK) != <span class="number">0</span>) {</span><br><span class="line">        <span class="keyword">if</span> (isLockTaskModeViolation(reuseTask)) {</span><br><span class="line">            Slog.e(TAG, <span class="string">"Attempted Lock Task Mode violation r="</span> + r);</span><br><span class="line">            <span class="keyword">return</span> ActivityManager.START_RETURN_LOCK_TASK_MODE_VIOLATION;</span><br><span class="line">        }</span><br><span class="line">        newTask = <span class="keyword">true</span>;</span><br><span class="line">        targetStack = adjustStackFocus(r, newTask);</span><br><span class="line">        <span class="keyword">if</span> (!launchTaskBehind) {</span><br><span class="line">            targetStack.moveToFront();</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> (reuseTask == <span class="keyword">null</span>) {</span><br><span class="line">            r.setTask(targetStack.createTaskRecord(getNextTaskId(),</span><br><span class="line">                    newTaskInfo != <span class="keyword">null</span> ? newTaskInfo : r.info,</span><br><span class="line">                    newTaskIntent != <span class="keyword">null</span> ? newTaskIntent : intent,</span><br><span class="line">                    voiceSession, voiceInteractor, !launchTaskBehind <span class="comment">/* toTop */</span>),</span><br><span class="line">                    taskToAffiliate);</span><br><span class="line">            <span class="keyword">if</span> (DEBUG_TASKS) Slog.v(TAG, <span class="string">"Starting new activity "</span> + r + <span class="string">" in new task "</span> +</span><br><span class="line">                    r.task);</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            r.setTask(reuseTask, taskToAffiliate);</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> (!movedHome) {</span><br><span class="line">            <span class="keyword">if</span> ((launchFlags &amp;</span><br><span class="line">                    (Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_TASK_ON_HOME))</span><br><span class="line">                    == (Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_TASK_ON_HOME)) {</span><br><span class="line">                <span class="comment">// Caller wants to appear on home activity, so before starting</span></span><br><span class="line">                <span class="comment">// their own activity we will bring home to the front.</span></span><br><span class="line">                r.task.setTaskToReturnTo(HOME_ACTIVITY_TYPE);</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (sourceRecord != <span class="keyword">null</span>) {</span><br><span class="line">        <span class="keyword">final</span> TaskRecord sourceTask = sourceRecord.task;</span><br><span class="line">        <span class="keyword">if</span> (isLockTaskModeViolation(sourceTask)) {</span><br><span class="line">            Slog.e(TAG, <span class="string">"Attempted Lock Task Mode violation r="</span> + r);</span><br><span class="line">            <span class="keyword">return</span> ActivityManager.START_RETURN_LOCK_TASK_MODE_VIOLATION;</span><br><span class="line">        }</span><br><span class="line">        targetStack = sourceTask.stack;</span><br><span class="line">        targetStack.moveToFront();</span><br><span class="line">        <span class="keyword">final</span> TaskRecord topTask = targetStack.topTask();</span><br><span class="line">        <span class="keyword">if</span> (topTask != sourceTask) {</span><br><span class="line">            targetStack.moveTaskToFrontLocked(sourceTask, r, options);</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            mWindowManager.moveTaskToTop(topTask.taskId);</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> (!addingToTask &amp;&amp; (launchFlags&amp;Intent.FLAG_ACTIVITY_CLEAR_TOP) != <span class="number">0</span>) {</span><br><span class="line">            <span class="comment">// In this case, we are adding the activity to an existing</span></span><br><span class="line">            <span class="comment">// task, but the caller has asked to clear that task if the</span></span><br><span class="line">            <span class="comment">// activity is already running.</span></span><br><span class="line">            ActivityRecord top = sourceTask.performClearTaskLocked(r, launchFlags);</span><br><span class="line">            keepCurTransition = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">if</span> (top != <span class="keyword">null</span>) {</span><br><span class="line">                ActivityStack.logStartActivity(EventLogTags.AM_NEW_INTENT, r, top.task);</span><br><span class="line">                top.deliverNewIntentLocked(callingUid, r.intent);</span><br><span class="line">                <span class="comment">// For paranoia, make sure we have correctly</span></span><br><span class="line">                <span class="comment">// resumed the top activity.</span></span><br><span class="line">                targetStack.mLastPausedActivity = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">if</span> (doResume) {</span><br><span class="line">                    targetStack.resumeTopActivityLocked(<span class="keyword">null</span>);</span><br><span class="line">                }</span><br><span class="line">                ActivityOptions.abort(options);</span><br><span class="line">                <span class="keyword">return</span> ActivityManager.START_DELIVERED_TO_TOP;</span><br><span class="line">            }</span><br><span class="line">        } <span class="keyword">else</span> <span class="keyword">if</span> (!addingToTask &amp;&amp;</span><br><span class="line">                (launchFlags&amp;Intent.FLAG_ACTIVITY_REORDER_TO_FRONT) != <span class="number">0</span>) {</span><br><span class="line">            <span class="comment">// In this case, we are launching an activity in our own task</span></span><br><span class="line">            <span class="comment">// that may already be running somewhere in the history, and</span></span><br><span class="line">            <span class="comment">// we want to shuffle it to the front of the stack if so.</span></span><br><span class="line">            <span class="keyword">final</span> ActivityRecord top = sourceTask.findActivityInHistoryLocked(r);</span><br><span class="line">            <span class="keyword">if</span> (top != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">final</span> TaskRecord task = top.task;</span><br><span class="line">                task.moveActivityToFrontLocked(top);</span><br><span class="line">                ActivityStack.logStartActivity(EventLogTags.AM_NEW_INTENT, r, task);</span><br><span class="line">                top.updateOptionsLocked(options);</span><br><span class="line">                top.deliverNewIntentLocked(callingUid, r.intent);</span><br><span class="line">                targetStack.mLastPausedActivity = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">if</span> (doResume) {</span><br><span class="line">                    targetStack.resumeTopActivityLocked(<span class="keyword">null</span>);</span><br><span class="line">                }</span><br><span class="line">                <span class="keyword">return</span> ActivityManager.START_DELIVERED_TO_TOP;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">// An existing activity is starting this new activity, so we want</span></span><br><span class="line">        <span class="comment">// to keep the new one in the same task as the one that is starting</span></span><br><span class="line">        <span class="comment">// it.</span></span><br><span class="line">        r.setTask(sourceTask, <span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">if</span> (DEBUG_TASKS) Slog.v(TAG, <span class="string">"Starting new activity "</span> + r</span><br><span class="line">                + <span class="string">" in existing task "</span> + r.task + <span class="string">" from source "</span> + sourceRecord);</span><br><span class="line"></span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (inTask != <span class="keyword">null</span>) {</span><br><span class="line">        <span class="comment">// The calling is asking that the new activity be started in an explicit</span></span><br><span class="line">        <span class="comment">// task it has provided to us.</span></span><br><span class="line">        <span class="keyword">if</span> (isLockTaskModeViolation(inTask)) {</span><br><span class="line">            Slog.e(TAG, <span class="string">"Attempted Lock Task Mode violation r="</span> + r);</span><br><span class="line">            <span class="keyword">return</span> ActivityManager.START_RETURN_LOCK_TASK_MODE_VIOLATION;</span><br><span class="line">        }</span><br><span class="line">        targetStack = inTask.stack;</span><br><span class="line">        targetStack.moveTaskToFrontLocked(inTask, r, options);</span><br><span class="line">        targetStack.moveToFront();</span><br><span class="line">        mWindowManager.moveTaskToTop(inTask.taskId);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Check whether we should actually launch the new activity in to the task,</span></span><br><span class="line">        <span class="comment">// or just reuse the current activity on top.</span></span><br><span class="line">        ActivityRecord top = inTask.getTopActivity();</span><br><span class="line">        <span class="keyword">if</span> (top != <span class="keyword">null</span> &amp;&amp; top.realActivity.equals(r.realActivity) &amp;&amp; top.userId == r.userId) {</span><br><span class="line">            <span class="keyword">if</span> ((launchFlags &amp; Intent.FLAG_ACTIVITY_SINGLE_TOP) != <span class="number">0</span></span><br><span class="line">                    || launchSingleTop || launchSingleTask) {</span><br><span class="line">                ActivityStack.logStartActivity(EventLogTags.AM_NEW_INTENT, top, top.task);</span><br><span class="line">                <span class="keyword">if</span> ((startFlags&amp;ActivityManager.START_FLAG_ONLY_IF_NEEDED) != <span class="number">0</span>) {</span><br><span class="line">                    <span class="comment">// We don't need to start a new activity, and</span></span><br><span class="line">                    <span class="comment">// the client said not to do anything if that</span></span><br><span class="line">                    <span class="comment">// is the case, so this is it!</span></span><br><span class="line">                    <span class="keyword">return</span> ActivityManager.START_RETURN_INTENT_TO_CALLER;</span><br><span class="line">                }</span><br><span class="line">                top.deliverNewIntentLocked(callingUid, r.intent);</span><br><span class="line">                <span class="keyword">return</span> ActivityManager.START_DELIVERED_TO_TOP;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!addingToTask) {</span><br><span class="line">            <span class="comment">// We don't actually want to have this activity added to the task, so just</span></span><br><span class="line">            <span class="comment">// stop here but still tell the caller that we consumed the intent.</span></span><br><span class="line">            ActivityOptions.abort(options);</span><br><span class="line">            <span class="keyword">return</span> ActivityManager.START_TASK_TO_FRONT;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        r.setTask(inTask, <span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">if</span> (DEBUG_TASKS) Slog.v(TAG, <span class="string">"Starting new activity "</span> + r</span><br><span class="line">                + <span class="string">" in explicit task "</span> + r.task);</span><br><span class="line"></span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        <span class="comment">// This not being started from an existing activity, and not part</span></span><br><span class="line">        <span class="comment">// of a new task...  just put it in the top task, though these days</span></span><br><span class="line">        <span class="comment">// this case should never happen.</span></span><br><span class="line">        targetStack = adjustStackFocus(r, newTask);</span><br><span class="line">        targetStack.moveToFront();</span><br><span class="line">        ActivityRecord prev = targetStack.topActivity();</span><br><span class="line">        r.setTask(prev != <span class="keyword">null</span> ? prev.task : targetStack.createTaskRecord(getNextTaskId(),</span><br><span class="line">                        r.info, intent, <span class="keyword">null</span>, <span class="keyword">null</span>, <span class="keyword">true</span>), <span class="keyword">null</span>);</span><br><span class="line">        mWindowManager.moveTaskToTop(r.task.taskId);</span><br><span class="line">        <span class="keyword">if</span> (DEBUG_TASKS) Slog.v(TAG, <span class="string">"Starting new activity "</span> + r</span><br><span class="line">                + <span class="string">" in new guessed "</span> + r.task);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    mService.grantUriPermissionFromIntentLocked(callingUid, r.packageName,</span><br><span class="line">            intent, r.getUriPermissionsLocked(), r.userId);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (sourceRecord != <span class="keyword">null</span> &amp;&amp; sourceRecord.isRecentsActivity()) {</span><br><span class="line">        r.task.setTaskToReturnTo(RECENTS_ACTIVITY_TYPE);</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">if</span> (newTask) {</span><br><span class="line">        EventLog.writeEvent(EventLogTags.AM_CREATE_TASK, r.userId, r.task.taskId);</span><br><span class="line">    }</span><br><span class="line">    ActivityStack.logStartActivity(EventLogTags.AM_CREATE_ACTIVITY, r, r.task);</span><br><span class="line">    targetStack.mLastPausedActivity = <span class="keyword">null</span>;</span><br><span class="line">    targetStack.startActivityLocked(r, newTask, doResume, keepCurTransition, options);</span><br><span class="line">    <span class="keyword">if</span> (!launchTaskBehind) {</span><br><span class="line">        <span class="comment">// Don't set focus on an activity that's going to the back.</span></span><br><span class="line">        mService.setFocusedActivityLocked(r);</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> ActivityManager.START_SUCCESS;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>首先将newTask变量初始化为false，表示不要在新的任务中启动Activity。由于前面的已经把addingToTask设置为true，因此，这里会执行中间的else if语句，即这里会把r.task设置为sourceRecord.task，即把即将启动的Activity放在原Activity所在的任务中启动。最后，就是调用startActivityLocked函数继续进行启动Activity的操作了</p>
+<p>声明： 以上内容拷贝自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/09365022adac">简书作者jiantao的文章，供自己学习使用</a></p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/" rel="tag"># Android进阶解密</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/04/06/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC22%E7%AB%A0/" rel="next" title="第22章：插件化技术总结">
+                  <i class="fa fa-chevron-left"></i> 第22章：插件化技术总结
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2021/08/10/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/ReactNative%E7%B2%BE%E8%A7%A3%E4%B8%8E%E5%AE%9E%E6%88%98-%E7%AC%AC1%E7%AB%A0/" rel="prev" title="第1章：React 与 React Native 简介">
+                  第1章：React 与 React Native 简介 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">112</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共262.1k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '9d497aedfb27a894880dce7e61d655c6',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
