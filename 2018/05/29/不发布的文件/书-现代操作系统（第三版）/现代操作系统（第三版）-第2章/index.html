@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="进程是操作系统提供的最古老也是最重要的抽象概念之一。即使CPU只有一个，但他们也支持（伪）并发操作的能力。他们将一个单独的CPU变换成多个虚拟的CPU，没有进程的抽象，现代计算将不复存在。 进程在任何多道程序设计系统中，CPU由一个进程快速切换到另一个进程，使每个进程各运行几十或者几百个毫秒，严格地来说，在某一个瞬间，CPU只能运行一个进程，但在1秒钟期间，它可能运行多个进程，这样就能产生并行的错">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第2章：进程与线程">
+<meta property="og:url" content="https://glassx.gitee.io/2018/05/29/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC2%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="进程是操作系统提供的最古老也是最重要的抽象概念之一。即使CPU只有一个，但他们也支持（伪）并发操作的能力。他们将一个单独的CPU变换成多个虚拟的CPU，没有进程的抽象，现代计算将不复存在。 进程在任何多道程序设计系统中，CPU由一个进程快速切换到另一个进程，使每个进程各运行几十或者几百个毫秒，严格地来说，在某一个瞬间，CPU只能运行一个进程，但在1秒钟期间，它可能运行多个进程，这样就能产生并行的错">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE1.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE2.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE3.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE4.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE5.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE6.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE7.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE8.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE9.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE10.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE11.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE12.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE13.png">
+<meta property="article:published_time" content="2018-05-29T10:00:00.000Z">
+<meta property="article:modified_time" content="2019-11-17T13:50:12.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="读书笔记-现代操作系统（第三版）">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE1.png">
+
+<link rel="canonical" href="https://glassx.gitee.io/2018/05/29/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC2%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第2章：进程与线程 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">27</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">115</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/05/29/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC2%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第2章：进程与线程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-05-29 18:00:00" itemprop="dateCreated datePublished" datetime="2018-05-29T18:00:00+08:00">2018-05-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:50:12" itemprop="dateModified" datetime="2019-11-17T21:50:12+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>进程是操作系统提供的最古老也是最重要的抽象概念之一。即使CPU只有一个，但他们也支持（伪）并发操作的能力。他们将一个单独的CPU变换成多个虚拟的CPU，没有进程的抽象，现代计算将不复存在。</p>
+<h2 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h2><p>在任何多道程序设计系统中，CPU由一个进程快速切换到另一个进程，使每个进程各运行几十或者几百个毫秒，严格地来说，在某一个瞬间，CPU只能运行一个进程，但在1秒钟期间，它可能运行多个进程，这样就能产生并行的错觉，这就是伪并行。伪并行概念用来区分<strong>多处理器系统</strong>（系统有两个或者更多CPU并共享同一个物理内存）的真正硬件并行。</p>
+<h3 id="进程模型"><a href="#进程模型" class="headerlink" title="进程模型"></a>进程模型</h3><p>一个进程就是一个正在执行的程序的实例，包括程序计数器、寄存器和变量当前值。从概念上讲，每个进程拥有它自己的CPU，当然，真正的CPU在各进程间来回切换，这种快速的切换称作<strong>多道程序设计</strong>。在多道程序计算机内存中有若干道程序，这些程序被抽象为若干个各自拥有自己控制流程（即每个程序自己的逻辑程序计数器）的进程，并且每个程序都独立地运行。当然，实际上只有一个物理程序计数器，所以程序运行时，它的逻辑程序计数器被装入实际的程序计数器，当该程序结束（或暂停）执行时，物理程序计数器被保存在内存中该进程的逻辑程序计数器中。</p>
+<p>由于CPU在各进程之间来回快速切换，所以每个进程执行器运算的速度是不确定的，并且当同一进程再次运行时，器运算速度通常也不可再现。例如，考虑一个 I/O 进程，它执行一个10000次的空循环以等待磁带机达到正常速度，然后发出命令读取第一个记录。如果CPU决定在空循环期间切换到其他进程，则磁带机进程可能在第一条记录通过磁头之后还未被再次执行。</p>
+<p>进程和程序间的却别是微妙的，但是非常重要。想象以为父亲正在为他的女儿烘制生日蛋糕，则做蛋糕的食谱就是程序（即用适当形式描述的算法），这位父亲是处理器（CPU），而做蛋糕各种原料（面粉、糖、鸡蛋等）就是输入的数据，<strong>进程就是他阅读食谱、取各种原料以及烘制蛋糕等一系列动作的总和</strong>。现假设他的儿子被蜜蜂蛰了哭着跑进来，父亲于是就记录下当前照着食谱做到哪里了（保存进程当前状态），拿出急救手册，为儿子处理蜇伤，我们看到处理机从一个进程（做蛋糕）切换到另一个优先级高的进程（医疗救治），每个进程有各自的程序（食谱和急救手册）。当急救完成之后，父亲又继续做蛋糕，从离开时的那一步继续做下去。值得注意的是，我们可能经常两次去启动同一个字处理软件，即一个程序运行了两遍，这也要算作两个进程。</p>
+<h3 id="创建进程"><a href="#创建进程" class="headerlink" title="创建进程"></a>创建进程</h3><p>有4中主要事件导致进程创建：</p>
+<ul>
+<li><p>系统初始化</p>
+<blockquote>
+<p>启动操作系统时，通常会创建若干进程，这些进程中有些是前台进程，用于同用户（人类）交互。其他的是后台进程，后台进程一般具有某些专门的功能，例如，设计一个后台进程接收发来的电子邮件，这个进程在一天的大部分时间都在睡眠，但是当电子邮件达到时就被唤醒了。停留在后台处理诸如电子邮件、web页面、新闻、打印之类的活动的进程称为<strong>守护进程（daemon）</strong>。</p>
+</blockquote>
+</li>
+<li><p>正在运行的进程进行系统调用创建</p>
+<blockquote>
+<p>正在运行的进程发出系统调用，以便创建一个或者多个线程协助其工作。</p>
+</blockquote>
+</li>
+<li><p>用户请求创建一个新的进程。</p>
+<blockquote>
+<p>用户双击图标或者输入命令行，启动一个新的程序。</p>
+</blockquote>
+</li>
+<li><p>一个批处理作业的初始化</p>
+<blockquote>
+<p>仅在大型机的批处理系统中应用，用户在这种系统中提交批处理作业，在操作系统认为有资源科运行另一个作业时，它创建一个新的进程，并运行其输入队列中的下一个作业。</p>
+</blockquote>
+</li>
+</ul>
+<p>在Unix系统中，只有一个系统调用可以创建新的进程：<strong>fork</strong>。它会创建一个与调用进程相同的副本，这两个进程（父进程和子进程）拥有相同的存储镜像、同样的环境字符串和同样的打开文件，这就是全部情形。通常，子进程接着执行execve或者一个类似的系统调用，以修改器存储镜像并运行一个新的程序。例如，当一个用户在shell中输入sort时，shell就创建一个子进程，然后这个子进程执行sort。在Windows中，情形正相反，一个win32函数调用 CreateProcess既处理进程的创建，也负责把正确的程序装入新的进程。不论在Unix还是Windows中，进程创建后，父进程和子进程有各自不同的地址空间。</p>
+<h3 id="进程的终止"><a href="#进程的终止" class="headerlink" title="进程的终止"></a>进程的终止</h3><p>进程终止，通常由下列条件引起：</p>
+<ul>
+<li><p>正常退出（自愿）</p>
+<blockquote>
+<p>进程完成了自己的工作，调用系统调用，通知工作已经完成。</p>
+</blockquote>
+</li>
+<li><p>出错退出（自愿）</p>
+<blockquote>
+<p>进程发现了严重错误，如要编译某个文件，但是该文件不存在，于是编译器就会退出。再给出了错误参数时，面向屏幕的交互式进程通常不退出，相反，这些程序会弹出一个对话框，并要求用户再试一次。</p>
+</blockquote>
+</li>
+<li><p>严重错误（非自愿）</p>
+<blockquote>
+<p>进程引起的错误，通常是由于程序中的错误导致，例如执行了非法指令，引用不存在的内存等。在这类错误中，进程会收到信号（被中断），而不是在这类错误出现时终止。</p>
+</blockquote>
+</li>
+<li><p>被其他进程杀死（非自愿）</p>
+</li>
+</ul>
+<h3 id="进程的状态"><a href="#进程的状态" class="headerlink" title="进程的状态"></a>进程的状态</h3><p>尽管每个进程是一个独立的实体，有其自己的程序计数器和内部状态，但进城之间经常需要相互作用，一个进程的输出结果可能作为另一个进程的输入，在shell命令：</p>
+<blockquote>
+<p>cat chapter1 chapter2 chapter3 | grep tree</p>
+</blockquote>
+<p>中，第一个进程运行cat，将三个文件链接并输出，第二个进程运行grep，它从输入中选择所有包含单词tree的那些行。根据这两个进程的相对速度，可能发生这种情况：grep准备就绪可以运行，但输入还没有完成，于是必须阻塞grep；还有可能是：一个概念上能够运行的进程被迫停止，因为操作系统调度另一个进程占用了CPU。下图可以看到显示进程的三种状态的状态图：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE1.png" alt="进程三种状态"></p>
+<p>运行态和就绪态在逻辑上是类似的，二者都可以运行，只是后者还没有CPU分配给它，阻塞态就完全不同，处于该状态的进程不能运行，即使CPU空闲也不行。在操作系统发现进程不能继续运行下去时，发生转换1；转换2和3是由于进程调度引起的；当进程等待的一个外部事件发生时（如一些输入到达），则发生转换4。</p>
+<h3 id="进程的实现"><a href="#进程的实现" class="headerlink" title="进程的实现"></a>进程的实现</h3><p>操作系统维护者一张表格，即进程表（process table）。每个进程占用一个进程表项，该表项包含了进程状态的重要信息，诸如程序计数器、堆栈指针，内存分配状况、所打开的文件的状态、账号和调度信息等。下图展示了典型系统中的关键字段：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE2.png" alt="典型的进程表项字段"></p>
+<h3 id="多道程序设计模型"><a href="#多道程序设计模型" class="headerlink" title="多道程序设计模型"></a>多道程序设计模型</h3><p>采用多道程序设计可以提高CPU利用率，从概率的角度来看cpu的利用率是比较好。假设一个进程等待I/O操作的时间与其停留在内存中的时间比是<em>p</em>,当内存中有n个进程时，则所有n个进程都在等待I/O（此时CPU空转）的概率是p的n次方，CPU的利用率由一下公式给出：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE3.png" alt="CPU利用率公式"></p>
+<p>从完全精确的角度考虑，应该指出此概率模型只是描述了一个大致的状况。它假设所有n个进程都是独立的，即内存中的5个进程中，3个运行，2个等待是完全可以接受的，但在单cpu中，不能同时运行3个进程，所以当CPU忙时，已就绪的进程必须等待CPU，因而，进程不是独立的，更精确的模型应该使用排队论构造，但它仍然是具有参考意义的，下图以n为变量的函数表示CPU的利用率，n称为多道程序设计的<strong>道数（degree of multiprogramming）</strong>。</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE4.png" alt="CPU利用率-道数的关系"></p>
+<p>从图中可以看到，如果进程花费80%的时间等待I/O，为使CPU的浪费低于10%，至少要有10个进程同时在内存中。当读者认识到一个等待用户从终端输入的交互式进程是处于I/O等待状态时，很明显，80%甚至更多的I/O等待时间是普遍的，即使是在服务器中，做大量磁盘I/O操作的进程也会花费同样或更多的等待时间。虽然图中的模型很粗略，但它依然对预测CPU的性能很有效。例如，假设计算机有512MB内存，操作系统占128MB，每个用户程序占128MB，那么这些内存允许3个用户程序同时驻留内存，若80%时间用于I/O等待，则CPU利用率大约是1-0.8<em>0.8</em>0.8 ，大约49%，在增加512MB内存后，CPU利用率可以提高到79%，换而言之，第二个512M内存提高了30%的吞吐量。但是增加第三个512MB内存只能讲CPU利用率提高到91%，吞吐量仅提高12%，因此可以确定第一次增加内存是合算的投资，第二个则不是。</p>
+<h2 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h2><h3 id="线程的使用"><a href="#线程的使用" class="headerlink" title="线程的使用"></a>线程的使用</h3><p>人们认为需要使用线程的理由如下：</p>
+<ul>
+<li><p>并行的线程可以共享同一个地址空间和所有可用数据的。</p>
+<blockquote>
+<p>对于某些应用而言，这是必需的，二者正式多进程模型（它们具有不同的地址空间）所无法表达的。</p>
+</blockquote>
+</li>
+<li><p>线程比进程更轻量级，更快捷地创建和撤销。</p>
+<blockquote>
+<p>在许多系统中，创建一个线程较一个进程要快10~100倍。在有大量线程需要动态和快速修改时，这一特性很有用。</p>
+</blockquote>
+</li>
+<li><p>若多个线程都是CPU密集型的，那么并不能获得性能上的增强，但是如果存在着大量的计算和大量的I/O处理，拥有多个线程允许这些活动彼此重叠进行，从而加快应用程序执行速度。</p>
+</li>
+<li><p>在多CPU系统中，多线程是有益的，在这样的系统中，真正的并行有了实现的可能。</p>
+</li>
+</ul>
+<p>假如字处理软件被编写成含有3个线程的程序，一个与用户交互，另一个在后台重新进行格式处理，一旦有某一句语句被删掉，交互线程就通知格式化线程对整个文档重新进行处理，同时交互线程继续监控键盘和鼠标，并相应诸如滚动到第一页之类的简单命令。剩下那个每隔一段时间进行磁盘备份，防止程序崩溃或者系统崩溃。拥有三个线程的情形如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE5.png" alt="三个线程协同"></p>
+<p>如果程序是单线程的，那么在进行磁盘备份时，来自键盘和鼠标的命令就会被忽略，直到备份工作完成为止。并且，很显然在这里三个不同的进程是不能工作的，这是因为三个线程都需要在同一个文件上进行操作，通过让三个线程代替三个进程，三个线程共享公共内存，于是它们都可以访问同一个正在编辑的文件。</p>
+<p>现在考虑另一个多线程发挥作用的例子，一个web服务器，某些页面较其它页面相比，有更多的访问，比如对主页的访问比其它更深层次的页面访问次数更多。利用这一事实，web服务器可以把获得大量访问的页面集合保存在内存中，这样的一种页面集合称为<strong>高速缓存（cache）</strong>，高速缓存也应用在其它很多场合。一种组织web服务器的方式如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE6.png" alt="多线程web服务器"></p>
+<p>上图中，一个称为分派程序（dispatcher）的线程从网络中读入工作请求，在检查请求之后，分派现成挑选一个空转的（即被阻塞的）工作线程（worker thread）提交该请求。接着分派现成唤醒该工作线程，将它由阻塞状态转变为就绪状态。工作线程被唤醒后，它检查有关的请求是否在web页面的cache中，这个高速缓存是所有线程都可以访问的，如果没有，该线程开始执行从磁盘中调入页面的I/O操作，并且进入阻塞直到磁盘操作完成。当上述工作线程阻塞在磁盘操作时，为了完成更多操作，分派线程可能挑选另一个工作线程运行，也可以把另一个已经就绪的工作线程投入运行。</p>
+<p>这种模型允许把服务器编写为一个集合，在分派线程的程序中包含一个无限循环，该循环用来获得工作请求并把工作请求派给工作线程。每个工作线程的代码包含一个从分派线程接收请求的无限循环，收到请求后，如果页面存在，则返回给客户机，接着该工作线程阻塞，等待一个新的请求到来。</p>
+<p>在没有多线程的情况下，编写web服务器。一种可能的方式是：web服务器的主循环获得请求，检查请求，并在取下一个请求之前完成整个工作。在等待磁盘操作时，服务器空转，不处理任何到来的其他请求。课件线程较好地改善了web服务器的性能。如果对于这种性能的降低不可接受，那如果使用read系统调用，则还有一种可能的方式。在请求到来时，这个唯一的线程对请求进行考察，如果请求能在高速缓存中得到满足，那么一切都好，否则，就启动一个非阻塞的磁盘操作。服务器在表格中记录当前请求的状态，然后去处理下一个事件。下一个事件可能是一个新工作的请求，或是磁盘对先前操作的回答。如果是新工作的请求，就开始该工作；如果是磁盘的回答，就从表格中取出对应的信息，并处理该回答。对于非阻塞磁盘I/O而言，这种回答多数会以信号或者中断的形式出现。<strong>注意，这种情况下，“顺序进程”模型消失了，每次服务器从为某个请求工作的状态切换到另一个状态时，都必须显式地保存或者重新装入相应的计算状态。</strong>这里，每个计算都有一个被保存的状态，存在一个会发生且使得相关状态发生改变的事件集合，我们把这类设计称为<strong>有限状态机（finite-state machine）</strong>。</p>
+<p>现在很清楚多线程必须提供的是什么了，多线程使得“顺序进程”的思想得以保留下来，这种顺序进程阻塞了系统调用（如磁盘I/O），但是仍旧实现了并行性。</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE7.png" alt="构造服务器三种方法"></p>
+<h3 id="经典线程模型"><a href="#经典线程模型" class="headerlink" title="经典线程模型"></a>经典线程模型</h3><p>进程用于把资源集中到一起，而线程是在CPU上被调度执行的实体。在同一个进程环境中，多个线程共享一个地址空间和其他资源，这意味着线程间共享同样的全局变量，一个线程也可以读、写甚至清除另一个线程的堆栈，线程间是没有保护的，因为这是没有必要的，因为同一个进程中的多个线程是合作而不是竞争关系。线程之间对于资源的持有如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE8.png" alt="线程与资源"></p>
+<p>和传统进程一样（即只有一个线程的进程），线程可以处于若干种状态的任何一个：运行、阻塞、就绪或者终止。认识到每个线程有其自己的堆栈很重要，下图展示这一状况：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE9.png" alt="每个线程有自己的堆栈"></p>
+<p>每个线程的堆栈有一帧，供各个被调用但是还没有从中返回的过程使用。例如，如果过程X调用过程Y，而Y又调用Z，那么当Z执行时，供X、Y和Z使用的帧会全部存在堆栈中。通常每个线程会调用不同的过程，从而有一个各自不同的执行历史，这就是为什么每个线程需要有自己的堆栈的原因。这里还可以了解线程的<strong>join</strong>操作和<strong>yield</strong>操作。</p>
+<h3 id="POSIX-线程"><a href="#POSIX-线程" class="headerlink" title="POSIX 线程"></a>POSIX 线程</h3><p>POSIX线程是线程的POSIX（Portable Operating System Interface of UNIX，可移植操作系统接口）标准。它定义的线程包叫做Pthread。有两种主要的方法实现线程包：<strong>在用户空间中和在内核中</strong>。这两种方法互有利弊，不过混合实现方式也是可能的。</p>
+<h3 id="在用户空间中实现线程"><a href="#在用户空间中实现线程" class="headerlink" title="在用户空间中实现线程"></a>在用户空间中实现线程</h3><p>这种方法是把整个线程包放在用户空间，内核对线程包一无所知，从内核角度考虑，就是按单线程进程方式管理。这种方法的优点：</p>
+<ul>
+<li>最明显的优点是：用户级线程包可以在不支持线程的操作系统上实现。<blockquote>
+<p>线程在一个运行时系统的顶部运行，这个运行时系统是一个管理线程的过程的集合。在用户空间管理线程时，每个进程需要有其专用的<strong>线程表（thread table）</strong>，用来跟踪该进程中的线程。这些表和内核中的进程表类似，不过它仅仅记录各个线程的属性，如每个线程的程序计数器、堆栈指针、寄存器等。该线程表由运行时系统管理，当一个线程转换到就绪态或者阻塞态时，需要在线程表中存放重新启动该线程所需的信息。如下图可以对比不同方式实现的线程包：</p>
+</blockquote>
+</li>
+</ul>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE10.png" alt="用户级和内核级线程包"></p>
+<ul>
+<li><p>可以方便地在进程内调度切换到另一个线程，并且线程切换非常快捷。</p>
+<blockquote>
+<p>在线程运行完成，例如，线程调用thread_yield ，就可以把线程的信息保存在线程表中，进而，线程调度程序来选择另一个要运行的线程。保存该线程状态的过程和调度程序都只是本地过程，所以启动它们比进行内核调用效率更高。</p>
+</blockquote>
+</li>
+<li><p>允许进程有自己定制的调度算法。</p>
+<blockquote>
+<p>例如，那些有垃圾收集线程的应用程序就不用担心线程会在不合适的时刻停止。</p>
+</blockquote>
+</li>
+</ul>
+<p>尽管用户级线程具有上述的优点，但是它的缺点也明显：</p>
+<ul>
+<li><p>第一个问题是如何实现阻塞系统调用。</p>
+<blockquote>
+<p>假设在还没有任何按键动作之前，一个线程读取键盘，让该线程时机进行该系统调用时不可接受的，因为这会停止所有的线程。使用线程的一个主要目标是：首先要允许每个线程使用阻塞调用，但是还要避免被阻塞的线程影响其他的线程。有了阻塞系统的调用，这个目标不太容易实现。</p>
+</blockquote>
+</li>
+<li><p>页面故障问题。</p>
+<blockquote>
+<p>如果某个程序调用或者跳转到了一条不在内存的指令上，而操作系统将到磁盘上取回这个丢失的指令（和该指令的“邻居们”），这就称为<strong>页面故障</strong>。如果有一个线程引起页面故障，内核甚至不知道有线程存在，通常会把整个进程阻塞，直到磁盘I/O完成为止，尽管其他线程是可以运行的。</p>
+</blockquote>
+</li>
+<li><p>如果一个线程开始运行，那么在该进程中的其他线程就不能运行，除非第一个线程自动放弃CPU。</p>
+<blockquote>
+<p>在一个单独的进程内部，没有时间中断，所以不可能用轮转调度（轮流）的方式调度进程。</p>
+</blockquote>
+</li>
+<li><p>可能反对用户级线程的最大负面意见是，程序员通常在经常发生线程阻塞的应用中才希望使用多个线程。</p>
+</li>
+</ul>
+<h3 id="在内核中实现线程"><a href="#在内核中实现线程" class="headerlink" title="在内核中实现线程"></a>在内核中实现线程</h3><p>由上面在用户空间实现的线程和在内核空间实现的线程对比图可以看出，在内核中实现线程不在需要运行时系统，另外，每个进程中也没有线程表。所有能够阻塞线程的调用都以系统调用的形式实现，这与运行时系统过程相比，代价是相当可观的。当一个线程阻塞时，内核根据其选择，可以运行同一个进程中的另一个线程或者运行另一个进程中的线程。而在用户级线程中，运行时始终运行自己进程的线程，直到内核剥夺它的CPU。如果某个进程中的线程引起页面故障，内核可以很方便地检查该进程是否还有其他可运行的线程，如果有，在等待所需要的页面从磁盘读入时，就选择一个线程运行。</p>
+<p>在内核中实现线程有以下缺点：</p>
+<ul>
+<li><p>但是内核中创建、撤销、切换线程操作代价都比较大。</p>
+<blockquote>
+<p>在内核中尽量减少创建和撤销线程，最好能实现复用（在执行完成后，标记为不可运行，当要创建新线程时，再将其启用）。</p>
+</blockquote>
+</li>
+<li><p>信号是发给进程而不是线程，当信号达到时要考虑将信号交给哪个线程处理。</p>
+<blockquote>
+<p>即使线程可以注册感兴趣的信号，但是多个线程注册同一个信号如何处理也是个问题。</p>
+</blockquote>
+</li>
+</ul>
+<h3 id="混合实现"><a href="#混合实现" class="headerlink" title="混合实现"></a>混合实现</h3><p>有试图将用户级线程的优点与内核级线程的优点结合起来的方法，一种方法是使用内核级线程，然后将用户级线程与某些内核线程多路复用起来，如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE11.png" alt="用户级和内核级线程混合实现"></p>
+<h2 id="进程间通信"><a href="#进程间通信" class="headerlink" title="进程间通信"></a>进程间通信</h2><p><em>这个部分看了两次都不甚明白，先跳过。</em></p>
+<h2 id="调度"><a href="#调度" class="headerlink" title="调度"></a>调度</h2><h3 id="进程行为"><a href="#进程行为" class="headerlink" title="进程行为"></a>进程行为</h3><p>几乎所有进程的（磁盘）I/O请求或计算都是交替突发的。如下图所示，CPU不停顿地运行一段时间，然后发出一个系统调用以便读写文件。如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE12.png" alt="突发进行"></p>
+<p>图中有一件事值得注意，某些进程花了大多数时间在计算上，称为计算密集型；有些在等待I/O上花了大多数啊时间，称为I/O密集型。有必要指出，随着CPU越来越快，更多的进程倾向于I/O密集型，这里的基本思想是，如果需要运行I/O密集型进程，那么就应该让它尽快得到机会，以便发出磁盘请求并保持磁盘始终忙碌。</p>
+<h3 id="何时调度"><a href="#何时调度" class="headerlink" title="何时调度"></a>何时调度</h3><ul>
+<li>创建新进程后，决定运行父进程还是子进程。</li>
+<li>在一个进程退出时必须做出调度决策。</li>
+<li>一个进程阻塞时，必须选择另一个进程运行。</li>
+<li>发生I/O中断时，做出调度决策。</li>
+</ul>
+<h3 id="调度算法的目标"><a href="#调度算法的目标" class="headerlink" title="调度算法的目标"></a>调度算法的目标</h3><p>在讨论目标前，有必要了解我们会处于那些环境中，在不同的应用领域有不同的环境，可以将其分为三类：</p>
+<ul>
+<li>批处理</li>
+<li>交互式</li>
+<li>实时</li>
+</ul>
+<p>下图针对所有环境列出不同的目标：</p>
+<p><img src="/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-2/%E5%9B%BE13.png" alt="不同环境不同目标"></p>
+<p><strong>批处理系统的调度算法</strong></p>
+<blockquote>
+<p>先来先服务<br>最短作业优先<br>最短剩余时间优先</p>
+</blockquote>
+<p><strong>交互式系统调度算法</strong></p>
+<blockquote>
+<p>轮转调度<br>优先级调度<br>多级队列调度：<br>最短进程优先<br>保证调度<br>彩票调度<br>公平分享调度</p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/" rel="tag"># 读书笔记-现代操作系统（第三版）</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2018/05/25/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-HTTP%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC14%E7%AB%A0/" rel="next" title="第14章：安全HTTP">
+                  <i class="fa fa-chevron-left"></i> 第14章：安全HTTP
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2018/05/30/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/" rel="prev" title="第6章：死锁">
+                  第6章：死锁 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">进程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.1.</span> <span class="nav-text">进程模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">创建进程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%9A%84%E7%BB%88%E6%AD%A2"><span class="nav-number">1.3.</span> <span class="nav-text">进程的终止</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%9A%84%E7%8A%B6%E6%80%81"><span class="nav-number">1.4.</span> <span class="nav-text">进程的状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.5.</span> <span class="nav-text">进程的实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E9%81%93%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.6.</span> <span class="nav-text">多道程序设计模型</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="nav-number">2.1.</span> <span class="nav-text">线程的使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%8F%E5%85%B8%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.2.</span> <span class="nav-text">经典线程模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#POSIX-%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.3.</span> <span class="nav-text">POSIX 线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E4%B8%AD%E5%AE%9E%E7%8E%B0%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.4.</span> <span class="nav-text">在用户空间中实现线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E5%86%85%E6%A0%B8%E4%B8%AD%E5%AE%9E%E7%8E%B0%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.5.</span> <span class="nav-text">在内核中实现线程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B7%B7%E5%90%88%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.6.</span> <span class="nav-text">混合实现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1"><span class="nav-number">3.</span> <span class="nav-text">进程间通信</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6"><span class="nav-number">4.</span> <span class="nav-text">调度</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E8%A1%8C%E4%B8%BA"><span class="nav-number">4.1.</span> <span class="nav-text">进程行为</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%95%E6%97%B6%E8%B0%83%E5%BA%A6"><span class="nav-number">4.2.</span> <span class="nav-text">何时调度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E7%AE%97%E6%B3%95%E7%9A%84%E7%9B%AE%E6%A0%87"><span class="nav-number">4.3.</span> <span class="nav-text">调度算法的目标</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">115</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共271.4k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '23ecd2b4d77084768ac5219d01d0dcd5',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
