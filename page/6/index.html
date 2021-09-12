@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">115</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">116</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,105 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/24/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC3%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/11/24/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章：应用程序进程启动过程</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-24 10:22:00" itemprop="dateCreated datePublished" datetime="2019-11-24T10:22:00+08:00">2019-11-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-03 21:29:50" itemprop="dateModified" datetime="2019-12-03T21:29:50+08:00">2019-12-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>AMS启动一个应用程序首先要保证该应用程序的进程已经启动，如果应用程序进程还不存在，则请求 Zygote 进程启动进程。</p>
+<p>从前一章内容可知，在Zygote 的Java 框架层会创建Server 端的Socket，用于等待AMS 请求Zygote 创建新的应用程序进程。Zygote 通过fork自身即可创建应用程序进程，这个进程会包含虚拟机实例，并且会创建Binder线程池和消息循环。</p>
+<p>本章学习应用程序进程的启动，注意，是应用程序进程而不是应用程序的启动过程。</p>
+<h2 id="应用程序进程启动过程介绍"><a href="#应用程序进程启动过程介绍" class="headerlink" title="应用程序进程启动过程介绍"></a>应用程序进程启动过程介绍</h2><p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC3%E7%AB%A0/AMS%E5%8F%91%E9%80%81%E5%90%AF%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E8%BF%9B%E7%A8%8B%E8%AF%B7%E6%B1%82%E8%BF%87%E7%A8%8B%E7%9A%84%E6%97%B6%E5%BA%8F%E5%9B%BE.jpeg" alt="AMS发送启动应用程序进程请求过程的时序图"></p>
+<p>AMS 通过调用  startProcessLocked 向 Zygote 进程发送请求， 主要代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">startProcessLocked</span><span class="params">(ProcessRecord app, String hostingType,</span></span></span><br><span class="line"><span class="params"><span class="function">String hostingNameStr, String abiOverride ,String entryPoint ,String [] entryPointArgs)</span> </span>{</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//获取要创建的应用程序进程的用户 ID</span></span><br><span class="line">    <span class="keyword">int</span> uid = app.uid; <span class="comment">//1 </span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">int</span> [] gids = <span class="keyword">null</span>; </span><br><span class="line">    <span class="keyword">if</span> (!app.isolated) { </span><br><span class="line">        <span class="comment">//2  gids创建和赋值</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="function">ArrayUtils <span class="title">isEmpty</span><span class="params">(permGids)</span>)</span>{</span><br><span class="line">            gids =<span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">3</span>]; </span><br><span class="line">        }<span class="keyword">else</span> { </span><br><span class="line">            gids = <span class="keyword">new</span> <span class="keyword">int</span>[permGids.leng + <span class="number">3</span>] ; </span><br><span class="line">            System.arraycopy(permGids, <span class="number">0</span>, gids, <span class="number">3</span>, permGids.length) ; </span><br><span class="line">            gids[O] = UserHandle.getSharedAppGid(UserHandle.getAppid(uid)); </span><br><span class="line">            gids[<span class="number">1</span>] = UserHandle.getCacheAppGid(UserHandle .getAppid(uid)) ; </span><br><span class="line">            gids[<span class="number">2</span>] = UserHandle.getUserGid{UserHandle.getUserid(uid)); </span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (entryPoint = <span class="keyword">null</span>) entryPoint = <span class="string">"android.app.ActivityThread"</span>;<span class="comment">//3</span></span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//启动应用程序进程,这里省略不重要的参数</span></span><br><span class="line">    startResult = Process.start(entryPoint,xxx,uid, xxx,gids,xxx,xxx);</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码<strong>首先得到应用程序进程的用户ID</strong>，之后创建用户组ID 并且赋值，在注释3处判断 entryPoint 为null就赋值 “android.app.ActivityThread”，<font color="#008000">这个值就是应用程序进程主线程的类名</font>。在最终调用 Process.start 创建进程时，会将进程的用户ID和用户组ID传入。</p>
+<p>Process.start会将实现交给 ZygoteProcess(<strong>ZygoteProcess用于保持与Zygote进程的通信状态</strong>)的start 方法处理，其中首先会执行 openZygoteSocketifNeeded  方法，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="keyword">if</span> (primaryZygoteState == <span class="keyword">null</span> || primaryZygoteState.isClosed ()) { </span><br><span class="line"><span class="keyword">try</span> { </span><br><span class="line">    <span class="comment">//与 Zygote 进程建立 Socket 连接</span></span><br><span class="line">    primaryZygoteState = ZygoteState.connect(mSocket);<span class="comment">//1</span></span><br><span class="line">} <span class="keyword">catch</span> (IOException ioe} { </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> ZygoteStartFailedEx (<span class="string">"Error connecting to primary zygote"</span>， ioe)</span><br><span class="line">}</span><br><span class="line"><span class="comment">//连接 Zygote 主模式返回的 ZygoteState 是否与启动应用程序进程所需要的ABI匹配</span></span><br><span class="line"><span class="keyword">if</span> (primaryZygotestate.matches (abi)) {<span class="comment">//2 </span></span><br><span class="line">    <span class="keyword">return</span> primaryZygoteState;</span><br><span class="line">} </span><br><span class="line"></span><br><span class="line">／／如果不匹配，则尝试连接 Zygote 辅模式</span><br><span class="line"><span class="keyword">if</span> (secondaryZygoteState ==<span class="keyword">null</span> || secondaryZygoteState.isClosed()) { </span><br><span class="line"><span class="keyword">try</span> { </span><br><span class="line">    secondaryZygoteState = ZygoteState.connect(mSecondarySocket);<span class="comment">//3</span></span><br><span class="line">} <span class="keyword">catch</span> (IOException ioe) { </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> ZygoteStartFailedEx (<span class="string">"Error connecting to secondary zygote"</span>, ioe) ; </span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">／／连接 Zygote 辅模式返回的 ZygoteState 是否与启动应用程序进程所需要的 ABI 匹配</span><br><span class="line"><span class="keyword">if</span> (secondaryZygoteState.matches(abi)) {<span class="comment">//4 </span></span><br><span class="line">    <span class="keyword">return</span> secondaryZygoteState; </span><br><span class="line">}</span><br><span class="line"><span class="keyword">throw</span> <span class="keyword">new</span> ZygoteStartFailedEx (<span class="string">"Unsupported zygote ABI :"</span> + abi); </span><br></pre></td></tr></tbody></table></figure>
+
+<p>前面章节提到Zygote的main方法中会创建name为 “zygote” 的server端Socket，注释1就是与Zygote进程建立Socket 连接(name为”zygote”)，并得到 ZygoteState 对象primaryZygoteState；注释2处如果primaryZygoteState 与启动应用程序所需要的 ABI 不匹配，则在注释3处连接name为 “zygote_secondary” 的Socket。如果辅模式返回的 ZygoteState 与进程所需的ABI也不匹配，就抛出异常。</p>
+<p>通过 openZygoteSocketifNeeded 获取ZygoteState后，将其作为参数调用 ZygoteProcess的  ZygoteSendArgsAndGetResult 方法 获取Process.ProcessStartResult。</p>
+<h3 id="Zygote-接收请求并创建应用程序进程"><a href="#Zygote-接收请求并创建应用程序进程" class="headerlink" title="Zygote 接收请求并创建应用程序进程"></a>Zygote 接收请求并创建应用程序进程</h3><p>执行完以上步骤后，继续执行 argsForZygote 方法即可让Zygote 收到创建新的应用程序进程的请求。Zygote 接收请求并创建应用程序进程的时序图如下：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC3%E7%AB%A0/Zygote%E6%8E%A5%E6%94%B6%E8%AF%B7%E6%B1%82%E5%B9%B6%E5%88%9B%E5%BB%BA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="Zygote接收请求并创建应用程序进程的时序图"></p>
+<p>由前面章节我们知道，Zygote 中的Server Socket 的runSelectLoop 方法一直在等待 AMS请求创建新的应用程序进程，runSelectLoop 中是通过 runOnce 来创建进程的，runOnce最终调用到 Zygote 的 forkAndSpecialize 方法创建应用程序进程，并返回pid。forkAndSpecialize 通过fork 当前进程来创建一个子进程。此后，便会在应用程序进程中创建 Binder 线程池，*<em>进一步通过反射 ActivityThread 类的main方法调用，令应用程序进程进入了ActivityThread 的main方法中。此时，应用程序进程创建完毕，并且运行了主线程管理类 ActivityThread *</em>。</p>
+<blockquote>
+<p>如果pid为0，说明当前代码运行在新创建的子进程中。</p>
+</blockquote>
+<h3 id="Binder-线程池启动过程"><a href="#Binder-线程池启动过程" class="headerlink" title="Binder 线程池启动过程"></a>Binder 线程池启动过程</h3><p>程序中会检查代码，确保Binder线程池只会被启动一次。</p>
+<h3 id="消息循环创建过程"><a href="#消息循环创建过程" class="headerlink" title="消息循环创建过程"></a>消息循环创建过程</h3><p>通过反射方式 invok 执行 ActivityThread 的main方法时，会执行一系列主线程的工作，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/ActivityThread.java </span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{ </span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//创建主线程 Looper</span></span><br><span class="line">    Looper.prepareMainLooper(); <span class="comment">//1 </span></span><br><span class="line">    ActivityThread thread= <span class="keyword">new</span> ActivityThread(); <span class="comment">//2 </span></span><br><span class="line">    thread.attach(<span class="keyword">false</span>) ; </span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span> ) {<span class="comment">//3 </span></span><br><span class="line">    <span class="comment">//创建主线程 H 类</span></span><br><span class="line">    sMainThreadHandler = thread . getHandler ();<span class="comment">//4 </span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">false</span>) { </span><br><span class="line">        Looper.myLooper().setMessageLogging(<span class="keyword">new</span> LogPrinter(Log.DEBUG, <span class="string">"ActivityThread"</span>）；</span><br><span class="line">    Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER) ; </span><br><span class="line">    <span class="comment">//Looper 开始工作</span></span><br><span class="line">    Looper.loop (); <span class="comment">//5 </span></span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>); </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>ActivityThread类用于管理当前应用程序进程的主线程，上述代码中创建了主线程的消息循环Looper，其中的内部类 H 继承 Handler，在注释 5 处调用Looper.loop ，即使得Looper 开始处理消息，可见，系统在应用程序进程启动完成后，就会创建消息循环。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1949,386 +2048,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/15/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E4%B9%A6%E7%B1%8D-%E5%89%91%E6%8C%87offer/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/11/15/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E4%B9%A6%E7%B1%8D-%E5%89%91%E6%8C%87offer/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-书籍-剑指offer</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-11-15 20:58:00" itemprop="dateCreated datePublished" datetime="2019-11-15T20:58:00+08:00">2019-11-15</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-11 20:43:35" itemprop="dateModified" datetime="2020-04-11T20:43:35+08:00">2020-04-11</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="LeetCode-剑指offer系列"><a href="#LeetCode-剑指offer系列" class="headerlink" title="LeetCode-剑指offer系列"></a>LeetCode-剑指offer系列</h2><hr>
-<h3 id="面试题03、数组中重复的数字"><a href="#面试题03、数组中重复的数字" class="headerlink" title="面试题03、数组中重复的数字"></a>面试题03、数组中重复的数字</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>HashSet 是否添加进去了</p>
-<p>自己写的时候的问题：<strong>没啥，用hashset 搞定，但是忘了 new 关键字。。。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/shu-zu-zhong-zhong-fu-de-shu-zi-lcof/solution/mian-shi-ti-03-shu-zu-zhong-zhong-fu-de-shu-zi-b-4/">力扣</a></p>
-</blockquote>
-<h3 id="面试题04、二维数组中的查找"><a href="#面试题04、二维数组中的查找" class="headerlink" title="面试题04、二维数组中的查找"></a>面试题04、二维数组中的查找</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>左下角标志法     </p>
-<p>自己写的时候的问题：<strong>自己写得完美，没问题。为了加深印象，我们说行数 rowNum = matrix.length;  columnNum = matrix[0].length,  之后从左下角开始即可。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/er-wei-shu-zu-zhong-de-cha-zhao-lcof/solution/mian-shi-ti-04-er-wei-shu-zu-zhong-de-cha-zhao-zuo/">力扣</a></p>
-</blockquote>
-<h3 id="面试题05、替换String空格"><a href="#面试题05、替换String空格" class="headerlink" title="面试题05、替换String空格"></a>面试题05、替换String空格</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>使用 StringBuilder</p>
-<p>自己写的时候的问题：<strong>没啥问题，StringBuilder 疯狂拼接即可</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/ti-huan-kong-ge-lcof/solution/mian-shi-ti-05-ti-huan-kong-ge-ji-jian-qing-xi-tu-/">力扣</a></p>
-</blockquote>
-<h3 id="面试题10-I、斐波那契数列由-0-和-1-开始，之后的斐波那契数就是由之前的两数相加而得出，求第n个数，但是结果要对-1000000007，如计算初始结果为：1000000008，请返回-1。"><a href="#面试题10-I、斐波那契数列由-0-和-1-开始，之后的斐波那契数就是由之前的两数相加而得出，求第n个数，但是结果要对-1000000007，如计算初始结果为：1000000008，请返回-1。" class="headerlink" title="面试题10-I、斐波那契数列由 0 和 1 开始，之后的斐波那契数就是由之前的两数相加而得出，求第n个数，但是结果要对 1000000007，如计算初始结果为：1000000008，请返回 1。"></a>面试题10-I、斐波那契数列由 0 和 1 开始，之后的斐波那契数就是由之前的两数相加而得出，求第n个数，但是结果要对 1000000007，如计算初始结果为：1000000008，请返回 1。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>使用 StringBuilder</p>
-<p>自己写的时候的问题：<strong>大体上使用数组是对的，但是在做计算的时候写成了： arrs[i] = arrs[i - 1]%mod + arrs[i-2] % mod;，而实际上应该写成： arrs[i] = (arrs[i - 1] + arrs[i-2]) % mod; 以后要注意</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/fei-bo-na-qi-shu-lie-lcof/solution/zhi-xing-yong-shi-0-ms-zai-suo-you-java-ti-jiao-96/">力扣</a></p>
-</blockquote>
-<p>还可以延伸<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/qing-wa-tiao-tai-jie-wen-ti-lcof/solution/mian-shi-ti-10-ii-qing-wa-tiao-tai-jie-wen-ti-dong/">青蛙跳台阶问题</a></p>
-<h3 id="面试题11、旋转数组的最小数字"><a href="#面试题11、旋转数组的最小数字" class="headerlink" title="面试题11、旋转数组的最小数字"></a>面试题11、旋转数组的最小数字</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>二分法</p>
-<p>自己写的时候的问题：<strong>没啥难，就是要注意细节，1、没有旋转的情况  2、所有数字都相同的情况  3、只有一个数字的情况  4、剩下的就是从后面往前面找，当到某一个数字它的前面一个数字比当前数字大的时候，那最小数字就是当前数字了。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/xuan-zhuan-shu-zu-de-zui-xiao-shu-zi-lcof/solution/mian-shi-ti-11-xuan-zhuan-shu-zu-de-zui-xiao-shu-3/">力扣</a></p>
-</blockquote>
-<h3 id="面试题15、二进制中1的个数"><a href="#面试题15、二进制中1的个数" class="headerlink" title="面试题15、二进制中1的个数"></a>面试题15、二进制中1的个数</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>n &amp; (n -1)</p>
-<p>自己写的时候的问题：<strong>没啥，还是 n &amp; (n-1)</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/er-jin-zhi-zhong-1de-ge-shu-lcof/solution/mian-shi-ti-15-er-jin-zhi-zhong-1de-ge-shu-wei-yun/">力扣</a></p>
-</blockquote>
-<h3 id="面试题18、删除链表的节点"><a href="#面试题18、删除链表的节点" class="headerlink" title="面试题18、删除链表的节点"></a>面试题18、删除链表的节点</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>两个指针</p>
-<p>自己写的时候的问题：<strong>没啥，处理好head，之后就是常用的pre 指针、current 指针了</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/shan-chu-lian-biao-de-jie-dian-lcof/solution/mian-shi-ti-18-shan-chu-lian-biao-de-jie-dian-shua/">力扣</a></p>
-</blockquote>
-<h3 id="面试题21、-调整数组顺序使奇数位于偶数前面"><a href="#面试题21、-调整数组顺序使奇数位于偶数前面" class="headerlink" title="面试题21、 调整数组顺序使奇数位于偶数前面"></a>面试题21、 调整数组顺序使奇数位于偶数前面</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>首尾双指针</p>
-<p>自己写的时候的问题：<strong>没啥，很顺利。双指针，快排思想</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/diao-zheng-shu-zu-shun-xu-shi-qi-shu-wei-yu-ou-shu-qian-mian-lcof/solution/ti-jie-shou-wei-shuang-zhi-zhen-kuai-man-shuang-zh/">力扣</a></p>
-</blockquote>
-<h3 id="面试题22、-链表中倒数第k个节点"><a href="#面试题22、-链表中倒数第k个节点" class="headerlink" title="面试题22、 链表中倒数第k个节点"></a>面试题22、 链表中倒数第k个节点</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>前后指针</p>
-<p>自己写的时候的问题：<strong>没啥，快慢指针，快指针先走k步</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/lian-biao-zhong-dao-shu-di-kge-jie-dian-lcof/solution/javajie-fa-shuang-zhi-zhen-by-shi-na-de-ya/">力扣</a></p>
-</blockquote>
-<h3 id="面试题24、-反转链表。反转一个单链表，如输入：-1-gt-2-gt-3-gt-4-gt-5-gt-Null-，则输出：5-gt-4-gt-3-gt-2-gt-1-gt-Null"><a href="#面试题24、-反转链表。反转一个单链表，如输入：-1-gt-2-gt-3-gt-4-gt-5-gt-Null-，则输出：5-gt-4-gt-3-gt-2-gt-1-gt-Null" class="headerlink" title="面试题24、 反转链表。反转一个单链表，如输入： 1->2->3->4->5->Null  ，则输出：5->4->3->2->1->Null"></a>面试题24、 反转链表。反转一个单链表，如输入： 1-&gt;2-&gt;3-&gt;4-&gt;5-&gt;Null  ，则输出：5-&gt;4-&gt;3-&gt;2-&gt;1-&gt;Null</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>存储当前节点和上一个节点</p>
-<p>自己写的时候的问题：<strong>没啥，搞个pre</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-linked-list/solution/fan-zhuan-lian-biao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="面试题25、-合并两个排序的链表"><a href="#面试题25、-合并两个排序的链表" class="headerlink" title="面试题25、 合并两个排序的链表"></a>面试题25、 合并两个排序的链表</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>一个链表到表尾之后，需要接上另一个表的剩余部分</p>
-<p>自己写的时候的问题：<strong>没啥，造一个空节点</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/solution/tu-jie-jian-zhi-offerzhi-he-bing-liang-ge-pai-xu-d/">力扣</a></p>
-</blockquote>
-<h3 id="包含min函数的栈"><a href="#包含min函数的栈" class="headerlink" title="包含min函数的栈"></a>包含min函数的栈</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>两个栈，一个维持压入数据，一个维持最小数栈，注意相同最小值要都压入最小数栈</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/bao-han-minhan-shu-de-zhan-lcof/solution/shuang-zhan-wei-hu-jie-fa-ji-linkedlistjie-fa-by-c/">力扣</a></p>
-</blockquote>
-<h3 id="面试题39、-数组中出现次数超过一半的数字"><a href="#面试题39、-数组中出现次数超过一半的数字" class="headerlink" title="面试题39、 数组中出现次数超过一半的数字"></a>面试题39、 数组中出现次数超过一半的数字</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>既然出现次数超过一半 那么排序后在中间的就是所需数字</p>
-<p>自己写的时候的问题：<strong>先排序后取值不难，但是时间复杂度太高，提交的时候耗时1.3s；使用hashMap 计数，也不难，只是略微繁琐，还有 HashMap 额外占用空间。要熟练 摩尔计数法，这才是最优解。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/shu-zu-zhong-chu-xian-ci-shu-chao-guo-yi-ban-de-shu-zi-lcof/solution/ji-ran-chu-xian-ci-shu-chao-guo-yi-ban-na-yao-pai-/">力扣</a></p>
-</blockquote>
-<h3 id="面试题40、最小的k个数"><a href="#面试题40、最小的k个数" class="headerlink" title="面试题40、最小的k个数"></a>面试题40、最小的k个数</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>大顶堆</p>
-<p>自己写的时候的问题：<strong>暂时还没做</strong></p>
-</details>
-
-<p>还可以引申<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/shu-ju-liu-zhong-de-zhong-wei-shu-lcof/solution/">数据流中中位数</a></p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/zui-xiao-de-kge-shu-lcof/solution/javada-ding-dui-shi-xian-by-lsz/">力扣</a></p>
-</blockquote>
-<h3 id="连续子数组的最大和"><a href="#连续子数组的最大和" class="headerlink" title="连续子数组的最大和"></a>连续子数组的最大和</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>要么取大值，要么另起炉灶</p>
-<p>自己写的时候的问题：<strong>与之前写的 力扣53题的答案，这次更加简洁粗暴，直接判断result &lt; 0 是否成立，成立就放弃result，否则就还让它继续 result += element;重点记住这个答案就好</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/lian-xu-zi-shu-zu-de-zui-da-he-lcof/solution/6xing-dai-ma-1ms-3xing-jie-shi-by-18716060157/">力扣</a></p>
-</blockquote>
-<h3 id="面试题50、第一个只出现一次的字符"><a href="#面试题50、第一个只出现一次的字符" class="headerlink" title="面试题50、第一个只出现一次的字符"></a>面试题50、第一个只出现一次的字符</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>hashmap 存储次数</p>
-<p>自己写的时候的问题：<strong>HashMap 辅助，没啥难度。在 字符出现次数 &gt; 1 的时候，不要尝试去增加它的次数，节省put 操作。 因为 2次 和 100次 对我们意义是一样的</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/di-yi-ge-zhi-chu-xian-yi-ci-de-zi-fu-lcof/solution/java-shi-yong-ha-xi-biao-chang-gui-jie-fa-by-panc-/">力扣</a></p>
-</blockquote>
-<h3 id="面试题52、两个链表的第一个公共节点"><a href="#面试题52、两个链表的第一个公共节点" class="headerlink" title="面试题52、两个链表的第一个公共节点"></a>面试题52、两个链表的第一个公共节点</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>两个指针 node1，node2 分别指向两个链表 headA，headB 的头结点，然后同时分别逐结点遍历，当 node1 到达链表 headA 的末尾时，重新定位到链表 headB 的头结点；当 node2 到达链表 headB 的末尾时，重新定位到链表 headA 的头结点。这样，当它们相遇时，所指向的结点就是第一个公共结点</p>
-<p>自己写的时候的问题：<strong>刚开始脑抽只允许一个转换，其实 应该 A 和B两个链表应该各有一次转换机会。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/liang-ge-lian-biao-de-di-yi-ge-gong-gong-jie-dian-lcof/solution/shuang-zhi-zhen-fa-lang-man-xiang-yu-by-ml-zimingm/">力扣</a></p>
-</blockquote>
-<h3 id="面试题53-I、在排序数组中查找数字-I，统计一个数字在排序数组中出现的次数"><a href="#面试题53-I、在排序数组中查找数字-I，统计一个数字在排序数组中出现的次数" class="headerlink" title="面试题53 - I、在排序数组中查找数字 I，统计一个数字在排序数组中出现的次数"></a>面试题53 - I、在排序数组中查找数字 I，统计一个数字在排序数组中出现的次数</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>二分法</p>
-<p>自己写的时候的问题：<strong>自己写没问题，二分查找没毛病。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/zai-pai-xu-shu-zu-zhong-cha-zhao-shu-zi-lcof/solution/java-liang-chong-er-fen-cha-zhao-fang-fa-by-caixia/">力扣</a></p>
-</blockquote>
-<h3 id="面试题53-II-0～n-1中缺失的数字。一个长度为n-1的递增排序数组中的所有数字都是唯一的，并且每个数字都在范围0～n-1之内。在范围0～n-1内的n个数字中有且只有一个数字不在该数组中，请找出这个数字"><a href="#面试题53-II-0～n-1中缺失的数字。一个长度为n-1的递增排序数组中的所有数字都是唯一的，并且每个数字都在范围0～n-1之内。在范围0～n-1内的n个数字中有且只有一个数字不在该数组中，请找出这个数字" class="headerlink" title="面试题53 - II. 0～n-1中缺失的数字。一个长度为n-1的递增排序数组中的所有数字都是唯一的，并且每个数字都在范围0～n-1之内。在范围0～n-1内的n个数字中有且只有一个数字不在该数组中，请找出这个数字"></a>面试题53 - II. 0～n-1中缺失的数字。一个长度为n-1的递增排序数组中的所有数字都是唯一的，并且每个数字都在范围0～n-1之内。在范围0～n-1内的n个数字中有且只有一个数字不在该数组中，请找出这个数字</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>解法1：与下标是否相等 解法2：求和？(要考虑溢出)  解法3：二分法</p>
-<p>自己写的时候的问题：<strong>在数组下标都对应得上的时候，缺失的就是最后一个数字，写的时候没想到这点。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/que-shi-de-shu-zi-lcof/solution/java-yi-ci-bian-li-hen-jian-dan-by-guard-2/">力扣</a></p>
-</blockquote>
-<h3 id="面试题56-I、数组中数字出现的次数。一个整型数组-nums-里除两个数字之外，其他数字都出现了两次。请写程序找出这两个只出现一次的数字。要求时间复杂度是O-n-，空间复杂度是O-1"><a href="#面试题56-I、数组中数字出现的次数。一个整型数组-nums-里除两个数字之外，其他数字都出现了两次。请写程序找出这两个只出现一次的数字。要求时间复杂度是O-n-，空间复杂度是O-1" class="headerlink" title="面试题56 - I、数组中数字出现的次数。一个整型数组 nums 里除两个数字之外，其他数字都出现了两次。请写程序找出这两个只出现一次的数字。要求时间复杂度是O(n)，空间复杂度是O(1)"></a>面试题56 - I、数组中数字出现的次数。一个整型数组 nums 里除两个数字之外，其他数字都出现了两次。请写程序找出这两个只出现一次的数字。要求时间复杂度是O(n)，空间复杂度是O(1)</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>异或-&gt; 数字分组</p>
-<p>自己写的时候的问题：<strong>不太熟练，自己只能想到全员异或，然后分组，之后想不到了。其实在分组过后，每组元素都是由 若干个出现两次的数字和一个只出现一次的数字  组成，组内异或就能得到那个只出现一次的数字。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-lcof/solution/zhi-chu-xian-yi-ci-de-shu-xi-lie-wei-yun-suan-by-a/">力扣</a></p>
-</blockquote>
-<h3 id="给定一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素"><a href="#给定一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素" class="headerlink" title="给定一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素"></a>给定一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>全员异或</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/single-number/solution/cou-yi-pian-ti-jie-hua-shuo-ti-jie-hen-hao-wan-by-/">力扣</a></p>
-</blockquote>
-<h3 id="面试题57、和为s的两个数字。输入一个递增排序的数组和一个数字s，在数组中查找两个数，使得它们的和正好是s。如果有多对数字的和等于s，则输出任意一对即可"><a href="#面试题57、和为s的两个数字。输入一个递增排序的数组和一个数字s，在数组中查找两个数，使得它们的和正好是s。如果有多对数字的和等于s，则输出任意一对即可" class="headerlink" title="面试题57、和为s的两个数字。输入一个递增排序的数组和一个数字s，在数组中查找两个数，使得它们的和正好是s。如果有多对数字的和等于s，则输出任意一对即可"></a>面试题57、和为s的两个数字。输入一个递增排序的数组和一个数字s，在数组中查找两个数，使得它们的和正好是s。如果有多对数字的和等于s，则输出任意一对即可</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>双指针即可</p>
-<p>自己写的时候的问题：<strong>没啥说的，提交完美。双指针即可</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/he-wei-sde-liang-ge-shu-zi-lcof/solution/2msshuang-100-by-wei-yu-13/">力扣</a></p>
-</blockquote>
-<h3 id="面试题58-I、翻转单词顺序。输入一个英文句子，翻转句子中单词的顺序，但单词内字符的顺序不变。为简单起见，标点符号和普通字母一样处理。例如输入字符串”I-am-a-student-“，则输出”student-a-am-I”"><a href="#面试题58-I、翻转单词顺序。输入一个英文句子，翻转句子中单词的顺序，但单词内字符的顺序不变。为简单起见，标点符号和普通字母一样处理。例如输入字符串”I-am-a-student-“，则输出”student-a-am-I”" class="headerlink" title="面试题58 - I、翻转单词顺序。输入一个英文句子，翻转句子中单词的顺序，但单词内字符的顺序不变。为简单起见，标点符号和普通字母一样处理。例如输入字符串”I am a student. “，则输出”student. a am I”"></a>面试题58 - I、翻转单词顺序。输入一个英文句子，翻转句子中单词的顺序，但单词内字符的顺序不变。为简单起见，标点符号和普通字母一样处理。例如输入字符串”I am a student. “，则输出”student. a am I”</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>两次翻转</p>
-<p>自己写的时候的问题：<strong>这题目本身就有点坑爹，注意审题，因为它首尾的空格要求在结果中去掉，并且单词间有多个空格也只保留一个。还有，清空StringBuilder 可以使用 sb.setLength(0) 的方式。其他的倒是没啥。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/fan-zhuan-dan-ci-shun-xu-lcof/solution/fan-zhuan-dan-ci-shun-xu-by-peterbrave/">力扣</a></p>
-</blockquote>
-<h3 id="面试题58-II、-左旋转字符串。字符串的左旋转操作是把字符串前面的若干个字符转移到字符串的尾部。请定义一个函数实现字符串左旋转操作的功能。比如，输入字符串”abcdefg”和数字2，该函数将返回左旋转两位得到的结果”cdefgab”"><a href="#面试题58-II、-左旋转字符串。字符串的左旋转操作是把字符串前面的若干个字符转移到字符串的尾部。请定义一个函数实现字符串左旋转操作的功能。比如，输入字符串”abcdefg”和数字2，该函数将返回左旋转两位得到的结果”cdefgab”" class="headerlink" title="面试题58 - II、 左旋转字符串。字符串的左旋转操作是把字符串前面的若干个字符转移到字符串的尾部。请定义一个函数实现字符串左旋转操作的功能。比如，输入字符串”abcdefg”和数字2，该函数将返回左旋转两位得到的结果”cdefgab”"></a>面试题58 - II、 左旋转字符串。字符串的左旋转操作是把字符串前面的若干个字符转移到字符串的尾部。请定义一个函数实现字符串左旋转操作的功能。比如，输入字符串”abcdefg”和数字2，该函数将返回左旋转两位得到的结果”cdefgab”</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>subString即可</p>
-<p>自己写的时候的问题：<strong>没啥，StringBuilder 拼接，简单粗暴</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/zuo-xuan-zhuan-zi-fu-chuan-lcof/solution/javaqie-pian-pin-jie-fa-by-abner-42/">leetcode</a></p>
-</blockquote>
-<h3 id="面试题59-I、-滑动窗口的最大值。给定一个数组-nums-和滑动窗口的大小-k，请找出所有滑动窗口里的最大值"><a href="#面试题59-I、-滑动窗口的最大值。给定一个数组-nums-和滑动窗口的大小-k，请找出所有滑动窗口里的最大值" class="headerlink" title="面试题59 - I、 滑动窗口的最大值。给定一个数组 nums 和滑动窗口的大小 k，请找出所有滑动窗口里的最大值"></a>面试题59 - I、 滑动窗口的最大值。给定一个数组 nums 和滑动窗口的大小 k，请找出所有滑动窗口里的最大值</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>上一次的最大值是不是被滑过的位置</p>
-<p>自己写的时候的问题：<strong>自己写，不难。充分利用好上一次的最大值即可</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/hua-dong-chuang-kou-de-zui-da-zhi-lcof/solution/bu-shi-yong-shu-ju-jie-gou-shuang-100-by-sun-239/">leetcode</a></p>
-</blockquote>
-<h3 id="面试题61、-扑克牌中的顺子。从扑克牌中随机抽5张牌，判断是不是一个顺子，即这5张牌是不是连续的。2～10为数字本身，A为1，J为11，Q为12，K为13，而大、小王为-0-，可以看成任意数字。A-不能视为-14"><a href="#面试题61、-扑克牌中的顺子。从扑克牌中随机抽5张牌，判断是不是一个顺子，即这5张牌是不是连续的。2～10为数字本身，A为1，J为11，Q为12，K为13，而大、小王为-0-，可以看成任意数字。A-不能视为-14" class="headerlink" title="面试题61、 扑克牌中的顺子。从扑克牌中随机抽5张牌，判断是不是一个顺子，即这5张牌是不是连续的。2～10为数字本身，A为1，J为11，Q为12，K为13，而大、小王为 0 ，可以看成任意数字。A 不能视为 14"></a>面试题61、 扑克牌中的顺子。从扑克牌中随机抽5张牌，判断是不是一个顺子，即这5张牌是不是连续的。2～10为数字本身，A为1，J为11，Q为12，K为13，而大、小王为 0 ，可以看成任意数字。A 不能视为 14</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>根据差值计算大小王是否够用就行</p>
-<p>自己写的时候的问题：<strong>看懂原理，就不难(抄别人的)： 如果我们能够知道 5 张扑克牌中的最大值 maxValue 和最小值 minValue ，那我们就知道，要使它为顺子需要 maxValue - minValue + 1 张牌，所以我们只需要计算最大最小值(0除外)，然后通过上述规律来判断。当然，如果其中有重复的数字(0除外),那么肯定凑不齐了。所以我们关键是找最大最小值，以及判断是否重复。这里面的细节很多，比如boolean[] 用来表示元素是否重复的数组，它的index 不是 遍历牌的 i ，而是牌面值，即 nums[i]</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/bu-ke-pai-zhong-de-shun-zi-lcof/solution/bu-ke-pai-zhong-de-shun-zi-pai-xu-fang-shi-he-bu-p/">leetcode</a></p>
-</blockquote>
-<h3 id="面试题62、圆圈中最后剩下的数字。0-1-n-1这n个数字排成一个圆圈，从数字0开始，每次从这个圆圈里删除第m个数字。求出这个圆圈里剩下的最后一个数字"><a href="#面试题62、圆圈中最后剩下的数字。0-1-n-1这n个数字排成一个圆圈，从数字0开始，每次从这个圆圈里删除第m个数字。求出这个圆圈里剩下的最后一个数字" class="headerlink" title="面试题62、圆圈中最后剩下的数字。0,1,,n-1这n个数字排成一个圆圈，从数字0开始，每次从这个圆圈里删除第m个数字。求出这个圆圈里剩下的最后一个数字"></a>面试题62、圆圈中最后剩下的数字。0,1,,n-1这n个数字排成一个圆圈，从数字0开始，每次从这个圆圈里删除第m个数字。求出这个圆圈里剩下的最后一个数字</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>约瑟夫环，记得公式就行（返回的是数组下标）</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">cir</span><span class="params">(<span class="keyword">int</span> n,<span class="keyword">int</span> m)</span></span>{</span><br><span class="line">	<span class="keyword">int</span> p=<span class="number">0</span>;</span><br><span class="line">	<span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">2</span>;i&lt;=n;i++)</span><br><span class="line">	{</span><br><span class="line">		p=(p+m)%i;</span><br><span class="line">	}</span><br><span class="line">	<span class="keyword">return</span> p;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-</details>
-
-<blockquote>
-<p>题目<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/yuan-quan-zhong-zui-hou-sheng-xia-de-shu-zi-lcof/">leetcode</a>、解答参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/u011500062/article/details/72855826">csdn</a></p>
-</blockquote>
-<h3 id="面试题65、不用加减乘除做加法。写一个函数，求两个整数之和，要求在函数体内不得使用-“-”、“-”、“-”、“-”-四则运算符号"><a href="#面试题65、不用加减乘除做加法。写一个函数，求两个整数之和，要求在函数体内不得使用-“-”、“-”、“-”、“-”-四则运算符号" class="headerlink" title="面试题65、不用加减乘除做加法。写一个函数，求两个整数之和，要求在函数体内不得使用 “+”、“-”、“*”、“/” 四则运算符号"></a>面试题65、不用加减乘除做加法。写一个函数，求两个整数之和，要求在函数体内不得使用 “+”、“-”、“*”、“/” 四则运算符号</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>异或操作</p>
-<p>自己写的时候的问题：<strong>凭记忆做出来了，后续还是要加强。 注意一点再java中不要做 &lt;&lt;&lt; 操作，非法的。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/bu-yong-jia-jian-cheng-chu-zuo-jia-fa-lcof/solution/ni-hao-fan-te-xi-by-chen-san-shi/">leetcode</a></p>
-</blockquote>
-<h3 id="面试题66、给定一个数组-A-0-1-…-n-1-，请构建一个数组-B-0-1-…-n-1-，其中-B-中的元素-B-i-A-0-×A-1-×…×A-i-1-×A-i-1-×…×A-n-1-。不能使用除法。"><a href="#面试题66、给定一个数组-A-0-1-…-n-1-，请构建一个数组-B-0-1-…-n-1-，其中-B-中的元素-B-i-A-0-×A-1-×…×A-i-1-×A-i-1-×…×A-n-1-。不能使用除法。" class="headerlink" title="面试题66、给定一个数组 A[0,1,…,n-1]，请构建一个数组 B[0,1,…,n-1]，其中 B 中的元素 B[i]=A[0]×A[1]×…×A[i-1]×A[i+1]×…×A[n-1]。不能使用除法。"></a>面试题66、给定一个数组 A[0,1,…,n-1]，请构建一个数组 B[0,1,…,n-1]，其中 B 中的元素 B[i]=A[0]×A[1]×…×A[i-1]×A[i+1]×…×A[n-1]。不能使用除法。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>对称数组</p>
-<p>自己写的时候的问题：<strong>似懂非懂</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/gou-jian-cheng-ji-shu-zu-lcof/solution/gou-jian-cheng-ji-shu-zu-dui-cheng-bian-li-by-huwt/">leetcode</a></p>
-</blockquote>
-<h3 id="66、加一，给定一个由整数组成的非空数组所表示的非负整数，在该数的基础上加一，最高位存放在数组收尾，数组中每个元素只存储单个数字，可以假设除了0之外，这个整数不会以0开头。假如输入：-1-2-3-，代表123，则输出-1-2-4-；输入-4-3-2-1-，代表-4321，则输出-4-3-2-2"><a href="#66、加一，给定一个由整数组成的非空数组所表示的非负整数，在该数的基础上加一，最高位存放在数组收尾，数组中每个元素只存储单个数字，可以假设除了0之外，这个整数不会以0开头。假如输入：-1-2-3-，代表123，则输出-1-2-4-；输入-4-3-2-1-，代表-4321，则输出-4-3-2-2" class="headerlink" title="66、加一，给定一个由整数组成的非空数组所表示的非负整数，在该数的基础上加一，最高位存放在数组收尾，数组中每个元素只存储单个数字，可以假设除了0之外，这个整数不会以0开头。假如输入：[1,2,3] ，代表123，则输出 [1,2,4]；输入 [4,3,2,1] ，代表 4321，则输出 [4,3,2,2]"></a>66、加一，给定一个由整数组成的非空数组所表示的非负整数，在该数的基础上加一，最高位存放在数组收尾，数组中每个元素只存储单个数字，可以假设除了0之外，这个整数不会以0开头。假如输入：[1,2,3] ，代表123，则输出 [1,2,4]；输入 [4,3,2,1] ，代表 4321，则输出 [4,3,2,2]</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>它只是加一的话，可能的情况只有两种：</p>
-<ul>
-<li>除9之外的数字加一    </li>
-<li>数字9加一<br>加一得十，进一位，个位数为0；如加法运算不出现进位，则运算就结束了。还有一种情况就是 当出现 9，99，999 之类的数字时，循环到最后也需要进位，需要手动将它进一位</li>
-</ul>
-<p>自己写的时候的问题：<strong>没啥问题，遍历每个元素让每个元素 +1 ，当某个元素 +1 之后 &lt; 10,就将当前数组返回；否则，加到最后也还没返回，就要新建一个数组，最开始位为1</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/plus-one/solution/java-shu-xue-jie-ti-by-yhhzw/">LeetCode</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -2379,7 +2098,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">115</span>
+          <span class="site-state-item-count">116</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2465,7 +2184,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共271.4k字</span>
+  <span class="post-count">博客全站共274k字</span>
 </div>
 
 

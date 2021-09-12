@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="优化：闪屏、极速版、viewStub、IdleHandler加载Webview、classes.dex只保留App启动所需要的代码、避开峰值，滑动时不加载图片。线程优化-采用线程池、不加载大的sp，监控方式：视频录制  内存泄漏，比如 EventBus没有反注册、Activity被静态持有  衡量指标： 快开慢开比：比如2秒快开比，5秒快开比；90% 用户启动时间。冷启动，从3.5秒左右降低到1">
+<meta property="og:type" content="article">
+<meta property="og:title" content="glassx的小黑屋">
+<meta property="og:url" content="https://glassx.gitee.io/2021/09/12/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E8%AE%B0%E4%B8%8D%E7%89%A2%E7%9F%A5%E8%AF%86%E7%82%B9/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="优化：闪屏、极速版、viewStub、IdleHandler加载Webview、classes.dex只保留App启动所需要的代码、避开峰值，滑动时不加载图片。线程优化-采用线程池、不加载大的sp，监控方式：视频录制  内存泄漏，比如 EventBus没有反注册、Activity被静态持有  衡量指标： 快开慢开比：比如2秒快开比，5秒快开比；90% 用户启动时间。冷启动，从3.5秒左右降低到1">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-09-12T01:05:45.179Z">
+<meta property="article:modified_time" content="2021-09-12T10:01:57.371Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="glassx,码农">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.gitee.io/2021/09/12/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E8%AE%B0%E4%B8%8D%E7%89%A2%E7%9F%A5%E8%AF%86%E7%82%B9/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title> | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">27</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">116</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/12/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E8%AE%B0%E4%B8%8D%E7%89%A2%E7%9F%A5%E8%AF%86%E7%82%B9/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-12 09:05:45 / 修改时间：18:01:57" itemprop="dateCreated datePublished" datetime="2021-09-12T09:05:45+08:00">2021-09-12</time>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><ul>
+<li><p>优化：闪屏、极速版、viewStub、IdleHandler加载Webview、classes.dex只保留App启动所需要的代码、避开峰值，滑动时不加载图片。线程优化-采用线程池、不加载大的sp，监控方式：视频录制</p>
+</li>
+<li><p>内存泄漏，比如 EventBus没有反注册、Activity被静态持有</p>
+</li>
+<li><p>衡量指标： 快开慢开比：比如2秒快开比，5秒快开比；90% 用户启动时间。冷启动，从3.5秒左右降低到1秒左右，内存从经常性的 380M 左右降低到 330M 的水平，优化前88%左右,93%的收集数据显示1秒以内打开；主要集中在网络超时、网络无连接两种异常，其中网络超时占了40%左右</p>
+</li>
+</ul>
+<ul>
+<li>Serializable 的反序列默认是不会执行构造函数的</li>
+</ul>
+<ul>
+<li>SQLite 默认支持多进程并发操作，它通过文件锁来控制多进程的并发，但是SQLite 的锁粒度并没有非常细，针对的是整个DB文件，简单来说，多进程可以同时获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库</li>
+</ul>
+<ul>
+<li>网络请求： DNS解析(本地或服务查询)、连接（握手、TLS、慢启动、重定向）、发送数据包（延迟、丢包）、接收（IO、解析）、关闭</li>
+</ul>
+<ul>
+<li>网络性能监控：360的 ArgusAPM插桩技术、以及 TraceNetTrafficMonitor ：使用Aspect 切面功能</li>
+</ul>
+<ul>
+<li>软件绘制使用的是 Skia 库，画笔：Skia或者OpenGL；画纸：Surface；画板：Graphic Buffer</li>
+</ul>
+<ul>
+<li>硬件绘制与软件绘制最核心的区别是<strong>硬件绘制通过GPU完成 Graphic Buffer内容的绘制</strong></li>
+</ul>
+<ul>
+<li>Surface 对应2个Buffer，一个前台的，一个后台的，Surface与Buffer之间通过 匿名共享内存交换数据的。可以采用 Tracer for OpenGL ES 逐帧分析性能</li>
+</ul>
+<ul>
+<li>Android的多渠道打包其中的一种思路就是这样，在 apk 尾巴上追加几个字节，来标记apk的渠道，apk启动时，从apk尾巴上读取这个渠道值。不过，后来google发现了这个漏洞，在新版本系统中，<strong>系统安装apk时，会检查apk实际大小，二者不相等就会报错安装失败</strong>。</li>
+</ul>
+<ul>
+<li>UI渲染用 gfxinfo 监测性能，当然也可以用 Systrace，怎么操作？</li>
+</ul>
+<ul>
+<li>SharedPreference 缺点：跨进程不安全、加载慢（异步加载，可能主线程会等待）、卡顿（onPause会强制写入磁盘）、Json转义</li>
+</ul>
+<ul>
+<li>ContentProvider 的原理：通过 Binder 传输匿名共享内存的文件描述符给数据获取方（Client内部有一个 CursorWindow 对象，发送请求时，把这个CursorWindow 类型对象传过去，这个对象暂时为空，Server 收到请求，搜集数据，填充到这个CursorWindow 对象中，Client 读取内部这个CursorWindow 对象，获取数据）。适合传输大量数据，传小数据不一定划算</li>
+</ul>
+<ul>
+<li>静态代理就是对于每种情形都编写一个Proxy，在调用的时候，使用真实的target的来调用方法；动态代理就是根据系统提供的Proxy.newProxyInstance，它的原理是通过 Method.invok ，避免创建多个Proxy</li>
+</ul>
+<ul>
+<li>动态广播先于静态广播接收到</li>
+</ul>
+<ul>
+<li>assets目录存放的文件，最终还是通过 getResources 去open打开，所以，资源文件都可以归结到 Resource 里面</li>
+</ul>
+<ul>
+<li><font color="#ff0000">资源插件化解决：创建AssertManager对象，调用 addAssertPath 将所有的插件路径都添加进去，之后根据AssetManager对象创建 Resources 和 Theme 对象。 重写 Activity 的 getAsset、getResources 、和 getTheme 方法（第8、15章）。</font></li>
+</ul>
+<ul>
+<li>资源插件化问题解决：修改AAPT以及打包gradle文件，为插件资源指定不同前缀。插件使用宿主的资源，就固定id；宿主通过provider 以 aar形式引入到 插件项目中</li>
+</ul>
+<ul>
+<li>动态广播插件化：动态广播，只需要保证宿主APP能加载到动态广播类就行，所以，无序特别处理</li>
+</ul>
+<ul>
+<li>Service、ContentProvider、广播这些通用方案都是本地站位，因为数量不多</li>
+</ul>
+<ul>
+<li>ACTION_DOWN事件在哪个控件消费了（return true）， 那么ACTION_MOVE和ACTION_UP就会从上往下（通过dispatchTouchEvent）做事件分发往下传，就只会传到这个控件，不会继续往下传，如果ACTION_DOWN事件是在dispatchTouchEvent消费，那么事件到此为止停止传递，如果ACTION_DOWN事件是在onTouchEvent消费的，那么会把ACTION_MOVE或ACTION_UP事件传给该控件的onTouchEvent处理并结束传递。（事件分发机制）</li>
+</ul>
+<ul>
+<li>getX 是获取事件到屏幕的距离；getRawX 是获取事件距离控件顶边的距离</li>
+</ul>
+<ul>
+<li>View的滑动方法： layout、LayoutParams、属性动画、ObjectAnimator、offsetLeftAndRight、scrollTo、scrollBy、Scroller（computeScroll）</li>
+</ul>
+<ul>
+<li>Zygote 启动SystemServer，后者再启动各种服务，比如 AMS、WMS</li>
+</ul>
+<ul>
+<li>React 只关注MVC框架中的View层，为减少直接操作DOM，它使用虚拟DOM来差异化更新 DOM，实现数据单向流动。而传统的HTML 页面更新元素是全量更新</li>
+</ul>
+<ul>
+<li>RN 的UI层变化， 就映射到 虚拟DOM，计算出diff后转成json发送给Native生成页面元素。编写的 RN 代码最终会打包成 main.bundle.js 文件供App 加载，此文件可以存在App本地或者服务器上更新。<font color="#ff0000">我个人的理解是，生成虚拟DOM之后的.js文件发到Android或者ios中，由本地进行差异对比生成json，本地再根据json更改view。</font></li>
+</ul>
+<ul>
+<li>B想从A中获取数据，然后呢，它就mmap 一块内存，这块内存对应到物理内存上，但是Binder驱动在内核空间中也指向一块虚拟内存K，这块内存与B那块内存在物理上是一样的。这时候，只需要A将通过 copy_from_user 将数据复制到 K 中，即完成了数据的一次复制。<font color="#ff0000">同步回去博客</font></li>
+</ul>
+<ul>
+<li>直接内存，NIO ： 在Native 分配堆外内存，在Java对中通过 DirectBuffer 作为引用</li>
+</ul>
+<ul>
+<li>GC Root： 虚拟机栈引用、本地方法栈引用、方法区静态、方法区中常量</li>
+</ul>
+<ul>
+<li>类加载过程： 加载、校验、准备、解析（将常量池的符号引用搞成直接引用）、初始化、使用、卸载</li>
+</ul>
+<ul>
+<li>锁优化：自旋、锁消除、锁粗化、轻量级锁、偏向锁</li>
+<li>轻量级锁，使用CAS操作尝试将对象的 MarkWord 改成轻量级锁标志，如果成功，则拥有锁；否则，判断锁是否指向当前线程，如果是，则直接进入。否则，就等待(个人觉得应该是CAS重试)。如果有两个以上线程在争用这个锁，就升级为重量级锁，后面的线程阻塞。      </li>
+<li>偏向锁：偏向锁在轻量级锁基础上连 CAS 都不做。在对象第一次被线程获取后，把线程id写在 MarkWord 中(这个当然是CAS操作)，当另一个线程尝试获取的时候，偏向模式就结束(指的是这个CAS操作不做了)，恢复到未锁定或者轻量级锁状态，后续就是轻量级锁规则了       </li>
+</ul>
+<ul>
+<li>拥塞控制方法： 慢启动、拥塞避免（增速慢，不再翻番）、快速恢复（拥塞窗口减半，再做拥塞避免）</li>
+</ul>
+<ul>
+<li>TCP慢可能的原因：握手、捎带确认算法、拥塞控制算法</li>
+</ul>
+<ul>
+<li>数字签名就是加了密的摘要。证书包含的内容： 证书格式、对象名称、对象的公钥、有效期、颁发者、签名算法等</li>
+</ul>
+<ul>
+<li><strong>lateinit 主要用于 var 声明的变量，然而它不能用于基本数据类型，如 Int、Long 等</strong>，我们需要使用Integet这种包装类作为替代</li>
+</ul>
+<ul>
+<li>Data class 的特点是： 默认给写了getter、setter、equals、copy（浅拷贝）、toString 等方法</li>
+</ul>
+<ul>
+<li><strong>Kotlin 中的 Int 类型等同于 int</strong></li>
+<li><strong>Kotlin 中的 Int? 等同于 Integer ！</strong></li>
+</ul>
+<ul>
+<li>一般来说，<strong>Kotlin 属于 无栈协程</strong>，它依靠对协程体本身编译生成的状态机的状态流转实现，变量的保存也是通过闭包语法实现</li>
+</ul>
+<ul>
+<li>adb shell -》 run as   -》 cd  /data/data/app_webview，非Root情况下 获取webview的Cookies ，使用 sqlite3打开即可</li>
+</ul>
+<ul>
+<li>MeasureSpec 的含义是：父View传递给当前 View 的一个建议值。UNSPECIFIED 父不约束子，子View可以取任意尺寸。Exactly（match_parent、具体数值）： 父为子指定特定的尺寸，子必须在这个尺寸之内 ；AT_MOST（wrap_content）：父为子指定一个最大的尺寸，子要在这里面</li>
+</ul>
+<ul>
+<li>当子具体数值时：EXACTLY，大小为数值；当子为 match_parent： 为父容器的mode，父的剩余空间；当子为wrap_content: mode 为 AT_MOST ，不超过父容器</li>
+</ul>
+<ul>
+<li>内部拦截手势冲突时，在setOntouchListener 中 disallowParent设置为 true，在合适的时候，再设置为false。</li>
+</ul>
+<ul>
+<li>在WebviewClient 的 shouldInterceptRequest ，自行重新组装 WebResourceResponse</li>
+</ul>
+<ul>
+<li>安全努力：app签名校验、https防抓包、本地广播、sp加密</li>
+</ul>
+<ul>
+<li>自己写AIDL，会生成Stub 接口，在用于数据传递的Service （在主进程）中 自己写 binder实现 Stub 接口，实现其中的方法，在onBind 方法中返回这个 binder 。将数据传给webview：  webview.loadUrl(“javascript:”)</li>
+</ul>
+<ul>
+<li>handler处理流程：<strong>首先判断msg.callback 、其次是Handler的mCallback，最后才是交给 Handler 的 handleMessage 处理</strong></li>
+</ul>
+<ul>
+<li>epoll： 以前是将文件描述符数组发给内核，内核遍历；现在是 内核保存了一份文件描述符，只需要穿进去改动的部分。以前内核轮询来发现是否可以读写，现在是通过异步IO事件唤醒而不是轮询；最后，现在系统是仅将有IO事件的文件描述符返回给用户。</li>
+</ul>
+<ul>
+<li>ViewRootImpl 的 scheduleTraversals ，会往MessageQueue 中插入同步屏障 msg，之后在Vsync的时候，就会发送异步消息。之后在unscheduleTraversals中移除</li>
+</ul>
+<ul>
+<li>ANR： 输入5s，广播：前台10，后台60；服务：前台20，后台200；ContentProvider 的publish 超时 10s </li>
+</ul>
+<ul>
+<li>内存分配流程： 分配-&gt; GC无soft -&gt; 增长到最大 -&gt; GC 有 soft ，增长大最大 -&gt; OOM</li>
+</ul>
+<ul>
+<li>挂堆、标记、放堆、挂起线程、</li>
+</ul>
+<p>想让消息提前执行？</p>
+<p>可重入的原理</p>
+<p>启动模式兼容？无论singleTop还是singleTask，再回到这个Activity时，并不会触发它的onCreate，而是会触发它的onNewIntent(其实这里说的bug我并没有明白，等测试后再说)。为此，我们需要在MockClass2 中，拦截onNewIntent方法，把占位 StubActivity 替换回插件Activity，代码如下：</p>
+<p>写个自定义容器，在里面横着放子View，当一行放不下一个View的时候，自动换行</p>
+<p>RenderThread？</p>
+<p><font color="#ff0000">Binder原理？两种签名方式？</font></p>
+<p>systrace + 函数插桩怎么操作</p>
+<p>HardwarLayout、SoftWareLayout</p>
+<p>RN布局常用的方法</p>
+<p>Android 中 js 桥的原理</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/09/10/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/" rel="next" title="第7章：多态和扩展">
+                  <i class="fa fa-chevron-left"></i> 第7章：多态和扩展
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">116</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共274k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'f2389b25f4e3c874ab42881c0cd9d3a9',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

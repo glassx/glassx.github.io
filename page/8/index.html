@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">115</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">116</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,161 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/09/08/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC11%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/08/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC11%E7%AB%A0/" class="post-title-link" itemprop="url">第11章: 晚期（运行期）优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-08 16:24:00" itemprop="dateCreated datePublished" datetime="2019-09-08T16:24:00+08:00">2019-09-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:49:50" itemprop="dateModified" datetime="2019-11-17T21:49:50+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>Java 程序最初是通过解释器(Interpreter)进行解释执行的，虚拟机发现某个方法或代码块运行特别频繁时，会将它们认定为“热点代码”(Hot Spot Code)。为了提高运行效率，虚拟机会把这些代码编译成本地平台相关的机器码，并进行各种层次的优化，完成这个任务的编译器称为即时编译器(Just In Time Compiler, JIT编译器)。</p>
+<p>JIT 不是虚拟机必需部分，Java虚拟机规范也没有规定实现，但它却是衡量一款商用虚拟机优秀与否的关键指标，也是最能体现虚拟机技术水平的部分。本章所讲的内容都是基于HotSpot虚拟机。</p>
+<h2 id="HotSpot-虚拟机的JIT"><a href="#HotSpot-虚拟机的JIT" class="headerlink" title="HotSpot 虚拟机的JIT"></a>HotSpot 虚拟机的JIT</h2><p>首先看几个问题：</p>
+<ul>
+<li>为何要使用解释器与编译器并存架构    </li>
+<li>为何要实现两个不同的JIT    </li>
+<li>程序何时使用解释器执行？何时使用编译器执行？    </li>
+<li>哪些程序代码会被编译为本地代码？如何编译为本地代码？    </li>
+<li>如何从外部观察JIT的编译过程和编译结果？    </li>
+</ul>
+<h3 id="解释器与编译器"><a href="#解释器与编译器" class="headerlink" title="解释器与编译器"></a>解释器与编译器</h3><p>第一个问题，解释器与编译器两者各有优势：当程序需要迅速启动和执行时，解释器可以首先发挥作用，省去编译的时间，立即执行；程序运行后，随着时间推移，编译器逐渐发挥作用，把越来越多的代码编译成本地代码之后，可以获取更高的执行效率。当程序运行环境中内存资源限制较大时，也可以使用解释执行节约内存。同时，解释器可以作为编译器激进优化时的一个“逃生门”。因此，在整个虚拟机架构中，解释器与编译器经常配合工作。</p>
+<p>第二个问题，两个不同的JIT一般称为 Client Compiler（也称为 C1 编译） 和 Server Compiler（也称为 C2 编译） 。虚拟机一般会启用分层编译策略，分层编译根据编译器编译、优化的规模与耗时，划分出不同的编译层次：</p>
+<ol>
+<li>第0层：解释执行，解释器不开启性能监控(Profiling)，可触发第1层编译。    </li>
+<li>第1层，也称C1编译，将字节码编译成本地代码，进行简单、可靠的优化，如有必要将加入性能监控的逻辑。    </li>
+<li>第2层，也称C2编译，将字节码编译为本地代码，但是会启用一些编译耗时较长的优化，甚至会根据性能监控信息进行一些不可靠的激进优化。</li>
+</ol>
+<p>实施分层编译后，C1和C2将会同时工作，许多代码会被多次编译，用C1获取更高的编译速度，用C2获取更好地编译质量，并且解释执行时也无需承担收集性能监控信息的任务。</p>
+<h3 id="编译对象与触发条件"><a href="#编译对象与触发条件" class="headerlink" title="编译对象与触发条件"></a>编译对象与触发条件</h3><p>第三个问题，上文提到，运行过程中会被即时编译器编译的“热点代码”有两类，即：</p>
+<ul>
+<li>被多次调用的方法。    </li>
+<li>被多次执行的循环体。    </li>
+</ul>
+<p>解释一下第二点，这是为了解决一个方法只被调用过一次或少量几次，但是方法体内部存在循环次数较多的循环体问题。这样，循环体的代码也被重复执行多次，因此这些代码也应该认为是“热点代码”。</p>
+<h3 id="编译过程"><a href="#编译过程" class="headerlink" title="编译过程"></a>编译过程</h3><p>默认设置下，无论是方法调用产生的即时编译请求还是OSR编译请求，虚拟机在代码编译器还未完成之前，都仍将按照解释方式执行。</p>
+<h2 id="编译优化技术"><a href="#编译优化技术" class="headerlink" title="编译优化技术"></a>编译优化技术</h2><p>以如下代码清单来说明编译优化：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">B</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> value;</span><br><span class="line">    <span class="function"><span class="keyword">final</span> <span class="keyword">int</span> <span class="title">get</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">return</span> value;</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.get();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    z = b.get();</span><br><span class="line">    sum = y + z;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>首先说明的是，这些代码优化变换是建立在代码的某种中间表示或机器码之上，绝不是建立在Java源码之上，这里是为了展示方便，使用了Java语言的语法来表示这些优化技术所发挥的作用。</strong></p>
+<p>以上的代码已经非常简单了，但仍有许多优化余地，第一步就是<strong>方法内联(Method Inlining)</strong>，内联后的foo函数代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    z = b.value;</span><br><span class="line">    sum = y + z;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>方法内联的重要性高于其他优化措施，它主要有两个目的：去除方法调用的成本(如建立栈帧等)  以及为其他优化方法建立良好的基础(方法内联膨胀后可以便于在更大范围上采取后续优化手段)。</p>
+<p>第二步进行 <strong>冗余访问消除(Redundant Loads Elimination)</strong>，假设上述代码中 do something 刽改变 b.value的值，那就可以将 z = b.value 替换为 z = y ，因为上一句 y = b.value 已经保证 y 与b.value 是一致的，这样就可以不用再去访问对象b的局部变量了。优化后的代码:</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    z = y;</span><br><span class="line">    sum = y + z;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>第三步我们进行<strong>复写传播(Copy Propagation)</strong>，因为在这段程序的逻辑中没有必要使用 z 这个变量，它与 y 是完全相等的，因此可以用 y 来替代 z ，复写传播后的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    y = y;</span><br><span class="line">    sum = y + y;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>第四步我们进行<strong>无用代码消除(Dead Code Elimination)</strong>。在上述代码清单中， y = y 是没有意义的，把它擦除后的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    sum = y + y;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>经过4次优化后，达到的效果一致，但是比原始代码省略了许多语句，执行效率也更高。接下来继续看几项有代表性的优化技术。</p>
+<h3 id="公共子表达式消除"><a href="#公共子表达式消除" class="headerlink" title="公共子表达式消除"></a>公共子表达式消除</h3><p>这是语言无关的经典优化技术之一，普遍用于各种编译器的经典优化技术，它的含义是：如果一个表达式E已经计算过了，并且从先前的计算到现在E中所有变量的值都没有发生变化，那么E的这次出现就成了公共子表达式。假设存在如下代码：</p>
+<blockquote>
+<p>int d = (c * b) * 12 + a + (a + b * c);</p>
+</blockquote>
+<p>这段代码交给JIT编译后，它将进行如下优化：因为 c * b 与 b * c 是一样的表达式，并且在计算期间 b 与 c 的值是不可变的，因此表达式可能会被视为：</p>
+<blockquote>
+<p>int d = E * 12 + a + (a + E);</p>
+</blockquote>
+<p>这时候，编译器还可能进行 <strong>代数化简(Algebraic Simplification)</strong>，把表达式变为：</p>
+<blockquote>
+<p>int d = E * 13 + a * 2;</p>
+</blockquote>
+<h3 id="数组边界检查消除"><a href="#数组边界检查消除" class="headerlink" title="数组边界检查消除"></a>数组边界检查消除</h3><p>如果有一个数组 foo[] ，在Java语言中访问数组元素 foo[i] 的时候系统将会自动进行上下界的范围检查，即i必须满足 i&gt;= 0 &amp;&amp; i &lt; foo.length ，否则抛出异常。 为了安全，数组边界检查是必须的，但是运行期间一次不漏地检查则优点浪费，是可以“商量”的。假如程序中访问一个对象 foo 的某个属性 value，那以Java伪代码表示虚拟机访问的过程如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(foo != <span class="keyword">null</span>) {</span><br><span class="line">    <span class="keyword">return</span> foo.value;</span><br><span class="line">}<span class="keyword">else</span> {</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> NullPointException();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在使用隐式异常优化后，虚拟机会把上述代码变为如下伪代码过程：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span> {</span><br><span class="line">    <span class="keyword">return</span> foo.value;</span><br><span class="line">}<span class="keyword">catch</span>(segment_fault) {</span><br><span class="line">    uncommon_trap();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>虚拟机会注册一个 segment_fault 信号的异常处理(uncommon_trap),这样当foo不空的时候，对value的访问是不会额外消耗一次对foo判空的开销的。代价就是当 foo 真的为空时，必须转入到异常处理器中恢复并抛出 NullPointException异常，这个过程必须从用户态转到内核态中处理，结束后再回到用户态，速度远比一次判空检查慢，但当 foo 极少为空的时候，隐式异常优化是值得的。</p>
+<h3 id="方法内联"><a href="#方法内联" class="headerlink" title="方法内联"></a>方法内联</h3><p>方法内联是编译器最重要的优化手段之一，除了消除方法调用的成本之外，它更重要的意义在于为其他优化手段建立良好的基础，如下代码就解释了内联对其他优化手段的意义：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">(Object obj)</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(obj != <span class="keyword">null</span>){</span><br><span class="line">        System.out.println(<span class="string">"do something"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">testInline</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    Object obj = <span class="keyword">null</span>;</span><br><span class="line">    foo(obj);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>事实上 testInline 方法的内部全部是无用代码，如果不做内联，后续即使进行了无用代码消除优化，也无法发现任何“Dead Code”，因为如果分开来看， foo() 和 testInline() 两个方法的操作都可能是有意义的。因此方法内联的意义不只是把目标方法“复制”到发起调用的方法中避免真实的方法调用。但实际上Java 虚拟机中的内联过程远没有那么简单，如果不是即时编译器做了一些努力，按照经典编译原理的优化理论，大多数的方法都无法进行内联。</p>
+<h3 id="逃逸分析"><a href="#逃逸分析" class="headerlink" title="逃逸分析"></a>逃逸分析</h3><p>逃逸分析的基本行为就是分析对象动态作用域：当一个对象在方法中被定义后，它可能被外部方法所引用，例如作为调用参数传递到其他方法中，称为方法逃逸；甚至还可能被外部线程访问到，譬如赋值给类变量或者可以在其他线程中访问的实例变量，称为线程逃逸。</p>
+<p>如果能证明一个方法不会逃逸到方法或线程外，则可能为这个变量进行一些高效优化：</p>
+<ul>
+<li><p>栈上分配(Stack Allocation)：Java 虚拟机中，在Java 堆上分配创建对象的内存空间几乎是Java程序员都清楚的常识了，Java堆中的对象对于各个线程都是共享和可见的，只要持有这个对象的引用，就可以访问堆中存储的对象数据。虚拟机的垃圾收集系统可以回收堆中不再使用的对象，但回收动作（无论是筛选可回收对象还是回收和整理内存）都需要耗费时间。如果确定一个对象不会逃逸出方法之外，那让这个对象在栈上分配内存将会是一个很不错的主意，对象所占的内存空间就可以随栈帧出栈而销毁。在一般应用中，不会逃逸的局部对象所占比例很大，如果能使用栈上分配，那大量的对象就会随着方法的结束而自动销毁，减小垃圾收集系统的压力。</p>
+</li>
+<li><p>同步消除(Synchronization Elimination)：线程同步本身是一个相对耗时的过程，如果逃逸分析能够确定一个变量不会逃逸出线程，无法被其他线程访问，那么变量的读写肯定不会有竞争，对这个变量实施的同步措施就可以被消除。</p>
+</li>
+<li><p>标量替换(Scalar Replacement)：标量(Scalar)是指一个数据已经无法再分解成更小的数据来表示了，Java虚拟机中的原始数据类型(int、long等数值类型及 refrence 类型等)都不能再进一步分解，它们就可以称为标量。相对地，如果一个数据可以继续分解，那它就称作聚合量，Java中的对象就是最典型的聚合量。如果把一个Java 对象拆散，根据程序访问情况将其使用到的成员变量恢复原始类型来访问就叫做标量替换。    </p>
+<blockquote>
+<p>如果逃逸分析证明一个对象不会被外部访问，并且这个对象可以被拆散的话，那程序真正执行的时候将可能不创建这个对象，而改为直接创建它的若干个被这个方法使用到的成员变量来代替。将对象拆分后，除了可以让对象的成员变量在栈上分配和读写外，还可以为后续进一步优化手段创建条件。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="Java-与-C-C-的编译器对比"><a href="#Java-与-C-C-的编译器对比" class="headerlink" title="Java 与 C/C++的编译器对比"></a>Java 与 C/C++的编译器对比</h2><p>有兴趣的时候再来补上，略。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1709,185 +1864,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/05/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/05/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/" class="post-title-link" itemprop="url">第2章——IPC机制</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-05-11 22:40:00" itemprop="dateCreated datePublished" datetime="2019-05-11T22:40:00+08:00">2019-05-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:43:34" itemprop="dateModified" datetime="2019-11-17T21:43:34+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>提到IPC的使用场景就必须提到多进程，如果只有一个进程，又何必使用进程间通信。多进程的情况分为两种：第一种是应用本身需要采用多进程模式实现（比如通过多个进程来获取多份内存空间）；第二种是当前应用需要向其他应用获取数据，由于是两个应用，因此必须采用跨进程通信方式。</p>
-<h2 id="Android中的多进程模式"><a href="#Android中的多进程模式" class="headerlink" title="Android中的多进程模式"></a>Android中的多进程模式</h2><p>我们不讨论两个应用之间的多进程情况。</p>
-<h3 id="1、开启多进程"><a href="#1、开启多进程" class="headerlink" title="1、开启多进程"></a>1、开启多进程</h3><p>，Android中使用多进程有两种方法：第一种是给四大组件在AndroidManifest中指定 android:process 属性；第二种是非常规方式，通过JNI在native层去fork一个新的进程。第二种情况属于特殊情况，暂时不考虑。</p>
-<h3 id="2、多线程模式的运行机制"><a href="#2、多线程模式的运行机制" class="headerlink" title="2、多线程模式的运行机制"></a>2、多线程模式的运行机制</h3><p>如果用一句话形容多进程，那就是：“当应用开启了多进程以后，各种奇怪的现象都出现了”，开启多线程只需要给四大组件指定 android:process 属性，但是是否正常运行就是另外一回事了。看个例子：</p>
-<blockquote>
-<p>有 MainActivity 和 SecondActivity，其中 SecondActivity 指定运行在一个新的进程中，并且项目还新建一个 UserManager 类，类中有个public 的静态变量：</p>
-</blockquote>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UserManager</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> sUserId = <span class="number">1</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>在 MainActivity 的 onCreate 中把 sUserId 的值改为2，打印sUserId，之后再启动 SecondActivity ，在 SecondActivity 中打印 sUserId 。</p>
-</blockquote>
-<p><strong>可以发现在 MainActivity 中打印的值是2，在 SecondActivity 中打印的值是 1 ，看到这里，大家应该明白了多进程带来的问题，绝非只是指定一个 android:process 这么简单</strong>。</p>
-<p><strong>分析：</strong>我们知道，Android 系统为每个进程都分配一个独立的虚拟机，不同的虚拟机在内存分配上有不同的地址空间，这就导致在不同的虚拟机中访问同一个类的对象会产生<strong>多份副本</strong>。拿上面的例子来说，两个进程中都存在一个 UserManager 类，并且这两个类是互相不干扰的，在一个进程中修改 sUserId 的值只会影响当前进程，对其他进程不会造成任何影响。</p>
-<p>通过以上可以知道，运行在不同进程中的四大组件，只要他们之间需要通过内存来共享数据，都会共享失败，这也是多进程所带来的主要影响。一般来说，使用多进程会造成如下几个方面的问题：</p>
-<ul>
-<li>静态成员和单例模式完全失效  </li>
-</ul>
-<blockquote>
-<p>上面做了分析</p>
-</blockquote>
-<ul>
-<li>线程同步机制完全失效 </li>
-</ul>
-<blockquote>
-<p>既然都不是一块内存了，那么不管是锁对象还是锁全局类都无法保证线程同步，因为不同进程锁的不是同一个对象</p>
-</blockquote>
-<ul>
-<li>SharedPreference 的可靠性下降  </li>
-</ul>
-<blockquote>
-<p>是因为 SharedPreference 不支持两个进程同时去执行写操作，否则会导致可能的数据丢失（因其本质是通过读写xml文件来实现的）</p>
-</blockquote>
-<ul>
-<li>Application 会多次创建  </li>
-</ul>
-<blockquote>
-<p>这个问题是显而易见的，由于系统要在创建新的进程同时分配独立的虚拟机，所以这个过程其实就是启动一个应用的过程，因此相当于系统又把应用重新启动了一遍，自然就创建了新的Application。还可以这么理解，运行在同一个进程中的组件是属于同一个虚拟机和同一个Application的；同理，运行在不同进程中的组件是属于两个不同的虚拟机和Application。</p>
-</blockquote>
-<h2 id="IPC-基础概念介绍"><a href="#IPC-基础概念介绍" class="headerlink" title="IPC 基础概念介绍"></a>IPC 基础概念介绍</h2><p>IPC 中的基础概念包括3方面内容： Serializable 接口、Parcelable接口、Binder。</p>
-<h3 id="1、Serializable-接口"><a href="#1、Serializable-接口" class="headerlink" title="1、Serializable 接口"></a>1、Serializable 接口</h3><p>Serializable 是Java提供的一个空的序列化接口，为对象提标准的序列化和反序列化操作。使用 Serializable 实现序列化非常简单，只需要类实现 Serializable 接口，并且在类的声明中指定一个类似下面的标识：</p>
-<blockquote>
-<p>private static final long serialVersionUID = 12345L</p>
-</blockquote>
-<p>实际上，这个 serialVersionUID 也不是必需的，因为serialVersionUID 的机制是这样的： 序列化时，系统会把当前类的 serialVersionUID 写入序列化的文件中；当反序列化的时候，会去检测文件中的 serialVersionUID 是否和当前类的 serialVersionUID 一致，如果一致说明序列化的类版本和当前类的版本是相同的，就可以成功反序列化；否则的话，说明当前类和序列化的类相比发生了某些变换，就无法正常反序列化。以下例子说明 Serializable 的使用：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//序列化的类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">User</span> <span class="keyword">implements</span> <span class="title">Serializable</span></span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = <span class="number">12345L</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">int</span> id;</span><br><span class="line">    <span class="keyword">public</span> String userName;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**********使用*****************/</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//序列化</span></span><br><span class="line">User user = <span class="keyword">new</span> User(<span class="number">12</span>,<span class="string">"tom"</span>);</span><br><span class="line">ObjectOutputStream out = <span class="keyword">new</span> ObjectOutputStream(<span class="keyword">new</span> FileOutputStream(<span class="string">"cache.txt"</span>));</span><br><span class="line">out.writeObject(user);</span><br><span class="line">out.close();</span><br><span class="line"></span><br><span class="line"><span class="comment">//反序列化过程</span></span><br><span class="line">ObjectInputStream in = <span class="keyword">new</span> ObjectInputStream(<span class="keyword">new</span> FileInputStream(<span class="string">"cache.txt"</span>));</span><br><span class="line">User newUser = (User)in.readObject();</span><br><span class="line">in.close();</span><br></pre></td></tr></tbody></table></figure>
-
-<p>另外，系统默认的序列化过程也是可以改变的，通过重写 writeObject 和 readObject 方法即可，只不过大部分情况下我们无需去重写这两个方法。</p>
-<h3 id="2、Parcelable-接口"><a href="#2、Parcelable-接口" class="headerlink" title="2、Parcelable 接口"></a>2、Parcelable 接口</h3><p>Parcelable 也是一个接口，只要实现这个接口，类的对象就可以实现序列化并通过 Intent 和 Binder 传递。</p>
-<p>具体使用方法可以查看<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/os/Parcelable.html">官方文档</a></p>
-<p>既然 Parcelable 和 Serializable 都能实现序列化并且都可用于 Intent 间的数据传递，那如何取舍呢？Serializable 是Java中的序列化接口，序列化和反序列化需要大量I/O操作；而Parcelable 是 Android 中的序列化方式，主要用在内存序列化上，使用起来稍显麻烦，但是效率高，所以这是 Android 官方推荐的序列化方式。综上所述，将对象序列化存储到设备或者通过网络传输时使用 Serializable ，否则使用 Parcelable 。</p>
-<h3 id="3、Binder"><a href="#3、Binder" class="headerlink" title="3、Binder"></a>3、Binder</h3><p>Binder 是 Android 中的一种 IPC 方式，还可以理解为一种虚拟的物理设备，它的设备驱动是 dev/binder。</p>
-<h2 id="Android-中的-IPC-方式"><a href="#Android-中的-IPC-方式" class="headerlink" title="Android 中的 IPC 方式"></a>Android 中的 IPC 方式</h2><h3 id="使用Bundle"><a href="#使用Bundle" class="headerlink" title="使用Bundle"></a>使用Bundle</h3><p>由于Bundle 实现了 Parcelable 接口，所以它可以方便地再不同的进程间传输，基于这一点，当我们在一个进程中启动了另一个进程的 Activity、Service 和 Receiver，我们就可以在Bundle 中附加我们需要传给其他进程的信息，并通过Intent 发送出去，这是一种最简单的进程间通信方式。</p>
-<h3 id="使用文件共享"><a href="#使用文件共享" class="headerlink" title="使用文件共享"></a>使用文件共享</h3><p>共享文件是一种不错的进程间通讯方式，适合在对数据同步要求不高的进程间通信。当然，SharedPreferences 是个特例，由于系统对它的读写会有一定的缓存策略，即在内存中会有一份 SharedPreferences 文件的缓存，因此在多进程模式下，面对高并发的的读写会有很大几率丢失数据，因此不建议在进程间通信中使用 SharedPreferences。</p>
-<h3 id="使用-Messenger"><a href="#使用-Messenger" class="headerlink" title="使用 Messenger"></a>使用 Messenger</h3><p>顾名思义可以翻译成信使，通过它可以在不同的进程中传递 Message 对象,它是轻量级的 IPC 方案，底层实现是 AIDL 。Messenger 只是一串行的方式处理客户端发来的消息，如果大量的消息同时发送到服务端，服务端仍然只能一个个处理。具体可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/os/Messenger">官方文档</a></p>
-<h3 id="使用-AIDL"><a href="#使用-AIDL" class="headerlink" title="使用 AIDL"></a>使用 AIDL</h3><p>由于 Messenger 服务端只能串行处理，所以可以使用 AIDL 来实现跨进程调用。具体内容可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/guide/components/aidl">官方文档</a></p>
-<h3 id="使用-ContentProvider"><a href="#使用-ContentProvider" class="headerlink" title="使用 ContentProvider"></a>使用 ContentProvider</h3><p>这是Android 中提供的专门用于不同应用建进行数据共享的方式。</p>
-<h3 id="使用-Socket"><a href="#使用-Socket" class="headerlink" title="使用 Socket"></a>使用 Socket</h3><p>Socket 是网络通信中的概念，也称为“套接字”，<strong>它分为流式套接字和用户数据报套接字两种，分别对应于网络的传输控制层中的TCP和UDP协议</strong>。</p>
-<h2 id="选择合适的-IPC-方式"><a href="#选择合适的-IPC-方式" class="headerlink" title="选择合适的 IPC 方式"></a>选择合适的 IPC 方式</h2><table>
-<thead>
-<tr>
-<th>名称</th>
-<th>优点</th>
-<th>缺点</th>
-<th>适用场景</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Bundle</td>
-<td>简单易用</td>
-<td>只能传输Bundle支持的数据类型</td>
-<td>四大组件之间的通信</td>
-</tr>
-<tr>
-<td>文件共享</td>
-<td>简单易用</td>
-<td>不适合高并发</td>
-<td>无并发，数据实时性要求不高</td>
-</tr>
-<tr>
-<td>AIDL</td>
-<td>功能强大，支持一对多，支持实时</td>
-<td>使用复杂</td>
-<td>一对多通信且有RPC需求</td>
-</tr>
-<tr>
-<td>Messenger</td>
-<td>一对多串行通信，支持实时</td>
-<td>高并发困难，不支持RPC，只能传输Bundle支持的数据</td>
-<td>低并发的一对多通信</td>
-</tr>
-<tr>
-<td>ContentProvider</td>
-<td>数据源访问功能强大</td>
-<td>理解为受约束的AIDL，主要提供数据源的 CRUD 操作</td>
-<td>一对多的进程间数据共享</td>
-</tr>
-<tr>
-<td>Socket</td>
-<td>支持一对多并发实时通信，支持字节流</td>
-<td>实现繁琐</td>
-<td>网络数据交换</td>
-</tr>
-</tbody></table>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1938,7 +1914,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">115</span>
+          <span class="site-state-item-count">116</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2024,7 +2000,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共271.4k字</span>
+  <span class="post-count">博客全站共274k字</span>
 </div>
 
 
