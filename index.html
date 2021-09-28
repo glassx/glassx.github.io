@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">122</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">123</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,112 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/28/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/ViewPager2%E6%BB%91%E5%8A%A8%E5%86%B2%E7%AA%81%E8%A7%A3%E5%86%B3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/28/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/ViewPager2%E6%BB%91%E5%8A%A8%E5%86%B2%E7%AA%81%E8%A7%A3%E5%86%B3/" class="post-title-link" itemprop="url">Android基础-ViewPager2滑动冲突处理</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-28 16:18:00 / 修改时间：16:18:59" itemprop="dateCreated datePublished" datetime="2021-09-28T16:18:00+08:00">2021-09-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="为什么-ViewPager-没有滑动冲突"><a href="#为什么-ViewPager-没有滑动冲突" class="headerlink" title="为什么 ViewPager 没有滑动冲突"></a>为什么 ViewPager 没有滑动冲突</h2><p>可能你会有疑问，在 ViewPager 时代，ViewPager 嵌套 ViewPager 并没有出现过滑动冲突。但为什么在升级了 ViewPager2 之后就出现了滑动冲突呢？</p>
+<p>既然如此，我们看下 ViewPager 的 onInterceptTouchEvent 方法（为了方便阅读，代码做了删减）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">      <span class="meta">@Override</span></span><br><span class="line"> <span class="number">2</span>    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>{</span><br><span class="line"> <span class="number">3</span></span><br><span class="line"> <span class="number">4</span>        <span class="keyword">final</span> <span class="keyword">int</span> action = ev.getAction() &amp; MotionEvent.ACTION_MASK;</span><br><span class="line"> <span class="number">5</span>        <span class="keyword">if</span> (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {</span><br><span class="line"> <span class="number">6</span>            <span class="comment">// 在事件取消或者抬起手指后重置状态</span></span><br><span class="line"> <span class="number">7</span>            resetTouch();</span><br><span class="line"> <span class="number">8</span>            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">9</span>        }</span><br><span class="line"><span class="number">10</span></span><br><span class="line"><span class="number">11</span>        <span class="keyword">switch</span> (action) {</span><br><span class="line"><span class="number">12</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">13</span>                <span class="comment">// 这里判断在水平方向上的滑动距离大于竖直方向的2倍，则认为是有效的切换页面的滑动</span></span><br><span class="line"><span class="number">14</span>                <span class="keyword">if</span> (xDiff &gt; mTouchSlop &amp;&amp; xDiff * <span class="number">0.5f</span> &gt; yDiff) { </span><br><span class="line"><span class="number">15</span>                    mIsBeingDragged = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">16</span>                    <span class="comment">// 禁止Parent View拦截事件，即事件要能够传递到ViewPager</span></span><br><span class="line"><span class="number">17</span>                    requestParentDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"><span class="number">18</span>                    setScrollState(SCROLL_STATE_DRAGGING);</span><br><span class="line"><span class="number">19</span>                } <span class="keyword">else</span> <span class="keyword">if</span> (yDiff &gt; mTouchSlop) {</span><br><span class="line"><span class="number">20</span>                    mIsUnableToDrag = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">21</span>                }</span><br><span class="line"><span class="number">22</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">23</span>            }</span><br><span class="line"><span class="number">24</span></span><br><span class="line"><span class="number">25</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {     </span><br><span class="line"><span class="number">26</span>                <span class="keyword">if</span> (mScrollState == SCROLL_STATE_SETTLING</span><br><span class="line"><span class="number">27</span>                        &amp;&amp; Math.abs(mScroller.getFinalX() - mScroller.getCurrX()) &gt; mCloseEnough) {</span><br><span class="line"><span class="number">28</span>                       <span class="comment">// 在Down事件中禁止Parent View拦截事件，是为了事件序列能够传递到ViewPager</span></span><br><span class="line"><span class="number">29</span>                    requestParentDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"><span class="number">30</span>                    setScrollState(SCROLL_STATE_DRAGGING);</span><br><span class="line"><span class="number">31</span>                } <span class="keyword">else</span> {</span><br><span class="line"><span class="number">32</span>                    completeScroll(<span class="keyword">false</span>);</span><br><span class="line"><span class="number">33</span>                    mIsBeingDragged = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">34</span>                }</span><br><span class="line"><span class="number">35</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">36</span>            }</span><br><span class="line"><span class="number">37</span></span><br><span class="line"><span class="number">38</span>            <span class="keyword">case</span> MotionEvent.ACTION_POINTER_UP:</span><br><span class="line"><span class="number">39</span>                onSecondaryPointerUp(ev);</span><br><span class="line"><span class="number">40</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">41</span>        }</span><br><span class="line"><span class="number">42</span>        <span class="keyword">return</span> mIsBeingDragged;</span><br><span class="line"><span class="number">43</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看到，首先在 ACTION_DOWN 的时候通过 requestParentDisallowInterceptTouchEvent(true) 禁止 Parent View 拦截事件，以便后续的事件还能传到 ViewPager 中来；在 ACTION_MOVE 的时候也会有 <strong>水平方向上的滑动距离大于竖直方向的2倍</strong> 条件来判断是否需要禁止 Parent View 拦截事件。</p>
+<p>所以 ViewPager 时我们只管用，无需担心滑动冲突的问题。再看下 ViewPager2 的 onInterceptTouchEvent 方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span>    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">RecyclerViewImpl</span> <span class="keyword">extends</span> <span class="title">RecyclerView</span> </span>{</span><br><span class="line"><span class="number">2</span></span><br><span class="line"><span class="number">3</span>        .... <span class="comment">// 省略部分代码</span></span><br><span class="line"><span class="number">4</span></span><br><span class="line"><span class="number">5</span>        <span class="meta">@Override</span></span><br><span class="line"><span class="number">6</span>        <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>{</span><br><span class="line"><span class="number">7</span>            <span class="keyword">return</span> isUserInputEnabled() &amp;&amp; <span class="keyword">super</span>.onInterceptTouchEvent(ev);</span><br><span class="line"><span class="number">8</span>        }</span><br><span class="line"><span class="number">9</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>它并没有为我们做冲突处理！为什么呢？<strong>因为 ViewPager2 被声明成 final 的，并不能继承，</strong>假如它像 ViewPager 一样官方给处理了滑动冲突，那么如果有特殊要求的情况下，官方的冲突处理可能会妨碍我们自己写的冲突处理，所以全权交给开发者自己处理了。</p>
+<h2 id="滑动冲突的处理方案"><a href="#滑动冲突的处理方案" class="headerlink" title="滑动冲突的处理方案"></a>滑动冲突的处理方案</h2><p>在处理滑动冲突之前先了解处理滑动冲突的两种方案。</p>
+<h3 id="外部拦截法"><a href="#外部拦截法" class="headerlink" title="外部拦截法"></a>外部拦截法</h3><p>所谓的 “外部拦截法” 这个 “外部” 是指 出现滑动冲突的这两个布局的外层。因为，一个事件序列是由 Parent View 先获取的，如果 Parent View 不拦截事件才会交给子 View 去处理，既然外部先获知事件，那外层 View 根据情况来决定是否要拦截事件就行了。大概思路如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"> <span class="number">1</span>     <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent event)</span> </span>{</span><br><span class="line"> <span class="number">2</span>        <span class="keyword">boolean</span> intercepted = <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">3</span>        <span class="keyword">int</span> x = (<span class="keyword">int</span>) event.getX();</span><br><span class="line"> <span class="number">4</span>        <span class="keyword">int</span> y = (<span class="keyword">int</span>) event.getY();</span><br><span class="line"> <span class="number">5</span>        <span class="keyword">switch</span> (event.getAction()) {</span><br><span class="line"> <span class="number">6</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {</span><br><span class="line"> <span class="number">7</span>                intercepted = <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">8</span>                <span class="keyword">break</span>;</span><br><span class="line"> <span class="number">9</span>            }</span><br><span class="line"><span class="number">10</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">11</span>                <span class="keyword">if</span> (needIntercept) { <span class="comment">// 这里根据需求判断是否需要拦截</span></span><br><span class="line"><span class="number">12</span>                    intercepted = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">13</span>                } <span class="keyword">else</span> {</span><br><span class="line"><span class="number">14</span>                    intercepted = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">15</span>                }</span><br><span class="line"><span class="number">16</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">17</span>            }</span><br><span class="line"><span class="number">18</span>            <span class="keyword">case</span> MotionEvent.ACTION_UP: {</span><br><span class="line"><span class="number">19</span>                intercepted = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">20</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">21</span>            }</span><br><span class="line"><span class="number">22</span>            <span class="keyword">default</span>:</span><br><span class="line"><span class="number">23</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">24</span>        }</span><br><span class="line"><span class="number">25</span>        mLastXIntercept = x;</span><br><span class="line"><span class="number">26</span>        mLastYIntercept = y;</span><br><span class="line"><span class="number">27</span>        <span class="keyword">return</span> intercepted;</span><br><span class="line"><span class="number">28</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>首先也是在 ACTION_DOWN 中不做拦截，其次是在 ACTION_MOVE 中根据需要拦截。</p>
+<h2 id="内部拦截法"><a href="#内部拦截法" class="headerlink" title="内部拦截法"></a>内部拦截法</h2><p>所谓“内部拦截法”指的是对内部的View 做文章，<strong>让内部 View 决定是不是拦截事件</strong>。因为 Google 官方提供了 requestDisallowInterceptTouchEvent 方法，它接收一个 Boolean 值，意思是是否要禁止父 ViewGroup 拦截当前事件，如果是 true 的话，父 ViewGroup 就无法对事件进行拦截，看下具体实现：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"> <span class="number">1</span>     <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">dispatchTouchEvent</span><span class="params">(MotionEvent event)</span> </span>{</span><br><span class="line"> <span class="number">2</span>        <span class="keyword">int</span> x = (<span class="keyword">int</span>) event.getX();</span><br><span class="line"> <span class="number">3</span>        <span class="keyword">int</span> y = (<span class="keyword">int</span>) event.getY();</span><br><span class="line"> <span class="number">4</span></span><br><span class="line"> <span class="number">5</span>        <span class="keyword">switch</span> (event.getAction()) {</span><br><span class="line"> <span class="number">6</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {</span><br><span class="line"> <span class="number">7</span>                <span class="comment">// 禁止parent拦截down事件</span></span><br><span class="line"> <span class="number">8</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"> <span class="number">9</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">10</span>            }</span><br><span class="line"><span class="number">11</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">12</span>                <span class="keyword">int</span> deltaX = x - mLastX;</span><br><span class="line"><span class="number">13</span>                <span class="keyword">int</span> deltaY = y - mLastY;</span><br><span class="line"><span class="number">14</span>                <span class="keyword">if</span> (disallowParentInterceptTouchEvent) { <span class="comment">// 根据需求条件来决定是否让Parent View拦截事件。</span></span><br><span class="line"><span class="number">15</span>                    parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>);</span><br><span class="line"><span class="number">16</span>                }</span><br><span class="line"><span class="number">17</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">18</span>            }</span><br><span class="line"><span class="number">19</span>            <span class="keyword">case</span> MotionEvent.ACTION_UP: {</span><br><span class="line"><span class="number">20</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">21</span>            }</span><br><span class="line"><span class="number">22</span>            <span class="keyword">default</span>:</span><br><span class="line"><span class="number">23</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">24</span>        }</span><br><span class="line"><span class="number">25</span></span><br><span class="line"><span class="number">26</span>        mLastX = x;</span><br><span class="line"><span class="number">27</span>        mLastY = y;</span><br><span class="line"><span class="number">28</span>        <span class="keyword">return</span> <span class="keyword">super</span>.dispatchTouchEvent(event);</span><br><span class="line"><span class="number">29</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 dispatchTouchEvent 的 ACTION_DOWN 和 ACTION_MOVE 行为中，分别执行相应动作来判断是否允许 Parent View 拦截自己的事件。</p>
+<h2 id="处理-ViewPager2-的滑动冲突"><a href="#处理-ViewPager2-的滑动冲突" class="headerlink" title="处理 ViewPager2 的滑动冲突"></a>处理 ViewPager2 的滑动冲突</h2><p>在解决冲突之前，我们首先要确定下存在哪些需要拦截哪些不需要拦截的边界条件，来分析下：</p>
+<ul>
+<li>如果设置了 userInputEnable=false ，那么ViewPager2不应该拦截任何事件；</li>
+<li>如果只有一个Item，那么ViewPager2也不应该拦截事件；</li>
+<li>如果是多个Item，且当前是第一个页面，那么只能拦截向左的滑动事件，向右的滑动事件就不应该由ViewPager2拦截了；</li>
+<li>如果是多个Item，且当前是最后一个页面，那么只能拦截向右的滑动事件，向左的滑动事件不应该由当前的ViewPager2拦截；</li>
+<li>如果是多个Item，且是中间页面，那么无论向左还是向右的事件都应该由ViewPager2拦截；</li>
+<li>最后，由于ViewPager2是支持竖直滑动的，那么竖直滑动也应该考虑以上条件。</li>
+</ul>
+<p>分析完成后，我们看下应该使用哪种方案来处理滑动冲突，很明显，我们应该使用 <strong>内部拦截法</strong>，但是，由于 ViewPager2 被设置为了 final ，我们无法通过继承方式来处理。</p>
+<p>所以，<strong>我们需要在 ViewPager2 外部包裹一层自定义的 Layout，在它里面实现事件拦截逻辑，用它来实现内部拦截！</strong>看代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line">  1class ViewPager2Container <span class="meta">@JvmOverloads</span> constructor(context: Context, attrs: AttributeSet? = <span class="keyword">null</span>, defStyleAttr: Int = <span class="number">0</span>) : RelativeLayout(context, attrs, defStyleAttr) {</span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span>    <span class="keyword">private</span> <span class="keyword">var</span> mViewPager2: ViewPager2? = <span class="keyword">null</span></span><br><span class="line">  <span class="number">4</span>    <span class="keyword">private</span> <span class="keyword">var</span> disallowParentInterceptDownEvent = <span class="keyword">true</span></span><br><span class="line">  <span class="number">5</span>    <span class="keyword">private</span> <span class="keyword">var</span> startX = <span class="number">0</span></span><br><span class="line">  <span class="number">6</span>    <span class="keyword">private</span> <span class="keyword">var</span> startY = <span class="number">0</span></span><br><span class="line">  <span class="number">7</span></span><br><span class="line">  <span class="number">8</span>    <span class="function">override fun <span class="title">onFinishInflate</span><span class="params">()</span> </span>{</span><br><span class="line">  <span class="number">9</span>        <span class="keyword">super</span>.onFinishInflate()</span><br><span class="line"> <span class="number">10</span>        <span class="keyword">for</span> (i in <span class="number">0</span> until childCount) {</span><br><span class="line"> <span class="number">11</span>            val childView = getChildAt(i)</span><br><span class="line"> <span class="number">12</span>            <span class="keyword">if</span> (childView is ViewPager2) {</span><br><span class="line"> <span class="number">13</span>                mViewPager2 = childView</span><br><span class="line"> <span class="number">14</span>                <span class="keyword">break</span></span><br><span class="line"> <span class="number">15</span>            }</span><br><span class="line"> <span class="number">16</span>        }</span><br><span class="line"> <span class="number">17</span>        <span class="keyword">if</span> (mViewPager2 == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">18</span>            <span class="keyword">throw</span> IllegalStateException(<span class="string">"The root child of ViewPager2Container must contains a ViewPager2"</span>)</span><br><span class="line"> <span class="number">19</span>        }</span><br><span class="line"> <span class="number">20</span>    }</span><br><span class="line"> <span class="number">21</span></span><br><span class="line"> <span class="number">22</span>    <span class="function">override fun <span class="title">onInterceptTouchEvent</span><span class="params">(ev: MotionEvent)</span>: Boolean </span>{</span><br><span class="line"> <span class="number">23</span>        val doNotNeedIntercept = (!mViewPager2!!.isUserInputEnabled</span><br><span class="line"> <span class="number">24</span>                || (mViewPager2?.adapter != <span class="keyword">null</span></span><br><span class="line"> <span class="number">25</span>                &amp;&amp; mViewPager2?.adapter!!.itemCount &lt;= <span class="number">1</span>))</span><br><span class="line"> <span class="number">26</span>        <span class="keyword">if</span> (doNotNeedIntercept) {</span><br><span class="line"> <span class="number">27</span>            <span class="keyword">return</span> <span class="keyword">super</span>.onInterceptTouchEvent(ev)</span><br><span class="line"> <span class="number">28</span>        }</span><br><span class="line"> <span class="number">29</span>        when (ev.action) {</span><br><span class="line"> <span class="number">30</span>            MotionEvent.ACTION_DOWN -&gt; {</span><br><span class="line"> <span class="number">31</span>                startX = ev.x.toInt()</span><br><span class="line"> <span class="number">32</span>                startY = ev.y.toInt()</span><br><span class="line"> <span class="number">33</span>                parent.requestDisallowInterceptTouchEvent(!disallowParentInterceptDownEvent)</span><br><span class="line"> <span class="number">34</span>            }</span><br><span class="line"> <span class="number">35</span>            MotionEvent.ACTION_MOVE -&gt; {</span><br><span class="line"> <span class="number">36</span>                val endX = ev.x.toInt()</span><br><span class="line"> <span class="number">37</span>                val endY = ev.y.toInt()</span><br><span class="line"> <span class="number">38</span>                val disX = abs(endX - startX)</span><br><span class="line"> <span class="number">39</span>                val disY = abs(endY - startY)</span><br><span class="line"> <span class="number">40</span>                <span class="keyword">if</span> (mViewPager2!!.orientation == ViewPager2.ORIENTATION_VERTICAL) {</span><br><span class="line"> <span class="number">41</span>                    onVerticalActionMove(endY, disX, disY)</span><br><span class="line"> <span class="number">42</span>                } <span class="keyword">else</span> <span class="keyword">if</span> (mViewPager2!!.orientation == ViewPager2.ORIENTATION_HORIZONTAL) {</span><br><span class="line"> <span class="number">43</span>                    onHorizontalActionMove(endX, disX, disY)</span><br><span class="line"> <span class="number">44</span>                }</span><br><span class="line"> <span class="number">45</span>            }</span><br><span class="line"> <span class="number">46</span>            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -&gt; parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">47</span>        }</span><br><span class="line"> <span class="number">48</span>        <span class="keyword">return</span> <span class="keyword">super</span>.onInterceptTouchEvent(ev)</span><br><span class="line"> <span class="number">49</span>    }</span><br><span class="line"> <span class="number">50</span></span><br><span class="line"> <span class="number">51</span>    <span class="function"><span class="keyword">private</span> fun <span class="title">onHorizontalActionMove</span><span class="params">(endX: Int, disX: Int, disY: Int)</span> </span>{</span><br><span class="line"> <span class="number">52</span>        <span class="keyword">if</span> (mViewPager2?.adapter == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">53</span>            <span class="keyword">return</span></span><br><span class="line"> <span class="number">54</span>        }</span><br><span class="line"> <span class="number">55</span>        <span class="keyword">if</span> (disX &gt; disY) {</span><br><span class="line"> <span class="number">56</span>            val currentItem = mViewPager2?.currentItem</span><br><span class="line"> <span class="number">57</span>            val itemCount = mViewPager2?.adapter!!.itemCount</span><br><span class="line"> <span class="number">58</span>            <span class="keyword">if</span> (currentItem == <span class="number">0</span> &amp;&amp; endX - startX &gt; <span class="number">0</span>) {</span><br><span class="line"> <span class="number">59</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">60</span>            } <span class="keyword">else</span> {</span><br><span class="line"> <span class="number">61</span>                parent.requestDisallowInterceptTouchEvent(currentItem != itemCount - <span class="number">1</span></span><br><span class="line"> <span class="number">62</span>                        || endX - startX &gt;= <span class="number">0</span>)</span><br><span class="line"> <span class="number">63</span>            }</span><br><span class="line"> <span class="number">64</span>        } <span class="keyword">else</span> <span class="keyword">if</span> (disY &gt; disX) {</span><br><span class="line"> <span class="number">65</span>            parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">66</span>        }</span><br><span class="line"> <span class="number">67</span>    }</span><br><span class="line"> <span class="number">68</span></span><br><span class="line"> <span class="number">69</span>    <span class="function"><span class="keyword">private</span> fun <span class="title">onVerticalActionMove</span><span class="params">(endY: Int, disX: Int, disY: Int)</span> </span>{</span><br><span class="line"> <span class="number">70</span>        <span class="keyword">if</span> (mViewPager2?.adapter == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">71</span>            <span class="keyword">return</span></span><br><span class="line"> <span class="number">72</span>        }</span><br><span class="line"> <span class="number">73</span>        val currentItem = mViewPager2?.currentItem</span><br><span class="line"> <span class="number">74</span>        val itemCount = mViewPager2?.adapter!!.itemCount</span><br><span class="line"> <span class="number">75</span>        <span class="keyword">if</span> (disY &gt; disX) {</span><br><span class="line"> <span class="number">76</span>            <span class="keyword">if</span> (currentItem == <span class="number">0</span> &amp;&amp; endY - startY &gt; <span class="number">0</span>) {</span><br><span class="line"> <span class="number">77</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">78</span>            } <span class="keyword">else</span> {</span><br><span class="line"> <span class="number">79</span>                parent.requestDisallowInterceptTouchEvent(currentItem != itemCount - <span class="number">1</span></span><br><span class="line"> <span class="number">80</span>                        || endY - startY &gt;= <span class="number">0</span>)</span><br><span class="line"> <span class="number">81</span>            }</span><br><span class="line"> <span class="number">82</span>        } <span class="keyword">else</span> <span class="keyword">if</span> (disX &gt; disY) {</span><br><span class="line"> <span class="number">83</span>            parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">84</span>        }</span><br><span class="line"> <span class="number">85</span>    }</span><br><span class="line"> <span class="number">86</span></span><br><span class="line"> <span class="number">87</span>    <span class="comment">/**</span></span><br><span class="line"><span class="comment"> 88     * 设置是否允许在当前View的{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View对事件的拦截，该方法</span></span><br><span class="line"><span class="comment"> 89     * 用于解决CoordinatorLayout+CollapsingToolbarLayout在嵌套ViewPager2Container时引起的滑动冲突问题。</span></span><br><span class="line"><span class="comment"> 90     *</span></span><br><span class="line"><span class="comment"> 91     * 设置是否允许在ViewPager2Container的{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View对事件的拦截，该方法</span></span><br><span class="line"><span class="comment"> 92     * 用于解决CoordinatorLayout+CollapsingToolbarLayout在嵌套ViewPager2Container时引起的滑动冲突问题。</span></span><br><span class="line"><span class="comment"> 93     *</span></span><br><span class="line"><span class="comment"> 94     * <span class="doctag">@param</span> disallowParentInterceptDownEvent 是否允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View拦截事件，默认值为false</span></span><br><span class="line"><span class="comment"> 95     *                          true 不允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}时间中禁止父View的时间拦截，</span></span><br><span class="line"><span class="comment"> 96     *                          设置disallowIntercept为true可以解决CoordinatorLayout+CollapsingToolbarLayout的滑动冲突</span></span><br><span class="line"><span class="comment"> 97     *                          false 允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}时间中禁止父View的时间拦截，</span></span><br><span class="line"><span class="comment"> 98     */</span></span><br><span class="line"> <span class="number">99</span>    <span class="function">fun <span class="title">disallowParentInterceptDownEvent</span><span class="params">(disallowParentInterceptDownEvent: Boolean)</span> </span>{</span><br><span class="line"><span class="number">100</span>        <span class="keyword">this</span>.disallowParentInterceptDownEvent = disallowParentInterceptDownEvent</span><br><span class="line"><span class="number">101</span>    }</span><br><span class="line"><span class="number">102</span>}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>代码已经很清楚了，但是主要注意一下： <strong>在onFinishInflate中我们通过循环，遍历自定义 Layout 的所有子 View ，如果没有找到 ViewPager2 就抛出异常</strong>。</p>
+<blockquote>
+<p> 以上内容参考自<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/7iqXs2z3z20dQR7Ocv_qiQ">刘望舒的公众号</a>，如果链接失效，可以查看原文<a target="_blank" rel="noopener" href="https://juejin.cn/post/6911456860533063688">赌一包辣条的博客</a></p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1565,219 +1671,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/06/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E5%8D%A1%E9%A1%BF-ANR%E7%AD%89%E7%BA%BF%E4%B8%8A%E7%9B%91%E6%8E%A7/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/06/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E5%8D%A1%E9%A1%BF-ANR%E7%AD%89%E7%BA%BF%E4%B8%8A%E7%9B%91%E6%8E%A7/" class="post-title-link" itemprop="url">卡顿、ANR、死锁线上监控</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-09-06 20:00:00 / 修改时间：20:27:10" itemprop="dateCreated datePublished" datetime="2021-09-06T20:00:00+08:00">2021-09-06</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>性能优化这块，很多人只能说出传统的分析方式，比如 ANR 分析，只会通过<strong>查看/data/arn/下的log</strong>，分析主线程堆栈、cpu、锁等信息。但是这种方法有<strong>局限性，有些高版本设备需要root权限才能访问 /data/anr/ 目录</strong>，或者，如果只是用户反馈，我们压根没法复现的情况，就很难分析问题了。</p>
-<h2 id="卡顿原理与监控"><a href="#卡顿原理与监控" class="headerlink" title="卡顿原理与监控"></a>卡顿原理与监控</h2><p>卡顿原理里面需要注意的一点是：存在消息屏障的情况下，*<em>当异步消息被处理完后，如果没有及时把消息屏障消息移除，会导致同步消息一直没有机会处理，一直阻塞在nativePollOnce *</em>。</p>
-<h3 id="卡顿原理"><a href="#卡顿原理" class="headerlink" title="卡顿原理"></a>卡顿原理</h3><p>首先，我们可以看下Looper.loop的源码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">loop</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">for</span> (;;) {</span><br><span class="line">            <span class="comment">//1、取消息</span></span><br><span class="line">            Message msg = queue.next(); <span class="comment">// might block</span></span><br><span class="line">            ...</span><br><span class="line">            <span class="comment">//2、消息处理前回调</span></span><br><span class="line">            <span class="keyword">if</span> (logging != <span class="keyword">null</span>) {</span><br><span class="line">                logging.println(<span class="string">"&gt;&gt;&gt;&gt;&gt; Dispatching to "</span> + msg.target + <span class="string">" "</span> +</span><br><span class="line">                        msg.callback + <span class="string">": "</span> + msg.what);</span><br><span class="line">            }</span><br><span class="line">            ...</span><br><span class="line">            </span><br><span class="line">            <span class="comment">//3、消息开始处理</span></span><br><span class="line">            msg.target.dispatchMessage(msg);<span class="comment">// 分发处理消息</span></span><br><span class="line">            ...</span><br><span class="line">            </span><br><span class="line">            <span class="comment">//4、消息处理完回调</span></span><br><span class="line">            <span class="keyword">if</span> (logging != <span class="keyword">null</span>) {</span><br><span class="line">                logging.println(<span class="string">"&lt;&lt;&lt;&lt;&lt; Finished to "</span> + msg.target + <span class="string">" "</span> + msg.callback);</span><br><span class="line">            }</span><br><span class="line">       }</span><br><span class="line">       ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>这个loop方法主线程循环，可以长时间运行，从代码可以看出导致卡顿的原因可能有两个地方：</p>
-<ul>
-<li>注释1处的取消息 queue.next() 阻塞     </li>
-<li>注释3处 dispatchMessage 耗时太久    </li>
-</ul>
-<p>看下 MessageQueue#next 的代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Message <span class="title">next</span><span class="params">()</span> </span>{</span><br><span class="line">  ...</span><br><span class="line">    <span class="keyword">for</span> (;;) {</span><br><span class="line">        <span class="comment">//1、nextPollTimeoutMillis 不为0则阻塞</span></span><br><span class="line">        nativePollOnce(ptr, nextPollTimeoutMillis);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line">            <span class="comment">// Try to retrieve the next message.  Return if found.</span></span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">long</span> now = SystemClock.uptimeMillis();</span><br><span class="line">            Message prevMsg = <span class="keyword">null</span>;</span><br><span class="line">            Message msg = mMessages;</span><br><span class="line">            <span class="comment">// 2、先判断当前第一条消息是不是同步屏障消息，</span></span><br><span class="line">            <span class="keyword">if</span> (msg != <span class="keyword">null</span> &amp;&amp; msg.target == <span class="keyword">null</span>) {</span><br><span class="line">                <span class="comment">//3、遇到同步屏障消息，就跳过去取后面的异步消息来处理，同步消息相当于被设立了屏障</span></span><br><span class="line">                <span class="comment">// Stalled by a barrier.  Find the next asynchronous message in the queue.</span></span><br><span class="line">                <span class="keyword">do</span> {</span><br><span class="line">                    prevMsg = msg;</span><br><span class="line">                    msg = msg.next;</span><br><span class="line">                } <span class="keyword">while</span> (msg != <span class="keyword">null</span> &amp;&amp; !msg.isAsynchronous());</span><br><span class="line">            }</span><br><span class="line">            </span><br><span class="line">            <span class="comment">//4、正常的消息处理，判断是否有延时</span></span><br><span class="line">            <span class="keyword">if</span> (msg != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">if</span> (now &lt; msg.when) {</span><br><span class="line">                    <span class="comment">//4 </span></span><br><span class="line">                    <span class="comment">// Next message is not ready.  Set a timeout to wake up when it is ready.</span></span><br><span class="line">                    nextPollTimeoutMillis = (<span class="keyword">int</span>) Math.min(msg.when - now, Integer.MAX_VALUE);</span><br><span class="line">                } <span class="keyword">else</span> {</span><br><span class="line">                    <span class="comment">// Got a message.</span></span><br><span class="line">                    mBlocked = <span class="keyword">false</span>;</span><br><span class="line">                    <span class="keyword">if</span> (prevMsg != <span class="keyword">null</span>) {</span><br><span class="line">                        prevMsg.next = msg.next;</span><br><span class="line">                    } <span class="keyword">else</span> {</span><br><span class="line">                        mMessages = msg.next;</span><br><span class="line">                    }</span><br><span class="line">                    msg.next = <span class="keyword">null</span>;</span><br><span class="line">                    <span class="keyword">if</span> (DEBUG) Log.v(TAG, <span class="string">"Returning message: "</span> + msg);</span><br><span class="line">                    msg.markInUse();</span><br><span class="line">                    <span class="keyword">return</span> msg;</span><br><span class="line">                }</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                <span class="comment">//5、如果此时是同步屏障，没有取到消息，那么下次循环就走到1那里去了，nativePollOnce为-1，会一直阻塞</span></span><br><span class="line">                nextPollTimeoutMillis = -<span class="number">1</span>;</span><br><span class="line">            }</span><br><span class="line">          ...</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>MessageQueue 是一个<strong>链表数据结构</strong>，它的 next 方法大致流程是这样的：</p>
-<ol>
-<li>首先判断它头结点(第一个消息)是否是同步屏障消息，如果是，则只处理异步msg，同步msg不处理   </li>
-<li>如果是同步屏障的话，若没有获取到异步消息，就会走到注释5，设置 nextPollTimeoutMillis = -1 后，下次循环就会在注释 1 处阻塞     </li>
-<li>如果获取到正常的 msg ，不管是同步还是异步，处理流程都一样，先在注释4处判断是否演示，如果延时，则会给 nextPollTimeoutMillis 赋值，下次循环到 1 处就会阻塞一段时间；如果不延时，则会return ，<strong>交给 handler 处理（确实是交给Handler处理： msg.target.dispatchMessage(msg) ，在这里面会 首先判断msg.callback 、其次是Handler的mCallback，最后才是交给 Handler 的 handleMessage 处理）</strong></li>
-</ol>
-<h3 id="简单介绍Linux-中的IO多路复用方案"><a href="#简单介绍Linux-中的IO多路复用方案" class="headerlink" title="简单介绍Linux 中的IO多路复用方案"></a>简单介绍Linux 中的IO多路复用方案</h3><p>Linux上IO多路复用方案有 <strong>select、poll、epoll</strong>，它们 3 个中 epoll 的性能表现是最优秀的，能支持的并发量也最大，简单介绍：</p>
-<ul>
-<li><strong>select</strong> 操作系统提供的函数，通过它，我们可以把一个<strong>文件描述符的数组发给操作系统，让操作系统去遍历，确定哪个文件描述符可以读写，然后让我们处理</strong>。    </li>
-<li><strong>poll</strong>：和select 的主要区别就是，去掉了 select 只能监听 1024 个文件描述符的限制    </li>
-<li><strong>epoll</strong>： 主要针对select 做了3个优化：</li>
-</ul>
-<blockquote>
-<p>1、内核中保存一份文件描述符集合，无序用户每次传入，只需要告诉内核修改的部分</p>
-<p>2、内核通过异步IO事件唤醒而不是轮询的方式找到就绪的文件描述符    </p>
-<p>3、内核仅将有IO事件的文件描述符返回给用户，用户也无需遍历整个文件描述符集合</p>
-</blockquote>
-<h3 id="同步屏障"><a href="#同步屏障" class="headerlink" title="同步屏障"></a>同步屏障</h3><p>Android 不允许用户调用 发送同步屏障的方法，它是hide的：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"> <span class="comment">/* @hide</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">postSyncBarrier</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> postSyncBarrier(SystemClock.uptimeMillis());</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">postSyncBarrier</span><span class="params">(<span class="keyword">long</span> when)</span> </span>{</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>系统一些高优先级的操作会用到同步屏障消息，例如，View在绘制的时候，最终都要调用 ViewRootImpl 的 scheduleTraversals ，会往MessageQueue 中插入同步屏障 msg，之后在unscheduleTraversals中移除 ：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">scheduleTraversals</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (!mTraversalScheduled) {</span><br><span class="line">        mTraversalScheduled = <span class="keyword">true</span>;</span><br><span class="line">        <span class="comment">//插入同步屏障消息</span></span><br><span class="line">        mTraversalBarrier = mHandler.getLooper().getQueue().postSyncBarrier();</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unscheduleTraversals</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (mTraversalScheduled) {</span><br><span class="line">        mTraversalScheduled = <span class="keyword">false</span>;</span><br><span class="line">        <span class="comment">//移除同步屏障消息</span></span><br><span class="line">        mHandler.getLooper().getQueue().removeSyncBarrier(mTraversalBarrier);</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>为了保证View的绘制过程不被主线程其他任务影响，View在绘制之前会先往MessageQueue 中插入同步屏障消息，然后注册 Vsync 信号监听，<strong>Choreographer$FrameDisplayEventReceiver</strong>就是做这事：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FrameDisplayEventReceiver</span> <span class="keyword">extends</span> <span class="title">DisplayEventReceiver</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>{</span><br><span class="line">   </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onVsync</span><span class="params">(<span class="keyword">long</span> timestampNanos, <span class="keyword">int</span> builtInDisplayId, <span class="keyword">int</span> frame)</span> </span>{</span><br><span class="line">        ...</span><br><span class="line">        Message msg = Message.obtain(mHandler, <span class="keyword">this</span>);</span><br><span class="line">        <span class="comment">//1、发送异步消息</span></span><br><span class="line">        msg.setAsynchronous(<span class="keyword">true</span>);</span><br><span class="line">        mHandler.sendMessageAtTime(msg, timestampNanos / TimeUtils.NANOS_PER_MS);</span><br><span class="line">    }</span><br><span class="line">  </span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">// 2、doFrame优先执行</span></span><br><span class="line">        doFrame(mTimestampNanos, mFrame);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>收到 Vsync 信号，注释1会发送异步消息，保证注释2中的doFrame 方法（View真正开始绘制的方法，会调用ViewRootImpl 的 doTraversal、performTraversals）优先执行。<strong>需要注意的是，App要谨慎使用异步msg，使用不当可能会<a target="_blank" rel="noopener" href="https://juejin.cn/post/6947986170135445535">出现主线程假死的问题</a>，排查也会比较困难</strong>。</p>
-<h3 id="Handler-的dispatchMessage方法"><a href="#Handler-的dispatchMessage方法" class="headerlink" title="Handler 的dispatchMessage方法"></a>Handler 的dispatchMessage方法</h3><figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispatchMessage</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (msg.callback != <span class="keyword">null</span>) {</span><br><span class="line">        handleCallback(msg);</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        <span class="keyword">if</span> (mCallback != <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">if</span> (mCallback.handleMessage(msg)) {</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        handleMessage(msg);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这里印证了前面说的msg 处理顺序， msg.callback -&gt; Handler.mCallback -&gt; handleMessage</p>
-<h2 id="卡顿监控方案"><a href="#卡顿监控方案" class="headerlink" title="卡顿监控方案"></a>卡顿监控方案</h2><h3 id="卡顿监控方案一：通过Looper-loop中的日志打印监控"><a href="#卡顿监控方案一：通过Looper-loop中的日志打印监控" class="headerlink" title="卡顿监控方案一：通过Looper.loop中的日志打印监控"></a>卡顿监控方案一：通过Looper.loop中的日志打印监控</h3><p>首先，我们可以回顾上面 Looper.loop 的源码。注释2和注释4会打印日志，中间过程3是处理msg的过程，这样两段日志之间的耗时就是msg处理的耗时。Google 为我们提供了这个接口，我们只需要 Looper.getMainLooper().setMessageLogging(printer) 设置我们自己的printer就行。需要注意的是，<strong>监听到发生卡顿之后，dispatchMessage 早已调用结束，已经出栈，此时再去获取主线程的堆栈，堆栈中是不会包含卡顿代码的！</strong>。</p>
-<p>所以，<strong>我们需要在后台开一个线程，定时获取主线程堆栈，然后以时间点作为key，堆栈信息作为value，保存到Map中</strong>，发生卡顿的时候，只需要取出卡顿时间段内的堆栈信息即可。</p>
-<p>不过，这种方法只适合线下使用，因其存在以下缺陷：</p>
-<ul>
-<li>logging.println 存在字符拼接，频繁调用会<strong>创建大量对象，造成内存抖动</strong></li>
-<li><strong>获取主线程堆栈，会暂停主线程的运行</strong></li>
-</ul>
-<h3 id="卡顿监控方案二：字节码插桩"><a href="#卡顿监控方案二：字节码插桩" class="headerlink" title="卡顿监控方案二：字节码插桩"></a>卡顿监控方案二：字节码插桩</h3><p>通过 Gradle Plugin + ASM ，<strong>编译期在每个方法开始和结束的位置分别插入一行代码，统计方法耗时！</strong>，行业内的轮子有 <strong>微信的 Matrix 方案</strong>。</p>
-<p>对于这种插桩方法，需要注意的是：</p>
-<ul>
-<li>避免方法数暴增。在方法的入口和出口应该插入相同的函数，在编译时提前给代码中每个方法分配一个独立的ID作为参数。</li>
-<li>过滤简单函数。过滤一些直接return、i++ 之类的简单函数，并支持黑名单配置，对一些调用非常频繁的函数，需要添加到黑名单来降低整个方案对性能的消耗。</li>
-</ul>
-<p>微信对Matrix做了大量优化，整个包体积增大1%~2%，帧率下降 2 帧以内，对性能影响可以接收，<strong>不过依然只会在灰度包使用</strong>。</p>
-<h2 id="ANR监控"><a href="#ANR监控" class="headerlink" title="ANR监控"></a>ANR监控</h2><h3 id="ANR-原理"><a href="#ANR-原理" class="headerlink" title="ANR 原理"></a>ANR 原理</h3><p>ANR的原理可以比喻成<strong>埋炸弹</strong>和<strong>拆炸弹</strong>的过程，以Service为例，在通知AMS启动服务之前，通过Handler发送演示消息，这就是埋炸弹，若是 10s 内（前台服务是20s）没人来拆炸弹，炸弹就会爆炸。在ActivityThread中创建服务对象时，调用其 onCreate 之后，就会执行remove之前发送的消息，即拆炸弹。</p>
-<p>常见的ANR情形如下：</p>
-<ul>
-<li>Service。 前台服务在20s内未执行完成，后台服务是前台服务的10倍，200s</li>
-<li>输入事件。输入事件分发超时5s，包括按键和触摸事件</li>
-<li>广播。前台广播在10s内未执行完成，后台60s</li>
-<li>ContentProvider。在publish过程超时10s;</li>
-</ul>
-<h3 id="AppErrors"><a href="#AppErrors" class="headerlink" title="AppErrors"></a>AppErrors</h3><p>所有的ANR，最终都会调用 AppErrors 的 appNotResponding 方法，主要包括几个流程：</p>
-<ol>
-<li>写入event log</li>
-<li>写入 main log</li>
-<li>生成tracesFile</li>
-<li>输出ANR logcat （控制台可以看到）</li>
-<li>尝试写入traceFile</li>
-<li>输出drapbox</li>
-<li>后台ANR，直接杀进程</li>
-<li>错误报告</li>
-<li>弹出ANR dialog</li>
-</ol>
-<p>关于ANR，可以看<a target="_blank" rel="noopener" href="http://gityuan.com/2019/04/06/android-anr/">gityuan的《彻底理解安卓应用五响应机制》</a></p>
-<h3 id="ANR分析方法：导出ANR文件"><a href="#ANR分析方法：导出ANR文件" class="headerlink" title="ANR分析方法：导出ANR文件"></a>ANR分析方法：导出ANR文件</h3><p>导出ANR文件，即导出/data/anr/traces.txt文件，首先查看主线程，搜索main：</p>
-<p><img src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/55c5c9e9b60743de9f10d5372ac7087b~tplv-k3u1fbpfcp-zoom-1.image" alt="搜索main示意"></p>
-<p>ANR日志有很多信息，可以看到主线程id是1（tid=1），在等待一个锁，这个锁一直被id为22的线程持有，再来看看22号线程的堆栈：</p>
-<p><img src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2a9e111b93404118bd9b8cca2085dd48~tplv-k3u1fbpfcp-zoom-1.image" alt="持有锁的线程"></p>
-<p>22号线程处于Blocked状态，正在等待一个锁，这个锁被id为1的线程持有，同时这个22号线程还持有一个锁，这个锁是主线程想要的。</p>
-<p>通过ANR日志可以分析除这个ANR是死锁导致的，并且有具体的堆栈信息。这只是一种，还有其他ANR情况，比如内存不足、CPU被抢占、系统服务没有及时响应。</p>
-<p><strong>如果作为线上的话，在ANR发生时，可以将这个traces.txt文件上报到服务器，只不过有些手机需要root权限才能读取 /data/anr目录</strong></p>
-<h3 id="ANR监控-1"><a href="#ANR监控-1" class="headerlink" title="ANR监控"></a>ANR监控</h3><h4 id="1、抓取系统的-traces-txt"><a href="#1、抓取系统的-traces-txt" class="headerlink" title="1、抓取系统的 traces.txt"></a>1、抓取系统的 traces.txt</h4><ol>
-<li>当监控线程发现主线程卡死时，主动向系统发送 SIGNAL_QUIT信号</li>
-<li>等待 /data/anr/traces.txt 文件生成</li>
-<li>文件生成后进行上报</li>
-</ol>
-<p>这种方案可以参考<a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1064396">手Q的线程死锁监控与自动化分析实践</a>，但是，这种方案存在以下问题：</p>
-<ul>
-<li>traces.txt 里面包含所有线程信息，上传后需要<strong>人工过滤分析</strong></li>
-<li>很多高版本系统<strong>需要root权限才能读取到 /data/anr</strong> 这个目录</li>
-</ul>
-<h4 id="2、ANRWatchDog"><a href="#2、ANRWatchDog" class="headerlink" title="2、ANRWatchDog"></a>2、ANRWatchDog</h4><p>它的主要原理：</p>
-<ol>
-<li>开启一个线程，死循环，循环中睡眠 5s    </li>
-<li>往UI线程post一个Runnable，将_tick 赋值为 0 ，将 _reported 赋值为 false</li>
-<li>线程睡眠 5s 后检查 _tick 和 _report 的字段是否被修改    </li>
-<li>如果一直没有被修改，说明主线程post的Runnable 一直没有被执行，说明主线程至少卡顿5s <strong>(只能说至少，这里存在5s内的误差)</strong></li>
-<li>将贤臣各堆栈信息输出</li>
-</ol>
-<p>但是，这种方案，其实是有缺陷的，它有个时候会捕获不到 ANR ，什么原因呢？</p>
-<p><strong>ANRWatchDog缺点</strong></p>
-<p>可以用一个图片来表示：</p>
-<p><img src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2ae96474849043f4acb5719e2bf3e797~tplv-k3u1fbpfcp-watermark.awebp" alt="漏检测示意图"></p>
-<p>这种情况红色表示卡顿：</p>
-<ol>
-<li>假设主线程卡顿了 2s 之后，ANRWatchDog 刚好开始下一轮循环，将 _tick 赋值为5，并往主线程post一个任务，执行 _tick = 0</li>
-<li>主线程过了 3s 之后刚好不卡顿了，将 _tick 置为 0 ，</li>
-<li>等到 ANRWatchDog 睡眠 5s 之后，发现 _tick = 0 ，判断并没有发生 ANR</li>
-</ol>
-<p>针对 ANRWatchDog 存在的问题，可以做一个优化。</p>
-<h3 id="3、ANRMoitor"><a href="#3、ANRMoitor" class="headerlink" title="3、ANRMoitor"></a>3、ANRMoitor</h3><p>针对 ANRWatchDog 的漏检测问题，设计一个 ANRMoitor ，ANRWatchDog 出现问题的主要原因是，<strong>因为线程睡眠 5s ，不知道前一秒主线程是否已经出现卡顿了，如果盖层每隔 1s 检测一次，就可以把误差降低到 1s 内。</strong>我们<strong>想让子线程间隔1s执行一次任务，可以通过 HandlerThread 来实现</strong>，代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Volatile</span></span><br><span class="line"><span class="keyword">var</span> mainHandlerRunEnd = <span class="keyword">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//子线程会间隔1s调用一次这个Runnable</span></span><br><span class="line"><span class="keyword">private</span> val mThreadRunnable = Runnable {</span><br><span class="line">    </span><br><span class="line">    blockTime++</span><br><span class="line">    <span class="comment">//1、标志位 mainHandlerRunEnd 没有被主线程修改，说明有卡顿</span></span><br><span class="line">    <span class="keyword">if</span> (!mainHandlerRunEnd &amp;&amp; !isDebugger()) {</span><br><span class="line">        logw(TAG, <span class="string">"mThreadRunnable: main thread may be block at least $blockTime s"</span>)</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2、卡顿超过5s，触发ANR流程，打印堆栈</span></span><br><span class="line">    <span class="keyword">if</span> (blockTime &gt;= <span class="number">5</span>) {</span><br><span class="line">        <span class="keyword">if</span> (!mainHandlerRunEnd &amp;&amp; !isDebugger() &amp;&amp; !mHadReport) {</span><br><span class="line">            mHadReport = <span class="keyword">true</span></span><br><span class="line">            <span class="comment">//5s了，主线程还没更新这个标志，ANR</span></span><br><span class="line">            loge(TAG, <span class="string">"ANR-&gt;main thread may be block at least $blockTime s "</span>)</span><br><span class="line">            loge(TAG, getMainThreadStack())</span><br><span class="line">            <span class="comment">//todo 回调出去，这里可以按需把其它线程的堆栈也输出</span></span><br><span class="line">            <span class="comment">//todo debug环境可以开一个新进程，弹出堆栈信息</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//3、如果上一秒没有卡顿，那么重置标志位，然后让主线程去修改这个标志位</span></span><br><span class="line">    <span class="keyword">if</span> (mainHandlerRunEnd) {</span><br><span class="line">        mainHandlerRunEnd = <span class="keyword">false</span></span><br><span class="line">        mMainHandler.post {</span><br><span class="line">        	mainHandlerRunEnd = <span class="keyword">true</span></span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line"> <span class="comment">//子线程间隔1s调用一次mThreadRunnable</span></span><br><span class="line">    sendDelayThreadMessage()</span><br><span class="line"></span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>具体流程：</p>
-<ol>
-<li>子线程每隔 1s 执行一次 mThreadRunnable，检测标志位 mainHandlerRunEnd 是否被修改</li>
-<li>假如 mainHandlerRunEnd 被如期修改为 true，则重置 mainHandlerRunEnd 为 false，继续执行步骤 1</li>
-<li>假如 mainHandlerRunEnd 没有被修改为true，说明有卡顿，累计卡顿 5s 就触发 ANR</li>
-</ol>
-<p>这种方案也能在线下应用，定位到耗时代码。<strong>最好可以结合 ProcessLifecycleOwner ，应用在前台时才开启，否则停止检测。</strong></p>
-<h2 id="死锁监控"><a href="#死锁监控" class="headerlink" title="死锁监控"></a>死锁监控</h2><p>就是检测等待啥锁，锁被谁持有了</p>
-<h2 id="形成闭环"><a href="#形成闭环" class="headerlink" title="形成闭环"></a>形成闭环</h2><p>前面分别讲了卡顿监控、ANR监控和死锁监控，可以把它们连接起来，形成闭环：</p>
-<ol>
-<li>发生ANR</li>
-<li>获取主线程堆栈</li>
-<li>检测死锁</li>
-<li>上报服务器</li>
-<li>结合git，定位到最后修改代码的同学，提问题单</li>
-</ol>
-<p>以上内容参考<a target="_blank" rel="noopener" href="https://juejin.cn/post/6973564044351373326">蓝师傅的博客</a></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1828,7 +1721,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">122</span>
+          <span class="site-state-item-count">123</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1914,7 +1807,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共285.9k字</span>
+  <span class="post-count">博客全站共287.9k字</span>
 </div>
 
 
