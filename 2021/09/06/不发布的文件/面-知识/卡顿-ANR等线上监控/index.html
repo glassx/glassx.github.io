@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="前言性能优化这块，很多人只能说出传统的分析方式，比如 ANR 分析，只会通过查看&#x2F;data&#x2F;arn&#x2F;下的log，分析主线程堆栈、cpu、锁等信息。但是这种方法有局限性，有些高版本设备需要root权限才能访问 &#x2F;data&#x2F;anr&#x2F; 目录，或者，如果只是用户反馈，我们压根没法复现的情况，就很难分析问题了。 卡顿原理与监控卡顿原理里面需要注意的一点是：存在消息屏障的情况下，*当异步消息被处理完后，如果没">
+<meta property="og:type" content="article">
+<meta property="og:title" content="卡顿、ANR、死锁线上监控">
+<meta property="og:url" content="https://glassx.gitee.io/2021/09/06/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E5%8D%A1%E9%A1%BF-ANR%E7%AD%89%E7%BA%BF%E4%B8%8A%E7%9B%91%E6%8E%A7/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="前言性能优化这块，很多人只能说出传统的分析方式，比如 ANR 分析，只会通过查看&#x2F;data&#x2F;arn&#x2F;下的log，分析主线程堆栈、cpu、锁等信息。但是这种方法有局限性，有些高版本设备需要root权限才能访问 &#x2F;data&#x2F;anr&#x2F; 目录，或者，如果只是用户反馈，我们压根没法复现的情况，就很难分析问题了。 卡顿原理与监控卡顿原理里面需要注意的一点是：存在消息屏障的情况下，*当异步消息被处理完后，如果没">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/55c5c9e9b60743de9f10d5372ac7087b~tplv-k3u1fbpfcp-zoom-1.image">
+<meta property="og:image" content="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2a9e111b93404118bd9b8cca2085dd48~tplv-k3u1fbpfcp-zoom-1.image">
+<meta property="og:image" content="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2ae96474849043f4acb5719e2bf3e797~tplv-k3u1fbpfcp-watermark.awebp">
+<meta property="article:published_time" content="2021-09-06T12:00:00.000Z">
+<meta property="article:modified_time" content="2021-09-06T12:27:10.524Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="面试题">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/55c5c9e9b60743de9f10d5372ac7087b~tplv-k3u1fbpfcp-zoom-1.image">
+
+<link rel="canonical" href="https://glassx.gitee.io/2021/09/06/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E5%8D%A1%E9%A1%BF-ANR%E7%AD%89%E7%BA%BF%E4%B8%8A%E7%9B%91%E6%8E%A7/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>卡顿、ANR、死锁线上监控 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">29</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">124</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/06/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E5%8D%A1%E9%A1%BF-ANR%E7%AD%89%E7%BA%BF%E4%B8%8A%E7%9B%91%E6%8E%A7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          卡顿、ANR、死锁线上监控
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-06 20:00:00 / 修改时间：20:27:10" itemprop="dateCreated datePublished" datetime="2021-09-06T20:00:00+08:00">2021-09-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>性能优化这块，很多人只能说出传统的分析方式，比如 ANR 分析，只会通过<strong>查看/data/arn/下的log</strong>，分析主线程堆栈、cpu、锁等信息。但是这种方法有<strong>局限性，有些高版本设备需要root权限才能访问 /data/anr/ 目录</strong>，或者，如果只是用户反馈，我们压根没法复现的情况，就很难分析问题了。</p>
+<h2 id="卡顿原理与监控"><a href="#卡顿原理与监控" class="headerlink" title="卡顿原理与监控"></a>卡顿原理与监控</h2><p>卡顿原理里面需要注意的一点是：存在消息屏障的情况下，*<em>当异步消息被处理完后，如果没有及时把消息屏障消息移除，会导致同步消息一直没有机会处理，一直阻塞在nativePollOnce *</em>。</p>
+<h3 id="卡顿原理"><a href="#卡顿原理" class="headerlink" title="卡顿原理"></a>卡顿原理</h3><p>首先，我们可以看下Looper.loop的源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">loop</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">for</span> (;;) {</span><br><span class="line">            <span class="comment">//1、取消息</span></span><br><span class="line">            Message msg = queue.next(); <span class="comment">// might block</span></span><br><span class="line">            ...</span><br><span class="line">            <span class="comment">//2、消息处理前回调</span></span><br><span class="line">            <span class="keyword">if</span> (logging != <span class="keyword">null</span>) {</span><br><span class="line">                logging.println(<span class="string">"&gt;&gt;&gt;&gt;&gt; Dispatching to "</span> + msg.target + <span class="string">" "</span> +</span><br><span class="line">                        msg.callback + <span class="string">": "</span> + msg.what);</span><br><span class="line">            }</span><br><span class="line">            ...</span><br><span class="line">            </span><br><span class="line">            <span class="comment">//3、消息开始处理</span></span><br><span class="line">            msg.target.dispatchMessage(msg);<span class="comment">// 分发处理消息</span></span><br><span class="line">            ...</span><br><span class="line">            </span><br><span class="line">            <span class="comment">//4、消息处理完回调</span></span><br><span class="line">            <span class="keyword">if</span> (logging != <span class="keyword">null</span>) {</span><br><span class="line">                logging.println(<span class="string">"&lt;&lt;&lt;&lt;&lt; Finished to "</span> + msg.target + <span class="string">" "</span> + msg.callback);</span><br><span class="line">            }</span><br><span class="line">       }</span><br><span class="line">       ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>这个loop方法主线程循环，可以长时间运行，从代码可以看出导致卡顿的原因可能有两个地方：</p>
+<ul>
+<li>注释1处的取消息 queue.next() 阻塞     </li>
+<li>注释3处 dispatchMessage 耗时太久    </li>
+</ul>
+<p>看下 MessageQueue#next 的代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Message <span class="title">next</span><span class="params">()</span> </span>{</span><br><span class="line">  ...</span><br><span class="line">    <span class="keyword">for</span> (;;) {</span><br><span class="line">        <span class="comment">//1、nextPollTimeoutMillis 不为0则阻塞</span></span><br><span class="line">        nativePollOnce(ptr, nextPollTimeoutMillis);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line">            <span class="comment">// Try to retrieve the next message.  Return if found.</span></span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">long</span> now = SystemClock.uptimeMillis();</span><br><span class="line">            Message prevMsg = <span class="keyword">null</span>;</span><br><span class="line">            Message msg = mMessages;</span><br><span class="line">            <span class="comment">// 2、先判断当前第一条消息是不是同步屏障消息，</span></span><br><span class="line">            <span class="keyword">if</span> (msg != <span class="keyword">null</span> &amp;&amp; msg.target == <span class="keyword">null</span>) {</span><br><span class="line">                <span class="comment">//3、遇到同步屏障消息，就跳过去取后面的异步消息来处理，同步消息相当于被设立了屏障</span></span><br><span class="line">                <span class="comment">// Stalled by a barrier.  Find the next asynchronous message in the queue.</span></span><br><span class="line">                <span class="keyword">do</span> {</span><br><span class="line">                    prevMsg = msg;</span><br><span class="line">                    msg = msg.next;</span><br><span class="line">                } <span class="keyword">while</span> (msg != <span class="keyword">null</span> &amp;&amp; !msg.isAsynchronous());</span><br><span class="line">            }</span><br><span class="line">            </span><br><span class="line">            <span class="comment">//4、正常的消息处理，判断是否有延时</span></span><br><span class="line">            <span class="keyword">if</span> (msg != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">if</span> (now &lt; msg.when) {</span><br><span class="line">                    <span class="comment">//4 </span></span><br><span class="line">                    <span class="comment">// Next message is not ready.  Set a timeout to wake up when it is ready.</span></span><br><span class="line">                    nextPollTimeoutMillis = (<span class="keyword">int</span>) Math.min(msg.when - now, Integer.MAX_VALUE);</span><br><span class="line">                } <span class="keyword">else</span> {</span><br><span class="line">                    <span class="comment">// Got a message.</span></span><br><span class="line">                    mBlocked = <span class="keyword">false</span>;</span><br><span class="line">                    <span class="keyword">if</span> (prevMsg != <span class="keyword">null</span>) {</span><br><span class="line">                        prevMsg.next = msg.next;</span><br><span class="line">                    } <span class="keyword">else</span> {</span><br><span class="line">                        mMessages = msg.next;</span><br><span class="line">                    }</span><br><span class="line">                    msg.next = <span class="keyword">null</span>;</span><br><span class="line">                    <span class="keyword">if</span> (DEBUG) Log.v(TAG, <span class="string">"Returning message: "</span> + msg);</span><br><span class="line">                    msg.markInUse();</span><br><span class="line">                    <span class="keyword">return</span> msg;</span><br><span class="line">                }</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                <span class="comment">//5、如果此时是同步屏障，没有取到消息，那么下次循环就走到1那里去了，nativePollOnce为-1，会一直阻塞</span></span><br><span class="line">                nextPollTimeoutMillis = -<span class="number">1</span>;</span><br><span class="line">            }</span><br><span class="line">          ...</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>MessageQueue 是一个<strong>链表数据结构</strong>，它的 next 方法大致流程是这样的：</p>
+<ol>
+<li>首先判断它头结点(第一个消息)是否是同步屏障消息，如果是，则只处理异步msg，同步msg不处理   </li>
+<li>如果是同步屏障的话，若没有获取到异步消息，就会走到注释5，设置 nextPollTimeoutMillis = -1 后，下次循环就会在注释 1 处阻塞     </li>
+<li>如果获取到正常的 msg ，不管是同步还是异步，处理流程都一样，先在注释4处判断是否演示，如果延时，则会给 nextPollTimeoutMillis 赋值，下次循环到 1 处就会阻塞一段时间；如果不延时，则会return ，<strong>交给 handler 处理（确实是交给Handler处理： msg.target.dispatchMessage(msg) ，在这里面会 首先判断msg.callback 、其次是Handler的mCallback，最后才是交给 Handler 的 handleMessage 处理）</strong></li>
+</ol>
+<h3 id="简单介绍Linux-中的IO多路复用方案"><a href="#简单介绍Linux-中的IO多路复用方案" class="headerlink" title="简单介绍Linux 中的IO多路复用方案"></a>简单介绍Linux 中的IO多路复用方案</h3><p>Linux上IO多路复用方案有 <strong>select、poll、epoll</strong>，它们 3 个中 epoll 的性能表现是最优秀的，能支持的并发量也最大，简单介绍：</p>
+<ul>
+<li><strong>select</strong> 操作系统提供的函数，通过它，我们可以把一个<strong>文件描述符的数组发给操作系统，让操作系统去遍历，确定哪个文件描述符可以读写，然后让我们处理</strong>。    </li>
+<li><strong>poll</strong>：和select 的主要区别就是，去掉了 select 只能监听 1024 个文件描述符的限制    </li>
+<li><strong>epoll</strong>： 主要针对select 做了3个优化：</li>
+</ul>
+<blockquote>
+<p>1、内核中保存一份文件描述符集合，无序用户每次传入，只需要告诉内核修改的部分</p>
+<p>2、内核通过异步IO事件唤醒而不是轮询的方式找到就绪的文件描述符    </p>
+<p>3、内核仅将有IO事件的文件描述符返回给用户，用户也无需遍历整个文件描述符集合</p>
+</blockquote>
+<h3 id="同步屏障"><a href="#同步屏障" class="headerlink" title="同步屏障"></a>同步屏障</h3><p>Android 不允许用户调用 发送同步屏障的方法，它是hide的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"> <span class="comment">/* @hide</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">postSyncBarrier</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> postSyncBarrier(SystemClock.uptimeMillis());</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">postSyncBarrier</span><span class="params">(<span class="keyword">long</span> when)</span> </span>{</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>系统一些高优先级的操作会用到同步屏障消息，例如，View在绘制的时候，最终都要调用 ViewRootImpl 的 scheduleTraversals ，会往MessageQueue 中插入同步屏障 msg，之后在unscheduleTraversals中移除 ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">scheduleTraversals</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (!mTraversalScheduled) {</span><br><span class="line">        mTraversalScheduled = <span class="keyword">true</span>;</span><br><span class="line">        <span class="comment">//插入同步屏障消息</span></span><br><span class="line">        mTraversalBarrier = mHandler.getLooper().getQueue().postSyncBarrier();</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unscheduleTraversals</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (mTraversalScheduled) {</span><br><span class="line">        mTraversalScheduled = <span class="keyword">false</span>;</span><br><span class="line">        <span class="comment">//移除同步屏障消息</span></span><br><span class="line">        mHandler.getLooper().getQueue().removeSyncBarrier(mTraversalBarrier);</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>为了保证View的绘制过程不被主线程其他任务影响，View在绘制之前会先往MessageQueue 中插入同步屏障消息，然后注册 Vsync 信号监听，<strong>Choreographer$FrameDisplayEventReceiver</strong>就是做这事：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FrameDisplayEventReceiver</span> <span class="keyword">extends</span> <span class="title">DisplayEventReceiver</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>{</span><br><span class="line">   </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onVsync</span><span class="params">(<span class="keyword">long</span> timestampNanos, <span class="keyword">int</span> builtInDisplayId, <span class="keyword">int</span> frame)</span> </span>{</span><br><span class="line">        ...</span><br><span class="line">        Message msg = Message.obtain(mHandler, <span class="keyword">this</span>);</span><br><span class="line">        <span class="comment">//1、发送异步消息</span></span><br><span class="line">        msg.setAsynchronous(<span class="keyword">true</span>);</span><br><span class="line">        mHandler.sendMessageAtTime(msg, timestampNanos / TimeUtils.NANOS_PER_MS);</span><br><span class="line">    }</span><br><span class="line">  </span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">// 2、doFrame优先执行</span></span><br><span class="line">        doFrame(mTimestampNanos, mFrame);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>收到 Vsync 信号，注释1会发送异步消息，保证注释2中的doFrame 方法（View真正开始绘制的方法，会调用ViewRootImpl 的 doTraversal、performTraversals）优先执行。<strong>需要注意的是，App要谨慎使用异步msg，使用不当可能会<a target="_blank" rel="noopener" href="https://juejin.cn/post/6947986170135445535">出现主线程假死的问题</a>，排查也会比较困难</strong>。</p>
+<h3 id="Handler-的dispatchMessage方法"><a href="#Handler-的dispatchMessage方法" class="headerlink" title="Handler 的dispatchMessage方法"></a>Handler 的dispatchMessage方法</h3><figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispatchMessage</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (msg.callback != <span class="keyword">null</span>) {</span><br><span class="line">        handleCallback(msg);</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        <span class="keyword">if</span> (mCallback != <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">if</span> (mCallback.handleMessage(msg)) {</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        handleMessage(msg);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里印证了前面说的msg 处理顺序， msg.callback -&gt; Handler.mCallback -&gt; handleMessage</p>
+<h2 id="卡顿监控方案"><a href="#卡顿监控方案" class="headerlink" title="卡顿监控方案"></a>卡顿监控方案</h2><h3 id="卡顿监控方案一：通过Looper-loop中的日志打印监控"><a href="#卡顿监控方案一：通过Looper-loop中的日志打印监控" class="headerlink" title="卡顿监控方案一：通过Looper.loop中的日志打印监控"></a>卡顿监控方案一：通过Looper.loop中的日志打印监控</h3><p>首先，我们可以回顾上面 Looper.loop 的源码。注释2和注释4会打印日志，中间过程3是处理msg的过程，这样两段日志之间的耗时就是msg处理的耗时。Google 为我们提供了这个接口，我们只需要 Looper.getMainLooper().setMessageLogging(printer) 设置我们自己的printer就行。需要注意的是，<strong>监听到发生卡顿之后，dispatchMessage 早已调用结束，已经出栈，此时再去获取主线程的堆栈，堆栈中是不会包含卡顿代码的！</strong>。</p>
+<p>所以，<strong>我们需要在后台开一个线程，定时获取主线程堆栈，然后以时间点作为key，堆栈信息作为value，保存到Map中</strong>，发生卡顿的时候，只需要取出卡顿时间段内的堆栈信息即可。</p>
+<p>不过，这种方法只适合线下使用，因其存在以下缺陷：</p>
+<ul>
+<li>logging.println 存在字符拼接，频繁调用会<strong>创建大量对象，造成内存抖动</strong></li>
+<li><strong>获取主线程堆栈，会暂停主线程的运行</strong></li>
+</ul>
+<h3 id="卡顿监控方案二：字节码插桩"><a href="#卡顿监控方案二：字节码插桩" class="headerlink" title="卡顿监控方案二：字节码插桩"></a>卡顿监控方案二：字节码插桩</h3><p>通过 Gradle Plugin + ASM ，<strong>编译期在每个方法开始和结束的位置分别插入一行代码，统计方法耗时！</strong>，行业内的轮子有 <strong>微信的 Matrix 方案</strong>。</p>
+<p>对于这种插桩方法，需要注意的是：</p>
+<ul>
+<li>避免方法数暴增。在方法的入口和出口应该插入相同的函数，在编译时提前给代码中每个方法分配一个独立的ID作为参数。</li>
+<li>过滤简单函数。过滤一些直接return、i++ 之类的简单函数，并支持黑名单配置，对一些调用非常频繁的函数，需要添加到黑名单来降低整个方案对性能的消耗。</li>
+</ul>
+<p>微信对Matrix做了大量优化，整个包体积增大1%~2%，帧率下降 2 帧以内，对性能影响可以接收，<strong>不过依然只会在灰度包使用</strong>。</p>
+<h2 id="ANR监控"><a href="#ANR监控" class="headerlink" title="ANR监控"></a>ANR监控</h2><h3 id="ANR-原理"><a href="#ANR-原理" class="headerlink" title="ANR 原理"></a>ANR 原理</h3><p>ANR的原理可以比喻成<strong>埋炸弹</strong>和<strong>拆炸弹</strong>的过程，以Service为例，在通知AMS启动服务之前，通过Handler发送演示消息，这就是埋炸弹，若是 10s 内（前台服务是20s）没人来拆炸弹，炸弹就会爆炸。在ActivityThread中创建服务对象时，调用其 onCreate 之后，就会执行remove之前发送的消息，即拆炸弹。</p>
+<p>常见的ANR情形如下：</p>
+<ul>
+<li>Service。 前台服务在20s内未执行完成，后台服务是前台服务的10倍，200s</li>
+<li>输入事件。输入事件分发超时5s，包括按键和触摸事件</li>
+<li>广播。前台广播在10s内未执行完成，后台60s</li>
+<li>ContentProvider。在publish过程超时10s;</li>
+</ul>
+<h3 id="AppErrors"><a href="#AppErrors" class="headerlink" title="AppErrors"></a>AppErrors</h3><p>所有的ANR，最终都会调用 AppErrors 的 appNotResponding 方法，主要包括几个流程：</p>
+<ol>
+<li>写入event log</li>
+<li>写入 main log</li>
+<li>生成tracesFile</li>
+<li>输出ANR logcat （控制台可以看到）</li>
+<li>尝试写入traceFile</li>
+<li>输出drapbox</li>
+<li>后台ANR，直接杀进程</li>
+<li>错误报告</li>
+<li>弹出ANR dialog</li>
+</ol>
+<p>关于ANR，可以看<a target="_blank" rel="noopener" href="http://gityuan.com/2019/04/06/android-anr/">gityuan的《彻底理解安卓应用五响应机制》</a></p>
+<h3 id="ANR分析方法：导出ANR文件"><a href="#ANR分析方法：导出ANR文件" class="headerlink" title="ANR分析方法：导出ANR文件"></a>ANR分析方法：导出ANR文件</h3><p>导出ANR文件，即导出/data/anr/traces.txt文件，首先查看主线程，搜索main：</p>
+<p><img src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/55c5c9e9b60743de9f10d5372ac7087b~tplv-k3u1fbpfcp-zoom-1.image" alt="搜索main示意"></p>
+<p>ANR日志有很多信息，可以看到主线程id是1（tid=1），在等待一个锁，这个锁一直被id为22的线程持有，再来看看22号线程的堆栈：</p>
+<p><img src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2a9e111b93404118bd9b8cca2085dd48~tplv-k3u1fbpfcp-zoom-1.image" alt="持有锁的线程"></p>
+<p>22号线程处于Blocked状态，正在等待一个锁，这个锁被id为1的线程持有，同时这个22号线程还持有一个锁，这个锁是主线程想要的。</p>
+<p>通过ANR日志可以分析除这个ANR是死锁导致的，并且有具体的堆栈信息。这只是一种，还有其他ANR情况，比如内存不足、CPU被抢占、系统服务没有及时响应。</p>
+<p><strong>如果作为线上的话，在ANR发生时，可以将这个traces.txt文件上报到服务器，只不过有些手机需要root权限才能读取 /data/anr目录</strong></p>
+<h3 id="ANR监控-1"><a href="#ANR监控-1" class="headerlink" title="ANR监控"></a>ANR监控</h3><h4 id="1、抓取系统的-traces-txt"><a href="#1、抓取系统的-traces-txt" class="headerlink" title="1、抓取系统的 traces.txt"></a>1、抓取系统的 traces.txt</h4><ol>
+<li>当监控线程发现主线程卡死时，主动向系统发送 SIGNAL_QUIT信号</li>
+<li>等待 /data/anr/traces.txt 文件生成</li>
+<li>文件生成后进行上报</li>
+</ol>
+<p>这种方案可以参考<a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1064396">手Q的线程死锁监控与自动化分析实践</a>，但是，这种方案存在以下问题：</p>
+<ul>
+<li>traces.txt 里面包含所有线程信息，上传后需要<strong>人工过滤分析</strong></li>
+<li>很多高版本系统<strong>需要root权限才能读取到 /data/anr</strong> 这个目录</li>
+</ul>
+<h4 id="2、ANRWatchDog"><a href="#2、ANRWatchDog" class="headerlink" title="2、ANRWatchDog"></a>2、ANRWatchDog</h4><p>它的主要原理：</p>
+<ol>
+<li>开启一个线程，死循环，循环中睡眠 5s    </li>
+<li>往UI线程post一个Runnable，将_tick 赋值为 0 ，将 _reported 赋值为 false</li>
+<li>线程睡眠 5s 后检查 _tick 和 _report 的字段是否被修改    </li>
+<li>如果一直没有被修改，说明主线程post的Runnable 一直没有被执行，说明主线程至少卡顿5s <strong>(只能说至少，这里存在5s内的误差)</strong></li>
+<li>将贤臣各堆栈信息输出</li>
+</ol>
+<p>但是，这种方案，其实是有缺陷的，它有个时候会捕获不到 ANR ，什么原因呢？</p>
+<p><strong>ANRWatchDog缺点</strong></p>
+<p>可以用一个图片来表示：</p>
+<p><img src="https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2ae96474849043f4acb5719e2bf3e797~tplv-k3u1fbpfcp-watermark.awebp" alt="漏检测示意图"></p>
+<p>这种情况红色表示卡顿：</p>
+<ol>
+<li>假设主线程卡顿了 2s 之后，ANRWatchDog 刚好开始下一轮循环，将 _tick 赋值为5，并往主线程post一个任务，执行 _tick = 0</li>
+<li>主线程过了 3s 之后刚好不卡顿了，将 _tick 置为 0 ，</li>
+<li>等到 ANRWatchDog 睡眠 5s 之后，发现 _tick = 0 ，判断并没有发生 ANR</li>
+</ol>
+<p>针对 ANRWatchDog 存在的问题，可以做一个优化。</p>
+<h3 id="3、ANRMoitor"><a href="#3、ANRMoitor" class="headerlink" title="3、ANRMoitor"></a>3、ANRMoitor</h3><p>针对 ANRWatchDog 的漏检测问题，设计一个 ANRMoitor ，ANRWatchDog 出现问题的主要原因是，<strong>因为线程睡眠 5s ，不知道前一秒主线程是否已经出现卡顿了，如果盖层每隔 1s 检测一次，就可以把误差降低到 1s 内。</strong>我们<strong>想让子线程间隔1s执行一次任务，可以通过 HandlerThread 来实现</strong>，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Volatile</span></span><br><span class="line"><span class="keyword">var</span> mainHandlerRunEnd = <span class="keyword">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//子线程会间隔1s调用一次这个Runnable</span></span><br><span class="line"><span class="keyword">private</span> val mThreadRunnable = Runnable {</span><br><span class="line">    </span><br><span class="line">    blockTime++</span><br><span class="line">    <span class="comment">//1、标志位 mainHandlerRunEnd 没有被主线程修改，说明有卡顿</span></span><br><span class="line">    <span class="keyword">if</span> (!mainHandlerRunEnd &amp;&amp; !isDebugger()) {</span><br><span class="line">        logw(TAG, <span class="string">"mThreadRunnable: main thread may be block at least $blockTime s"</span>)</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2、卡顿超过5s，触发ANR流程，打印堆栈</span></span><br><span class="line">    <span class="keyword">if</span> (blockTime &gt;= <span class="number">5</span>) {</span><br><span class="line">        <span class="keyword">if</span> (!mainHandlerRunEnd &amp;&amp; !isDebugger() &amp;&amp; !mHadReport) {</span><br><span class="line">            mHadReport = <span class="keyword">true</span></span><br><span class="line">            <span class="comment">//5s了，主线程还没更新这个标志，ANR</span></span><br><span class="line">            loge(TAG, <span class="string">"ANR-&gt;main thread may be block at least $blockTime s "</span>)</span><br><span class="line">            loge(TAG, getMainThreadStack())</span><br><span class="line">            <span class="comment">//todo 回调出去，这里可以按需把其它线程的堆栈也输出</span></span><br><span class="line">            <span class="comment">//todo debug环境可以开一个新进程，弹出堆栈信息</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//3、如果上一秒没有卡顿，那么重置标志位，然后让主线程去修改这个标志位</span></span><br><span class="line">    <span class="keyword">if</span> (mainHandlerRunEnd) {</span><br><span class="line">        mainHandlerRunEnd = <span class="keyword">false</span></span><br><span class="line">        mMainHandler.post {</span><br><span class="line">        	mainHandlerRunEnd = <span class="keyword">true</span></span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line"> <span class="comment">//子线程间隔1s调用一次mThreadRunnable</span></span><br><span class="line">    sendDelayThreadMessage()</span><br><span class="line"></span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>具体流程：</p>
+<ol>
+<li>子线程每隔 1s 执行一次 mThreadRunnable，检测标志位 mainHandlerRunEnd 是否被修改</li>
+<li>假如 mainHandlerRunEnd 被如期修改为 true，则重置 mainHandlerRunEnd 为 false，继续执行步骤 1</li>
+<li>假如 mainHandlerRunEnd 没有被修改为true，说明有卡顿，累计卡顿 5s 就触发 ANR</li>
+</ol>
+<p>这种方案也能在线下应用，定位到耗时代码。<strong>最好可以结合 ProcessLifecycleOwner ，应用在前台时才开启，否则停止检测。</strong></p>
+<h2 id="死锁监控"><a href="#死锁监控" class="headerlink" title="死锁监控"></a>死锁监控</h2><p>就是检测等待啥锁，锁被谁持有了</p>
+<h2 id="形成闭环"><a href="#形成闭环" class="headerlink" title="形成闭环"></a>形成闭环</h2><p>前面分别讲了卡顿监控、ANR监控和死锁监控，可以把它们连接起来，形成闭环：</p>
+<ol>
+<li>发生ANR</li>
+<li>获取主线程堆栈</li>
+<li>检测死锁</li>
+<li>上报服务器</li>
+<li>结合git，定位到最后修改代码的同学，提问题单</li>
+</ol>
+<p>以上内容参考<a target="_blank" rel="noopener" href="https://juejin.cn/post/6973564044351373326">蓝师傅的博客</a></p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%A2%E8%AF%95%E9%A2%98/" rel="tag"># 面试题</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/08/24/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/RecyclerView%E7%9A%84notifyItemChanged%E5%BC%95%E5%87%BA%E7%9A%84%E9%97%AE%E9%A2%98/" rel="next" title="RecyclerView的notifyItemChanged引出的问题">
+                  <i class="fa fa-chevron-left"></i> RecyclerView的notifyItemChanged引出的问题
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2021/09/06/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC5%E7%AB%A0/" rel="prev" title="第5章：类型系统">
+                  第5章：类型系统 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%A1%E9%A1%BF%E5%8E%9F%E7%90%86%E4%B8%8E%E7%9B%91%E6%8E%A7"><span class="nav-number">2.</span> <span class="nav-text">卡顿原理与监控</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%A1%E9%A1%BF%E5%8E%9F%E7%90%86"><span class="nav-number">2.1.</span> <span class="nav-text">卡顿原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AE%80%E5%8D%95%E4%BB%8B%E7%BB%8DLinux-%E4%B8%AD%E7%9A%84IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E6%96%B9%E6%A1%88"><span class="nav-number">2.2.</span> <span class="nav-text">简单介绍Linux 中的IO多路复用方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8C%E6%AD%A5%E5%B1%8F%E9%9A%9C"><span class="nav-number">2.3.</span> <span class="nav-text">同步屏障</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Handler-%E7%9A%84dispatchMessage%E6%96%B9%E6%B3%95"><span class="nav-number">2.4.</span> <span class="nav-text">Handler 的dispatchMessage方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%A1%E9%A1%BF%E7%9B%91%E6%8E%A7%E6%96%B9%E6%A1%88"><span class="nav-number">3.</span> <span class="nav-text">卡顿监控方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%A1%E9%A1%BF%E7%9B%91%E6%8E%A7%E6%96%B9%E6%A1%88%E4%B8%80%EF%BC%9A%E9%80%9A%E8%BF%87Looper-loop%E4%B8%AD%E7%9A%84%E6%97%A5%E5%BF%97%E6%89%93%E5%8D%B0%E7%9B%91%E6%8E%A7"><span class="nav-number">3.1.</span> <span class="nav-text">卡顿监控方案一：通过Looper.loop中的日志打印监控</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%A1%E9%A1%BF%E7%9B%91%E6%8E%A7%E6%96%B9%E6%A1%88%E4%BA%8C%EF%BC%9A%E5%AD%97%E8%8A%82%E7%A0%81%E6%8F%92%E6%A1%A9"><span class="nav-number">3.2.</span> <span class="nav-text">卡顿监控方案二：字节码插桩</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ANR%E7%9B%91%E6%8E%A7"><span class="nav-number">4.</span> <span class="nav-text">ANR监控</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR-%E5%8E%9F%E7%90%86"><span class="nav-number">4.1.</span> <span class="nav-text">ANR 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AppErrors"><span class="nav-number">4.2.</span> <span class="nav-text">AppErrors</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR%E5%88%86%E6%9E%90%E6%96%B9%E6%B3%95%EF%BC%9A%E5%AF%BC%E5%87%BAANR%E6%96%87%E4%BB%B6"><span class="nav-number">4.3.</span> <span class="nav-text">ANR分析方法：导出ANR文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR%E7%9B%91%E6%8E%A7-1"><span class="nav-number">4.4.</span> <span class="nav-text">ANR监控</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1%E3%80%81%E6%8A%93%E5%8F%96%E7%B3%BB%E7%BB%9F%E7%9A%84-traces-txt"><span class="nav-number">4.4.1.</span> <span class="nav-text">1、抓取系统的 traces.txt</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2%E3%80%81ANRWatchDog"><span class="nav-number">4.4.2.</span> <span class="nav-text">2、ANRWatchDog</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3%E3%80%81ANRMoitor"><span class="nav-number">4.5.</span> <span class="nav-text">3、ANRMoitor</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E7%9B%91%E6%8E%A7"><span class="nav-number">5.</span> <span class="nav-text">死锁监控</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BD%A2%E6%88%90%E9%97%AD%E7%8E%AF"><span class="nav-number">6.</span> <span class="nav-text">形成闭环</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">124</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">29</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共290.7k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '570055b0a48b359c00695f687cf22f64',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

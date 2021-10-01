@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="1、对象的内存布局 点击看答案  分为3个区域：对象头、实例数据 以及 对齐填充 对象头：包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。 实例数据：对象真正存储的有效信息。 对齐填充：比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必">
+<meta property="og:type" content="article">
+<meta property="og:title" content="面试题-虚拟机知识">
+<meta property="og:url" content="https://glassx.gitee.io/2019/11/23/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E8%99%9A%E6%8B%9F%E6%9C%BA/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="1、对象的内存布局 点击看答案  分为3个区域：对象头、实例数据 以及 对齐填充 对象头：包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。 实例数据：对象真正存储的有效信息。 对齐填充：比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E9%9D%A2%E8%AF%95/%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/dalvik%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E6%B5%81%E7%A8%8B.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/Art%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/dalvik%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg">
+<meta property="article:published_time" content="2019-11-23T13:40:00.000Z">
+<meta property="article:modified_time" content="2020-07-12T01:50:33.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="面试题">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.gitee.io/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png">
+
+<link rel="canonical" href="https://glassx.gitee.io/2019/11/23/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E8%99%9A%E6%8B%9F%E6%9C%BA/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>面试题-虚拟机知识 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">29</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">124</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/23/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E8%99%9A%E6%8B%9F%E6%9C%BA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          面试题-虚拟机知识
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-23 21:40:00" itemprop="dateCreated datePublished" datetime="2019-11-23T21:40:00+08:00">2019-11-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-07-12 09:50:33" itemprop="dateModified" datetime="2020-07-12T09:50:33+08:00">2020-07-12</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="1、对象的内存布局"><a href="#1、对象的内存布局" class="headerlink" title="1、对象的内存布局"></a>1、对象的内存布局</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>分为3个区域：对象头、实例数据 以及 对齐填充</p>
+<p><strong>对象头：</strong>包括两部分信息，第一部分：对象自身运行时数据，如hashcode、GC年龄分代、锁状态标志位，官方称为”Mark Word”。第二部分：类型指针，虚拟机通过这个指针确定对象是哪个类的实例。</p>
+<p><strong>实例数据：</strong>对象真正存储的有效信息。</p>
+<p><strong>对齐填充：</strong>比如HotSpot vm 要求对象起始地址必须是8的整数倍。对齐填充不是必需的。</p>
+<p>以下是句柄访问 时，内存布局关系图：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E5%85%B3%E7%B3%BB%E5%9B%BE.png" alt="内存布局关系图"></p>
+<blockquote>
+<p>以上内容参考自： <a target="_blank" rel="noopener" href="http://www.androidos.net.cn/book/android-road/java/virtual-machine/object.html">对象创建与定位</a></p>
+</blockquote>
+</details>
+
+<h2 id="2、垃圾收集算法"><a href="#2、垃圾收集算法" class="headerlink" title="2、垃圾收集算法"></a>2、垃圾收集算法</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ul>
+<li>标记-清除 算法。不足：1、标记清除效率不高。2、产生内存碎片。    </li>
+<li>复制算法。为了解决标记清除的效率问题，将内存划分为大小相等的两块，每次使用一块。不足：可用内存缩小为原来一半。    </li>
+<li>标记-整理。不足：复制存货对象耗时过多。    </li>
+<li>分代收集算法。 新生代使用复制算法；老年代采用“标记-清除” 或者 “标记-整理”算法。</li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自： <a target="_blank" rel="noopener" href="http://www.androidos.net.cn/book/android-road/java/virtual-machine/Garbage-Collector.html">垃圾回收算法</a></p>
+</blockquote>
+<h2 id="3、说说四大引用？强，软，弱，虚，并说明下合适GC"><a href="#3、说说四大引用？强，软，弱，虚，并说明下合适GC" class="headerlink" title="3、说说四大引用？强，软，弱，虚，并说明下合适GC"></a>3、说说四大引用？强，软，弱，虚，并说明下合适GC</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<blockquote>
+<p>强引用是使用最普遍的引用。如果一个对象具有强引用，那垃圾回收器绝不会回收它。</p>
+</blockquote>
+<blockquote>
+<p>软引用是用来描述一些有用但并不是必需的对象。对于软引用关联着的对象，只有在内存不足的时候 JVM 才会回收该对象。这一点可以很好地用来解决 OOM 的问题，并且这个特性很适合用来实现缓存：比如网页缓存、图片缓存等。</p>
+</blockquote>
+<blockquote>
+<p>弱引用与软引用的区别在于：只具有弱引用的对象拥有更短暂的生命周期。在垃圾回收器线程扫描它所管辖的内存区域的过程中，一旦发现了只具有弱引用的对象，不管当前内存空间足够与否，都会回收它的内存。</p>
+</blockquote>
+<blockquote>
+<p>“虚引用”顾名思义，就是形同虚设，与其他几种引用都不同，虚引用并不会决定对象的生命周期。如果一个对象仅持有虚引用，那么它就和没有任何引用一样，在任何时候都可能被垃圾回收器回收。要注意的是，虚引用必须和引用队列关联使用.</p>
+</blockquote>
+</details>
+
+<h2 id="4、Android中内存分配的执行流程"><a href="#4、Android中内存分配的执行流程" class="headerlink" title="4、Android中内存分配的执行流程"></a>4、Android中内存分配的执行流程</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="铺垫"><a href="#铺垫" class="headerlink" title="铺垫"></a>铺垫</h3><p>Dalvik 虚拟机的Java堆的底层实现是一块共享匿名内存(Ashmem)，并且将其抽象为C库的一个 mspace ，于是，Dalvik 虚拟机就可以利用 C 库里面的 dlmalloc 内存分配器来解决内存碎片问题(这是个成熟的内存分配器，<strong>可以很好地解决内存碎片的问题</strong>)</p>
+<h3 id="Android中内存分配的执行流程："><a href="#Android中内存分配的执行流程：" class="headerlink" title="Android中内存分配的执行流程："></a>Android中内存分配的执行流程：</h3><p>流程图如下：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/dalvik%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E6%B5%81%E7%A8%8B.png" alt="dalvik虚拟机内存分配流程"></p>
+<ol>
+<li>尝试在Java堆上分配指定大小的内存，如果内存充足，就直接分配成功。(不改变java堆当前大小的前提下进行内存分配，属于轻量级的内存分配)      </li>
+<li>如果分配失败，就执行一次GC(如果此时有GC在运行，则等待这次GC执行完成)，GC 时设置参数false标记<strong>不要</strong>回收软引用的对象。        </li>
+<li>GC 完成后，再次尝试轻量级内存分配操作，如果内存充足，就分配成功了               </li>
+<li>如果上一步内存分配失败，就考虑将Java堆的当前大小设置为Dalvik 虚拟机启动时指定的Java堆最大值，再进行内存分配         </li>
+<li>如果内存充足，就完成内存的分配       </li>
+<li>如果上一步还是分配失败，就再次调用GC，并将参数标记为true，<strong>表示要回收软引用的对象</strong>           </li>
+<li>GC完毕后，再次尝试分配，成功就返回；不成功也就抛出OOM了       </li>
+</ol>
+<blockquote>
+<p>以上内容参考自：<a target="_blank" rel="noopener" href="https://blog.csdn.net/luoshengyang/article/details/41688319">老罗的博客</a></p>
+</blockquote>
+</details>
+
+<h2 id="5、Android-GC-流程"><a href="#5、Android-GC-流程" class="headerlink" title="5、Android GC 流程"></a>5、Android GC 流程</h2><h3 id="Art-虚拟机GC过程"><a href="#Art-虚拟机GC过程" class="headerlink" title="Art 虚拟机GC过程"></a>Art 虚拟机GC过程</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/Art%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg" alt="Art的gc流程"></p>
+<p>由图可知，非并行GC的过程如下所示：</p>
+<ol>
+<li>挂起所有的ART运行时线程。      </li>
+<li>调用子类实现的成员函数MarkingPhase执行GC标记阶段。          </li>
+<li>调用子类实现的成员函数ReclaimPhase执行GC回收阶段。       </li>
+<li>恢复第2步挂起的ART运行时线程。          </li>
+</ol>
+<p>并行GC的过程如下所示：</p>
+<ol>
+<li>获取用于访问Java堆的锁。</li>
+<li>调用子类实现的成员函数MarkingPhase执行GC并行标记阶段。</li>
+<li>释放用于访问Java堆的锁。</li>
+<li>挂起所有的ART运行时线程。</li>
+<li>调用子类实现的成员函数HandleDirtyObjectsPhase处理在GC并行标记阶段被修改的对象。。</li>
+<li>恢复第4步挂起的ART运行时线程。</li>
+<li>重复第5到第7步，直到所有在GC并行阶段被修改的对象都处理完成。</li>
+<li>获取用于访问Java堆的锁。</li>
+<li>调用子类实现的成员函数ReclaimPhase执行GC回收阶段。</li>
+<li>释放用于访问Java堆的锁。</li>
+</ol>
+<p>从上面的分析就可以看出，并行GC和非并行GC的区别在于：</p>
+<ol>
+<li>非并行GC的标记阶段和回收阶段是在挂住所有的ART运行时线程的前提下进行的，因此，只需要执行一次标记。         </li>
+<li>并行GC的标记阶段只锁住了Java堆，因此它不能阻止那些不是正在分配对象的ART运行时线程同时运行，而这些同进运行的ART运行时线程可能会引用了一些在之前的标记阶段没有被标记的对象。如果不对这些对象进行重新标记的话，那么就会导致它们被GC回收，造成错误。因此，与非并行GC相比，并行GC多了一个处理脏对象的阶段。所谓的脏对象就是我们前面说的在GC标记阶段同时运行的ART运行时线程访问或者修改过的对象。        </li>
+<li>并行GC并不是自始至终都是并行的，例如，处理脏对象的阶段就是需要挂起除GC线程以外的其它ART运行时线程，这样才可以保证标记阶段可以结束。         </li>
+</ol>
+</details>
+
+
+<h3 id="Dalvik-虚拟机垃圾收集过程"><a href="#Dalvik-虚拟机垃圾收集过程" class="headerlink" title="Dalvik 虚拟机垃圾收集过程"></a>Dalvik 虚拟机垃圾收集过程</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>Dalvik 虚拟机使用 Mark-Sweep 算法来进行垃圾收集<br>Dalvik 执行GC 时会有一些选项：</p>
+<ul>
+<li>isPartial，为true 时，表示仅仅回收Active 堆的垃圾；为false时，表示同时回收Active 堆和Zygote 堆的垃圾    </li>
+<li>isConcurrent：为true时，表示执行并行GC，false时，表示非并行GC    </li>
+<li>doPreserve：为true的时候，表示不回收软引用的对象；false的时候，表示回收软引用对象<br>Dalvik在如下几种情况会触发GC：</li>
+<li>分配对象时，内存不足触发GC    </li>
+<li>已经分配的内存达到一定阈值时触发GC    </li>
+<li>调用 System.gc 、VMRuntime.gc 或者收到信号触发 GC    </li>
+<li>准备抛出 OOM 前而最后进行的 GC<br>GC线程在空闲达到一定时间后，会调用函数对Java堆进行裁剪，将一些没有用到的内存交还给内核。<br>dalvik 的GC 流程(并行和非并行情况)如下图所示：<br><img src="/assets/%E9%9D%A2%E8%AF%95/java%E8%99%9A%E6%8B%9F%E6%9C%BA/dalvik%E7%9A%84gc%E6%B5%81%E7%A8%8B.jpg" alt="dalvik虚拟机gc流程"></li>
+</ul>
+<h3 id="哪些对象可以做-GC-Root"><a href="#哪些对象可以做-GC-Root" class="headerlink" title="哪些对象可以做 GC Root"></a>哪些对象可以做 GC Root</h3><ul>
+<li>虚拟机栈引用的对象    </li>
+<li>本地方法栈引用的对象     </li>
+<li>方法区中类静态属性引用的对象     </li>
+<li>方法区中常量引用的对象        </li>
+<li>Dalvik 虚拟机内部创建的部分异常对象      </li>
+<li>Dalvik 虚拟机内部创建的原子类     </li>
+<li>注册在调试器的对象</li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自以上内容参考自 <a target="_blank" rel="noopener" href="https://blog.csdn.net/Luoshengyang/article/details/41822747?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522158968621519724843340084%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&amp;request_id=158968621519724843340084&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_v2~rank_v25-6-41822747.nonecase&amp;utm_term=dalvik">罗升阳的博客</a>  、 <a target="_blank" rel="noopener" href="https://blog.csdn.net/luoshengyang/article/details/42555483">老罗的博客</a></p>
+</blockquote>
+<h2 id="6、如何理解Java类加载机制"><a href="#6、如何理解Java类加载机制" class="headerlink" title="6、如何理解Java类加载机制"></a>6、<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzIwMzYwMTk1NA==&amp;mid=2247483903&amp;idx=1&amp;sn=c20d3172052bd7db9a1ad6a95f112bc9&amp;chksm=96cda0b2a1ba29a4cc9912cb1bf8a955f97ee45a7b8db48e384f1694ddbabbd4d5e7fa90f880&amp;scene=21#wechat_redirect">如何理解Java类加载机制</a></h2></body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%A2%E8%AF%95%E9%A2%98/" rel="tag"># 面试题</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2019/11/23/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/" rel="next" title="面试题-设计模式">
+                  <i class="fa fa-chevron-left"></i> 面试题-设计模式
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2019/11/24/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC3%E7%AB%A0/" rel="prev" title="第3章：应用程序进程启动过程">
+                  第3章：应用程序进程启动过程 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1%E3%80%81%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80"><span class="nav-number">1.</span> <span class="nav-text">1、对象的内存布局</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2%E3%80%81%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E7%AE%97%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">2、垃圾收集算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3%E3%80%81%E8%AF%B4%E8%AF%B4%E5%9B%9B%E5%A4%A7%E5%BC%95%E7%94%A8%EF%BC%9F%E5%BC%BA%EF%BC%8C%E8%BD%AF%EF%BC%8C%E5%BC%B1%EF%BC%8C%E8%99%9A%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E4%B8%8B%E5%90%88%E9%80%82GC"><span class="nav-number">3.</span> <span class="nav-text">3、说说四大引用？强，软，弱，虚，并说明下合适GC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4%E3%80%81Android%E4%B8%AD%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">4.</span> <span class="nav-text">4、Android中内存分配的执行流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%93%BA%E5%9E%AB"><span class="nav-number">4.1.</span> <span class="nav-text">铺垫</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Android%E4%B8%AD%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B%EF%BC%9A"><span class="nav-number">4.2.</span> <span class="nav-text">Android中内存分配的执行流程：</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5%E3%80%81Android-GC-%E6%B5%81%E7%A8%8B"><span class="nav-number">5.</span> <span class="nav-text">5、Android GC 流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Art-%E8%99%9A%E6%8B%9F%E6%9C%BAGC%E8%BF%87%E7%A8%8B"><span class="nav-number">5.1.</span> <span class="nav-text">Art 虚拟机GC过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dalvik-%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E8%BF%87%E7%A8%8B"><span class="nav-number">5.2.</span> <span class="nav-text">Dalvik 虚拟机垃圾收集过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%93%AA%E4%BA%9B%E5%AF%B9%E8%B1%A1%E5%8F%AF%E4%BB%A5%E5%81%9A-GC-Root"><span class="nav-number">5.3.</span> <span class="nav-text">哪些对象可以做 GC Root</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6%E3%80%81%E5%A6%82%E4%BD%95%E7%90%86%E8%A7%A3Java%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6"><span class="nav-number">6.</span> <span class="nav-text">6、如何理解Java类加载机制</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">124</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">29</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共290.7k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '1d0baeb6c84f8df84d25c43db22e3acb',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

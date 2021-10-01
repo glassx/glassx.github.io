@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="Android系统主要提供了3种方式用于简单地实现数据持久化功能——文件存储、SharedPreference存储以及数据库存储。 文件存储文件存储是Android中最基本的存储方式，它不对存储内容进行任何的格式化处理，因而比较适合用于存储一些简单的文本数据或者二进制数据。 将数据存储到文件Context类提供了一个openFileOutput()方法，可以用于将数据存储到指定文件，需要两个参数，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第6章：数据存储全方案：详解持久化技术">
+<meta property="og:url" content="https://glassx.gitee.io/2018/06/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E5%85%AD%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="Android系统主要提供了3种方式用于简单地实现数据持久化功能——文件存储、SharedPreference存储以及数据库存储。 文件存储文件存储是Android中最基本的存储方式，它不对存储内容进行任何的格式化处理，因而比较适合用于存储一些简单的文本数据或者二进制数据。 将数据存储到文件Context类提供了一个openFileOutput()方法，可以用于将数据存储到指定文件，需要两个参数，">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-06-11T00:00:00.000Z">
+<meta property="article:modified_time" content="2019-11-17T13:51:55.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="读书笔记-第一行代码（第二版）">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.gitee.io/2018/06/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E5%85%AD%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第6章：数据存储全方案：详解持久化技术 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">29</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">124</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/06/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E5%85%AD%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第6章：数据存储全方案：详解持久化技术
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-06-11 08:00:00" itemprop="dateCreated datePublished" datetime="2018-06-11T08:00:00+08:00">2018-06-11</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:51:55" itemprop="dateModified" datetime="2019-11-17T21:51:55+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>Android系统主要提供了3种方式用于简单地实现数据持久化功能——文件存储、SharedPreference存储以及数据库存储。</p>
+<h2 id="文件存储"><a href="#文件存储" class="headerlink" title="文件存储"></a>文件存储</h2><p>文件存储是Android中最基本的存储方式，它不对存储内容进行任何的格式化处理，因而比较适合用于存储一些<strong>简单的文本数据</strong>或者<strong>二进制数据</strong>。</p>
+<h3 id="将数据存储到文件"><a href="#将数据存储到文件" class="headerlink" title="将数据存储到文件"></a>将数据存储到文件</h3><p>Context类提供了一个openFileOutput()方法，可以用于将数据存储到指定文件，需要两个参数，第一个参数是文件名，纯粹的名称，不可以包含路径，因为所有的文件都是默认存储到<strong>/data/data/<packagename>/files/</packagename></strong>目录下；还有个参数是操作模式，主要有两种（其他2种在4.2被废弃了）：</p>
+<ul>
+<li>MODE_PRIVATE:默认的操作模式，表示当指定同样文件名的时候，所写入的内容将会覆盖原来文件中的内容。</li>
+<li>MODE_APPEND:表示如果该文件已经存在，就往文件里面追加内容，不存在就创建新文件。</li>
+</ul>
+<p>保存文件的一般如以下代码操作：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">save</span><span class="params">()</span></span>{</span><br><span class="line">	String dataStr = <span class="string">"data to save"</span>;</span><br><span class="line">	FileOutputStream out = <span class="keyword">null</span>;</span><br><span class="line">	BufferedWriter writer = <span class="keyword">null</span>;</span><br><span class="line">	<span class="keyword">try</span>{</span><br><span class="line">		<span class="comment">//文件名是data</span></span><br><span class="line">		out = openFileOutput(<span class="string">"data"</span>,Context.MODE_PRIVATE);</span><br><span class="line">		writer = <span class="keyword">new</span> BufferedWriter(<span class="keyword">new</span> OutputStreamWriter(out));</span><br><span class="line">		writer.write(dataStr);</span><br><span class="line">	}<span class="keyword">catch</span>(IOException e){</span><br><span class="line">		e.printStackTrace();</span><br><span class="line">	}finnaly{</span><br><span class="line">		<span class="keyword">try</span>{</span><br><span class="line">			<span class="keyword">if</span>(writer != <span class="keyword">null</span>){</span><br><span class="line">				writer.close();</span><br><span class="line">			}<span class="keyword">catch</span>(IOException e){</span><br><span class="line">				e.printStackTrace();</span><br><span class="line">			}</span><br><span class="line">		}</span><br><span class="line">	}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>存储成功后，可以通过Android Device Monitor 进入File Explorer标签，在目录中/data/data/<packagename>/files/中就能找到 data 文件。同理，读取存到文件中的代码应如下所示：</packagename></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">load</span><span class="params">()</span></span>{</span><br><span class="line">	FileInputStream in = <span class="keyword">null</span>;</span><br><span class="line">	BufferedReader reader = <span class="keyword">null</span>;</span><br><span class="line">	StringBuilder content = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">	<span class="keyword">try</span>{</span><br><span class="line">		in = openFileInput(<span class="string">"data"</span>);</span><br><span class="line">		reader = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(in));</span><br><span class="line">		String line = <span class="string">""</span>;</span><br><span class="line">		<span class="keyword">while</span>((line = reader.readLine()) != <span class="keyword">null</span>){</span><br><span class="line">			content.append(line);</span><br><span class="line">		}</span><br><span class="line"></span><br><span class="line">	}<span class="keyword">catch</span>(IOException e){</span><br><span class="line">		e.printStackTrace();</span><br><span class="line">	}finnaly{</span><br><span class="line">		<span class="keyword">try</span>{</span><br><span class="line">			<span class="keyword">if</span>(reader != <span class="keyword">null</span>){</span><br><span class="line">				reader.close();</span><br><span class="line">			}<span class="keyword">catch</span>(IOException e){</span><br><span class="line">				e.printStackTrace();</span><br><span class="line">			}</span><br><span class="line">		}</span><br><span class="line">	}</span><br><span class="line">	<span class="keyword">return</span> content.toString();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="SharedPreference"><a href="#SharedPreference" class="headerlink" title="SharedPreference"></a>SharedPreference</h2><p>SharedPreference是使用键值对的方式来存储数据的，保存一条数据的时候，需要给这条数据提供一个对应的键，读取数据时通过这个键把对应的值读取出来，SharedPreference文件都是存放在/data/data/<packagename>/shared_prefs目录下。要想存储数据，首先要获取到SharedPreference对象，Android主要提供了3中方式：</packagename></p>
+<ul>
+<li><p>Context类中的getSharedPreference()方法：此方法接收两个参数，第一个用于指定文件名称，第二个用于指定操作模式，目前只有MODE_PRIVATE可选（其他的几种在4.2或者6.0版本被废弃了），并且是默认的操作模式，表示只有当前应用程序才可以对这个文件进行读写。</p>
+</li>
+<li><p>Activity中的getPreferences()方法：和Context类中的getSharedPreference()方法类似，只不过它只接受一个操作模式参数，因为使用这个方法时会自动将当前Activity的类名作为SharedPreference的文件名。</p>
+</li>
+<li><p>PreferenceManager类中的getDefaultSharedPreferences()方法：它接受一个Context参数，并自动使用当前应用程序的包名作为前缀来命名SharedPreference文件。</p>
+</li>
+</ul>
+<p>获取到SharedPreference对象之后，就可以开始存储数据了，主要分为3步实现：</p>
+<ol>
+<li>调用SharedPreference对象的edit()方法获取SharedPreference.Editor对象</li>
+<li>向SharedPreference.Editor对象添加数据。</li>
+<li>调用apply()方法提交，从而完成存储操作。</li>
+</ol>
+<p>代码形式应该是这样的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SharedPreferences.Editor editor = getSharedPreferences(<span class="string">"data"</span>,MODE_PRIVATE).edit();</span><br><span class="line">editor.putString(<span class="string">"name"</span>,<span class="string">"Tom"</span>);</span><br><span class="line">editor.apply();</span><br><span class="line"></span><br><span class="line"><span class="comment">//存储完成后，读取数据</span></span><br><span class="line">SharedPreferences pref = getSharedPreferences(<span class="string">"data"</span>,MODE_PRIVATE);</span><br><span class="line">String name = pref.getString(<span class="string">"name"</span>,<span class="string">""</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="SQLite数据库存储"><a href="#SQLite数据库存储" class="headerlink" title="SQLite数据库存储"></a>SQLite数据库存储</h2><p>文件存储和SharedPrefrences存储只适用于保存一些简单的数据和键值对，要存储大量复杂的关系型数据的时候，有点难以应付了。</p>
+<h3 id="创建数据库"><a href="#创建数据库" class="headerlink" title="创建数据库"></a>创建数据库</h3><p>Android为了让我们更方便地管理数据库，专门提供了一个SQLiteOpenHelper抽象类，要想使用的话，我们就需要创建一个自己的类去继承它，它有两个抽象方法，onCreate和onUpgrade用来创建和升级数据库，其它两个重要的实例方法：getReadableDatabase和getWritableDatabase，他们都可以创建或者打开一个现有的数据库（没有就创建），在数据库不可写入的时候（如磁盘满了），前者以只读的形式打开数据库，后者会出现异常。它有两个构造方法可重写，一般使用哪个参数较少的即可，总共4个参数，第一个context，第二个是数据库名，第三个是自定义的Cursor，一般传null，第四个表示当前的数据库版本号，用于对数据库进行升级操作。一般代码如下图所示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyDatabaseHelper</span> <span class="keyword">extends</span> <span class="title">SQLiteOpenHelper</span></span>{</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> CREATE_BOOK = <span class="string">"create table Book ("</span></span><br><span class="line">		+ <span class="string">"id integer primary key autoincrement,"</span></span><br><span class="line">		+ <span class="string">"author text,"</span></span><br><span class="line">		+ <span class="string">"price real,"</span></span><br><span class="line">		+ <span class="string">"pages integer,"</span></span><br><span class="line">		+<span class="string">"name text)"</span>;</span><br><span class="line"></span><br><span class="line">		<span class="meta">@Override</span></span><br><span class="line">		<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(SQLiteDatabase db)</span></span>{</span><br><span class="line">			db.exeSQL(CREATE_BOOK);</span><br><span class="line">		}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>使用的时候应该是这样子的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dbHelper = <span class="keyword">new</span> MyDatabaseHelper(<span class="keyword">this</span>,<span class="string">"BookStore.db"</span>,<span class="keyword">null</span>,<span class="number">1</span>);</span><br><span class="line"><span class="comment">//就会创建成功了</span></span><br><span class="line">dbHelper.getWritableDatabase();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上例创建了一个Book表，使用primary key 将id设置为主键，并用autoincrement关键字表示id是自增长的。可以使用</p>
+<blockquote>
+<p>adb shell</p>
+</blockquote>
+<p>命令，之后cd到/data/data/<packagename>/databases/目录下用<strong>ls</strong>列出该目录的文件，可以看到BookStore.db文件，以及BookStore.db-journal文件，后者是数据库的临时文件。SQLite没有其他数据库一样有很多繁杂的数据类型，它的数据类型很简单：<strong>integer表示整型，real表示浮点型，text表示文本，blob表示二进制类型</strong>；</packagename></p>
+<h3 id="升级数据库"><a href="#升级数据库" class="headerlink" title="升级数据库"></a>升级数据库</h3><p>此时项目中有一张Book表用于存放输的各种详细数据了，但是如果再想添加一张Category表用于记录图书的分类，如果仅仅直接在MyDatabaseHelper的onCreate中写成：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(SQLiteDatabase db)</span></span>{</span><br><span class="line">	db.exeSQL(CREATE_BOOK);</span><br><span class="line">	db.exeSQL(CREATE_CATEGORY);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>是行不通的，因为使用的时候先初始化helper：<strong>dbHelper = new MyDatabaseHelper(this,”BookStore.db”,null,1)</strong>再获取数据库：<strong>dbHelper.getWritableDatabase()</strong>，而由于此时已经存在数据库BookStore.db了，因此不会再执行helper的onCreate方法了。此时清除app数据可以做到创建Category表，但是这在实际应用中不合理，而我们可以用<strong>onUpgrade</strong>方法来解决，我们前面构造了MyDatabaseHelper，第4个参数是版本号，我们目前是1，所以只要传入的值大于当前版本号1，onUpgrade方法就可以执行，因此我们可以这样增加Category表：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyDatabaseHelper</span> <span class="keyword">extends</span> <span class="title">SQLiteOpenHelper</span></span>{</span><br><span class="line">	</span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onUpgrade</span><span class="params">(SQLiteDatabase db,<span class="keyword">int</span> oldVersion,<span class="keyword">int</span> newVersion)</span></span>{</span><br><span class="line">		db.exeSQL(<span class="string">"drop table if exists Book"</span>);</span><br><span class="line">		db.exeSQL(<span class="string">"drop table if exists Category"</span>);</span><br><span class="line">		onCreate(db);</span><br><span class="line">	}</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>上述代码执行了两条drop语句，发现数据库已经存在Book表和Category表了就删除，然后调用onCreate方法重新创建，因此在onCreate中也得写成：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(SQLiteDatabase db)</span></span>{</span><br><span class="line">	db.exeSQL(CREATE_BOOK);</span><br><span class="line">	db.exeSQL(CREATE_CATEGORY);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在使用的时候也得升级版本号：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dbHelper = <span class="keyword">new</span> MyDatabaseHelper(<span class="keyword">this</span>,<span class="string">"BookStore.db"</span>,<span class="keyword">null</span>,<span class="number">2</span>);</span><br><span class="line"><span class="comment">//就会创建成功了</span></span><br><span class="line">dbHelper.getWritableDatabase();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>获取到数据库，接下来可以对其CRUD操作，其中C代表添加（Create），R代表查询（retrieve），U代表更新（Update），D代表删除（Delete）。Android开发者水平参差不齐，并非每一个都会SQL语言，Android提供了一系列的辅助性方法，是的在Android中即使不去编写SQL语句，也能轻松完成所有CRUD操作。getReadableDatabase与getWriteableDatabase方法不仅可以用来创建和升级数据库，他们还会返回一个SQLiteDatabase对象，借助这个对象就可以轻松CRUD：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**添加数据**/</span></span><br><span class="line">SQLiteDatabase db = dbHelper.getWritableDatabase();</span><br><span class="line">ContentValues values = <span class="keyword">new</span> ContentValues();</span><br><span class="line">values.put(<span class="string">"name"</span>,<span class="string">"thinking in java"</span>);</span><br><span class="line">values.put(<span class="string">"price"</span>,<span class="number">16.96</span>);</span><br><span class="line">values.put(<span class="string">"pages"</span>,<span class="number">512</span>);</span><br><span class="line"><span class="comment">//插入时指定表名为"Book"</span></span><br><span class="line">db.insert(<span class="string">"Book"</span>,<span class="keyword">null</span>,values);</span><br><span class="line"></span><br><span class="line"><span class="comment">/**以下是更新**/</span></span><br><span class="line">values.clear();</span><br><span class="line">values.put(<span class="string">"price"</span>,<span class="number">20</span>);</span><br><span class="line"><span class="comment">//第三个参数对应SQL语句中的where部分，表示更新所有name等于?的行，而?是一个占位符，</span></span><br><span class="line"><span class="comment">//可以通过第四个参数提供的一个字符串数组为第三个参数中的每个占位符指定相应内容</span></span><br><span class="line">db.update(<span class="string">"Book"</span>,values,<span class="string">"name=?"</span>,<span class="keyword">new</span> String[]{<span class="string">"thinking in java"</span>});</span><br><span class="line"></span><br><span class="line"><span class="comment">/**以下是删除**/</span></span><br><span class="line"><span class="comment">//表示删除pages的值大于500的数据</span></span><br><span class="line">db.delete(<span class="string">"Book"</span>,<span class="string">"pages &gt; ?"</span>,<span class="keyword">new</span> String[]{<span class="string">"500"</span>});</span><br><span class="line"></span><br><span class="line"><span class="comment">/**以下是查询**/</span></span><br><span class="line">Cursor cusor = db.query(<span class="string">"Book"</span>,<span class="keyword">null</span>,<span class="keyword">null</span>,<span class="keyword">null</span>,<span class="keyword">null</span>,<span class="keyword">null</span>,<span class="keyword">null</span>);</span><br><span class="line"><span class="keyword">if</span>(cursor.moveToFirst()){</span><br><span class="line">	<span class="keyword">do</span>{</span><br><span class="line">		String name = cursor.getString(cursor.getColumnIndex(<span class="string">"name"</span>));</span><br><span class="line">		String pages = cursor.Double(cursor.getColumnIndex(<span class="string">"price"</span>));</span><br><span class="line">	}<span class="keyword">while</span>(cursor.moveToNext());</span><br><span class="line">}</span><br><span class="line">cusor.close();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>当然，可以直接使用SQL语句直接完成上述操作：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator">/</span><span class="operator">/</span>添加</span><br><span class="line">db.execSQL("insert into Book (name,pages,price) values(?,?,?)",<span class="keyword">new</span> String[]{"thinking in java","512","20"});</span><br><span class="line"></span><br><span class="line"><span class="operator">/</span><span class="operator">/</span>升级</span><br><span class="line">db.execSQL("update Book set price = ? where name = ",<span class="keyword">new</span> String[]{"20","thinking in java"});</span><br><span class="line"></span><br><span class="line"><span class="operator">/</span><span class="operator">/</span>删除</span><br><span class="line">db.execSQL("delete from Book where pages &gt; ?",<span class="keyword">new</span> String[]{"500"});</span><br><span class="line"></span><br><span class="line"><span class="operator">/</span><span class="operator">/</span>查询</span><br><span class="line">db.execSQL("select * from Book",<span class="keyword">null</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="使用LitePal"><a href="#使用LitePal" class="headerlink" title="使用LitePal"></a>使用LitePal</h2><p><strong>略</strong></p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89/" rel="tag"># 读书笔记-第一行代码（第二版）</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2018/06/10/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%BA%94%E7%AB%A0/" rel="next" title="第5章： 全局大喇叭：详解广播机制">
+                  <i class="fa fa-chevron-left"></i> 第5章： 全局大喇叭：详解广播机制
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2018/06/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/" rel="prev" title="第7章： 数据存储全方案——跨程序共享数据：探究内容提供器">
+                  第7章： 数据存储全方案——跨程序共享数据：探究内容提供器 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E5%AD%98%E5%82%A8"><span class="nav-number">1.</span> <span class="nav-text">文件存储</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%86%E6%95%B0%E6%8D%AE%E5%AD%98%E5%82%A8%E5%88%B0%E6%96%87%E4%BB%B6"><span class="nav-number">1.1.</span> <span class="nav-text">将数据存储到文件</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SharedPreference"><span class="nav-number">2.</span> <span class="nav-text">SharedPreference</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SQLite%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AD%98%E5%82%A8"><span class="nav-number">3.</span> <span class="nav-text">SQLite数据库存储</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="nav-number">3.1.</span> <span class="nav-text">创建数据库</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%87%E7%BA%A7%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="nav-number">3.2.</span> <span class="nav-text">升级数据库</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8LitePal"><span class="nav-number">4.</span> <span class="nav-text">使用LitePal</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">124</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">29</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共290.7k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'effc4a911c2bd0ea7157fd49042a9431',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

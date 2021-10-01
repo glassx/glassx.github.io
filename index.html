@@ -154,17 +154,17 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">1</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">29</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">1</span></a>
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">1</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">124</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -243,10 +243,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2021-09-28 17:14:00 / 修改时间：17:15:00" itemprop="dateCreated datePublished" datetime="2021-09-28T17:14:00+08:00">2021-09-28</time>
+              <time title="创建时间：2021-09-28 17:14:00" itemprop="dateCreated datePublished" datetime="2021-09-28T17:14:00+08:00">2021-09-28</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-09-29 15:06:55" itemprop="dateModified" datetime="2021-09-29T15:06:55+08:00">2021-09-29</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
@@ -285,6 +291,1320 @@
 <li>js错误类型</li>
 <li>交互信息：设备型号分布、操作系统版本、App版本（各个版本占比多少）</li>
 </ul>
+<blockquote>
+<p>以上内容对照现有的APM系统界面编写</p>
+</blockquote>
+<h2 id="360开源的-ArgusAPM-线上监控"><a href="#360开源的-ArgusAPM-线上监控" class="headerlink" title="360开源的 ArgusAPM 线上监控"></a>360开源的 ArgusAPM 线上监控</h2><h3 id="主要功能"><a href="#主要功能" class="headerlink" title="主要功能"></a>主要功能</h3><p>ArgusAPM 主要支持如下性能指标：</p>
+<ul>
+<li>交互分析：分析 Activity 生命周期耗时</li>
+<li>网络请求分析：监控流量使用情况，发现并定位各种网络问题</li>
+<li>内存分析：全面监控内存的使用</li>
+<li>进程监控：针对多进程应用，统计进程启动情况，发现启动异常（耗电、存活率等）</li>
+<li>文件监控： 监控 App 私有文件大小/变化，避免私有文件过大导致的卡顿</li>
+<li>卡顿分析：监控并发现卡顿原因</li>
+<li>ANR 分析： 捕获 ANR 异常</li>
+</ul>
+<h3 id="结构"><a href="#结构" class="headerlink" title="结构"></a>结构</h3><p>主要注意有一个 </p>
+<h3 id="数据采集"><a href="#数据采集" class="headerlink" title="数据采集"></a>数据采集</h3><h4 id="1、卡顿（block）-信息"><a href="#1、卡顿（block）-信息" class="headerlink" title="1、卡顿（block） 信息"></a>1、卡顿（block） 信息</h4><p>通过使用 ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Looper.getMainLooper().setMessageLogging()</span><br></pre></td></tr></tbody></table></figure>
+
+<p>方法设置自定义的 Printer，监听消息的开始和消息的结束。</p>
+<h4 id="2、FPS"><a href="#2、FPS" class="headerlink" title="2、FPS"></a>2、FPS</h4><p>主要通过监听系统执行下一帧的回调来做到：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这个方法的使用方式</span></span><br><span class="line">Choreographer.getInstance().postFrameCallback(<span class="keyword">new</span> Choreographer.FrameCallback(){</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doFrame</span><span class="params">(<span class="keyword">long</span> frameTimeNanos)</span> </span>{</span><br><span class="line"></span><br><span class="line">            }</span><br><span class="line">        });</span><br><span class="line"></span><br><span class="line"><span class="comment">//在 ArgusAPM 中的使用：</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doFrame</span><span class="params">(<span class="keyword">long</span> frameTimeNanos)</span> </span>{</span><br><span class="line">  mFpsCount ++;</span><br><span class="line">  mFrameTimeNanos = frameTimeNanos;</span><br><span class="line">  <span class="keyword">if</span>(isCanWork()) {</span><br><span class="line">    Choreographer.getInstance().postFrameCallback(<span class="keyword">this</span>);</span><br><span class="line">  } <span class="keyword">else</span> {</span><br><span class="line">    mFpsCount = <span class="number">0</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 doFrame 回调里面，每次都重新注册这个监听，当到了定时任务，就计算当前 mFpsCount 数量（总帧数），我们直到 FPS 无非就是每秒绘制的帧数，所以，我们可以计算出 FPS 的值：总帧数/时间。</p>
+<h4 id="3、Memory"><a href="#3、Memory" class="headerlink" title="3、Memory"></a>3、Memory</h4><p>内存收集，在 ArgusAPM 中是通过 getMemoryInfo 方法来获得的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> MemoryInfo <span class="title">getMemoryInfo</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="comment">// 注意：这里是耗时和耗CPU的操作，一定要谨慎调用</span></span><br><span class="line">    Debug.MemoryInfo info = <span class="keyword">new</span> Debug.MemoryInfo();</span><br><span class="line">    Debug.getMemoryInfo(info);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MemoryInfo(ProcessUtils.getCurrentProcessName(), info.getTotalPss(), info.dalvikPss, info.nativePss, info.otherPss);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>通过 Debug 类的相关功能，最后在Native层面实现。 Debug 这个类很有用，我们可以看下主要的方法，会有意想不到的收获。比如启动时等待调试就是调用的 waitForDebugger 方法；获取当前的虚拟机信息可以通过 getVmFeatureList 方法。此外，这个比较耗时和cpu，所以谨慎调用，需要合理降低采集的次数。</p>
+<h4 id="4、watchdog"><a href="#4、watchdog" class="headerlink" title="4、watchdog"></a>4、watchdog</h4><p>WatchDogTask 做的事情和 blockTask 类似，都是卡顿检测，不过采用另外的思路，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Runnable runnable = <span class="keyword">new</span> Runnable() {</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == mHandler) {</span><br><span class="line">                Log.e(TAG, <span class="string">"handler is null"</span>);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            mHandler.post(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    mTick++;</span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                Thread.sleep(DELAY_TIME);</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (TICK_INIT_VALUE == mTick) {</span><br><span class="line">                String stack = captureStacktrace();</span><br><span class="line">                saveWatchdogInfo(stack);</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                mTick = TICK_INIT_VALUE;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            AsyncThreadTask.getInstance().executeDelayed(runnable, ArgusApmConfigManager.getInstance().getArgusApmConfigData().funcControl.getWatchDogIntervalTime());</span><br><span class="line">        }</span><br><span class="line">    };</span><br></pre></td></tr></tbody></table></figure>
+
+<p>主要思路是：<strong>往主线程post 一个任务，对一个变量 mTick 执行 ++ 操作，然后再当前线程中 sleep 一段时间，然后再去检测 mTick，假如主线程没有卡顿的话，那么 ++ 操作肯定会得到执行，这时候 mTick 就不会与初始值相等。如果相等就可以认为这个等待时间里面，主线程发生了卡顿，这个时候就采集数据，采集的主要是堆栈</strong>。</p>
+<h4 id="5、ANR"><a href="#5、ANR" class="headerlink" title="5、ANR"></a>5、ANR</h4><p>发生 ANR 时都会在 <strong>data/anr</strong> 下产生 trace 文件，因此 anr 就是以 trace 文件为核心。ArgusAPM 提供了两种思路： 1）通过Fileobserver 的方式监听 data/anr 这个目录；2）定时采样方式（隔一段时间就保存一下现场）。</p>
+<p>但是这里需要注意，如果没有权限就拿不到 trace 文件，这里并没有解决方案。</p>
+<h4 id="6、Net"><a href="#6、Net" class="headerlink" title="6、Net"></a>6、Net</h4><p>有个 gradle 的 plugin，通过这个 gradle ，在编译 APK 的时候，读取所有的 class 文件，如果发现 Class  文件是 Okhttp 的时候，在方法里面，拿到 interceptors 字段，添加自己的 Interceptor ，这样就完成了 用 ASM 写入一段字节码，这样就可以采集 Okhttp 信息。</p>
+<h4 id="7、Activity"><a href="#7、Activity" class="headerlink" title="7、Activity"></a>7、Activity</h4><p>Activity 的启动常规方式不好采集，ArgusAPM 采用 Hook 的方式，这里采用的是 Hook Instrumentation 这个类：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">hookInstrumentation</span><span class="params">()</span> <span class="keyword">throws</span> ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException </span>{</span><br><span class="line">        Log.e(TAG, <span class="string">"  hookInstrumentation: "</span>);</span><br><span class="line">        Class&lt;?&gt; c = Class.forName(<span class="string">"android.app.ActivityThread"</span>);</span><br><span class="line">        Method currentActivityThread = c.getDeclaredMethod(<span class="string">"currentActivityThread"</span>);</span><br><span class="line">        <span class="keyword">boolean</span> acc = currentActivityThread.isAccessible();</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            currentActivityThread.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        }</span><br><span class="line">        Object o = currentActivityThread.invoke(<span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            currentActivityThread.setAccessible(acc);</span><br><span class="line">        }</span><br><span class="line">        Field f = c.getDeclaredField(<span class="string">"mInstrumentation"</span>);</span><br><span class="line">        acc = f.isAccessible();</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            f.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        }</span><br><span class="line">        Instrumentation currentInstrumentation = (Instrumentation) f.get(o);</span><br><span class="line">        Instrumentation ins = <span class="keyword">new</span> ApmInstrumentation(currentInstrumentation);</span><br><span class="line">        f.set(o, ins);</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            f.setAccessible(acc);</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>hook 当前currentActivityThread 的 mInstrumentation。每次执行 Activity 的任何生命周期都会先调用到 Instrumentation 。在后续可以通过 Hook 方式将自定义的 Instrumentation 代理系统原来的 Instrumentation，这样，就能统计 Activity  中的每个 onXXX 方法执行的耗时，而没有嵌入任何代码。</p>
+<h4 id="8、Appstart"><a href="#8、Appstart" class="headerlink" title="8、Appstart"></a>8、Appstart</h4><p>ArgusAPM 中采用的是 application 的启动到第一个 Activity 的创建结束，因为已经 Hook 了 Instrumentation ，因此在 Instrumentation 的 callApplicationOnCreate 方法执行时，就记录下 Application 启动的时间，然后 callActivityOnCreate 记录下第一个 Activity 的启动即可获得冷启动的启动时间。</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>除了net 和 Activity 之外，其他的采集并不难，只是细节会非常多，所以需要很精细化的控制，降低对 App 的影响。</p>
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/025f61a99534">简书上的博客</a>、<a target="_blank" rel="noopener" href="https://blog.csdn.net/u013270444/article/details/90182469">csdn上的博客</a></p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/28/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/ViewPager2%E6%BB%91%E5%8A%A8%E5%86%B2%E7%AA%81%E8%A7%A3%E5%86%B3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/28/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/ViewPager2%E6%BB%91%E5%8A%A8%E5%86%B2%E7%AA%81%E8%A7%A3%E5%86%B3/" class="post-title-link" itemprop="url">Android基础-ViewPager2滑动冲突处理</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-28 16:18:00 / 修改时间：16:18:59" itemprop="dateCreated datePublished" datetime="2021-09-28T16:18:00+08:00">2021-09-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="为什么-ViewPager-没有滑动冲突"><a href="#为什么-ViewPager-没有滑动冲突" class="headerlink" title="为什么 ViewPager 没有滑动冲突"></a>为什么 ViewPager 没有滑动冲突</h2><p>可能你会有疑问，在 ViewPager 时代，ViewPager 嵌套 ViewPager 并没有出现过滑动冲突。但为什么在升级了 ViewPager2 之后就出现了滑动冲突呢？</p>
+<p>既然如此，我们看下 ViewPager 的 onInterceptTouchEvent 方法（为了方便阅读，代码做了删减）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">      <span class="meta">@Override</span></span><br><span class="line"> <span class="number">2</span>    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>{</span><br><span class="line"> <span class="number">3</span></span><br><span class="line"> <span class="number">4</span>        <span class="keyword">final</span> <span class="keyword">int</span> action = ev.getAction() &amp; MotionEvent.ACTION_MASK;</span><br><span class="line"> <span class="number">5</span>        <span class="keyword">if</span> (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {</span><br><span class="line"> <span class="number">6</span>            <span class="comment">// 在事件取消或者抬起手指后重置状态</span></span><br><span class="line"> <span class="number">7</span>            resetTouch();</span><br><span class="line"> <span class="number">8</span>            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">9</span>        }</span><br><span class="line"><span class="number">10</span></span><br><span class="line"><span class="number">11</span>        <span class="keyword">switch</span> (action) {</span><br><span class="line"><span class="number">12</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">13</span>                <span class="comment">// 这里判断在水平方向上的滑动距离大于竖直方向的2倍，则认为是有效的切换页面的滑动</span></span><br><span class="line"><span class="number">14</span>                <span class="keyword">if</span> (xDiff &gt; mTouchSlop &amp;&amp; xDiff * <span class="number">0.5f</span> &gt; yDiff) { </span><br><span class="line"><span class="number">15</span>                    mIsBeingDragged = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">16</span>                    <span class="comment">// 禁止Parent View拦截事件，即事件要能够传递到ViewPager</span></span><br><span class="line"><span class="number">17</span>                    requestParentDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"><span class="number">18</span>                    setScrollState(SCROLL_STATE_DRAGGING);</span><br><span class="line"><span class="number">19</span>                } <span class="keyword">else</span> <span class="keyword">if</span> (yDiff &gt; mTouchSlop) {</span><br><span class="line"><span class="number">20</span>                    mIsUnableToDrag = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">21</span>                }</span><br><span class="line"><span class="number">22</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">23</span>            }</span><br><span class="line"><span class="number">24</span></span><br><span class="line"><span class="number">25</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {     </span><br><span class="line"><span class="number">26</span>                <span class="keyword">if</span> (mScrollState == SCROLL_STATE_SETTLING</span><br><span class="line"><span class="number">27</span>                        &amp;&amp; Math.abs(mScroller.getFinalX() - mScroller.getCurrX()) &gt; mCloseEnough) {</span><br><span class="line"><span class="number">28</span>                       <span class="comment">// 在Down事件中禁止Parent View拦截事件，是为了事件序列能够传递到ViewPager</span></span><br><span class="line"><span class="number">29</span>                    requestParentDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"><span class="number">30</span>                    setScrollState(SCROLL_STATE_DRAGGING);</span><br><span class="line"><span class="number">31</span>                } <span class="keyword">else</span> {</span><br><span class="line"><span class="number">32</span>                    completeScroll(<span class="keyword">false</span>);</span><br><span class="line"><span class="number">33</span>                    mIsBeingDragged = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">34</span>                }</span><br><span class="line"><span class="number">35</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">36</span>            }</span><br><span class="line"><span class="number">37</span></span><br><span class="line"><span class="number">38</span>            <span class="keyword">case</span> MotionEvent.ACTION_POINTER_UP:</span><br><span class="line"><span class="number">39</span>                onSecondaryPointerUp(ev);</span><br><span class="line"><span class="number">40</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">41</span>        }</span><br><span class="line"><span class="number">42</span>        <span class="keyword">return</span> mIsBeingDragged;</span><br><span class="line"><span class="number">43</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看到，首先在 ACTION_DOWN 的时候通过 requestParentDisallowInterceptTouchEvent(true) 禁止 Parent View 拦截事件，以便后续的事件还能传到 ViewPager 中来；在 ACTION_MOVE 的时候也会有 <strong>水平方向上的滑动距离大于竖直方向的2倍</strong> 条件来判断是否需要禁止 Parent View 拦截事件。</p>
+<p>所以 ViewPager 时我们只管用，无需担心滑动冲突的问题。再看下 ViewPager2 的 onInterceptTouchEvent 方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span>    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">RecyclerViewImpl</span> <span class="keyword">extends</span> <span class="title">RecyclerView</span> </span>{</span><br><span class="line"><span class="number">2</span></span><br><span class="line"><span class="number">3</span>        .... <span class="comment">// 省略部分代码</span></span><br><span class="line"><span class="number">4</span></span><br><span class="line"><span class="number">5</span>        <span class="meta">@Override</span></span><br><span class="line"><span class="number">6</span>        <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>{</span><br><span class="line"><span class="number">7</span>            <span class="keyword">return</span> isUserInputEnabled() &amp;&amp; <span class="keyword">super</span>.onInterceptTouchEvent(ev);</span><br><span class="line"><span class="number">8</span>        }</span><br><span class="line"><span class="number">9</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>它并没有为我们做冲突处理！为什么呢？<strong>因为 ViewPager2 被声明成 final 的，并不能继承，</strong>假如它像 ViewPager 一样官方给处理了滑动冲突，那么如果有特殊要求的情况下，官方的冲突处理可能会妨碍我们自己写的冲突处理，所以全权交给开发者自己处理了。</p>
+<h2 id="滑动冲突的处理方案"><a href="#滑动冲突的处理方案" class="headerlink" title="滑动冲突的处理方案"></a>滑动冲突的处理方案</h2><p>在处理滑动冲突之前先了解处理滑动冲突的两种方案。</p>
+<h3 id="外部拦截法"><a href="#外部拦截法" class="headerlink" title="外部拦截法"></a>外部拦截法</h3><p>所谓的 “外部拦截法” 这个 “外部” 是指 出现滑动冲突的这两个布局的外层。因为，一个事件序列是由 Parent View 先获取的，如果 Parent View 不拦截事件才会交给子 View 去处理，既然外部先获知事件，那外层 View 根据情况来决定是否要拦截事件就行了。大概思路如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"> <span class="number">1</span>     <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent event)</span> </span>{</span><br><span class="line"> <span class="number">2</span>        <span class="keyword">boolean</span> intercepted = <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">3</span>        <span class="keyword">int</span> x = (<span class="keyword">int</span>) event.getX();</span><br><span class="line"> <span class="number">4</span>        <span class="keyword">int</span> y = (<span class="keyword">int</span>) event.getY();</span><br><span class="line"> <span class="number">5</span>        <span class="keyword">switch</span> (event.getAction()) {</span><br><span class="line"> <span class="number">6</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {</span><br><span class="line"> <span class="number">7</span>                intercepted = <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">8</span>                <span class="keyword">break</span>;</span><br><span class="line"> <span class="number">9</span>            }</span><br><span class="line"><span class="number">10</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">11</span>                <span class="keyword">if</span> (needIntercept) { <span class="comment">// 这里根据需求判断是否需要拦截</span></span><br><span class="line"><span class="number">12</span>                    intercepted = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">13</span>                } <span class="keyword">else</span> {</span><br><span class="line"><span class="number">14</span>                    intercepted = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">15</span>                }</span><br><span class="line"><span class="number">16</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">17</span>            }</span><br><span class="line"><span class="number">18</span>            <span class="keyword">case</span> MotionEvent.ACTION_UP: {</span><br><span class="line"><span class="number">19</span>                intercepted = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">20</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">21</span>            }</span><br><span class="line"><span class="number">22</span>            <span class="keyword">default</span>:</span><br><span class="line"><span class="number">23</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">24</span>        }</span><br><span class="line"><span class="number">25</span>        mLastXIntercept = x;</span><br><span class="line"><span class="number">26</span>        mLastYIntercept = y;</span><br><span class="line"><span class="number">27</span>        <span class="keyword">return</span> intercepted;</span><br><span class="line"><span class="number">28</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>首先也是在 ACTION_DOWN 中不做拦截，其次是在 ACTION_MOVE 中根据需要拦截。</p>
+<h2 id="内部拦截法"><a href="#内部拦截法" class="headerlink" title="内部拦截法"></a>内部拦截法</h2><p>所谓“内部拦截法”指的是对内部的View 做文章，<strong>让内部 View 决定是不是拦截事件</strong>。因为 Google 官方提供了 requestDisallowInterceptTouchEvent 方法，它接收一个 Boolean 值，意思是是否要禁止父 ViewGroup 拦截当前事件，如果是 true 的话，父 ViewGroup 就无法对事件进行拦截，看下具体实现：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"> <span class="number">1</span>     <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">dispatchTouchEvent</span><span class="params">(MotionEvent event)</span> </span>{</span><br><span class="line"> <span class="number">2</span>        <span class="keyword">int</span> x = (<span class="keyword">int</span>) event.getX();</span><br><span class="line"> <span class="number">3</span>        <span class="keyword">int</span> y = (<span class="keyword">int</span>) event.getY();</span><br><span class="line"> <span class="number">4</span></span><br><span class="line"> <span class="number">5</span>        <span class="keyword">switch</span> (event.getAction()) {</span><br><span class="line"> <span class="number">6</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {</span><br><span class="line"> <span class="number">7</span>                <span class="comment">// 禁止parent拦截down事件</span></span><br><span class="line"> <span class="number">8</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"> <span class="number">9</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">10</span>            }</span><br><span class="line"><span class="number">11</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">12</span>                <span class="keyword">int</span> deltaX = x - mLastX;</span><br><span class="line"><span class="number">13</span>                <span class="keyword">int</span> deltaY = y - mLastY;</span><br><span class="line"><span class="number">14</span>                <span class="keyword">if</span> (disallowParentInterceptTouchEvent) { <span class="comment">// 根据需求条件来决定是否让Parent View拦截事件。</span></span><br><span class="line"><span class="number">15</span>                    parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>);</span><br><span class="line"><span class="number">16</span>                }</span><br><span class="line"><span class="number">17</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">18</span>            }</span><br><span class="line"><span class="number">19</span>            <span class="keyword">case</span> MotionEvent.ACTION_UP: {</span><br><span class="line"><span class="number">20</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">21</span>            }</span><br><span class="line"><span class="number">22</span>            <span class="keyword">default</span>:</span><br><span class="line"><span class="number">23</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">24</span>        }</span><br><span class="line"><span class="number">25</span></span><br><span class="line"><span class="number">26</span>        mLastX = x;</span><br><span class="line"><span class="number">27</span>        mLastY = y;</span><br><span class="line"><span class="number">28</span>        <span class="keyword">return</span> <span class="keyword">super</span>.dispatchTouchEvent(event);</span><br><span class="line"><span class="number">29</span>    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 dispatchTouchEvent 的 ACTION_DOWN 和 ACTION_MOVE 行为中，分别执行相应动作来判断是否允许 Parent View 拦截自己的事件。</p>
+<h2 id="处理-ViewPager2-的滑动冲突"><a href="#处理-ViewPager2-的滑动冲突" class="headerlink" title="处理 ViewPager2 的滑动冲突"></a>处理 ViewPager2 的滑动冲突</h2><p>在解决冲突之前，我们首先要确定下存在哪些需要拦截哪些不需要拦截的边界条件，来分析下：</p>
+<ul>
+<li>如果设置了 userInputEnable=false ，那么ViewPager2不应该拦截任何事件；</li>
+<li>如果只有一个Item，那么ViewPager2也不应该拦截事件；</li>
+<li>如果是多个Item，且当前是第一个页面，那么只能拦截向左的滑动事件，向右的滑动事件就不应该由ViewPager2拦截了；</li>
+<li>如果是多个Item，且当前是最后一个页面，那么只能拦截向右的滑动事件，向左的滑动事件不应该由当前的ViewPager2拦截；</li>
+<li>如果是多个Item，且是中间页面，那么无论向左还是向右的事件都应该由ViewPager2拦截；</li>
+<li>最后，由于ViewPager2是支持竖直滑动的，那么竖直滑动也应该考虑以上条件。</li>
+</ul>
+<p>分析完成后，我们看下应该使用哪种方案来处理滑动冲突，很明显，我们应该使用 <strong>内部拦截法</strong>，但是，由于 ViewPager2 被设置为了 final ，我们无法通过继承方式来处理。</p>
+<p>所以，<strong>我们需要在 ViewPager2 外部包裹一层自定义的 Layout，在它里面实现事件拦截逻辑，用它来实现内部拦截！</strong>看代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line">  1class ViewPager2Container <span class="meta">@JvmOverloads</span> constructor(context: Context, attrs: AttributeSet? = <span class="keyword">null</span>, defStyleAttr: Int = <span class="number">0</span>) : RelativeLayout(context, attrs, defStyleAttr) {</span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span>    <span class="keyword">private</span> <span class="keyword">var</span> mViewPager2: ViewPager2? = <span class="keyword">null</span></span><br><span class="line">  <span class="number">4</span>    <span class="keyword">private</span> <span class="keyword">var</span> disallowParentInterceptDownEvent = <span class="keyword">true</span></span><br><span class="line">  <span class="number">5</span>    <span class="keyword">private</span> <span class="keyword">var</span> startX = <span class="number">0</span></span><br><span class="line">  <span class="number">6</span>    <span class="keyword">private</span> <span class="keyword">var</span> startY = <span class="number">0</span></span><br><span class="line">  <span class="number">7</span></span><br><span class="line">  <span class="number">8</span>    <span class="function">override fun <span class="title">onFinishInflate</span><span class="params">()</span> </span>{</span><br><span class="line">  <span class="number">9</span>        <span class="keyword">super</span>.onFinishInflate()</span><br><span class="line"> <span class="number">10</span>        <span class="keyword">for</span> (i in <span class="number">0</span> until childCount) {</span><br><span class="line"> <span class="number">11</span>            val childView = getChildAt(i)</span><br><span class="line"> <span class="number">12</span>            <span class="keyword">if</span> (childView is ViewPager2) {</span><br><span class="line"> <span class="number">13</span>                mViewPager2 = childView</span><br><span class="line"> <span class="number">14</span>                <span class="keyword">break</span></span><br><span class="line"> <span class="number">15</span>            }</span><br><span class="line"> <span class="number">16</span>        }</span><br><span class="line"> <span class="number">17</span>        <span class="keyword">if</span> (mViewPager2 == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">18</span>            <span class="keyword">throw</span> IllegalStateException(<span class="string">"The root child of ViewPager2Container must contains a ViewPager2"</span>)</span><br><span class="line"> <span class="number">19</span>        }</span><br><span class="line"> <span class="number">20</span>    }</span><br><span class="line"> <span class="number">21</span></span><br><span class="line"> <span class="number">22</span>    <span class="function">override fun <span class="title">onInterceptTouchEvent</span><span class="params">(ev: MotionEvent)</span>: Boolean </span>{</span><br><span class="line"> <span class="number">23</span>        val doNotNeedIntercept = (!mViewPager2!!.isUserInputEnabled</span><br><span class="line"> <span class="number">24</span>                || (mViewPager2?.adapter != <span class="keyword">null</span></span><br><span class="line"> <span class="number">25</span>                &amp;&amp; mViewPager2?.adapter!!.itemCount &lt;= <span class="number">1</span>))</span><br><span class="line"> <span class="number">26</span>        <span class="keyword">if</span> (doNotNeedIntercept) {</span><br><span class="line"> <span class="number">27</span>            <span class="keyword">return</span> <span class="keyword">super</span>.onInterceptTouchEvent(ev)</span><br><span class="line"> <span class="number">28</span>        }</span><br><span class="line"> <span class="number">29</span>        when (ev.action) {</span><br><span class="line"> <span class="number">30</span>            MotionEvent.ACTION_DOWN -&gt; {</span><br><span class="line"> <span class="number">31</span>                startX = ev.x.toInt()</span><br><span class="line"> <span class="number">32</span>                startY = ev.y.toInt()</span><br><span class="line"> <span class="number">33</span>                parent.requestDisallowInterceptTouchEvent(!disallowParentInterceptDownEvent)</span><br><span class="line"> <span class="number">34</span>            }</span><br><span class="line"> <span class="number">35</span>            MotionEvent.ACTION_MOVE -&gt; {</span><br><span class="line"> <span class="number">36</span>                val endX = ev.x.toInt()</span><br><span class="line"> <span class="number">37</span>                val endY = ev.y.toInt()</span><br><span class="line"> <span class="number">38</span>                val disX = abs(endX - startX)</span><br><span class="line"> <span class="number">39</span>                val disY = abs(endY - startY)</span><br><span class="line"> <span class="number">40</span>                <span class="keyword">if</span> (mViewPager2!!.orientation == ViewPager2.ORIENTATION_VERTICAL) {</span><br><span class="line"> <span class="number">41</span>                    onVerticalActionMove(endY, disX, disY)</span><br><span class="line"> <span class="number">42</span>                } <span class="keyword">else</span> <span class="keyword">if</span> (mViewPager2!!.orientation == ViewPager2.ORIENTATION_HORIZONTAL) {</span><br><span class="line"> <span class="number">43</span>                    onHorizontalActionMove(endX, disX, disY)</span><br><span class="line"> <span class="number">44</span>                }</span><br><span class="line"> <span class="number">45</span>            }</span><br><span class="line"> <span class="number">46</span>            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -&gt; parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">47</span>        }</span><br><span class="line"> <span class="number">48</span>        <span class="keyword">return</span> <span class="keyword">super</span>.onInterceptTouchEvent(ev)</span><br><span class="line"> <span class="number">49</span>    }</span><br><span class="line"> <span class="number">50</span></span><br><span class="line"> <span class="number">51</span>    <span class="function"><span class="keyword">private</span> fun <span class="title">onHorizontalActionMove</span><span class="params">(endX: Int, disX: Int, disY: Int)</span> </span>{</span><br><span class="line"> <span class="number">52</span>        <span class="keyword">if</span> (mViewPager2?.adapter == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">53</span>            <span class="keyword">return</span></span><br><span class="line"> <span class="number">54</span>        }</span><br><span class="line"> <span class="number">55</span>        <span class="keyword">if</span> (disX &gt; disY) {</span><br><span class="line"> <span class="number">56</span>            val currentItem = mViewPager2?.currentItem</span><br><span class="line"> <span class="number">57</span>            val itemCount = mViewPager2?.adapter!!.itemCount</span><br><span class="line"> <span class="number">58</span>            <span class="keyword">if</span> (currentItem == <span class="number">0</span> &amp;&amp; endX - startX &gt; <span class="number">0</span>) {</span><br><span class="line"> <span class="number">59</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">60</span>            } <span class="keyword">else</span> {</span><br><span class="line"> <span class="number">61</span>                parent.requestDisallowInterceptTouchEvent(currentItem != itemCount - <span class="number">1</span></span><br><span class="line"> <span class="number">62</span>                        || endX - startX &gt;= <span class="number">0</span>)</span><br><span class="line"> <span class="number">63</span>            }</span><br><span class="line"> <span class="number">64</span>        } <span class="keyword">else</span> <span class="keyword">if</span> (disY &gt; disX) {</span><br><span class="line"> <span class="number">65</span>            parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">66</span>        }</span><br><span class="line"> <span class="number">67</span>    }</span><br><span class="line"> <span class="number">68</span></span><br><span class="line"> <span class="number">69</span>    <span class="function"><span class="keyword">private</span> fun <span class="title">onVerticalActionMove</span><span class="params">(endY: Int, disX: Int, disY: Int)</span> </span>{</span><br><span class="line"> <span class="number">70</span>        <span class="keyword">if</span> (mViewPager2?.adapter == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">71</span>            <span class="keyword">return</span></span><br><span class="line"> <span class="number">72</span>        }</span><br><span class="line"> <span class="number">73</span>        val currentItem = mViewPager2?.currentItem</span><br><span class="line"> <span class="number">74</span>        val itemCount = mViewPager2?.adapter!!.itemCount</span><br><span class="line"> <span class="number">75</span>        <span class="keyword">if</span> (disY &gt; disX) {</span><br><span class="line"> <span class="number">76</span>            <span class="keyword">if</span> (currentItem == <span class="number">0</span> &amp;&amp; endY - startY &gt; <span class="number">0</span>) {</span><br><span class="line"> <span class="number">77</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">78</span>            } <span class="keyword">else</span> {</span><br><span class="line"> <span class="number">79</span>                parent.requestDisallowInterceptTouchEvent(currentItem != itemCount - <span class="number">1</span></span><br><span class="line"> <span class="number">80</span>                        || endY - startY &gt;= <span class="number">0</span>)</span><br><span class="line"> <span class="number">81</span>            }</span><br><span class="line"> <span class="number">82</span>        } <span class="keyword">else</span> <span class="keyword">if</span> (disX &gt; disY) {</span><br><span class="line"> <span class="number">83</span>            parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">84</span>        }</span><br><span class="line"> <span class="number">85</span>    }</span><br><span class="line"> <span class="number">86</span></span><br><span class="line"> <span class="number">87</span>    <span class="comment">/**</span></span><br><span class="line"><span class="comment"> 88     * 设置是否允许在当前View的{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View对事件的拦截，该方法</span></span><br><span class="line"><span class="comment"> 89     * 用于解决CoordinatorLayout+CollapsingToolbarLayout在嵌套ViewPager2Container时引起的滑动冲突问题。</span></span><br><span class="line"><span class="comment"> 90     *</span></span><br><span class="line"><span class="comment"> 91     * 设置是否允许在ViewPager2Container的{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View对事件的拦截，该方法</span></span><br><span class="line"><span class="comment"> 92     * 用于解决CoordinatorLayout+CollapsingToolbarLayout在嵌套ViewPager2Container时引起的滑动冲突问题。</span></span><br><span class="line"><span class="comment"> 93     *</span></span><br><span class="line"><span class="comment"> 94     * <span class="doctag">@param</span> disallowParentInterceptDownEvent 是否允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View拦截事件，默认值为false</span></span><br><span class="line"><span class="comment"> 95     *                          true 不允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}时间中禁止父View的时间拦截，</span></span><br><span class="line"><span class="comment"> 96     *                          设置disallowIntercept为true可以解决CoordinatorLayout+CollapsingToolbarLayout的滑动冲突</span></span><br><span class="line"><span class="comment"> 97     *                          false 允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}时间中禁止父View的时间拦截，</span></span><br><span class="line"><span class="comment"> 98     */</span></span><br><span class="line"> <span class="number">99</span>    <span class="function">fun <span class="title">disallowParentInterceptDownEvent</span><span class="params">(disallowParentInterceptDownEvent: Boolean)</span> </span>{</span><br><span class="line"><span class="number">100</span>        <span class="keyword">this</span>.disallowParentInterceptDownEvent = disallowParentInterceptDownEvent</span><br><span class="line"><span class="number">101</span>    }</span><br><span class="line"><span class="number">102</span>}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>代码已经很清楚了，但是主要注意一下： <strong>在onFinishInflate中我们通过循环，遍历自定义 Layout 的所有子 View ，如果没有找到 ViewPager2 就抛出异常</strong>。</p>
+<blockquote>
+<p> 以上内容参考自<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/7iqXs2z3z20dQR7Ocv_qiQ">刘望舒的公众号</a>，如果链接失效，可以查看原文<a target="_blank" rel="noopener" href="https://juejin.cn/post/6911456860533063688">赌一包辣条的博客</a></p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/EventBus%E5%8E%9F%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/27/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/EventBus%E5%8E%9F%E7%90%86/" class="post-title-link" itemprop="url">系统源码理解-EventBus原理</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-09-27 11:13:00" itemprop="dateCreated datePublished" datetime="2021-09-27T11:13:00+08:00">2021-09-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-09-28 16:36:15" itemprop="dateModified" datetime="2021-09-28T16:36:15+08:00">2021-09-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><blockquote>
+<p>注： 本文的EventBus版本为 3.0</p>
+</blockquote>
+<h2 id="Subscrib-注解"><a href="#Subscrib-注解" class="headerlink" title="Subscrib 注解"></a>Subscrib 注解</h2><p>自 3.0 以来，EventBus 使用 @Subscrib 注解来标记订阅事件的方法，方法命名随意。并不用像以前那样指定方法的命名：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Subscribe</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testEventBus</span><span class="params">(Object obj)</span></span>{ }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个注解的定义很有个性，可以看下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span> <span class="comment">// 注解不仅被保存到class文件中，jvm加载class文件之后，仍然存在</span></span><br><span class="line"><span class="meta">@Target({ElementType.METHOD})</span>  <span class="comment">// 作用在方法上</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Subscribe {</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 指定事件订阅方法所在的线程模式，也就是决定订阅方法是在哪个线程，默认是POSTING模式</span></span><br><span class="line">    <span class="function">ThreadMode <span class="title">threadMode</span><span class="params">()</span> <span class="keyword">default</span> ThreadMode.POSTING</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 是否支持粘性事件</span></span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">sticky</span><span class="params">()</span> <span class="keyword">default</span> <span class="keyword">false</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 优先级，如果指定了优先级，则若干方法接收同一事件时，优先级高的方法会先接收到。</span></span><br><span class="line">    <span class="function"><span class="keyword">int</span> <span class="title">priority</span><span class="params">()</span> <span class="keyword">default</span> 0</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其中有几种线程模式，有以下几种：</p>
+<ul>
+<li><p><strong>ThreadMode.MAIN：</strong>如在主线程（UI线程）发送事件，则直接在主线程处理事件；如果在子线程发送事件，则先将事件入队列，然后通过 Handler 切换到主线程，依次处理事件。</p>
+</li>
+<li><p><strong>ThreadMode.ASYNC：</strong>与ThreadMode.MAIN_ORDERED相反，无论在哪个线程发送事件，都将事件加入到队列中，然后通过线程池执行事件</p>
+</li>
+<li><p><strong>ThreadMode.POSTING：</strong>默认的线程模式，在哪个线程发送事件就在对应线程处理事件，避免了线程切换，效率高。</p>
+</li>
+<li><p><strong>ThreadMode.MAIN_ORDERED：</strong>无论在哪个线程发送事件，都将事件加入到队列中，然后通过Handler切换到主线程，依次处理事件。</p>
+</li>
+<li><p><strong>ThreadMode.BACKGROUND：</strong>与ThreadMode.MAIN相反，如果在子线程发送事件，则直接在子线程处理事件；如果在主线程上发送事件，则先将事件入队列，然后通过线程池处理事件。</p>
+</li>
+</ul>
+<h2 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h2><p>注册过程很简单：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().register(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//注册源码</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">register</span><span class="params">(Object subscriber)</span> </span>{</span><br><span class="line">     Class&lt;?&gt; subscriberClass = subscriber.getClass(); <span class="comment">// 获取传入的要注册类的字节码文件</span></span><br><span class="line">     List&lt;SubscriberMethod&gt; subscriberMethods = </span><br><span class="line">     subscriberMethodFinder.findSubscriberMethods(subscriberClass); </span><br><span class="line">     </span><br><span class="line">     <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line"></span><br><span class="line">         <span class="comment">// 遍历订阅方法封装类的集合</span></span><br><span class="line">         <span class="keyword">for</span> (SubscriberMethod subscriberMethod : subscriberMethods) {</span><br><span class="line">              subscribe(subscriber, subscriberMethod); </span><br><span class="line">         }</span><br><span class="line">     }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>根据源码可以直到，这个方法就做了两件事情：</p>
+<ul>
+<li>根据传入的参数object ，获取其 Class ，然后通过这个 Class 获取所有的方法（当然，首先看有没有缓存），查看经过 @Subscrib 修饰的方法，即这个类中所有的订阅方法（会做封装），生成一个list</li>
+<li>遍历上述生成的 list ，给 2 个 Map 填充数据：<strong>subscriptionsByEventType</strong>以 event （订阅方法的参数）的类型（Class）为key，value 为订阅方法list（CopyOnWriteArrayList）；<strong>typesBySubscriber</strong> 以register时传入的对象为key ，value 为 这个对象所有订阅方法所订阅的事件。</li>
+</ul>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//EventBus中变量的声明</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//可以根据event（订阅方法中的参数）类型 获取所有订阅方法</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Class&lt;?&gt;, CopyOnWriteArrayList&lt;Subscription&gt;&gt; subscriptionsByEventType;</span><br><span class="line"><span class="comment">//根据注册对象，获取这个对象上所有的订阅方法</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Object, List&lt;Class&lt;?&gt;&gt;&gt; typesBySubscriber;</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="反注册"><a href="#反注册" class="headerlink" title="反注册"></a>反注册</h2><p>反注册也很简单：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().unregister(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unregister</span><span class="params">(Object subscriber)</span> </span>{</span><br><span class="line"></span><br><span class="line">    List&lt;Class&lt;?&gt;&gt; subscribedTypes = typesBySubscriber.get(subscriber);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 如果集合不为null    </span></span><br><span class="line">    <span class="keyword">if</span> (subscribedTypes != <span class="keyword">null</span>) {</span><br><span class="line">            </span><br><span class="line">         <span class="comment">// 遍历集合，获取订阅事件的类型</span></span><br><span class="line">         <span class="keyword">for</span> (Class&lt;?&gt; eventType : subscribedTypes) {</span><br><span class="line"></span><br><span class="line">              unsubscribeByEventType(subscriber, eventType);</span><br><span class="line">         }</span><br><span class="line">         typesBySubscriber.remove(subscriber);</span><br><span class="line">     } <span class="keyword">else</span> {</span><br><span class="line">          logger.log(Level.WARNING, <span class="string">"Subscriber to unregister was not registered before: "</span> + subscriber.getClass());</span><br><span class="line">     }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>刚才在注册时候，说了其中一个 map 为 typesBySubscriber，它以注册对象为 key ，value 为这个对象中所有注册方法所注册的event 类型的列表。所以在反注册的时候，</p>
+<ol>
+<li>首先通过传入的对象，获取 注册的 event 的列表 </li>
+<li>遍历这个列表，获取 event 的类型，然后通过这个类型在 subscriptionsByEventType 查找（经过封装的）订阅方法，根据封装在里面的 注册对象 是否是当前 unregister 传入的对象来判断，如果是当前传入的对象，就移除这个经过封装的订阅方法   </li>
+</ol>
+<h2 id="post-发布事件"><a href="#post-发布事件" class="headerlink" title="post 发布事件"></a>post 发布事件</h2><p>post的使用也很简单：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().post(<span class="keyword">new</span> Object());</span><br></pre></td></tr></tbody></table></figure>
+
+<p>注册的时候，说了有一个map 为 subscriptionsByEventType ，以 event 的类型为key ，存储了所有订阅了这中 event 的（经过封装的）方法。post 的时候，根据post发送的事件类型（post方法的参数的 Class ）从 subscriptionsByEventType 这个集合中获取到所有的订阅方法。之后依次通过反射调用这些方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">invokeSubscriber</span><span class="params">(Subscription subscription, Object event)</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        subscription.subscriberMethod.method.invoke(subscription.subscriber, event);</span><br><span class="line">    } <span class="keyword">catch</span> (InvocationTargetException e) {</span><br><span class="line">        handleSubscriberException(subscription, event, e.getCause());</span><br><span class="line">    } <span class="keyword">catch</span> (IllegalAccessException e) {</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unexpected exception"</span>, e);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>其中， subscription.subscriberMethod.method 是 Method 类型的，用过反射的话，就知道它可以直接 invoke ，它的定义是这样的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">native</span> Object <span class="title">invoke</span><span class="params">(Object obj, Object... args)</span></span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>第一个参数 obj 指的是用 obj 这个实例来调用这个方法（因为一个类可能会有多个实例，非静态方法需要指定一个实例来调用这个方法），后面的 args 就是方法需要传入的参数。</p>
+<p>所以，在 invoke 的时候，subscription.subscriber 我们应该很容易知道是 register 时传入的那个 Object ！由此，我们一个消息就形成了闭环。</p>
+<h3 id="最后问题，支持跨进程吗？"><a href="#最后问题，支持跨进程吗？" class="headerlink" title="最后问题，支持跨进程吗？"></a>最后问题，支持跨进程吗？</h3><p>不支持跨进程，因为单例。经过上述分析，我们知道 EventBus 的注册、反注册、post 都是通过：EventBus.getDefault() 实现，我们看下它的代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EventBus</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> EventBus defaultInstance;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** Convenience singleton for apps using a process-wide EventBus instance. */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> EventBus <span class="title">getDefault</span><span class="params">()</span> </span>{</span><br><span class="line">        EventBus instance = defaultInstance;</span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">synchronized</span> (EventBus.class) {</span><br><span class="line">                instance = EventBus.defaultInstance;</span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="keyword">null</span>) {</span><br><span class="line">                    instance = EventBus.defaultInstance = <span class="keyword">new</span> EventBus();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p> 所以我们都是基于一个 <strong>static 类型的 defaultInstance</strong>去做一系列操作，由于跨进程后，静态会失效，所以，<strong>EventBus 并不能跨进程</strong>。</p>
+<p>以上参考自掘金<a target="_blank" rel="noopener" href="https://juejin.cn/post/6844903969517469709#heading-7">刘洋巴金的博客</a>，如果链接变得不可访问，可以参看这篇文章的<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/a2f14b0cb217">Copy</a></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/21/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/" class="post-title-link" itemprop="url">第12章：封装控件</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-21 22:17:00 / 修改时间：22:18:08" itemprop="dateCreated datePublished" datetime="2021-09-21T22:17:00+08:00">2021-09-21</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="自定义属性与自定义-Style"><a href="#自定义属性与自定义-Style" class="headerlink" title="自定义属性与自定义 Style"></a>自定义属性与自定义 Style</h2><p>我们一般会自定义一个View，比如 MyCustomView，然后再设置自定义属性：在 res/values 目录下，创建一个 attrs.xml ，在其中编写 declare-styleable ：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">resources</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">declare-styleable</span> <span class="attr">name</span>=<span class="string">"MyCustomView"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">attr</span> <span class="attr">name</span>=<span class="string">"header"</span> <span class="attr">format</span>=<span class="string">"reference"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">attr</span> <span class="attr">name</span>=<span class="string">"age"</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">flag</span> <span class="attr">name</span>=<span class="string">"child"</span> <span class="attr">value</span>=<span class="string">"10"</span>/&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">flag</span> <span class="attr">name</span>=<span class="string">"young"</span> <span class="attr">value</span>=<span class="string">"18"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">attr</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">declare-styleable</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个过程有2点需要注意：</p>
+<ul>
+<li>declare-styleable 旁边的name属性，这个属性的取值对应所定义的<strong>类名</strong>。因为我们自定义的类名叫做 MyCustomView ，所以这里的name 取值也是 MyCustomView    </li>
+<li>自定义属性值可以组合使用，比如 <attr name="color" format="color|reference"> 表示既可以自定义 color 值（比如#ff0000），也可以利用 @color/xxx 来引用 color.xml 中已有的值    </attr></li>
+</ul>
+<p>当然，我们有时候也需要使用常量来表示，比如上述的 flag，相当于代码中的常量，比如 young 就表示数字 18。</p>
+<h3 id="在xml中使用自定义属性"><a href="#在xml中使用自定义属性" class="headerlink" title="在xml中使用自定义属性"></a>在xml中使用自定义属性</h3><p>要记得以 xmlns 导入自定义的属性集：</p>
+<blockquote>
+<p>xmlns:attrstest=”<a target="_blank" rel="noopener" href="http://schemas.android.com/apk/res-auto&quot;">http://schemas.android.com/apk/res-auto"</a></p>
+</blockquote>
+<p>在代码中获取自定义的属性主要使用 <strong>TypedArray</strong></p>
+<h3 id="declare-styleable-标签其他属性的用法"><a href="#declare-styleable-标签其他属性的用法" class="headerlink" title="declare-styleable 标签其他属性的用法"></a>declare-styleable 标签其他属性的用法</h3><p>暂略</p>
+<h2 id="测量与布局"><a href="#测量与布局" class="headerlink" title="测量与布局"></a>测量与布局</h2><h3 id="ViewGroup-的绘制流程"><a href="#ViewGroup-的绘制流程" class="headerlink" title="ViewGroup 的绘制流程"></a>ViewGroup 的绘制流程</h3><p>View 和ViewGroup 基本相同，只不过ViewGroup 不仅要绘制自己，还要绘制其子控件，而View 只需要绘制自己即可，所以就以 ViewGroup 来讲解。</p>
+<p>绘制流程分为 3 个步骤，测量（onMeasure）、布局（onLayout）、绘制（onDraw），需要注意的一点是：onMeasure 用于测量当前控件的大小，为正式布局提供建议（<strong>只是提供建议，至于用不用，需要看 onLayout 函数</strong>）。</p>
+<h3 id="onMeasure-函数与-MeasureSpec"><a href="#onMeasure-函数与-MeasureSpec" class="headerlink" title="onMeasure 函数与 MeasureSpec"></a>onMeasure 函数与 MeasureSpec</h3><p>测量过程通过 measure() 函数实现，是 View 树自顶向下的遍历，每个 View 在循环过程中将尺寸细节往下传递，<strong>当测量过程完成后，所有的 View 都存储了自己的尺寸。</strong></p>
+<p>并且，布局过程 layout 也是自顶向下实现的，在这个过程中，每个父 View 负责通过计算好的尺寸放置它的子 View。</p>
+<h4 id="onMeasure-函数"><a href="#onMeasure-函数" class="headerlink" title="onMeasure 函数"></a>onMeasure 函数</h4><p>该函数有2个int类型的参数 widthMeasureSpec 和 heightMeasureSpec ，这两个参数都是父View传递过来给当前 View 的一个<strong>建议值</strong>。</p>
+<h4 id="MeasureSpec-组成"><a href="#MeasureSpec-组成" class="headerlink" title="MeasureSpec 组成"></a>MeasureSpec 组成</h4><p>虽然上述参数是int 类型的，但是它们是由 mode + size 两部分组成的。它们转换成二进制后，<strong>前2位表示模式（mode），后30位表示数值（size）</strong>。模式主要有3种：</p>
+<ul>
+<li>UNSPECIFIED（mode位：00）：父元素不对子元素施加任何约束，子元素可以得到任意想要的大小    </li>
+<li>EXACTLY（mode位：01）：父元素决定子元素的确切大小，子元素将被限定在给定的便捷里而忽略它本身大小</li>
+<li>AT_MOST（mode位：10）:子元素至多能达到指定的大小值</li>
+</ul>
+<p>由以上特性，我们就可以很简单地直到模式和数值的提取：<strong>MODE_MASK，它的二进制表示中，前2位是1，其余30位都是 0，这样，我们只需要将widthMeasureSpec （或 heightMeasureSpec） 位与(&amp;)  MODE_MASK 就可以得到 mode 值，将 他们 &amp; ~MODE_MASK 即可得到数值</strong>。</p>
+<h4 id="mode-的用处"><a href="#mode-的用处" class="headerlink" title="mode 的用处"></a>mode 的用处</h4><p>参数 widthMeasureSpec 和 heightMeasureSpec 各自都有对应的mode，而这个mode 来自 XML 定义，简单来说xml 布局和 mode  有如下关系：</p>
+<ul>
+<li>Wrap_content -&gt; MeasureSpec.AT_MOST</li>
+<li>match_parent -&gt; MeasureSpec.EXACTLY</li>
+<li>具体值 -&gt; MeasureSpec.EXACTLY</li>
+</ul>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">com.example.FlowLayout</span></span></span><br><span class="line"><span class="tag">     <span class="attr">android:layout_width</span>=<span class="string">"match_parent"</span></span></span><br><span class="line"><span class="tag">     <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>比如上述例子中，FlowLayout 在 onMeasure() 函数中传值时，widthMeasureSpec 的mode 是 MeasureSpec.EXACTLY ，即父窗口宽度值；heightMeasureSpec 的mode是 MeasureSpec.AT_MOST ，即值不确定。一定要注意的是：<strong>当模式是 MeasureSpec.EXACTLY 时，就不必设定我们计算的值了，因为这个大小是用户指定的，我们不应该改。但当模式是 MeasureSpec.AT_MOST 时，就需要将大小设定为我们计算的数值，因为用户使用的是 wrap_content，没有设置具体值</strong>。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onMeasure</span><span class="params">(<span class="keyword">int</span> widthMeasureSpec,<span class="keyword">int</span> heightMeasureSpec)</span> </span>{</span><br><span class="line">  <span class="comment">//假设width 与 height 使我们计算得到控件应该占的宽和高，省略计算过程</span></span><br><span class="line">  <span class="keyword">int</span> width = ...;</span><br><span class="line">  <span class="keyword">int</span> height = ...;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">//假设 measureWidth 与 measureHeight 是获取到的后30位的value</span></span><br><span class="line">  <span class="keyword">int</span> measureWidth = ...;</span><br><span class="line">  <span class="keyword">int</span> measureHeight = ...;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">//在 onMeasure 函数中，最终我们必须要通过 setMeasuredDimension 来设置</span></span><br><span class="line">  setMeasuredDimension((widthMode == MeasureSpec.EXACTLY)?measureWidth: width, (heightMode == MeasureSpec.EXACTLY)? measureHeight: height,)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h3 id="onLayout-函数"><a href="#onLayout-函数" class="headerlink" title="onLayout 函数"></a>onLayout 函数</h3><p>前面说了 ，onLayout 实现了所有子View的布局，注意，是<strong>所有子View</strong>。那它自己的布局怎么办？这个后续说。其实 onLayout 是个抽象函数，也就是所有继承 ViewGroup 的类都要自己去实现这个函数，LinearLayout 和 RelativeLayout 都是如此，均重写了。</p>
+<h3 id="简单示例-自己加的章节"><a href="#简单示例-自己加的章节" class="headerlink" title="简单示例(自己加的章节)"></a>简单示例(自己加的章节)</h3><p>用一个简单示例说明 onMeasure 与 onLayout 的具体使用，比如要做如下效果图：</p>
+<p><img src="/assets/Book-Notes/Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/%E7%AE%80%E5%8D%95%E6%95%88%E6%9E%9C.png" alt="简单效果"></p>
+<p>这个效果图需要关注2点：（1）、三个TextView 竖直排列  （2）、背景Layout宽度是 match_parent ，高度是 wrap_content 。首先看下布局文件：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">com.example.myapplication.MyLinLayout</span> <span class="attr">xmlns:android</span>=<span class="string">"http://schemas.android.com/apk/res/android"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:layout_width</span>=<span class="string">"match_parent"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:background</span>=<span class="string">"#ff00ff"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    <span class="tag">&lt;<span class="name">TextView</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:background</span>=<span class="string">"#ff0000"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:text</span>=<span class="string">"第一个VIEW"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">TextView</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:background</span>=<span class="string">"#00ff00"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:text</span>=<span class="string">"第二个VIEW"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">TextView</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:background</span>=<span class="string">"#0000ff"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:text</span>=<span class="string">"第三个VIEW"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">com.example.myapplication.MyLinLayout</span>&gt;</span>                   </span><br></pre></td></tr></tbody></table></figure>
+
+<p>自定义的 MyLinLayout 的宽高分别为 match_parent 和 wrap_content。</p>
+<h4 id="MyLinLayout-重写-onMeasure-函数"><a href="#MyLinLayout-重写-onMeasure-函数" class="headerlink" title="MyLinLayout 重写 onMeasure() 函数"></a>MyLinLayout 重写 onMeasure() 函数</h4><p>前面提到 <strong>onMeasure 的作用就是根据 container 内部的子控件计算自己的宽和高 ，然后通过 setMeasuredDimension 方法设置进去</strong>。先看看完整的代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onMeasure</span><span class="params">(<span class="keyword">int</span> widthMeasureSpec, <span class="keyword">int</span> heightMeasureSpec)</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> measureWidth = MeasureSpec.getSize(widthMeasureSpec);</span><br><span class="line">    <span class="keyword">int</span> measureHeight = MeasureSpec.getSize(heightMeasureSpec);</span><br><span class="line">    <span class="keyword">int</span> measureWidthMode = MeasureSpec.getMode(widthMeasureSpec);</span><br><span class="line">    <span class="keyword">int</span> measureHeightMode = MeasureSpec.getMode(heightMeasureSpec);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> height = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">int</span> width = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">int</span> count = getChildCount();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; count; i++) {</span><br><span class="line">        <span class="comment">//测量子控件</span></span><br><span class="line">        View child = getChildAt(i);</span><br><span class="line">        measureChild(child, widthMeasureSpec, heightMeasureSpec);</span><br><span class="line">        <span class="comment">//获取子控件的宽高</span></span><br><span class="line">        <span class="keyword">int</span> childHeight = child.getMeasuredHeight();</span><br><span class="line">        <span class="keyword">int</span> childWidth = child.getMeasuredWidth();</span><br><span class="line">        <span class="comment">//得到最大宽度，并且累加高度</span></span><br><span class="line">        height += childHeight;</span><br><span class="line">        width = Math.max(childWidth, width);</span><br><span class="line">        setMeasuredDimension((measureWidthMode == MeasureSpec.EXACTLY) ? measureWidth : width, </span><br><span class="line">                (measureHeightMode == MeasureSpec.EXACTLY) ? measureHeight : height);</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>步骤如下：</p>
+<ol>
+<li>获取从父类传过来的建议宽高，提取mode 和value </li>
+<li>测量所有的子 View ，之后就能获取所有子View 的测量宽高</li>
+<li>根据所有子View 的宽高，来获得自己的<strong>计算宽高，这个值计算的其实就是自己宽和高都被设置为 wrap_content 情况下的值</strong>，因为 Exactly 的时候，并不建议我们去改value 的。</li>
+<li>因为是竖直排列，所以container 的高度应该是各个子View的高度和；宽度应该是各个子View 最大的宽度</li>
+<li>最后，根据当前用户设置的mode来判断是否需要将这个计算宽高设置进去，用它来实现当前container 所在的位置</li>
+</ol>
+<p>由于我们在上面的xml 布局文件中，将 MyLinLayout 的宽度设置为 match_parent ，高度为 wrap_content ，所以在onMeasure 里面，</p>
+<p>int measureWidthMode 应该是MeasureSpec.EXACTLY；  measureHeightMode 为 MeasureSpec.AT_MOST，<strong>换句话说，width 使用的是从父类传过来的 measureWidth ，高度是我们自己计算的 height</strong>，即实际情况应该等价于：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setMeasuredDimension(measureWidth, height);</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h3 id="MyLinLayout-重写-onLayout-函数"><a href="#MyLinLayout-重写-onLayout-函数" class="headerlink" title="MyLinLayout 重写 onLayout 函数"></a>MyLinLayout 重写 onLayout 函数</h3><p>在这一部分是根据自己的医院把 container 内部的各个控件排列起来，先看完整代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onLayout</span><span class="params">(<span class="keyword">boolean</span> changed, <span class="keyword">int</span> l, <span class="keyword">int</span> t, <span class="keyword">int</span> r, <span class="keyword">int</span> b)</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> top = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">int</span> count = getChildCount();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; count; i++) {</span><br><span class="line">        View child = getChildAt(i);</span><br><span class="line">        <span class="keyword">int</span> childHeight = child.getMeasuredHeight();</span><br><span class="line">        <span class="keyword">int</span> childWidth = child.getMeasuredWidth();</span><br><span class="line">        <span class="comment">//设置子View的位置</span></span><br><span class="line">        child.layout(<span class="number">0</span>, top, childWidth, top + childHeight);</span><br><span class="line">        top += childHeight;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>代码讲完，再讲一个非常容易混淆的问题：</p>
+<h4 id="getMeasuredWidth-与-getWidth"><a href="#getMeasuredWidth-与-getWidth" class="headerlink" title="getMeasuredWidth 与 getWidth"></a>getMeasuredWidth 与 getWidth</h4><p>这两个值大部分时候是相同的，但是含义根本不一样，二者区别主要体现在：</p>
+<ul>
+<li>getMeasuredWidth 函数在 measure 过程结束后就可以获取到宽度值，而getWidth 需要在 layout 完成后才能获取到高度值！</li>
+<li>getMeasuredWidth 获取的值是通过 setMeasuredDimension 函数来设置的；而 getWidth 函数值则是通过 layout（left,top,right,bottom） 函数来进行设置的</li>
+</ul>
+<p>看完两个函数后，我们也明白了 onMeasure 阶段提供的测量结果只是为布局提供建议的，最终要看 onLayout 函数。<strong>因为我们在 child.layout 的时候，直接通过 0 + child.measuredWidth 来计算right 的值，所以我 getMeasuredWidth 与 getWidth 函数返回的值就是一样的了</strong>。</p>
+<h4 id="疑问：container-自己什么时候被布局"><a href="#疑问：container-自己什么时候被布局" class="headerlink" title="疑问：container 自己什么时候被布局"></a>疑问：container 自己什么时候被布局</h4><p>这其实要追溯到 View 的 layout 里面：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">layout</span><span class="params">(<span class="keyword">int</span> l, <span class="keyword">int</span> t, <span class="keyword">int</span> r, <span class="keyword">int</span> b)</span> </span>{</span><br><span class="line">  ...省略代码</span><br><span class="line">        <span class="keyword">boolean</span> changed =  setFrame(l, t, r, b);</span><br><span class="line">    ...省略代码</span><br><span class="line">       onLayout(changed, l, t, r, b);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>setFrame 设置的是自己的位置，结束后才调用 onLayout 。此时，measure 和 layout 都结束了，但是我们还没考虑 margin。</p>
+<h3 id="获取子控件margin"><a href="#获取子控件margin" class="headerlink" title="获取子控件margin"></a>获取子控件margin</h3><p>如果要自定义 ViewGroup 支持子控件的 layout_margin 参数，则自定义的 ViewGroup 类<strong>必须重写 generateLayoutParams() 函数，并且在该函数返回一个 ViewGroup.MarginLayoutParams 派生类对象！</strong></p>
+<p>为了验证，我们可以在之前的 MyLinLayout 例子基础上，为 TextView 添加 margin ，但是我们能看到，压根就没有起作用，代码就先略了。这是为什么呢？因为测量和布局都是我们自己实现的，我们在 onLayout() 函数中没有根据 margin 来布局。</p>
+<p>需要注意的是，<strong>如果我们在 onLayout() 函数中根据 margin 来布局，那么 onMeasure() 函数中计算 container 的大小时，也要加上 layout_margin 参数，否则导致 container 太小而控件显示不全</strong>。</p>
+<h4 id="实例展示"><a href="#实例展示" class="headerlink" title="实例展示"></a>实例展示</h4><p>之前说的需要重写  generateLayoutParams()  函数，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> LayoutParams <span class="title">generateLayoutParams</span><span class="params">(LayoutParams p)</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MarginLayoutParams(p);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> LayoutParams <span class="title">generateLayoutParams</span><span class="params">(AttributeSet attrs)</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MarginLayoutParams(getContext(), attrs);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> LayoutParams <span class="title">generateDefaultLayoutParams</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MarginLayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>至于为什么要这么写，稍后再讲。</p>
+<h4 id="重写-onMeasure-函数"><a href="#重写-onMeasure-函数" class="headerlink" title="重写 onMeasure() 函数"></a>重写 onMeasure() 函数</h4><p>略</p>
+<h2 id="实现-FlowLayout-容器"><a href="#实现-FlowLayout-容器" class="headerlink" title="实现 FlowLayout 容器"></a>实现 FlowLayout 容器</h2><p>先略</p>
+<p>当measure 完成之后，尺寸才会存到 View 属性中，我们才能获取到 View 的属性</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/20/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E9%98%B2%E6%AD%A2jar%E8%A2%AB%E5%8F%8D%E7%BC%96%E8%AF%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/20/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E9%98%B2%E6%AD%A2jar%E8%A2%AB%E5%8F%8D%E7%BC%96%E8%AF%91/" class="post-title-link" itemprop="url">Java基础-防止jar被反编译</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-09-20 18:25:00" itemprop="dateCreated datePublished" datetime="2021-09-20T18:25:00+08:00">2021-09-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-09-28 16:31:33" itemprop="dateModified" datetime="2021-09-28T16:31:33+08:00">2021-09-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>java作为解释型语言，因其高度抽象的特性导致其很容易被反编译，容易被反编译，自然有防止反编译的措施存在。常见的防反编译的技术有以下几种。</p>
+<h3 id="隔离Java程序"><a href="#隔离Java程序" class="headerlink" title="隔离Java程序"></a>隔离Java程序</h3><p>最简单的方法就是让用户不能够访问到 Java Class 程序，这种方法是最根本的方法。具体方法有很多，比如：</p>
+<ul>
+<li>将关键的Java Class 放在服务端，客户端通过访问接口来获得服务，而不是直接访问 Class 文件，这样黑客就没法反编译 Class 文件。</li>
+</ul>
+<p>但是有很多应用场景不适合这种保护方式，比如<strong>单机运行的程序</strong> 就无法格力Java 程序。</p>
+<h3 id="对-Class-文件进行加密"><a href="#对-Class-文件进行加密" class="headerlink" title="对 Class 文件进行加密"></a>对 Class 文件进行加密</h3><p>为了防止Class 文件被直接反编译，许多开发人员将一些关键的 Class 文件进行加密，例如，<strong>注册码、序列号管理</strong>等相关的类。</p>
+<p>在使用这些类之前，程序寿险需要对这些类进行解密，然后再将这些类装在到 JVM 中，<strong>这些类的加密可以由硬件完成，也可以使用软件完成</strong>。</p>
+<h3 id="转换成-Native-Code"><a href="#转换成-Native-Code" class="headerlink" title="转换成 Native Code"></a>转换成 Native Code</h3><p>Native Code 往往难以被反编译，开发人员可以选择将整个应用程序转换成 Native Code，也可以选择将关键模块转换为 Native Code。</p>
+<p>当然，这么做的同时，<strong>也牺牲了Java 的跨平台特性</strong>。如果仅仅转换关键部分，Java 程序在使用这些模块时，需要使用 JNI 技术调用。</p>
+<p>为了保证Native 代码不被修改和替代，通常需要对这些代码<strong>进行数字签名</strong>。在使用前，往往需要先对 Native Code 进行认证。</p>
+<h3 id="代码混淆"><a href="#代码混淆" class="headerlink" title="代码混淆"></a>代码混淆</h3><p>代码混淆是对 Class 文件进行重新组织和处理，功能虽然还保证，但是很难被反编译，即使反编译后也非常难懂。</p>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/BTH73KaZKqwX3JL2O1T-PA">如何防止你的java jar被反编译</a></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC2%E7%AB%A0-%E7%BB%84%E4%BB%B6%E5%8C%96%E7%BC%96%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC2%E7%AB%A0-%E7%BB%84%E4%BB%B6%E5%8C%96%E7%BC%96%E7%A8%8B/" class="post-title-link" itemprop="url">第2章：组件化编程</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-19 11:22:00 / 修改时间：16:45:16" itemprop="dateCreated datePublished" datetime="2021-09-19T11:22:00+08:00">2021-09-19</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="信息传递（自己起的，感觉书起的章节很乱）"><a href="#信息传递（自己起的，感觉书起的章节很乱）" class="headerlink" title="信息传递（自己起的，感觉书起的章节很乱）"></a>信息传递（自己起的，感觉书起的章节很乱）</h2><p>Android中提供了很多不同的信息传递方式，本节主要衡量每种传递方式的效率和使用场景。</p>
+<p>在最基础的组件化架构中，组件层中的模块是相互独立的，并不存在依赖，没有依赖就没法传递消息，那该如何传递消息呢？我们需要第三方协助，也就是基础层（BaseModule），如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E5%9F%BA%E7%A1%80%E5%8C%96%E7%BB%84%E4%BB%B6%E7%9A%84%E9%80%9A%E4%BF%A1.png" alt="基础组件化通信"></p>
+<p>从图可以看出，<strong>Base module 就是跨越组件化层级通信的关键，也是模块间交流的基础</strong>。</p>
+<h3 id="方式1、本地广播"><a href="#方式1、本地广播" class="headerlink" title="方式1、本地广播"></a>方式1、本地广播</h3><p>本地广播与全局广播比较：</p>
+<ul>
+<li>本地广播只能动态注册，全局广播可以动态和静态注册</li>
+<li>本地广播只局限于当前App（严谨说是当前进程），全局广播可以跨进程</li>
+<li>本地广播使用Handler 实现，就在当前进程传播，因此效率比全局广播高</li>
+</ul>
+<p>但是，<strong>在用于组件间通信时，本地广播将一切全交给系统负责了，无法干预传输途中的任何步骤</strong>。</p>
+<h3 id="方式2、事件总线"><a href="#方式2、事件总线" class="headerlink" title="方式2、事件总线"></a>方式2、事件总线</h3><p>事件总线主要有 EventBus 和 RxBus。</p>
+<p>事件总线通过记录对象、使用监听者模式来通知对象各种事件。工作机制如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%B7%A5%E4%BD%9C%E7%A4%BA%E6%84%8F.png" alt="事件总线工作示意"></p>
+<p>其中，EventBus 是一款针对Android优化的发布/订阅事件总线，主要功能是替代 Intent、Handler、BroadCast，在Fragment、Activity、Service、线程之间传递消息，<strong>优点是开销小，代码更优雅，发送和接收者解耦；缺点是依附的对象销毁时一定要记得取消订阅，否则由于强引用会导致内存泄漏，并且，每个事件都必须自定义一个事件类，造成事件类太多</strong>。</p>
+<blockquote>
+<p>注意： EventBus 2.x 使用的是 运行时注解，很大程度上是依赖于反射规则的，采用反射的方式对整个注册的类的所有方法进行扫描来完成注册；而Eventbus 3.x 使用的是 编译时注解，在编译的时候，就会将相应操作编译成 .class 文件，在编译时就进行操作这样运行时的速度就会快很多。</p>
+</blockquote>
+<p>RxBus 是基于RxJava 衍生而来的，只要引入了 RxJava 和 R小Android 就能很方便地使用 RxBus ，它的实现很有意思，采用静态内部类的单例，由于内部静态类只会被加载一次，所以实现方式是线程安全的（可以与volatile + double check 对比着看）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RxBus</span> </span>{</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Subject bus;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">RxBus</span><span class="params">()</span> </span>{</span><br><span class="line">    bus = <span class="keyword">new</span> SerializedSubject&lt;&gt;(PublishSubject.create());</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> RxBus <span class="title">getInstance</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> RxBusHolder.mInstance;</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">RxBusHolder</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> RxBus mInstance = <span class="keyword">new</span> RxBus();</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h3 id="组件化事件总线考量"><a href="#组件化事件总线考量" class="headerlink" title="组件化事件总线考量"></a>组件化事件总线考量</h3><p>通信事件都要放到公共的Base模块中，Base模块也需要依赖于事件总线框架，信息组件都都需要放在Base模块中，我们看一下总线传递的流程：</p>
+<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E6%80%BB%E7%BA%BF%E4%BC%A0%E9%80%92%E6%B5%81%E7%A8%8B.png" alt="总线传递流程"></p>
+<p>组件化要求功能模块独立，应该尽量少影响 App module 和 Base module ，其中 Base module 尽量做得通用，不受其他模块影响。而上述事件总线放在 Base module 中，每个模块增删时，都需要添加或者删除Base module 的事件，而增删事件会让其他代码索引到这些事件的代码时造成错误，这样会破坏组件化设计的规则。</p>
+<p>这就是目前组件化通信会遇到的瓶颈。两种比较适合现阶段组件化通信的方式：</p>
+<ul>
+<li>ModuleBus： 能传递一些基础类型数据，不需要在 Base module 添加额外的类，所以不会影响 Base模块的架构，但也无法动态移除信息接收端代码，而自定义的时间信息模型还是需要添加到 Base module    </li>
+<li>组件化架构的 ModularizationArchitecture 库。每个功能模块都需要使用注解建立 Action 时间，每个 Action 完成一个事件动作，没有用到反射，参数通过 HashMap&lt;Stirng,String&gt;传递，无法传递对象    </li>
+</ul>
+<p>如果一定要使用 EventBus 或者 RxBus事件总线，这里提供一种架构方案，最大限度地解耦：</p>
+<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/EventBus%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E4%BD%BF%E7%94%A8.png" alt="EventBus正确使用使用"></p>
+<p>其中xxBus独立为一个module ，Base module 依赖 xxBus 对事件通信的解耦，抽离事件到 xxBus 事件总线模块，以后天啊及事件的Event 的实体都需要在上面创建。</p>
+<h2 id="组件间跳转"><a href="#组件间跳转" class="headerlink" title="组件间跳转"></a>组件间跳转</h2><p>在组件化中，两个功能模块是不存在直接依赖的，<strong>其依赖规则是通过 Base module 间接依赖的</strong>。</p>
+<p>Activity 跳转，直观的跳转就是startActivity 发送一个包装好的 intent去实现。但是如果Activity 在其他 moudle ，则无法索引到 Activity 类，这时候我们会很自然想到使用 intent 包装隐式 Action 实现。隐式跳转的方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//方法1 通过AndroidManifest中声明的action来启动</span></span><br><span class="line">Intent intent = <span class="keyword">new</span> Intent(<span class="string">"material.com.settings"</span>);</span><br><span class="line">startActivity(intent);</span><br><span class="line"></span><br><span class="line"><span class="comment">//方法2 包名 + 类名的方式</span></span><br><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">intent.setClassName(<span class="string">"模块包名"</span>, <span class="string">"Activity路径"</span>);</span><br><span class="line">intent.setComponent(<span class="keyword">new</span> ComponentName(<span class="string">"模块包名"</span>,<span class="string">"Activity路径"</span>));</span><br><span class="line">startActivity(intent);</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>但是第2种方式会产生崩溃，提示Activity并没有在AndroidManifest中注册，可是明明注册了啊？这里真正需要理解的是， setClassName 和 setComponent 函数第一个参数的真正含义，<strong>它们是 App 的包名而不是所在的 module 的包名 ！</strong>这在第1章的时候已经聊过了，<strong>当最终合成 AndroidManifest 后，module的包名压根就不存在了</strong>（<font color="#ff0000">有空需要自己去验证下</font>）。</p>
+<p>由于隐式跳转有可能招不到目标Activity 而导致崩溃，所以，我们应该首先判断intent是否能够正常跳转。</p>
+<p>此外，还有对安全问题的考虑，因为其他App也能通过隐式的 Intent 来启动 Activity （<strong>隐式跳转是原生的，作用范围是整个Android系统</strong>），为了确保只有自己的 App 能启动组件，需要设置 exported = false。</p>
+<h3 id="ARouter-路由跳转"><a href="#ARouter-路由跳转" class="headerlink" title="ARouter 路由跳转"></a>ARouter 路由跳转</h3><p>ARouter 使用 AOP 切面编程可以进行控制跳转的过滤。在 Application 中进行 init 之后，我们就对跳转目标做处理：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//声明</span></span><br><span class="line"><span class="meta">@Route(path="gank_web/1")</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WebActivity</span> <span class="keyword">extends</span> <span class="title">BaseActivity</span> </span>{}</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line">ARouter.getInstance().build(<span class="string">"gank_web/1"</span>)</span><br><span class="line">  .withString(<span class="string">"url"</span>,url)</span><br><span class="line">  .navigation();</span><br><span class="line"></span><br><span class="line"><span class="comment">//获取传递的参数</span></span><br><span class="line">Intent intent = getIntent();</span><br><span class="line">String url = intent.getStringExtra(<span class="string">"url"</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>整一个过程还是非常优雅的。</p>
+<h3 id="组件化最佳路由"><a href="#组件化最佳路由" class="headerlink" title="组件化最佳路由"></a>组件化最佳路由</h3><p>既然已经存在隐式跳转，为什么我们还要选择路由呢？<strong>在组件化架构中，假如移除一些功能  module 和跳转关系，则跳转无法成功，此时，如果要做一些提示，将迁入更多的判断机制代码。而使用路由机制，可以统一对这些索引不到的 module 页面进行提前拦截和做出提示。</strong></p>
+<p>路由除了跳转，另一个重要作用就是拦截，比如可以在跳转前进行登录状态验证，路由表的引入，也不需要在 AndroidManifest 中声明隐式跳转。</p>
+<p><strong>路由的选择：</strong>现在开源软件中有不少路由结构，比如： ActivityRouter、天猫统跳协议、ARouter、DeepLinkDispatch、OkDeepLink 等。如果你的项目没有引入 RxJava，那么 ARouter 的介入成本低，是首选；如果接入了，那 OkDeepLink 可以 兼容 RxJava ，可以做考虑。当然，OkDeepLink 会在 Intent 中假如 FLAG_ACTIVITY_NEW_TASK 标识，那么创建每个Activity 都会创建新的任务栈来装载 ！</p>
+<h3 id="空类索引"><a href="#空类索引" class="headerlink" title="空类索引"></a>空类索引</h3><p>如果不想使用第三方路由，可以采用空类索引的方式实现跳转，它的原理就是：<strong>使用空类来欺骗编译。</strong>具体的步骤为（个人理解，不一定对）：</p>
+<ol>
+<li>在各个 module 编写好，但还没实现跨 module 跳转之前</li>
+<li>将所有 module 打包，就会生成 apk 了，只是还暂时不能跳转而已</li>
+<li>通过某种手段（人工或者工具）解压 apk ，并读取 AndroidManifest.xml 文件中的四大组件信息，生成一个 jar 包 </li>
+<li>这个 jar 包里面的内容是空的四大组件，比如，AndroidManifest 中有个 com.example.ActivityA ，那么在 jar 包中也会声明（同路径、同类名）一个 com.example.ActivityA，并且继承 Activity </li>
+<li>之后，将这个 jar 包以 provided 形式（只是引入，不会编译进去）到各个 module 中</li>
+<li>此后，各个 module 便可以直接以普通的显式 Intent 来 startActivity 了！</li>
+</ol>
+<h2 id="动态创建"><a href="#动态创建" class="headerlink" title="动态创建"></a>动态创建</h2><p>动态创建也是为了解耦</p>
+<h3 id="动态创建-Fragment"><a href="#动态创建-Fragment" class="headerlink" title="动态创建 Fragment"></a>动态创建 Fragment</h3><p>如果在单Activity + 多Fragment情景中，可以使用动态创建 Fragment （反射的方式），用于模块间的解耦是非常合适的。因为普通方式使用Fragment 的话，需要强引用 Fragment，因为ARouter 也支持这种 Fragment 方式，所以直接使用 ARouter 是不错的。</p>
+<h3 id="动态配置Application"><a href="#动态配置Application" class="headerlink" title="动态配置Application"></a>动态配置Application</h3><p>第1章介绍了使用组件化后，Application 产生的替换原则。如果某些功能模块需要做一些初始化操作，只能强引用到主 module 的 Application 中，是否有方法可以降低耦合呢？一种方案就是通过主 module 获取各个 module 的初始化文件，然后通过反射初始化的 Java 文件来调用初始化方法：</p>
+<ol>
+<li><p>Base module 中定义接口 BaseAppInit，里面有 init() 方法</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">BaseAppInit</span> </span>{</span><br><span class="line">  <span class="function"><span class="keyword">boolean</span> <span class="title">init</span><span class="params">(Application app)</span></span></span><br><span class="line"><span class="function">}</span></span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>在 module 中使用 BaseAppInit ，实现它：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NewsInit</span> <span class="keyword">implements</span> <span class="title">BaseAppInit</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">init</span><span class="params">(Application app)</span> </span>{</span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>在 PageConfig 中添加配置</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String NewsInit = <span class="string">"material.com.news.api.NewsInit"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> String[] initModules = {</span><br><span class="line">  NewsInit</span><br><span class="line">};</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>在主 module 的 Application 中实现初始化方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initModules</span><span class="params">()</span> </span>{</span><br><span class="line">  <span class="keyword">for</span> (String init: PageConfig.initModules) {</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">      Class&lt;?&gt; clazz = Class.forName(init);</span><br><span class="line">      BaseAppInit moduleInit = (BaseAppInit)clazz.newInstance();</span><br><span class="line">      moduleInit.init(<span class="keyword">this</span>);</span><br><span class="line">    } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">      e.printStack();</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>在 Application的 onCreate 中调用 上述的 initModules 方法即可</p>
+</li>
+</ol>
+<p>第二种方式就不写了，个人认为理解这种方式即可。</p>
+<h2 id="数据存储"><a href="#数据存储" class="headerlink" title="数据存储"></a>数据存储</h2><p>存储方式主要5种，网络存储、File I/O 、SQLite、ContentProvider、SharedPreference</p>
+<h3 id="组件化存储"><a href="#组件化存储" class="headerlink" title="组件化存储"></a>组件化存储</h3><p>Android 原生的存储体系是全局的，在组件化开发中，五中原生的存储方式是完全通用的。文中介绍了 greeDAO 这个关系映射的数据库框架。关于数据库在组件化的应用，文中也建议与事件总线一样，如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E5%85%B3%E7%B3%BB%E5%9E%8B%E6%95%B0%E6%8D%AE%E5%BA%93%E6%9E%B6%E6%9E%84.png" alt="关系型数据库架构"></p>
+<h2 id="权限管理"><a href="#权限管理" class="headerlink" title="权限管理"></a>权限管理</h2><h3 id="组件化权限"><a href="#组件化权限" class="headerlink" title="组件化权限"></a>组件化权限</h3><p>通过查看 AndroidManifest 文件，可以看到各个 module 中的权限申请，最终会被合并到完整 AndroidManifest 中。这时候，我们有两种权限放置方案：</p>
+<ol>
+<li>将 normal 级别的权限申请都放到 Base module 中，然后在各个 module 中分别申请 dangerous 权限，这样分配的好处在于：<strong>当添加或者移除一个模块时，隐私权限的申请也跟随移除，做到最大限度地解耦</strong></li>
+<li>还有人提议，将权限全部转交给每个 module 中，达到最大程度的解耦，这样做的缺点在于：<strong>会增加AndroidManifest 的合并检测的耗时</strong></li>
+</ol>
+<h3 id="动态权限框架"><a href="#动态权限框架" class="headerlink" title="动态权限框架"></a>动态权限框架</h3><p>书中说可以选择 AndPermission ，使用简单，并且最大程度适配国内各大厂商的 ROM</p>
+<h3 id="路由拦截"><a href="#路由拦截" class="headerlink" title="路由拦截"></a>路由拦截</h3><p>首先聊到了通过 registerActivityLifecycle 来保存栈顶的 Activity，在 resume 的时候持有 这个activity 。由于 下一个 Activity 的 resume 肯定比当前 Activity 的 destroy 要先执行，所以可以肯定静态持有栈顶 Activity 不会导致内存泄漏（细品就知道了）。</p>
+<h2 id="静态常量"><a href="#静态常量" class="headerlink" title="静态常量"></a>静态常量</h2><p>在 Application module 中查看 R.java 文件：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">R</span> </span>{</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">anim</span> </span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> abc_fade_in = <span class="number">0x7f050000</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> abc_fade_out = <span class="number">0x7f050001</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> abc_fade_from_bottom = <span class="number">0x7f050002</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是，在 Lib module 中查看 R.java 文件：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">R</span> </span>{</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">anim</span> </span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> abc_fade_in = <span class="number">0x7f050000</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> abc_fade_out = <span class="number">0x7f050001</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> abc_fade_from_bottom = <span class="number">0x7f050002</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>仔细观察会发现，<strong>在 Lib module 中的静态变量没有被赋予 final 属性</strong>。在第1章提及，各个 module 会生成 aar 文件，并且被引用到 Application  module 中，最终合并成 apk 文件，当各个次级 module 在 Application module 中被解压后，在编译时 R.java 会被重新解压到 build/generated/source/r/debug(release)/包名/R.java 中。</p>
+<p><strong>合并后的 R.java 中 的id 属性会被添加 final 修饰符</strong>。（<font color="#ff0000">这是我自己理解的，需要验证</font>）</p>
+<h3 id="组件化的静态变量"><a href="#组件化的静态变量" class="headerlink" title="组件化的静态变量"></a>组件化的静态变量</h3><p>在 Lib module 中，R.java 文件没有了 final 关键字会导致什么问题呢？</p>
+<p><strong>这就会导致凡是规定必须采用常量的地方都无法直接使用 R.java 中的变量，包括 switch-case  和注解。</strong></p>
+<h3 id="R2-java-的秘密"><a href="#R2-java-的秘密" class="headerlink" title="R2.java 的秘密"></a>R2.java 的秘密</h3><p>ButterKnife ，一个专注于 Android View 的注入框架，可以大量减少 findviewById 和 setOnClickListener 操作的第三方库。当使用注入View 绑定时：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@BindView(R2.id.submit)</span></span><br><span class="line"><span class="keyword">public</span> Toolbar mToolbar;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>编译成 class 后，R的值会替换为常量：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@BindView(2131492966)</span></span><br><span class="line"><span class="keyword">public</span> Toolbar mToolbar;</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>注解中只能使用常量</strong>，如果不是常量就会报错，那么 ButterKnife 是如何解决的呢？它的原理是使用替换的方法，<strong>将 R.java 文件赋值一份，命名为 R2.java ，然后给 R2.java 的变量加上 final 修饰符，在相关的地方直接使用 R2 资源！</strong></p>
+<h2 id="资源冲突"><a href="#资源冲突" class="headerlink" title="资源冲突"></a>资源冲突</h2><h3 id="AndroidManifest-冲突问题"><a href="#AndroidManifest-冲突问题" class="headerlink" title="AndroidManifest 冲突问题"></a>AndroidManifest 冲突问题</h3><p>前面说了，AndroidManifest 中 Application 的 app:name 冲突时，需要使用 “tools:replace=android:name” 声明可替换</p>
+<h3 id="包冲突"><a href="#包冲突" class="headerlink" title="包冲突"></a>包冲突</h3><p>包冲突可以先检查依赖报告，用以下命令查看依赖目录树：</p>
+<blockquote>
+<p>Gradle dependencies </p>
+</blockquote>
+<p>有冲突可以使用 exclude 解决（不严谨）</p>
+<h3 id="资源名冲突"><a href="#资源名冲突" class="headerlink" title="资源名冲突"></a>资源名冲突</h3><p>一般在一开始命名的时候，不同的 module 加上不同的前缀即可解决。只能一点可以采用 gradle 命名提示机制，resourcePrefix字段：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">android {</span><br><span class="line">    resourcePrefix "组件名_"</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="组件化混淆"><a href="#组件化混淆" class="headerlink" title="组件化混淆"></a>组件化混淆</h2><p>不能混淆的情况有以下：</p>
+<ul>
+<li>反射中使用的元素</li>
+<li>最好不让一些Bean 对象混淆</li>
+<li>四大组件要在AndroidManifest中声明，混淆后类名发生改变，因此不要混淆</li>
+<li>注解不要混淆，注解一般要用到反射</li>
+<li>不能混淆枚举红的 value 和 valueOf ，因为这两个方法是静态添加到代码中运行的，也会被反射使用</li>
+<li>JNI 调用 java 的方法，需要通过类名和方法名构成地址形成</li>
+<li>java 使用 Native 方法，Native 是C/C++ 编写的，方法是无法一同混淆的</li>
+<li>JS 调用 java的方法（-keepattributes *JavascriptInterface*） </li>
+<li>webview中 Javascript 的调用方法不能混淆</li>
+<li>第三方库建议使用自身混淆规则</li>
+<li>Parcelable 的子类和 Creator 的静态成员变量不混淆</li>
+</ul>
+<h3 id="组件化混淆-1"><a href="#组件化混淆-1" class="headerlink" title="组件化混淆"></a>组件化混淆</h3><p>重点是保证只混淆一次：</p>
+<p>第一种方案：只在 Application module 中设置混淆，其他module 都关闭混淆，所有的规则都放在 Application 的module 中</p>
+<p>第二种方案：命令将 所有的 module 中的 proguard-rule.pro 文件合成，然后覆盖 Application module 中的混淆文件</p>
+<h3 id="多渠道打包"><a href="#多渠道打包" class="headerlink" title="多渠道打包"></a>多渠道打包</h3><p>略</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC1%E7%AB%A0-%E7%BB%84%E4%BB%B6%E5%8C%96%E5%9F%BA%E7%A1%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC1%E7%AB%A0-%E7%BB%84%E4%BB%B6%E5%8C%96%E5%9F%BA%E7%A1%80/" class="post-title-link" itemprop="url">第1章：组件化基础</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-19 09:29:00 / 修改时间：11:21:56" itemprop="dateCreated datePublished" datetime="2021-09-19T09:29:00+08:00">2021-09-19</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="你知道组件化吗"><a href="#你知道组件化吗" class="headerlink" title="你知道组件化吗"></a>你知道组件化吗</h2><p>在项目开发中，一般将公用的代码提取出来用于制作基础库 Base Module ，将某些单独的功能封装到 Library module 中，根据业务来划分 module，组内每个人分别开发各自的模块，如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%B8%80%E7%AB%A0/%E9%A1%B9%E7%9B%AE%E5%8E%9F%E5%A7%8B%E6%9E%B6%E6%9E%84.png" alt="项目原始架构"></p>
+<p>但是，随着时间推移，扩展了一些业务模块之后，模块间互相调用的情况就越来越多，结构可能就会很混乱了，并且，耦合可能会非常严重。这时候，新的规划规则出现了，这就是<strong>组件化、模块化 以及 插件化</strong>。</p>
+<ul>
+<li><strong>组件：</strong>指的是单一功能的组件，如视频组件（VideoSDK）、支付组件（PaySDK）等，<strong>每个组件都能单独抽出来制作成SDK</strong>    </li>
+<li><strong>模块：</strong>指的是独立的业务模块，如首页模块（HomeModule）、直播模块（LiveModule）等，模块相对组件来说粒度更大，它可能包含多种不同的组件     </li>
+</ul>
+<p>组件化和模块化都是为了代码重用和业务解耦，区别在于模块化是业务导向，组件化是功能导向。模块化和组件化的缺点在于：旧项目需要重新适配组件化。当项目的越来越大，方法数可能就会超过 65535，此时有两种选择： <strong>MultiDex 分包解决以及 插件化方法解决</strong>。</p>
+<h2 id="基础组件化架构"><a href="#基础组件化架构" class="headerlink" title="基础组件化架构"></a>基础组件化架构</h2><p>我们用一个非常基础的组件化架构图来解释组件化基础：</p>
+<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%B8%80%E7%AB%A0/%E5%9F%BA%E7%A1%80%E7%9A%84%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84.png" alt="基础的组件化架构"></p>
+<p>其中，基础层包含一些基础库和对基础库的封装（如图片加载、网络加载、数据存储等）、组件层包含一些简单的业务（如登录、图片浏览等）、应用层用于统筹全部组件，并输出生成App。虽然这个架构捡漏，但是已经包含了组件化的内涵。</p>
+<h3 id="依赖"><a href="#依赖" class="headerlink" title="依赖"></a>依赖</h3><p>通过Android Studio ，我们有3中基本的依赖，如下代码：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dependencies {</span><br><span class="line">    compile fileTree(include: ['*.jar，*.aar'], dir: 'libs')</span><br><span class="line">    compile project(':base')</span><br><span class="line">    annotationProcessor 'com.alibba:arouter-compiler:1.1.1'</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这 3 种依赖分别是（我自己给命名的） jar dependency、module依赖、仓库索引依赖。需要注意的是：</p>
+<ul>
+<li>读入自身目录使用的是 ： fileTree 字段</li>
+<li>读入其他资源 module 使用的是： project 字段，而 “:base”中冒号表示文件目录与自己相同层级</li>
+</ul>
+<h2 id="重新认识-AndroidManifest"><a href="#重新认识-AndroidManifest" class="headerlink" title="重新认识 AndroidManifest"></a>重新认识 AndroidManifest</h2><p>manifest 字面意思就是货单、旅客名单，AndroidManifest 就是 Android 项目的声明配置文件。我们直到，这里面放的是 <strong>Android四大组件以及 自定义的 Application</strong>。</p>
+<p>如果项目中有多个 module，每个moudle都配有一份 manifest ，那么最终生成一个 App 时只会存在一个 AndroidManifest，因为这些 Androidmanifest 会合并，解决冲突后成一份。我们能在： app/build/intermediates/manifests/full/debug/Androidmanifest.xml 中找到这个最终合成的 AndroidManifest 文件。<strong>intermediates 目录是用来包含 App 生成过程中产生的“中间文件”</strong>。</p>
+<h3 id="AndroidManifest-属性变更"><a href="#AndroidManifest-属性变更" class="headerlink" title="AndroidManifest 属性变更"></a>AndroidManifest 属性变更</h3><p>module 的 manifest 文件在合入的时候，<strong>最主要的差别在于，activity 声明的时候，name 属性不再是缩进，而是完整地址</strong>，当然了，剩下的其他四大组件也会一样，如下所示：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--在module中写法--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">".MainActivity"</span>/&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--合并后--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">"com.example.MainActivity"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>权限最终也会被合并。当然也会有 Application 的合并（如果module中也注册了Application 的话），Application的合并规则如下：</p>
+<ul>
+<li>主module有，功能module 没有，那就用主的</li>
+<li>其中一个功能module有，主module没有，则用功能module的</li>
+<li>如果功能module中有多个Application，那么在解决冲突后，最终载入到<strong>后编译的module中</strong>  </li>
+<li>若主module 有，功能module也有，解决冲突后，最后何如主 module 的Application 中</li>
+</ul>
+<p>关于主题的声明，<strong>Activity 的主题都会引用自身module 声明的 主题，不声明当然就是使用默认主题了</strong>，主moudle 中声明 的 theme 将默认为整个 App 的 UI 主题风格。</p>
+<h3 id="关于shareUid（题目自己加的）"><a href="#关于shareUid（题目自己加的）" class="headerlink" title="关于shareUid（题目自己加的）"></a>关于shareUid（题目自己加的）</h3><p>通过声明 <strong>Shared User id</strong>，拥有同一个User id 的多个 App 可以配置成运行正在同一个进程中，所以默认可以互相访问任意数据。需要注意的是 <strong>如果只是在功能module 中声明 shareUid，那么最终并不会被何如最终的 AndroidManifest 中，只有主 module 的声明的 sharedUserId 才会最终打包到 AndroidManifest</strong>。</p>
+<h2 id="你所不知道的-Application"><a href="#你所不知道的-Application" class="headerlink" title="你所不知道的 Application"></a>你所不知道的 Application</h2><p>看一下 Application 中比较重要的方法：</p>
+<ul>
+<li>onTerminate：当终止应用程序时回调，<strong>但是不保证一定调用</strong>，比如，当程序被内核终止以便为其他应用释放空间时，就不会有提醒和这个回调</li>
+<li>onLowMemory： 当后台程序已经终止且此时资源还是匮乏时执行该回调，<strong>一般应该在这里释放一些不必要的资源</strong></li>
+<li>onConfigurationChanged：配置改变时触发，例如手机屏幕旋转</li>
+<li>registerActivityLifecycleCallbacks()  ：用于监听Activity 的生命周期，可以利用方法获取在栈顶的 Activity 对象，用于弹dialog 等   </li>
+</ul>
+<h3 id="组件化-Application"><a href="#组件化-Application" class="headerlink" title="组件化 Application"></a>组件化 Application</h3><p>前面研究了 Activity，这里讲解 Application。如果主工程创建一个 Application，Library 里面也声明了，那么在merge 的时候可能会出错，因为如果 Library 中定义了与 主项目 相同的属性（如android:icon 和 android:theme），此时就合并失败，并且<strong>提示可以用 tools:replace=”android:name” 来声明Application 是可被替换的</strong>。例如，我们在 application 标签下添加：</p>
+<blockquote>
+<p>Tools:replace=”android:icon, android:theme”   (多个属性的话，使用 “,” 分开)</p>
+</blockquote>
+<p>划分为业务module 和 基础module</p>
+<p>要求UI设计统一的规范，设立了基础UI库</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E8%AE%B0%E4%B8%8D%E7%89%A2%E7%9F%A5%E8%AF%86%E7%82%B9/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/19/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E8%AE%B0%E4%B8%8D%E7%89%A2%E7%9F%A5%E8%AF%86%E7%82%B9/" class="post-title-link" itemprop="url">总结-新</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-19 09:09:00 / 修改时间：09:09:23" itemprop="dateCreated datePublished" datetime="2021-09-19T09:09:00+08:00">2021-09-19</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%98%B6%E6%AE%B5/" itemprop="url" rel="index">
+                    <span itemprop="name">阶段</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><ul>
+<li><p>优化：闪屏、极速版、viewStub、IdleHandler加载Webview、classes.dex只保留App启动所需要的代码、避开峰值，滑动时不加载图片。线程优化-采用线程池、不加载大的sp，监控方式：视频录制</p>
+</li>
+<li><p>内存泄漏，比如 EventBus没有反注册、Activity被静态持有</p>
+</li>
+<li><p>衡量指标： 快开慢开比：比如2秒快开比，5秒快开比；90% 用户启动时间。冷启动，从3.5秒左右降低到1秒左右，内存从经常性的 380M 左右降低到 330M 的水平，优化前88%左右,93%的收集数据显示1秒以内打开；主要集中在网络超时、网络无连接两种异常，其中网络超时占了40%左右</p>
+</li>
+</ul>
+<ul>
+<li>Serializable 的反序列默认是不会执行构造函数的</li>
+</ul>
+<ul>
+<li>SQLite 默认支持多进程并发操作，它通过文件锁来控制多进程的并发，但是SQLite 的锁粒度并没有非常细，针对的是整个DB文件，简单来说，多进程可以同时获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库</li>
+</ul>
+<ul>
+<li>网络请求： DNS解析(本地或服务查询)、连接（握手、TLS、慢启动、重定向）、发送数据包（延迟、丢包）、接收（IO、解析）、关闭</li>
+</ul>
+<ul>
+<li>网络性能监控：360的 ArgusAPM插桩技术、以及 TraceNetTrafficMonitor ：使用Aspect 切面功能</li>
+</ul>
+<ul>
+<li>软件绘制使用的是 Skia 库，画笔：Skia或者OpenGL；画纸：Surface；画板：Graphic Buffer</li>
+</ul>
+<ul>
+<li>硬件绘制与软件绘制最核心的区别是<strong>硬件绘制通过GPU完成 Graphic Buffer内容的绘制</strong></li>
+</ul>
+<ul>
+<li>Surface 对应2个Buffer，一个前台的，一个后台的，Surface与Buffer之间通过 匿名共享内存交换数据的。可以采用 Tracer for OpenGL ES 逐帧分析性能</li>
+</ul>
+<ul>
+<li>Android的多渠道打包其中的一种思路就是这样，在 apk 尾巴上追加几个字节，来标记apk的渠道，apk启动时，从apk尾巴上读取这个渠道值。不过，后来google发现了这个漏洞，在新版本系统中，<strong>系统安装apk时，会检查apk实际大小，二者不相等就会报错安装失败</strong>。</li>
+</ul>
+<ul>
+<li>UI渲染用 gfxinfo 监测性能，当然也可以用 Systrace，怎么操作？</li>
+</ul>
+<ul>
+<li>SharedPreference 缺点：跨进程不安全、加载慢（异步加载，可能主线程会等待）、卡顿（onPause会强制写入磁盘）、Json转义</li>
+</ul>
+<ul>
+<li>ContentProvider 的原理：通过 Binder 传输匿名共享内存的文件描述符给数据获取方（Client内部有一个 CursorWindow 对象，发送请求时，把这个CursorWindow 类型对象传过去，这个对象暂时为空，Server 收到请求，搜集数据，填充到这个CursorWindow 对象中，Client 读取内部这个CursorWindow 对象，获取数据）。适合传输大量数据，传小数据不一定划算</li>
+</ul>
+<ul>
+<li>静态代理就是对于每种情形都编写一个Proxy，在调用的时候，使用真实的target的来调用方法；动态代理就是根据系统提供的Proxy.newProxyInstance，它的原理是通过 Method.invok ，避免创建多个Proxy</li>
+</ul>
+<ul>
+<li>动态广播先于静态广播接收到</li>
+</ul>
+<ul>
+<li>assets目录存放的文件，最终还是通过 getResources 去open打开，所以，资源文件都可以归结到 Resource 里面</li>
+</ul>
+<ul>
+<li><font color="#ff0000">资源插件化解决：创建AssertManager对象，调用 addAssertPath 将所有的插件路径都添加进去，之后根据AssetManager对象创建 Resources 和 Theme 对象。 重写 Activity 的 getAsset、getResources 、和 getTheme 方法（第8、15章）。</font></li>
+</ul>
+<ul>
+<li>资源插件化问题解决：修改AAPT以及打包gradle文件，为插件资源指定不同前缀。插件使用宿主的资源，就固定id；宿主通过provider 以 aar形式引入到 插件项目中</li>
+</ul>
+<ul>
+<li>动态广播插件化：动态广播，只需要保证宿主APP能加载到动态广播类就行，所以，无序特别处理</li>
+</ul>
+<ul>
+<li>Service、ContentProvider、广播这些通用方案都是本地站位，因为数量不多</li>
+</ul>
+<ul>
+<li>ACTION_DOWN事件在哪个控件消费了（return true）， 那么ACTION_MOVE和ACTION_UP就会从上往下（通过dispatchTouchEvent）做事件分发往下传，就只会传到这个控件，不会继续往下传，如果ACTION_DOWN事件是在dispatchTouchEvent消费，那么事件到此为止停止传递，如果ACTION_DOWN事件是在onTouchEvent消费的，那么会把ACTION_MOVE或ACTION_UP事件传给该控件的onTouchEvent处理并结束传递。（事件分发机制）</li>
+</ul>
+<ul>
+<li>getX 是获取事件到屏幕的距离；getRawX 是获取事件距离控件顶边的距离</li>
+</ul>
+<ul>
+<li>View的滑动方法： layout、LayoutParams、属性动画、ObjectAnimator、offsetLeftAndRight、scrollTo、scrollBy、Scroller（computeScroll）</li>
+</ul>
+<ul>
+<li>Zygote 启动SystemServer，后者再启动各种服务，比如 AMS、WMS</li>
+</ul>
+<ul>
+<li>React 只关注MVC框架中的View层，为减少直接操作DOM，它使用虚拟DOM来差异化更新 DOM，实现数据单向流动。而传统的HTML 页面更新元素是全量更新</li>
+</ul>
+<ul>
+<li>RN 的UI层变化， 就映射到 虚拟DOM，计算出diff后转成json发送给Native生成页面元素。编写的 RN 代码最终会打包成 main.bundle.js 文件供App 加载，此文件可以存在App本地或者服务器上更新。<font color="#ff0000">我个人的理解是，生成虚拟DOM之后的.js文件发到Android或者ios中，由本地进行差异对比生成json，本地再根据json更改view。</font></li>
+</ul>
+<ul>
+<li>B想从A中获取数据，然后呢，它就mmap 一块内存，这块内存对应到物理内存上，但是Binder驱动在内核空间中也指向一块虚拟内存K，这块内存与B那块内存在物理上是一样的。这时候，只需要A将通过 copy_from_user 将数据复制到 K 中，即完成了数据的一次复制。<font color="#ff0000">同步回去博客</font></li>
+</ul>
+<ul>
+<li>直接内存，NIO ： 在Native 分配堆外内存，在Java对中通过 DirectBuffer 作为引用</li>
+</ul>
+<ul>
+<li>GC Root： 虚拟机栈引用、本地方法栈引用、方法区静态、方法区中常量</li>
+</ul>
+<ul>
+<li>类加载过程： 加载、校验、准备、解析（将常量池的符号引用搞成直接引用）、初始化、使用、卸载</li>
+</ul>
+<ul>
+<li>锁优化：自旋、锁消除、锁粗化、轻量级锁、偏向锁</li>
+<li>轻量级锁，使用CAS操作尝试将对象的 MarkWord 改成轻量级锁标志，如果成功，则拥有锁；否则，判断锁是否指向当前线程，如果是，则直接进入。否则，就等待(个人觉得应该是CAS重试)。如果有两个以上线程在争用这个锁，就升级为重量级锁，后面的线程阻塞。      </li>
+<li>偏向锁：偏向锁在轻量级锁基础上连 CAS 都不做。在对象第一次被线程获取后，把线程id写在 MarkWord 中(这个当然是CAS操作)，当另一个线程尝试获取的时候，偏向模式就结束(指的是这个CAS操作不做了)，恢复到未锁定或者轻量级锁状态，后续就是轻量级锁规则了       </li>
+</ul>
+<ul>
+<li>拥塞控制方法： 慢启动、拥塞避免（增速慢，不再翻番）、快速恢复（拥塞窗口减半，再做拥塞避免）</li>
+</ul>
+<ul>
+<li>TCP慢可能的原因：握手、捎带确认算法、拥塞控制算法</li>
+</ul>
+<ul>
+<li>数字签名就是加了密的摘要。证书包含的内容： 证书格式、对象名称、对象的公钥、有效期、颁发者、签名算法等</li>
+</ul>
+<ul>
+<li><strong>lateinit 主要用于 var 声明的变量，然而它不能用于基本数据类型，如 Int、Long 等</strong>，我们需要使用Integet这种包装类作为替代</li>
+</ul>
+<ul>
+<li>Data class 的特点是： 默认给写了getter、setter、equals、copy（浅拷贝）、toString 等方法</li>
+</ul>
+<ul>
+<li><strong>Kotlin 中的 Int 类型等同于 int</strong></li>
+<li><strong>Kotlin 中的 Int? 等同于 Integer ！</strong></li>
+</ul>
+<ul>
+<li>一般来说，<strong>Kotlin 属于 无栈协程</strong>，它依靠对协程体本身编译生成的状态机的状态流转实现，变量的保存也是通过闭包语法实现</li>
+</ul>
+<ul>
+<li>adb shell -》 run as   -》 cd  /data/data/app_webview，非Root情况下 获取webview的Cookies ，使用 sqlite3打开即可</li>
+</ul>
+<ul>
+<li>MeasureSpec 的含义是：父View传递给当前 View 的一个建议值。UNSPECIFIED 父不约束子，子View可以取任意尺寸。Exactly（match_parent、具体数值）： 父为子指定特定的尺寸，子必须在这个尺寸之内 ；AT_MOST（wrap_content）：父为子指定一个最大的尺寸，子要在这里面</li>
+</ul>
+<ul>
+<li>当子具体数值时：EXACTLY，大小为数值；当子为 match_parent： 为父容器的mode，父的剩余空间；当子为wrap_content: mode 为 AT_MOST ，不超过父容器</li>
+</ul>
+<ul>
+<li>内部拦截手势冲突时，在setOntouchListener 中 disallowParent设置为 true，在合适的时候，再设置为false。</li>
+</ul>
+<ul>
+<li>在WebviewClient 的 shouldInterceptRequest ，自行重新组装 WebResourceResponse</li>
+</ul>
+<ul>
+<li>安全努力：app签名校验、https防抓包、本地广播、sp加密</li>
+</ul>
+<ul>
+<li>自己写AIDL，会生成Stub 接口，在用于数据传递的Service （在主进程）中 自己写 binder实现 Stub 接口，实现其中的方法，在onBind 方法中返回这个 binder 。将数据传给webview：  webview.loadUrl(“javascript:”)</li>
+</ul>
+<ul>
+<li>handler处理流程：<strong>首先判断msg.callback 、其次是Handler的mCallback，最后才是交给 Handler 的 handleMessage 处理</strong></li>
+</ul>
+<ul>
+<li>epoll： 以前是将文件描述符数组发给内核，内核遍历；现在是 内核保存了一份文件描述符，只需要穿进去改动的部分。以前内核轮询来发现是否可以读写，现在是通过异步IO事件唤醒而不是轮询；最后，现在系统是仅将有IO事件的文件描述符返回给用户。</li>
+</ul>
+<ul>
+<li>ViewRootImpl 的 scheduleTraversals ，会往MessageQueue 中插入同步屏障 msg，之后在Vsync的时候，就会发送异步消息。之后在unscheduleTraversals中移除</li>
+</ul>
+<ul>
+<li>ANR： 输入5s，广播：前台10，后台60；服务：前台20，后台200；ContentProvider 的publish 超时 10s </li>
+</ul>
+<ul>
+<li>内存分配流程： 分配-&gt; GC无soft -&gt; 增长到最大 -&gt; GC 有 soft ，增长大最大 -&gt; OOM</li>
+</ul>
+<ul>
+<li>挂堆、标记、放堆、挂起线程、</li>
+</ul>
+<p>想让消息提前执行？</p>
+<p>可重入的原理</p>
+<p>启动模式兼容？无论singleTop还是singleTask，再回到这个Activity时，并不会触发它的onCreate，而是会触发它的onNewIntent(其实这里说的bug我并没有明白，等测试后再说)。为此，我们需要在MockClass2 中，拦截onNewIntent方法，把占位 StubActivity 替换回插件Activity，代码如下：</p>
+<p>写个自定义容器，在里面横着放子View，当一行放不下一个View的时候，自动换行</p>
+<p>RenderThread？</p>
+<p><font color="#ff0000">Binder原理？两种签名方式？</font></p>
+<p>systrace + 函数插桩怎么操作</p>
+<p>HardwarLayout、SoftWareLayout</p>
+<p>RN布局常用的方法</p>
+<p>Android 中 js 桥的原理</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/http3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/http3/" class="post-title-link" itemprop="url">网络-http3</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-09-14 21:30:00" itemprop="dateCreated datePublished" datetime="2021-09-14T21:30:00+08:00">2021-09-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-09-28 16:19:22" itemprop="dateModified" datetime="2021-09-28T16:19:22+08:00">2021-09-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="QUIC-概览"><a href="#QUIC-概览" class="headerlink" title="QUIC 概览"></a>QUIC 概览</h2><p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%BD%91%E7%BB%9C/QUIC%E5%8D%8F%E8%AE%AE.png" alt="QUIC协议预览"></p>
+<p>  所以，QUIC 与 http3 啥关系呢？ QUIC 用来替代 TCP、SSL/TLS 的传输协议，在传输层之上还有应用层，如http、ftp、imap 等，理论上这些协议都能运行在 QUIC 之上。<strong>运行在 QUIC 之上的 HTTP 协议被称为 https 。</strong> QUIC的几个重要特性如下面介绍：</p>
+<h3 id="1、只要1个RTT建立连接"><a href="#1、只要1个RTT建立连接" class="headerlink" title="1、只要1个RTT建立连接"></a>1、只要1个RTT建立连接</h3><p>  Http2 基于TLS首次建立连接需要 3 个RTT，而 http3 首次建立连接只需要 1 RTT,首次连接后，后续连接只需要 0 RTT。如图：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%BD%91%E7%BB%9C/%E8%BF%9E%E6%8E%A5%E7%9A%84%E5%BB%BA%E7%AB%8B.png" alt="QUIC协议预览"></p>
+<p>那么，http3 如何做到，且看连接过程：</p>
+<ol>
+<li>首次连接时，客户端发送 Inchoate Client Hello 给服务端。   </li>
+<li>服务端生成 g、p、a，再根据 g、p、a 算出 A，然后将 g、p、A 放到 Server Config 中再发送 Rejection 消息给客户端。    </li>
+<li>客户端接收到 g、p、A 后，再自己生成 b ，根据 g、p、b 计算出 B，根据 A、p、b 算出初始秘钥 K ，B 和 K 计算好之后，客户端用 K 加密 http 数据，连同 B 一起发送给服务端     </li>
+<li>服务端收到 B 后，根据 a、p、B 生成与客户端相同的秘钥，再用这个秘钥解密收到的 http 数据。为了前向安全，服务端会更新自己的随机数 a 和 公钥，再生成新的密钥 S，然后把公钥、Http 返回的数据通过 Server Hello 发送给客户</li>
+<li>客户端收到 Server Hello 后，生成与服务端一致的新秘钥 S ，后面的传输都用 S 加密。     </li>
+</ol>
+<h3 id="2、连接迁移（QUIC连接不受四元组影响）"><a href="#2、连接迁移（QUIC连接不受四元组影响）" class="headerlink" title="2、连接迁移（QUIC连接不受四元组影响）"></a>2、连接迁移（QUIC连接不受四元组影响）</h3><p>  QUIC 连接不受四元组（源IP、源端口、目的IP、目的端口）影响，道理很简单：<strong>QUIC 不以四元组作为标识，而是使用一个 64 位的随机数，即使 IP 或者端口变化，称之为 Connection ID ，只要 这个 Connection ID 没变化，那么连接依然可以维持连接</strong>。</p>
+<p>  而使用TCP的话，切换网络时至少会有一个因素发生变化，当连接发生变化时，如果还使用原来的TCP连接，则会导致连接失败，就得等原来的连接超时后重新建立连接，所以，<strong>我们有时候发现切换到一个新网络时，即使新网络很好，但内容还是要加载很久</strong>。如果实现得好，当检测到网络变化时立刻建立新TCP连接，但这样建立连接还是需要好几百毫秒。</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%BD%91%E7%BB%9C/%E8%BF%9E%E6%8E%A5%E8%BF%81%E7%A7%BB.png" alt="连接迁移"></p>
+<h3 id="3、队头阻塞-多路复用"><a href="#3、队头阻塞-多路复用" class="headerlink" title="3、队头阻塞/多路复用"></a>3、队头阻塞/多路复用</h3><p>  TCP 是个面向连接的协议，即发送请求后需要收到 ACK 消息，如果每次请求都要收到上次请求的 ACK 消息后再请求，无疑效率很低。</p>
+<p>  后来http1.1 做了改进，允许一个TCP连接同时发送多个请求，在这个背景下，谈谈http1.1的队头阻塞：一个TCP连接同时传输了 10 个请求，其中 1、2、3个请求已经被客户端接收，但是第 4 个请求丢失，那么后面第 5~10 个请求都被阻塞，需要等第 4 个请求处理完毕才能被处理，这样就浪费了带宽。因此，http一般又允许 6 个TCP 连接，这样可以更加充分利用 带宽，但是每个连接中队头阻塞的问题还是存在。</p>
+<p>  http2 的多路复用解决了 http1.x 中的队头阻塞问题，它不用等上一个请求的所有数据包传输完毕之后才能下一个请求，http2每个请求被拆分多个 Fragme 通过一条 TCP 连接同时被传输，这样即使一个请求被阻塞，也不影响其他请求，如下所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%BD%91%E7%BB%9C/http2%E7%9A%84%E5%90%8C%E6%97%B6%E4%BC%A0%E8%BE%93.png" alt="连接迁移"></p>
+<p>由于http2 还是基于 TCP 的，虽然在上述粒度上已经解决队头阻塞，但TCP 处理数据时有严格的前后顺序，先发送的 Frame 要先被处理，这样，即使发送了 4 个请求，1，3，4 都已经到达，但是只能先处理了 1， 而 3 、 4 到了也不能被处理，这时候整条连接都被阻塞，如图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%BD%91%E7%BB%9C/http2%E7%9A%84%E9%98%BB%E5%A1%9E.png" alt="连接迁移"></p>
+<p>不仅如此，http2基于TLS ，TLS协议也存在队头阻塞问题，因为TLS 也是基于 TCP ，它将一堆数据加密，加密完成后又拆分成多个 TCP 包传输，丢了任何一个都不能解密。</p>
+<p>  那 QUIC 是如何解决的呢？有2点：</p>
+<ul>
+<li>QUIC 的传输单元是 Packet，加密单元也是 Packet ，整个加密、传输、解密都是基于 Packet，这样就能避免 TLS 的队头阻塞    </li>
+<li>QUIC 基于 UDP，UDP 的数据包在接收端没有处理顺序，即使中间丢失了包，也不会阻塞整条连接。</li>
+</ul>
+<h3 id="拥塞控制"><a href="#拥塞控制" class="headerlink" title="拥塞控制"></a>拥塞控制</h3><p>TCP 的拥塞控制就3个方法： 慢启动、拥塞避免、快速恢复 （博客中应该写错了）</p>
+<p>QUIC 可以在应用层修改 拥塞控制策略；而TCP 要修改的话，只能在系统层面，</p>
+<h3 id="流量控制"><a href="#流量控制" class="headerlink" title="流量控制"></a>流量控制</h3><p>TCP 会对每个TCP 连接进行流量控制，意思是让对方不要发送太快，TCP 主要通过 滑动窗口 来实现这个功能。</p>
+<p>QUIC 只需要建立一条连接，这条连接同时传输多条 Stream ，好比一条路，两头分别有仓库，道路中间很多车辆运送物资。QUIC 流量控制有两个级别： 连接级别 和 Stream 级别。就好比纪要控制这条路的总流量，不要一下子很多车辆涌进来，货物来不及处理，也不能一辆车一下子运送很多东西，这样货物也来不及处理。那到底怎么实现呢？它的实现也与滑动窗口类似，接收方会发送 WINDOW_UPDATE frame 告诉发送方你可以再多发送些数据过来。</p>
+<blockquote>
+<p>以上内容参考<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/143464334">腾讯技术团队的博客</a></p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/" class="post-title-link" itemprop="url">特别篇：自己的总结</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-14 19:46:00 / 修改时间：21:39:21" itemprop="dateCreated datePublished" datetime="2021-09-14T19:46:00+08:00">2021-09-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="识别插件的类"><a href="#识别插件的类" class="headerlink" title="识别插件的类"></a>识别插件的类</h2><p>方案：将所有的插件 dex 合并到 宿主中，具体步骤为：</p>
+<ol>
+<li><p>根据宿主的 ClassLoader，获取宿主的 dexElements 字段</p>
+<blockquote>
+<p>具体步骤为： 首先反射出 BaseDexClassLoader 的 pathList 字段，它是 DexPathList  类型的；第二步，反射出 DexPathList 的 dexElements 字段，他是个<strong>数组</strong>。</p>
+</blockquote>
+</li>
+<li><p>根据插件的 dexFile ，反射出一个 Element 类型对象，这就是插件 dex</p>
+</li>
+<li><p>把插件 dex 和 宿主 dexElements 合并成一个新的 dex 数组，替换宿主之前的 dexElements 字段</p>
+</li>
+</ol>
+<h2 id="欺骗系统"><a href="#欺骗系统" class="headerlink" title="欺骗系统"></a>欺骗系统</h2><p>启动时，其实是启动 PlaceHoldActivity ，将真正要启动的 TargetActivity 放在 Intent 的数据里面，主要步骤：</p>
+<p>1、Hook 到 ActivityManagerNative （它里面的gDefault，这个字段是个单例），把 TargetActivity 替换为 PlaceHoldActivity    </p>
+<p>2、Hook 到 H（Handler） 类的 mCallback 字段，将 PlaceHoldActivity 换成真正的 TargetActivity。或者，如果不想使用这种 Hook，可以在创建Activity （execStartActivity）对象的时候再替换回来</p>
+<h2 id="资源使用"><a href="#资源使用" class="headerlink" title="资源使用"></a>资源使用</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><ol>
+<li>通过反射，构建一个 AssetManager 对象 <font color="#CD6889">mAssetManager</font>，之后，反射调用 mAssetManager 的 addAssetPath 方法，将宿主和插件的 dexPath 全部添加进去，这样，这个新的 mAssetManager 拥有宿主以及插件中的所有的资源了。</li>
+<li>根据上述的 mAssetManager 构建处一个 Resources 对象 <font color="#CD6889">mResources</font></li>
+<li>使用 newTheme 创建一个 Theme 对象 <font color="#CD6889">mTheme</font></li>
+<li>在 Activity 中重写 getAssets()、getResources()、getTheme() 方法，分别返回上述的mAssetManager、mResources、mTheme</li>
+</ol>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> void loadResources(){</span><br><span class="line">    <span class="keyword">try</span>{</span><br><span class="line">        AssetManager assetManager= AssetManager.<span class="keyword">class</span>.newInstance();</span><br><span class="line">        Method addAssetPath = assetManager.getClass().getMethod(<span class="string">"addAssetPath"</span>,String.<span class="keyword">class</span>);</span><br><span class="line">        addAssetPath.invoke(assetManager, dexPath);</span><br><span class="line">        mAssetManager = assetManager;</span><br><span class="line">    }<span class="keyword">catch</span> (Exception e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">    Resources superResources = <span class="keyword">super</span>.getResources();</span><br><span class="line">    mResources = new Resources(mAssetManager, superResources.getDisplayMetrics(), superResources.getConfiguration());</span><br><span class="line">    mTheme = mResources.newTheme();</span><br><span class="line">    mTheme.setTo(<span class="keyword">super</span>.getTheme());</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> AssetManager getAssets() {</span><br><span class="line">    <span class="keyword">if</span> (mAssetManager == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getAssets();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mAssetManager;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources getResources() {</span><br><span class="line">    <span class="keyword">if</span> (mResources == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getResources();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mResources;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources.Theme getTheme() {</span><br><span class="line">    <span class="keyword">if</span> (mTheme == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getTheme();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mTheme;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p><strong>注意一点，由于将所有资源集合在一块，所以资源id可能冲突</strong>，解决方案：修改AAPT命令，将宿主和插件之间的id前缀都区分开，比如宿主的资源id以 0x71 开头，插件1以 0x72，插件2以 0x73  等，避免冲突。</p>
+<p><strong>还有</strong>，如果插件需要使用宿主的资源，那么，可以在宿主中将id写死，具体方式为自定义一个public.xml ，在里面写死。然后插件中以 provided 的方式将宿主的aar引入（这样，打包的时候就不会将这个aar打进去），引用资源的时候，直接使用这个写死的id就行。</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--public.xml--&gt;</span></span><br><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="welcom" id="0x71050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="启动模式（LaunchMode）"><a href="#启动模式（LaunchMode）" class="headerlink" title="启动模式（LaunchMode）"></a>启动模式（LaunchMode）</h2><p>普通使用的都是Standard 模式，如果要解决其他 3 种 LaunchMode 问题，使用的是<strong>占位Activity的思想</strong>，即事先为这3种 LaunchMode 创建很多 PlaceHoldActivity。比如：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SingleInstancePlaceHoldActivity1</span><br><span class="line">SingleInstancePlaceHoldActivity2</span><br><span class="line">SingleInstancePlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTaskPlaceHoldActivity1</span><br><span class="line">SingleTaskPlaceHoldActivity2</span><br><span class="line">SingleTaskPlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTopPlaceHoldActivity1</span><br><span class="line">SingleTopPlaceHoldActivity2</span><br><span class="line">SingleTopPlaceHoldActivity3</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>接下来，从服务器下载一个 Json ，指定插件Activity 要使用哪个 PlaceHoldActivity ，这里所说的 Activity 只包括 LauncherMode 为 SingleTop、SingleTask、SingleInstance 的 Activity。我们无法指定插件 Activity 的 LaunchMode ，但是通过这种指定占位，<strong>当 ActivityA 和 SingleTaskPlaceHoldActivity1 建立对应关系之后，ActivityA 的 LaunchMode 就是 SingleTask 了！</strong></p>
+<p>但是这里还有个小bug，无论是SingleTop 还是 SingleTask ，再回到这个Activity时，并不会触发它的 onCreate ，而是触发 它的 onNewIntent 方法！为此，<strong>我们需要在Hook的 Handler.Callback 中拦截 onNewIntent 方法，把占位的 PlaceHoldActivity 替换回插件Activity</strong>： </p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MockClass2</span> <span class="keyword">implements</span> <span class="title">Handler</span>.<span class="title">Callback</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    <span class="keyword">switch</span>(msg.what) {</span><br><span class="line">      <span class="keyword">case</span> <span class="number">112</span>:</span><br><span class="line">        handleNewIntent(msg);</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleNewIntent</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    Object obj = msg.obj;</span><br><span class="line">    ArrayList intents = (ArrayList)RefInvoke.getFieldObject(obj, <span class="string">"intents"</span>);</span><br><span class="line">    <span class="keyword">for</span>(Object object: intents) {</span><br><span class="line">      Intent raw = (Intent)object;</span><br><span class="line">      Intent target = raw.getParcelableExtra(AMSHookHelper.EXTRA_TARGET_INTENT);</span><br><span class="line">      <span class="keyword">if</span>(target != <span class="keyword">null</span>) {</span><br><span class="line">        raw.setComponent(target.getComponent());</span><br><span class="line">        <span class="keyword">if</span>(target.getExtras() != <span class="keyword">null</span>) {</span><br><span class="line">          raw.putExtras(target.getExtras());</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
 </body></html>
       
     </div>
@@ -303,6 +1623,9 @@
   </div>
 
   
+  <nav class="pagination">
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/13/">13</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+  </nav>
 
 
 
@@ -347,20 +1670,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">1</span>
+          <span class="site-state-item-count">124</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-count">10</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-count">29</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -433,7 +1756,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共149字</span>
+  <span class="post-count">博客全站共290.7k字</span>
 </div>
 
 
