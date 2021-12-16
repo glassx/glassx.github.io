@@ -7419,26 +7419,48 @@ transaction.commit();</code></pre><p>向FragmentTransaction添加更改的顺序
 <blockquote>
 <p>以上内容参考自<a href="https://blog.csdn.net/liu_12345_liu/article/details/109012867">CSDN上的博客</a></p>
 </blockquote>
-<h2 id="59、ListView-和-RecyclerView"><a href="#59、ListView-和-RecyclerView" class="headerlink" title="59、ListView 和 RecyclerView"></a>59、ListView 和 RecyclerView</h2><h3 id="如何选择"><a href="#如何选择" class="headerlink" title="如何选择"></a>如何选择</h3><p>如果我们需要<strong>频繁地刷新列表数据且列表数据需要添加动画或者列表数据相差不太大</strong>的话，还是使用 RecyclerView，对于前后数据相差不大的情况，还可以使用 DiffUtil 来进行差分，这样，就能实现定向刷新和局部刷新。</p>
+<h2 id="59、ListView-和-RecyclerView"><a href="#59、ListView-和-RecyclerView" class="headerlink" title="59、ListView 和 RecyclerView"></a>59、ListView 和 RecyclerView</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="如何选择"><a href="#如何选择" class="headerlink" title="如何选择"></a>如何选择</h3><p>如果我们需要<strong>频繁地刷新列表数据且列表数据需要添加动画或者列表数据相差不太大</strong>的话，还是使用 RecyclerView，对于前后数据相差不大的情况，还可以使用 DiffUtil 来进行差分，这样，就能实现定向刷新和局部刷新。</p>
 <p>除此以外，还是建议使用ListView ，不仅仅分割线之类的方便，它还有很多便捷的Adapter，CursorAdapter、ArrayAdater 等。</p>
-<h2 id="60、RecyclerView的缓存机制"><a href="#60、RecyclerView的缓存机制" class="headerlink" title="60、RecyclerView的缓存机制"></a>60、RecyclerView的缓存机制</h2><p>RecyclerView 缓存ViewHolder 有4个等级，优先级从高到低有4个层次：</p>
+</details>
+
+
+
+<h2 id="60、RecyclerView的缓存机制"><a href="#60、RecyclerView的缓存机制" class="headerlink" title="60、RecyclerView的缓存机制"></a>60、RecyclerView的缓存机制</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>RecyclerView 缓存ViewHolder 有4个等级，优先级从高到低有4个层次：</p>
 <ol>
 <li>mAttachedScrap： 缓存屏幕中可见范围的ViewHolder    </li>
 <li>mCachedViews： 缓存滑动时即将与RecyclerView 分离的 ViewHolder，存有postion信息，如果需要复用，直接可以拿过去用，不需要改变数据。默认最多2个</li>
 <li>ViewCacheExtention： 用户自定义的扩展缓存，需要用户自己管理View的创建和缓存。</li>
 <li>RecycledViewPool：缓存池。在 mCacheViews 中缓存已满时，就会将旧的ViewHolder 放到RecyclderViewPool，如果 RecyclderViewPool 满了，就不会再缓存。从这里取出的缓存需要bindView 才能使用（<strong>本质上是一个SparseArray，其中key是ViewType(int类型)，value存放的是 ArrayList&lt; ViewHolder&gt;，默认每个ArrayList中最多存放5个ViewHolder</strong>）。</li>
 </ol>
-<h2 id="61、到底在哪个阶段存储数据"><a href="#61、到底在哪个阶段存储数据" class="headerlink" title="61、到底在哪个阶段存储数据"></a>61、到底在哪个阶段存储数据</h2><p>官方文档说在Android 3.0 以后，应用只有等到 onStop 之后才能被杀死，官方还建议，<strong>应当在onPause方法中存储那些持久性的数据，比如用户输入</strong>等，onSaveInstanceState 将在Activity 转入后台状态之前被调用，能让我们存储一些<strong>Activity 的动态的状态值(比如组件的宽高之类的)到Bundle对象中</strong>，onSaveInstanceState  方法在onStop 方法之前调用，但是它跟onPause 回调没啥关系，但是还有一点要注意的是：onSaveInstanceState  并不是Activity的生命周期中的回调方法之一，所以，在Activity 被杀死的时候，不能保证百分百执行的！</p>
+</details>
+
+
+
+<h2 id="61、到底在哪个阶段存储数据"><a href="#61、到底在哪个阶段存储数据" class="headerlink" title="61、到底在哪个阶段存储数据"></a>61、到底在哪个阶段存储数据</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>官方文档说在Android 3.0 以后，应用只有等到 onStop 之后才能被杀死，官方还建议，<strong>应当在onPause方法中存储那些持久性的数据，比如用户输入</strong>等，onSaveInstanceState 将在Activity 转入后台状态之前被调用，能让我们存储一些<strong>Activity 的动态的状态值(比如组件的宽高之类的)到Bundle对象中</strong>，onSaveInstanceState  方法在onStop 方法之前调用，但是它跟onPause 回调没啥关系，但是还有一点要注意的是：onSaveInstanceState  并不是Activity的生命周期中的回调方法之一，所以，在Activity 被杀死的时候，不能保证百分百执行的！</p>
 <p>所以，个人总结以上的内容，</p>
 <ul>
 <li>如果要100%可靠，就要在onPause 中保存数据(一般就是保存在sp当中)</li>
 <li>onPuase 中保存持久化的数据，比如用户输入</li>
 <li>onSaveInstanceState  一般建议保存Activity的动态状态值（比如组件宽高）、允许丢失的数据</li>
 </ul>
+</details>
+
 <blockquote>
 <p>以上内容参考<a href="https://blog.csdn.net/cyp331203/article/details/44985087">CSDN文章</a></p>
 </blockquote>
-<h2 id="62、如果不给view设置id，会对状态保存有什么影响？"><a href="#62、如果不给view设置id，会对状态保存有什么影响？" class="headerlink" title="62、如果不给view设置id，会对状态保存有什么影响？"></a>62、如果不给view设置id，会对状态保存有什么影响？</h2><p>首先看focus：</p>
+<h2 id="62、如果不给view设置id，会对状态保存有什么影响？"><a href="#62、如果不给view设置id，会对状态保存有什么影响？" class="headerlink" title="62、如果不给view设置id，会对状态保存有什么影响？"></a>62、如果不给view设置id，会对状态保存有什么影响？</h2><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>首先看focus：</p>
 <figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">// save the focused view id</span></span><br><span class="line">        View focusedView = mContentParent.findFocus();</span><br><span class="line">        <span class="keyword">if</span> (focusedView != <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">if</span> (focusedView.getId() != View.NO_ID) {<span class="comment">//注意这里，如果当前焦点view有设置id，才会进入到下面</span></span><br><span class="line">                outState.putInt(FOCUSED_ID_TAG, focusedView.getId());<span class="comment">//特别存储当前焦点view的id值</span></span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">false</span>) {</span><br><span class="line">                    Log.d(TAG, <span class="string">"couldn't save which view has focus because the focused view "</span></span><br><span class="line">                            + focusedView + <span class="string">" has no id."</span>);</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
 
 <p>再看View的保存：</p>
@@ -7448,9 +7470,24 @@ transaction.commit();</code></pre><p>向FragmentTransaction添加更改的顺序
 
 <p>可以看出，如果没有设置id，那么在在Activity调用  onSaveInstantceState 时，就没法保存它的状态到SparseArray中(这个SparseArray再保存到Bundle中)，并且，如果当前它是焦点View，也没办法将焦点状态保存到 记录在 Bundle 中。</p>
 <p>但是，如果同类的view，在使用相同的id时，在取状态值的时候，就可能会出现问题，比如：你在应用中使用两个ScrollView，且都指定一样的id，那么在onSaveInstanceState时，后调用的那个则会覆盖掉之前的那个ScrollView的Scroll的值，导致在之后取出的时候，会让两个ScrollView的滑动进度总是一样。</p>
+</details>
+
+
+
 <blockquote>
 <p>以上内容参考自<a href="https://blog.csdn.net/cyp331203/article/details/45313125">CSDN</a></p>
 </blockquote>
+<h3 id="63、adb工具有哪些主要功能"><a href="#63、adb工具有哪些主要功能" class="headerlink" title="63、adb工具有哪些主要功能"></a>63、adb工具有哪些主要功能</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>1、常见的可能就是adb install、adb uninstall </p>
+<p>2、通过 adb pull 从手机拉取文件，或者 adb push </p>
+<p>3、常用的adb功能就是 dumpsys 的功能，比如 activity、meminfo、电池、cpu安装包信息</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/adb%E5%8A%9F%E8%83%BD.png" alt="adb功能"></p>
+<p>4、 adb shell ，很大的一个命令，run-as 可以在debug状态查看应用的存储空间</p>
+</details>
+
+<p>以上内容参考自<a href="https://www.cnblogs.com/mliangchen/p/5114149.html">csdn的博客</a></p>
 </body></html>]]></content>
       <categories>
         <category>面试</category>
@@ -10112,14 +10149,13 @@ transaction.commit();</code></pre><p>向FragmentTransaction添加更改的顺序
 <details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
 [参考以前的源码解析第10点](https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/)
-
 </details>
 
 <p>2、HashMap 源码？为什么要将链表转成红黑树？红黑树特点？</p>
 <details>
 <summary><font size="2" color="#888888">点击看答案</font></summary>
+[参考java基础中的第3点](https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/)
 
-<p><a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">参考java基础中的第3点</a></p>
 </details>
 
 
@@ -10569,6 +10605,24 @@ transaction.commit();</code></pre><p>向FragmentTransaction添加更改的顺序
 
 <p>算法：</p>
 <p>给出两个有序的整数数组 <img src="https://www.nowcoder.com/equation?tex=A%20%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">，请将数组 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">合并到数组 <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">中，变成一个有序的数组<br>注意：<br>可以假设 <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">数组有足够的空间存放 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">数组的元素， <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">中初始的元素数目分别为 <img src="https://www.nowcoder.com/equation?tex=m%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=n%5C" alt="img"></p>
+<h3 id="TX1-1"><a href="#TX1-1" class="headerlink" title="TX1"></a>TX1</h3><p>全程参与的项目有哪几个？</p>
+<p>项目里面哪个对你成长帮助比较大，收获比较大？</p>
+<p>遇到什么问题？为什么想着优化H5？如何优化H5页面的打开速度？是预创建 WebView 是吧？</p>
+<p>项目中碰到什么难点，以及是怎么去攻克它的？</p>
+<p>如果插件化要做好兼容性，应该怎么做？</p>
+<p>如何保证App的安全？</p>
+<p>有用 Service 开发吗？</p>
+<p>你们的跨进程通信用的什么方式？你知道有哪些跨进程通信方式？这些跨进程通信方式各有什么优势或者特点，他们之间的差异是什么？</p>
+<p>介绍下APK的启动过程——描述下进程启动、应用启动？启动过程哪些过程可能产生ANR ？</p>
+<p>Apk 中有一些第三方的包 Jar，在应用启动过程中，这些 Jar 是怎么链接起来的 ？——Android会把这些 jar 打包成 dex ， 那么这些 dex 是什么时候加载呢？</p>
+<p>类似抖音功能遇到了什么难点？怎么解决的？——播放错乱，咋解决？</p>
+<p>Android的源码看过多少？有编译过Android的源码吗？</p>
+<p>adb命令会吗？我想查看手机的剩余电量，怎么拿？ Linux的一些命令呢？root 和 Hook 了解多少？</p>
+<p>NDK 开发有吗？</p>
+<p>主要开发语言，Java 、Kotlin ？</p>
+<p>ART 知道吗？与 Dalvik 的区别？GC有什么不同？</p>
+<p>如果让你一个人开发App，能 Cover 住吗？</p>
+<p>有做单元测试吗？</p>
 <h2 id="国斌"><a href="#国斌" class="headerlink" title="国斌"></a>国斌</h2><p>1:<br>    （1）自我介绍<br>    （2）你主要负责什么模块、奖金优化是什么东西（奖金优化的前提是如果能中奖，中奖金额要怎么样）、如何将所有组合列出来、如何将注数分配出去、奖金范围怎么算的<br>    （3）APP的架构是怎么样的，为什么要这样子架构？MVP每块你们是怎么分工的<br>    （3）首屏怎么调优的、加快启动速度的，内存泄漏怎么检测，LeakCanary原理是什么<br>    （4）HashMap源码相关、为什么要将链转红黑树？红黑树特点、插入删除<br>    （5）消息循环源码、如何做到任务切换线程、想要提交一个任务有几种方式<br>    （6）Kotlin协程原理，怎么切换线程的，为什么要换Kotlin及其优缺点<br>    （6）一个无序、实际上是逆序的数组排序用什么算法好 我说的是快排、实际上应该用归并排序能获得最好的时间复杂度</p>
 <p>2：<br>    （1）还是奖金优化<br>    （2）还是性能调优、怎么瘦身、打包流程、模块化<br>    （3）开发者GPUInfo中的每条柱状图颜色代表含义、命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思<br>    （4）Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的<br>    （5）物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域<br>    （6）binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体<br>    （7）广度、深度搜索，拓朴排序、最短路径算法<br>    （8）ELF文件格式、反编译器原理<br>    （9）Kotlin优缺点</p>
 <p>3：<br>    （1）项目架构是怎么样的<br>    （2）画一下结构图<br>    （3）为什么要迁移项目到Kotlin<br>    （4）线程 协程 为什么需要线程池 他的状态变化是怎么样的 在Android中的应用<br>    （5）如何设计一个App的架构 该考虑什么<br>    （6）Flutter怎么从平台到Dart的 如何渲染的<br>    （7）你觉得面得怎么样</p>
