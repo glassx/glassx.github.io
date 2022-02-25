@@ -4,6 +4,31 @@
   
     
     <entry>
+      <title>面试题-Android显示机制以及 Systrace 的使用</title>
+      <link href="/2022/02/25/Systrace%E4%BD%BF%E7%94%A8/"/>
+      <url>/2022/02/25/Systrace%E4%BD%BF%E7%94%A8/</url>
+      
+        <content type="html"><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、屏幕刷新机制"><a href="#一、屏幕刷新机制" class="headerlink" title="一、屏幕刷新机制"></a>一、屏幕刷新机制</h2><p>简单来说，屏幕刷新包括三个步骤：CPU计算、GPU进一步处理和缓存、最后display 再将缓存（buffer）中的数据显示出来</p><h3 id="Screen-Tearing（撕裂）"><a href="#Screen-Tearing（撕裂）" class="headerlink" title="Screen Tearing（撕裂）"></a>Screen Tearing（撕裂）</h3><p>在早期设备上，采用单缓冲模式，由于 display 的处理频率是固定的，而CPU/GPU 处理数据的时间不确定，因此，会有屏幕撕裂的情况：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E5%B1%8F%E5%B9%95%E6%92%95%E8%A3%82.png" alt="屏幕撕裂"></p><p>从上图可看出，由于 CPU/GPU 仅完成部分工作，因此，在 0.015s 时，屏幕上部分显示的是2画面，下部分显示的是 1 画面的撕裂画面。</p><h3 id="Double-buffer"><a href="#Double-buffer" class="headerlink" title="Double-buffer"></a>Double-buffer</h3><p>双缓冲技术，原理就是采用2个 buffer，一块 back buffer 用于 CPU/GPU 后台绘制，另一块 framebuffer 则用于显示，当 back buffer 准备就绪之后，才进行交换，这样就避免了屏幕撕裂。</p><h3 id="VSync"><a href="#VSync" class="headerlink" title="VSync"></a>VSync</h3><p>在 Android 4.1 之前，没有采用 VSync 信号，此时 CPU 或 GPU 往 buffer 中写数据比较随意，因此会造成丢帧：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E6%97%A0VSync%E9%80%A0%E6%88%90%E4%B8%A2%E5%B8%A7.png" alt="无VSync造成丢帧"></p><p>当扫描完一个屏幕后，设备需要重新回到第一行以进入下一次循环，此时有一段时间空隙，这个时间点就是我们进行缓冲区交换的最佳时间。</p><p>在 Android 4.1 之后，Android display 系统进行了重构（黄油计划：Project Butter），引入三个核心元素： VSync、Triple Buffer 以及 Choreographer，它规定一旦收到 VSync 通知（约16ms触发一次），CPU 和 GPU 就立刻开始工作把显示数据写入 buffer。根据 VSync 新来来同步处理数据，让 CPU/GPU 有完整的 16ms 时间来处理数据，减少 jank。</p><h3 id="Triple-Buffer"><a href="#Triple-Buffer" class="headerlink" title="Triple Buffer"></a>Triple Buffer</h3><p>双缓存机制并不完美，当 CPU/GPU 工作时间较长时，会出现如下情况：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E5%8F%8C%E7%BC%93%E5%86%B2%E4%B8%8B%E7%9A%84jank.png" alt="双缓冲下的jank"></p><p>从图可以看出，当 CPU/GPU 的处理时间超过 16ms 时，第一个 VSync 信号来了，缓冲区 B 还没准备好，于是只能继续显示 A 缓冲区的内容，<strong>而在 B 完成后又因为第2个 VSync 信号还没来，不能及时展示，只能等待下一个 VSync 信号到来，在这一过程中，有一大段时间是被浪费的</strong>。</p><p>三缓冲虽然不能解决双缓冲第一次 jank 问题，但是当第一次 VSync 发生后，CPU 不用再等待了，它会使用第三个buffer C 来进行下一帧的准备工作。虽然对缓冲区 C 的处理所需时间也超狗 16ms ，但并不影响显示屏——第2次 VSync 到来时，会选择 buffer B 进行展示，而第 3 次 VSync 时，会接着采用 C ，而不是像 double buffer 时只能再显示一遍 B ，这样就有效地减低了 jank，如下图所示：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E4%B8%89%E7%BC%93%E5%86%B2%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="三缓冲示意图"></p><h2 id="App-相关的屏幕绘制"><a href="#App-相关的屏幕绘制" class="headerlink" title="App 相关的屏幕绘制"></a>App 相关的屏幕绘制</h2><p>总的来说，当有屏幕刷新操作时（是否时invalidate ？），系统会将 View 树的测量、布局和绘制等封装到一个 Runnable（当然，会过滤掉同一帧内的重复调用） ，然后监听 VSync 信号，待信号来时再触发此 Runnable。</p><h2 id="卡顿分析利器——Systrace-工具"><a href="#卡顿分析利器——Systrace-工具" class="headerlink" title="卡顿分析利器——Systrace 工具"></a>卡顿分析利器——Systrace 工具</h2><h3 id="systrace-的使用"><a href="#systrace-的使用" class="headerlink" title="systrace 的使用"></a>systrace 的使用</h3><p>一般来说，系统很多关键地方都添加了 trace ，可以看到很多关键代码耗时，当然，我们自己也可以自定义（叫做添加自己的 Label）：</p><figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Trace.beginSection(<span class="string">"名称"</span>):</span><br><span class="line"><span class="comment">//doSomething</span></span><br><span class="line"></span><br><span class="line">Trace.endSection():</span><br></pre></td></tr></tbody></table></figure><p>一般来说，添加自己的 Label 需要注意以下几点：</p><ul><li>begin 和 end 必须成对出现</li><li>Label 支持嵌套，但是 begin 会找最近的 end</li><li>begin 和 end 必须在同一线程</li><li>抓取 systrace 时，必须指定包名</li></ul><p>但是，还有一种情况，那就是 <strong>异步trace</strong>，使用方法如下：</p><figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Trace.asyncTraceBegin(Trace.TRACE_TAG_WINDOW_MANAGER, <span class="string">"Stop bootanim"</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//dosomeThing</span></span><br><span class="line"></span><br><span class="line">Trace.asyncTraceEnd(Trace.TRACE_TAG_WINDOW_MANAGER, <span class="string">"Stop bootanim"</span>, <span class="number">0</span>);</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure><h3 id="Systrace-文件获取"><a href="#Systrace-文件获取" class="headerlink" title="Systrace 文件获取"></a>Systrace 文件获取</h3><p>Android 在 platform-tools 中提供了 systrace 文件获取的工具，这是一个 python 脚本，用命令行就能够获取：</p><blockquote><p>python systrace.py –help</p></blockquote><p>一般来说，我们只需要使用 -o ，-b， -t，-a 对应输出文件路径，buffersize，time，需要分析的应用程序包名。</p><h3 id="查看trace-文件"><a href="#查看trace-文件" class="headerlink" title="查看trace 文件"></a>查看trace 文件</h3><p>使用 chrome 打开导出的 trace 文件，大概如下图所示：</p><p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/trace%E6%96%87%E4%BB%B6%E5%88%86%E6%9E%90.png" alt="trace文件分析"></p><p>重点关注带 F 的原点，表示一帧，只有圆点为绿色时才表示这一帧没有超过 16ms ，其他颜色都是大于 16ms ，红色表示严重超时。</p><h3 id="异步-trace"><a href="#异步-trace" class="headerlink" title="异步 trace"></a>异步 trace</h3><blockquote><p>以上内容参考自<a href="https://blog.csdn.net/vicwudi/article/details/100191529">CSDN上的博客</a>、<a href="https://www.jianshu.com/p/f83d84dcd0b8">简书上的博客</a></p></blockquote></body></html>]]></content>
+      
+      
+      <categories>
+          
+          <category> 面试 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 面试题 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>面试题-线上监控的功能</title>
       <link href="/2021/09/28/%E5%9C%A8%E7%BA%BF%E7%9B%91%E6%8E%A7/"/>
       <url>/2021/09/28/%E5%9C%A8%E7%BA%BF%E7%9B%91%E6%8E%A7/</url>

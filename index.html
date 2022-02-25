@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">124</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">125</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,115 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2022/02/25/Systrace%E4%BD%BF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/02/25/Systrace%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">面试题-Android显示机制以及 Systrace 的使用</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2022-02-25 10:50:00 / 修改时间：10:58:24" itemprop="dateCreated datePublished" datetime="2022-02-25T10:50:00+08:00">2022-02-25</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="一、屏幕刷新机制"><a href="#一、屏幕刷新机制" class="headerlink" title="一、屏幕刷新机制"></a>一、屏幕刷新机制</h2><p>简单来说，屏幕刷新包括三个步骤：CPU计算、GPU进一步处理和缓存、最后display 再将缓存（buffer）中的数据显示出来</p>
+<h3 id="Screen-Tearing（撕裂）"><a href="#Screen-Tearing（撕裂）" class="headerlink" title="Screen Tearing（撕裂）"></a>Screen Tearing（撕裂）</h3><p>在早期设备上，采用单缓冲模式，由于 display 的处理频率是固定的，而CPU/GPU 处理数据的时间不确定，因此，会有屏幕撕裂的情况：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E5%B1%8F%E5%B9%95%E6%92%95%E8%A3%82.png" alt="屏幕撕裂"></p>
+<p>从上图可看出，由于 CPU/GPU 仅完成部分工作，因此，在 0.015s 时，屏幕上部分显示的是2画面，下部分显示的是 1 画面的撕裂画面。</p>
+<h3 id="Double-buffer"><a href="#Double-buffer" class="headerlink" title="Double-buffer"></a>Double-buffer</h3><p>双缓冲技术，原理就是采用2个 buffer，一块 back buffer 用于 CPU/GPU 后台绘制，另一块 framebuffer 则用于显示，当 back buffer 准备就绪之后，才进行交换，这样就避免了屏幕撕裂。</p>
+<h3 id="VSync"><a href="#VSync" class="headerlink" title="VSync"></a>VSync</h3><p>在 Android 4.1 之前，没有采用 VSync 信号，此时 CPU 或 GPU 往 buffer 中写数据比较随意，因此会造成丢帧：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E6%97%A0VSync%E9%80%A0%E6%88%90%E4%B8%A2%E5%B8%A7.png" alt="无VSync造成丢帧"></p>
+<p>当扫描完一个屏幕后，设备需要重新回到第一行以进入下一次循环，此时有一段时间空隙，这个时间点就是我们进行缓冲区交换的最佳时间。</p>
+<p>在 Android 4.1 之后，Android display 系统进行了重构（黄油计划：Project Butter），引入三个核心元素： VSync、Triple Buffer 以及 Choreographer，它规定一旦收到 VSync 通知（约16ms触发一次），CPU 和 GPU 就立刻开始工作把显示数据写入 buffer。根据 VSync 新来来同步处理数据，让 CPU/GPU 有完整的 16ms 时间来处理数据，减少 jank。</p>
+<h3 id="Triple-Buffer"><a href="#Triple-Buffer" class="headerlink" title="Triple Buffer"></a>Triple Buffer</h3><p>双缓存机制并不完美，当 CPU/GPU 工作时间较长时，会出现如下情况：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E5%8F%8C%E7%BC%93%E5%86%B2%E4%B8%8B%E7%9A%84jank.png" alt="双缓冲下的jank"></p>
+<p>从图可以看出，当 CPU/GPU 的处理时间超过 16ms 时，第一个 VSync 信号来了，缓冲区 B 还没准备好，于是只能继续显示 A 缓冲区的内容，<strong>而在 B 完成后又因为第2个 VSync 信号还没来，不能及时展示，只能等待下一个 VSync 信号到来，在这一过程中，有一大段时间是被浪费的</strong>。</p>
+<p>三缓冲虽然不能解决双缓冲第一次 jank 问题，但是当第一次 VSync 发生后，CPU 不用再等待了，它会使用第三个buffer C 来进行下一帧的准备工作。虽然对缓冲区 C 的处理所需时间也超狗 16ms ，但并不影响显示屏——第2次 VSync 到来时，会选择 buffer B 进行展示，而第 3 次 VSync 时，会接着采用 C ，而不是像 double buffer 时只能再显示一遍 B ，这样就有效地减低了 jank，如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E4%B8%89%E7%BC%93%E5%86%B2%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="三缓冲示意图"></p>
+<h2 id="App-相关的屏幕绘制"><a href="#App-相关的屏幕绘制" class="headerlink" title="App 相关的屏幕绘制"></a>App 相关的屏幕绘制</h2><p>总的来说，当有屏幕刷新操作时（是否时invalidate ？），系统会将 View 树的测量、布局和绘制等封装到一个 Runnable（当然，会过滤掉同一帧内的重复调用） ，然后监听 VSync 信号，待信号来时再触发此 Runnable。</p>
+<h2 id="卡顿分析利器——Systrace-工具"><a href="#卡顿分析利器——Systrace-工具" class="headerlink" title="卡顿分析利器——Systrace 工具"></a>卡顿分析利器——Systrace 工具</h2><h3 id="systrace-的使用"><a href="#systrace-的使用" class="headerlink" title="systrace 的使用"></a>systrace 的使用</h3><p>一般来说，系统很多关键地方都添加了 trace ，可以看到很多关键代码耗时，当然，我们自己也可以自定义（叫做添加自己的 Label）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Trace.beginSection(<span class="string">"名称"</span>):</span><br><span class="line"><span class="comment">//doSomething</span></span><br><span class="line"></span><br><span class="line">Trace.endSection():</span><br></pre></td></tr></tbody></table></figure>
+
+<p>一般来说，添加自己的 Label 需要注意以下几点：</p>
+<ul>
+<li>begin 和 end 必须成对出现</li>
+<li>Label 支持嵌套，但是 begin 会找最近的 end</li>
+<li>begin 和 end 必须在同一线程</li>
+<li>抓取 systrace 时，必须指定包名</li>
+</ul>
+<p>但是，还有一种情况，那就是 <strong>异步trace</strong>，使用方法如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Trace.asyncTraceBegin(Trace.TRACE_TAG_WINDOW_MANAGER, <span class="string">"Stop bootanim"</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//dosomeThing</span></span><br><span class="line"></span><br><span class="line">Trace.asyncTraceEnd(Trace.TRACE_TAG_WINDOW_MANAGER, <span class="string">"Stop bootanim"</span>, <span class="number">0</span>);</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+<h3 id="Systrace-文件获取"><a href="#Systrace-文件获取" class="headerlink" title="Systrace 文件获取"></a>Systrace 文件获取</h3><p>Android 在 platform-tools 中提供了 systrace 文件获取的工具，这是一个 python 脚本，用命令行就能够获取：</p>
+<blockquote>
+<p>python systrace.py –help</p>
+</blockquote>
+<p>一般来说，我们只需要使用 -o ，-b， -t，-a 对应输出文件路径，buffersize，time，需要分析的应用程序包名。</p>
+<h3 id="查看trace-文件"><a href="#查看trace-文件" class="headerlink" title="查看trace 文件"></a>查看trace 文件</h3><p>使用 chrome 打开导出的 trace 文件，大概如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/trace%E6%96%87%E4%BB%B6%E5%88%86%E6%9E%90.png" alt="trace文件分析"></p>
+<p>重点关注带 F 的原点，表示一帧，只有圆点为绿色时才表示这一帧没有超过 16ms ，其他颜色都是大于 16ms ，红色表示严重超时。</p>
+<h3 id="异步-trace"><a href="#异步-trace" class="headerlink" title="异步 trace"></a>异步 trace</h3><blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://blog.csdn.net/vicwudi/article/details/100191529">CSDN上的博客</a>、<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/f83d84dcd0b8">简书上的博客</a></p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1671,115 +1780,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/14/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/" class="post-title-link" itemprop="url">特别篇：自己的总结</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-09-14 19:46:00 / 修改时间：21:39:21" itemprop="dateCreated datePublished" datetime="2021-09-14T19:46:00+08:00">2021-09-14</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="识别插件的类"><a href="#识别插件的类" class="headerlink" title="识别插件的类"></a>识别插件的类</h2><p>方案：将所有的插件 dex 合并到 宿主中，具体步骤为：</p>
-<ol>
-<li><p>根据宿主的 ClassLoader，获取宿主的 dexElements 字段</p>
-<blockquote>
-<p>具体步骤为： 首先反射出 BaseDexClassLoader 的 pathList 字段，它是 DexPathList  类型的；第二步，反射出 DexPathList 的 dexElements 字段，他是个<strong>数组</strong>。</p>
-</blockquote>
-</li>
-<li><p>根据插件的 dexFile ，反射出一个 Element 类型对象，这就是插件 dex</p>
-</li>
-<li><p>把插件 dex 和 宿主 dexElements 合并成一个新的 dex 数组，替换宿主之前的 dexElements 字段</p>
-</li>
-</ol>
-<h2 id="欺骗系统"><a href="#欺骗系统" class="headerlink" title="欺骗系统"></a>欺骗系统</h2><p>启动时，其实是启动 PlaceHoldActivity ，将真正要启动的 TargetActivity 放在 Intent 的数据里面，主要步骤：</p>
-<p>1、Hook 到 ActivityManagerNative （它里面的gDefault，这个字段是个单例），把 TargetActivity 替换为 PlaceHoldActivity    </p>
-<p>2、Hook 到 H（Handler） 类的 mCallback 字段，将 PlaceHoldActivity 换成真正的 TargetActivity。或者，如果不想使用这种 Hook，可以在创建Activity （execStartActivity）对象的时候再替换回来</p>
-<h2 id="资源使用"><a href="#资源使用" class="headerlink" title="资源使用"></a>资源使用</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><ol>
-<li>通过反射，构建一个 AssetManager 对象 <font color="#CD6889">mAssetManager</font>，之后，反射调用 mAssetManager 的 addAssetPath 方法，将宿主和插件的 dexPath 全部添加进去，这样，这个新的 mAssetManager 拥有宿主以及插件中的所有的资源了。</li>
-<li>根据上述的 mAssetManager 构建处一个 Resources 对象 <font color="#CD6889">mResources</font></li>
-<li>使用 newTheme 创建一个 Theme 对象 <font color="#CD6889">mTheme</font></li>
-<li>在 Activity 中重写 getAssets()、getResources()、getTheme() 方法，分别返回上述的mAssetManager、mResources、mTheme</li>
-</ol>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> void loadResources(){</span><br><span class="line">    <span class="keyword">try</span>{</span><br><span class="line">        AssetManager assetManager= AssetManager.<span class="keyword">class</span>.newInstance();</span><br><span class="line">        Method addAssetPath = assetManager.getClass().getMethod(<span class="string">"addAssetPath"</span>,String.<span class="keyword">class</span>);</span><br><span class="line">        addAssetPath.invoke(assetManager, dexPath);</span><br><span class="line">        mAssetManager = assetManager;</span><br><span class="line">    }<span class="keyword">catch</span> (Exception e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">    Resources superResources = <span class="keyword">super</span>.getResources();</span><br><span class="line">    mResources = new Resources(mAssetManager, superResources.getDisplayMetrics(), superResources.getConfiguration());</span><br><span class="line">    mTheme = mResources.newTheme();</span><br><span class="line">    mTheme.setTo(<span class="keyword">super</span>.getTheme());</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> AssetManager getAssets() {</span><br><span class="line">    <span class="keyword">if</span> (mAssetManager == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getAssets();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mAssetManager;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources getResources() {</span><br><span class="line">    <span class="keyword">if</span> (mResources == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getResources();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mResources;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources.Theme getTheme() {</span><br><span class="line">    <span class="keyword">if</span> (mTheme == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getTheme();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mTheme;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p><strong>注意一点，由于将所有资源集合在一块，所以资源id可能冲突</strong>，解决方案：修改AAPT命令，将宿主和插件之间的id前缀都区分开，比如宿主的资源id以 0x71 开头，插件1以 0x72，插件2以 0x73  等，避免冲突。</p>
-<p><strong>还有</strong>，如果插件需要使用宿主的资源，那么，可以在宿主中将id写死，具体方式为自定义一个public.xml ，在里面写死。然后插件中以 provided 的方式将宿主的aar引入（这样，打包的时候就不会将这个aar打进去），引用资源的时候，直接使用这个写死的id就行。</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--public.xml--&gt;</span></span><br><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="welcom" id="0x71050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h2 id="启动模式（LaunchMode）"><a href="#启动模式（LaunchMode）" class="headerlink" title="启动模式（LaunchMode）"></a>启动模式（LaunchMode）</h2><p>普通使用的都是Standard 模式，如果要解决其他 3 种 LaunchMode 问题，使用的是<strong>占位Activity的思想</strong>，即事先为这3种 LaunchMode 创建很多 PlaceHoldActivity。比如：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SingleInstancePlaceHoldActivity1</span><br><span class="line">SingleInstancePlaceHoldActivity2</span><br><span class="line">SingleInstancePlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTaskPlaceHoldActivity1</span><br><span class="line">SingleTaskPlaceHoldActivity2</span><br><span class="line">SingleTaskPlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTopPlaceHoldActivity1</span><br><span class="line">SingleTopPlaceHoldActivity2</span><br><span class="line">SingleTopPlaceHoldActivity3</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>接下来，从服务器下载一个 Json ，指定插件Activity 要使用哪个 PlaceHoldActivity ，这里所说的 Activity 只包括 LauncherMode 为 SingleTop、SingleTask、SingleInstance 的 Activity。我们无法指定插件 Activity 的 LaunchMode ，但是通过这种指定占位，<strong>当 ActivityA 和 SingleTaskPlaceHoldActivity1 建立对应关系之后，ActivityA 的 LaunchMode 就是 SingleTask 了！</strong></p>
-<p>但是这里还有个小bug，无论是SingleTop 还是 SingleTask ，再回到这个Activity时，并不会触发它的 onCreate ，而是触发 它的 onNewIntent 方法！为此，<strong>我们需要在Hook的 Handler.Callback 中拦截 onNewIntent 方法，把占位的 PlaceHoldActivity 替换回插件Activity</strong>： </p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MockClass2</span> <span class="keyword">implements</span> <span class="title">Handler</span>.<span class="title">Callback</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    <span class="keyword">switch</span>(msg.what) {</span><br><span class="line">      <span class="keyword">case</span> <span class="number">112</span>:</span><br><span class="line">        handleNewIntent(msg);</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleNewIntent</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    Object obj = msg.obj;</span><br><span class="line">    ArrayList intents = (ArrayList)RefInvoke.getFieldObject(obj, <span class="string">"intents"</span>);</span><br><span class="line">    <span class="keyword">for</span>(Object object: intents) {</span><br><span class="line">      Intent raw = (Intent)object;</span><br><span class="line">      Intent target = raw.getParcelableExtra(AMSHookHelper.EXTRA_TARGET_INTENT);</span><br><span class="line">      <span class="keyword">if</span>(target != <span class="keyword">null</span>) {</span><br><span class="line">        raw.setComponent(target.getComponent());</span><br><span class="line">        <span class="keyword">if</span>(target.getExtras() != <span class="keyword">null</span>) {</span><br><span class="line">          raw.putExtras(target.getExtras());</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1830,7 +1830,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">124</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1916,7 +1916,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共298.7k字</span>
+  <span class="post-count">博客全站共299.8k字</span>
 </div>
 
 

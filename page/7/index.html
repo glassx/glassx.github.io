@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">124</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">125</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,105 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/24/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC3%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/11/24/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章：应用程序进程启动过程</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-24 10:22:00" itemprop="dateCreated datePublished" datetime="2019-11-24T10:22:00+08:00">2019-11-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-03 21:29:50" itemprop="dateModified" datetime="2019-12-03T21:29:50+08:00">2019-12-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>AMS启动一个应用程序首先要保证该应用程序的进程已经启动，如果应用程序进程还不存在，则请求 Zygote 进程启动进程。</p>
+<p>从前一章内容可知，在Zygote 的Java 框架层会创建Server 端的Socket，用于等待AMS 请求Zygote 创建新的应用程序进程。Zygote 通过fork自身即可创建应用程序进程，这个进程会包含虚拟机实例，并且会创建Binder线程池和消息循环。</p>
+<p>本章学习应用程序进程的启动，注意，是应用程序进程而不是应用程序的启动过程。</p>
+<h2 id="应用程序进程启动过程介绍"><a href="#应用程序进程启动过程介绍" class="headerlink" title="应用程序进程启动过程介绍"></a>应用程序进程启动过程介绍</h2><p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC3%E7%AB%A0/AMS%E5%8F%91%E9%80%81%E5%90%AF%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E8%BF%9B%E7%A8%8B%E8%AF%B7%E6%B1%82%E8%BF%87%E7%A8%8B%E7%9A%84%E6%97%B6%E5%BA%8F%E5%9B%BE.jpeg" alt="AMS发送启动应用程序进程请求过程的时序图"></p>
+<p>AMS 通过调用  startProcessLocked 向 Zygote 进程发送请求， 主要代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">startProcessLocked</span><span class="params">(ProcessRecord app, String hostingType,</span></span></span><br><span class="line"><span class="params"><span class="function">String hostingNameStr, String abiOverride ,String entryPoint ,String [] entryPointArgs)</span> </span>{</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//获取要创建的应用程序进程的用户 ID</span></span><br><span class="line">    <span class="keyword">int</span> uid = app.uid; <span class="comment">//1 </span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">int</span> [] gids = <span class="keyword">null</span>; </span><br><span class="line">    <span class="keyword">if</span> (!app.isolated) { </span><br><span class="line">        <span class="comment">//2  gids创建和赋值</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="function">ArrayUtils <span class="title">isEmpty</span><span class="params">(permGids)</span>)</span>{</span><br><span class="line">            gids =<span class="keyword">new</span> <span class="keyword">int</span>[<span class="number">3</span>]; </span><br><span class="line">        }<span class="keyword">else</span> { </span><br><span class="line">            gids = <span class="keyword">new</span> <span class="keyword">int</span>[permGids.leng + <span class="number">3</span>] ; </span><br><span class="line">            System.arraycopy(permGids, <span class="number">0</span>, gids, <span class="number">3</span>, permGids.length) ; </span><br><span class="line">            gids[O] = UserHandle.getSharedAppGid(UserHandle.getAppid(uid)); </span><br><span class="line">            gids[<span class="number">1</span>] = UserHandle.getCacheAppGid(UserHandle .getAppid(uid)) ; </span><br><span class="line">            gids[<span class="number">2</span>] = UserHandle.getUserGid{UserHandle.getUserid(uid)); </span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (entryPoint = <span class="keyword">null</span>) entryPoint = <span class="string">"android.app.ActivityThread"</span>;<span class="comment">//3</span></span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//启动应用程序进程,这里省略不重要的参数</span></span><br><span class="line">    startResult = Process.start(entryPoint,xxx,uid, xxx,gids,xxx,xxx);</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码<strong>首先得到应用程序进程的用户ID</strong>，之后创建用户组ID 并且赋值，在注释3处判断 entryPoint 为null就赋值 “android.app.ActivityThread”，<font color="#008000">这个值就是应用程序进程主线程的类名</font>。在最终调用 Process.start 创建进程时，会将进程的用户ID和用户组ID传入。</p>
+<p>Process.start会将实现交给 ZygoteProcess(<strong>ZygoteProcess用于保持与Zygote进程的通信状态</strong>)的start 方法处理，其中首先会执行 openZygoteSocketifNeeded  方法，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="keyword">if</span> (primaryZygoteState == <span class="keyword">null</span> || primaryZygoteState.isClosed ()) { </span><br><span class="line"><span class="keyword">try</span> { </span><br><span class="line">    <span class="comment">//与 Zygote 进程建立 Socket 连接</span></span><br><span class="line">    primaryZygoteState = ZygoteState.connect(mSocket);<span class="comment">//1</span></span><br><span class="line">} <span class="keyword">catch</span> (IOException ioe} { </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> ZygoteStartFailedEx (<span class="string">"Error connecting to primary zygote"</span>， ioe)</span><br><span class="line">}</span><br><span class="line"><span class="comment">//连接 Zygote 主模式返回的 ZygoteState 是否与启动应用程序进程所需要的ABI匹配</span></span><br><span class="line"><span class="keyword">if</span> (primaryZygotestate.matches (abi)) {<span class="comment">//2 </span></span><br><span class="line">    <span class="keyword">return</span> primaryZygoteState;</span><br><span class="line">} </span><br><span class="line"></span><br><span class="line">／／如果不匹配，则尝试连接 Zygote 辅模式</span><br><span class="line"><span class="keyword">if</span> (secondaryZygoteState ==<span class="keyword">null</span> || secondaryZygoteState.isClosed()) { </span><br><span class="line"><span class="keyword">try</span> { </span><br><span class="line">    secondaryZygoteState = ZygoteState.connect(mSecondarySocket);<span class="comment">//3</span></span><br><span class="line">} <span class="keyword">catch</span> (IOException ioe) { </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> ZygoteStartFailedEx (<span class="string">"Error connecting to secondary zygote"</span>, ioe) ; </span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">／／连接 Zygote 辅模式返回的 ZygoteState 是否与启动应用程序进程所需要的 ABI 匹配</span><br><span class="line"><span class="keyword">if</span> (secondaryZygoteState.matches(abi)) {<span class="comment">//4 </span></span><br><span class="line">    <span class="keyword">return</span> secondaryZygoteState; </span><br><span class="line">}</span><br><span class="line"><span class="keyword">throw</span> <span class="keyword">new</span> ZygoteStartFailedEx (<span class="string">"Unsupported zygote ABI :"</span> + abi); </span><br></pre></td></tr></tbody></table></figure>
+
+<p>前面章节提到Zygote的main方法中会创建name为 “zygote” 的server端Socket，注释1就是与Zygote进程建立Socket 连接(name为”zygote”)，并得到 ZygoteState 对象primaryZygoteState；注释2处如果primaryZygoteState 与启动应用程序所需要的 ABI 不匹配，则在注释3处连接name为 “zygote_secondary” 的Socket。如果辅模式返回的 ZygoteState 与进程所需的ABI也不匹配，就抛出异常。</p>
+<p>通过 openZygoteSocketifNeeded 获取ZygoteState后，将其作为参数调用 ZygoteProcess的  ZygoteSendArgsAndGetResult 方法 获取Process.ProcessStartResult。</p>
+<h3 id="Zygote-接收请求并创建应用程序进程"><a href="#Zygote-接收请求并创建应用程序进程" class="headerlink" title="Zygote 接收请求并创建应用程序进程"></a>Zygote 接收请求并创建应用程序进程</h3><p>执行完以上步骤后，继续执行 argsForZygote 方法即可让Zygote 收到创建新的应用程序进程的请求。Zygote 接收请求并创建应用程序进程的时序图如下：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC3%E7%AB%A0/Zygote%E6%8E%A5%E6%94%B6%E8%AF%B7%E6%B1%82%E5%B9%B6%E5%88%9B%E5%BB%BA%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E8%BF%9B%E7%A8%8B%E7%9A%84%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="Zygote接收请求并创建应用程序进程的时序图"></p>
+<p>由前面章节我们知道，Zygote 中的Server Socket 的runSelectLoop 方法一直在等待 AMS请求创建新的应用程序进程，runSelectLoop 中是通过 runOnce 来创建进程的，runOnce最终调用到 Zygote 的 forkAndSpecialize 方法创建应用程序进程，并返回pid。forkAndSpecialize 通过fork 当前进程来创建一个子进程。此后，便会在应用程序进程中创建 Binder 线程池，*<em>进一步通过反射 ActivityThread 类的main方法调用，令应用程序进程进入了ActivityThread 的main方法中。此时，应用程序进程创建完毕，并且运行了主线程管理类 ActivityThread *</em>。</p>
+<blockquote>
+<p>如果pid为0，说明当前代码运行在新创建的子进程中。</p>
+</blockquote>
+<h3 id="Binder-线程池启动过程"><a href="#Binder-线程池启动过程" class="headerlink" title="Binder 线程池启动过程"></a>Binder 线程池启动过程</h3><p>程序中会检查代码，确保Binder线程池只会被启动一次。</p>
+<h3 id="消息循环创建过程"><a href="#消息循环创建过程" class="headerlink" title="消息循环创建过程"></a>消息循环创建过程</h3><p>通过反射方式 invok 执行 ActivityThread 的main方法时，会执行一系列主线程的工作，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/ActivityThread.java </span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{ </span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//创建主线程 Looper</span></span><br><span class="line">    Looper.prepareMainLooper(); <span class="comment">//1 </span></span><br><span class="line">    ActivityThread thread= <span class="keyword">new</span> ActivityThread(); <span class="comment">//2 </span></span><br><span class="line">    thread.attach(<span class="keyword">false</span>) ; </span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span> ) {<span class="comment">//3 </span></span><br><span class="line">    <span class="comment">//创建主线程 H 类</span></span><br><span class="line">    sMainThreadHandler = thread . getHandler ();<span class="comment">//4 </span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">false</span>) { </span><br><span class="line">        Looper.myLooper().setMessageLogging(<span class="keyword">new</span> LogPrinter(Log.DEBUG, <span class="string">"ActivityThread"</span>）；</span><br><span class="line">    Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER) ; </span><br><span class="line">    <span class="comment">//Looper 开始工作</span></span><br><span class="line">    Looper.loop (); <span class="comment">//5 </span></span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>); </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>ActivityThread类用于管理当前应用程序进程的主线程，上述代码中创建了主线程的消息循环Looper，其中的内部类 H 继承 Handler，在注释 5 处调用Looper.loop ，即使得Looper 开始处理消息，可见，系统在应用程序进程启动完成后，就会创建消息循环。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -2360,504 +2459,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/11/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/11/11/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/" class="post-title-link" itemprop="url">面试题-多线程知识</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-11-11 21:02:00" itemprop="dateCreated datePublished" datetime="2019-11-11T21:02:00+08:00">2019-11-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-06-27 15:10:25" itemprop="dateModified" datetime="2020-06-27T15:10:25+08:00">2020-06-27</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="1、线程同步，你了解哪几种方式？"><a href="#1、线程同步，你了解哪几种方式？" class="headerlink" title="1、线程同步，你了解哪几种方式？"></a>1、线程同步，你了解哪几种方式？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<blockquote>
-<ol>
-<li>数据同步：可以使用Android 提供的同步容器。如： CopyOnWriteArrayList（当某个线程要修改list的元素时，首先copy一份出来，然后在修改前加锁，防止多个线程同时修改而copy多个副本，读的时候无需加锁，读的是副本）、concurrentHashMap（分段锁）、BlockingQueue（队列满了，在调用put，会阻塞，直到不再是满的；同理，取也是一样）。</li>
-<li>用锁。同步锁：synchronize（无论synchronized关键字加在方法上还是对象上，他锁的都是对象，而不是把一段代码或函数当作锁）、ReentrantLock</li>
-</ol>
-</blockquote>
-</details>
-
-<h2 id="2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？"><a href="#2、synchronized-与-Lock。讲下-RecentLock-可重入锁？-什么是可重入锁？为什么要设计可重入锁？" class="headerlink" title="2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？"></a>2、synchronized 与 Lock。讲下 RecentLock 可重入锁？ 什么是可重入锁？为什么要设计可重入锁？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<blockquote>
-<p><strong>介绍：</strong>synchronized：无论synchronized关键字加在方法上还是对象上，他锁的都是对象，而不是把一段代码或函数当作锁。<br>Lock：一般使用ReentrantLock类做为锁，需要显式指出加锁与释放锁的位置，在加锁和解锁处通过lock()和unlock()显示指出，所以一般会在finally块中写unlock()以防死锁。  </p>
-</blockquote>
-<blockquote>
-<p><strong>区别：</strong>  </p>
-</blockquote>
-<ul>
-<li>synchronized 是个关键字，而 Lock 是个接口  </li>
-<li>synchronized 使用简单，会自动释放；Lock需要显式加锁与释放，要防止死锁  </li>
-<li>synchronized是悲观锁，其他线程只能阻塞来等待线程释放锁；Lock是乐观锁。  </li>
-<li>lock可以使我们多线程交互变得方便，而使用synchronized则无法做到这点。如：某个线程在等待锁的过程中需要中断、或者获知某个线程有没有获取到锁、或者需要指定notify哪个线程</li>
-</ul>
-</details>
-
-<h2 id="3、为什么wait、notify、notifyAll-方法在object-类中，而sleep-在Thread-类中？"><a href="#3、为什么wait、notify、notifyAll-方法在object-类中，而sleep-在Thread-类中？" class="headerlink" title="3、为什么wait、notify、notifyAll 方法在object 类中，而sleep 在Thread 类中？"></a>3、为什么wait、notify、notifyAll 方法在object 类中，而sleep 在Thread 类中？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>一个例子，假如要做的事情是“生火-烧水-煮面”。sleep 就是，当我生火之后，觉得有点累，要休息一段时间，所以并不立即烧水，等过会再烧，休息的这段时间是由我自己来控制的，这个灶台我也要一直占用；而对于wait，首先，wait 是由某个object 来调用的，这个object 类似于监督人的角色，当我点火在烧水的过程中，监督人要求我停下来，不允许我继续烧水了，同时剥夺我灶台使用权，让其他人先用灶台，我在旁边等着，直到这个监督人通知(notify/notifyAll)我可以继续使用灶台了，我才能继续。</p>
-<p>通过这个例子，我们可以知道：</p>
-<ul>
-<li>首先，sleep 和 其他的是有本质区别的：sleep 是一个线程的运行状态控制，所以交给Thread 自己更合适；而wait 是线程之间的通讯工具，交给object更合适，这样各个竞争线程不需要知道彼此的存在。       </li>
-<li>其次，wait、notify与notifyAll 是锁级别的操作，而锁属于对象，每个对象都可能作为锁，所以它们定义在Object 类中。       </li>
-</ul>
-<p>从另一个角度来说是，假如不这样做的话，即如果wait、notify和notifyAll 都在Thread 中，会有什么问题：</p>
-<p>首先，wait 方法仍然可以使当前线程挂起，但是挂起后怎么被其他线程唤起呢？因为唤起时需要知道要唤起哪个线程。<br>其次，notify 与 notifyAll 都需要知道目前需要唤醒哪些线程。</p>
-<p>当然你可以说我们使用共享变量或者其他方式，这无疑会增加线程间通信的复杂性，并带来安全隐患，所以并没有必要。</p>
-<blockquote>
-<p>值得注意的是：必须在某个对象的同步方法或同步代码块中才能调用该对象的wait()、notify()或notifyAll()方法。原因很简单，如果这个代码块或者方法不是同步的，那么进入其中必然是不需要获取锁的，所以释放锁和等待锁就无从谈起，这时候调用的话会报 IllegalMonitorStateException。Java 给报这个错，其实就是不想让我们的程序在不经意间出现 Lost Wake-Up 问题。</p>
-</blockquote>
-<blockquote>
-<p>以上内容<a target="_blank" rel="noopener" href="https://blog.csdn.net/liuzhe_2008/article/details/36901737">参考csdn的这篇文章</a></p>
-</blockquote>
-</details>
-
-<h2 id="4、延伸-深究-notify-wait-方法为什么一定要放在同步块中？"><a href="#4、延伸-深究-notify-wait-方法为什么一定要放在同步块中？" class="headerlink" title="4、延伸-深究 notify/wait 方法为什么一定要放在同步块中？"></a>4、延伸-深究 notify/wait 方法为什么一定要放在同步块中？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>前面谈到的是没有同步就没必要释放或者等待锁，这里深究如果不放在同步块中会出现什么问题。这主要是涉及到 <strong>“Lost Wake-Up Problem”</strong>问题。</p>
-<p>我们notify/wait 很典型的一个用途就是生产者-消费者 场景，伪代码如下：</p>
-<p>生产者：</p>
-<blockquote>
-<p>count ++;<br>notify();    </p>
-</blockquote>
-<p>消费者：</p>
-<blockquote>
-<p>while(count &lt;= 0) wait();<br>count –;    </p>
-</blockquote>
-<p>生产者和消费着都有两个步骤，如果不在同步块中的话，多线程情况下执行顺序很难保证，有可能会出现如下图所示的执行顺序：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%A4%9A%E7%BA%BF%E7%A8%8B/%E7%94%9F%E4%BA%A7%E6%B6%88%E8%B4%B9%E4%B9%B1%E5%BA%8F.png" alt="生产消费乱序"></p>
-<p>初始的时候，count == 0，消费者发现条件成立，此时，发生上下文切换，生产者线程一顿操作执行了 count ++，之后发出了通知准备唤醒一个线程，这时候消费者刚决定wait，但是还没进入wait，此时，由于消费者线程还未进入wait状态，因此在等待队列中还找不到消费者线程，这个notify就被丢掉了。</p>
-<blockquote>
-<p>以上内容<a target="_blank" rel="noopener" href="https://blog.csdn.net/belalds/article/details/89225104">参考自360linker</a>的博客</p>
-</blockquote>
-</details>
-
-<h2 id="5、两个线程交替打印，一个输出偶数，一个输出奇数"><a href="#5、两个线程交替打印，一个输出偶数，一个输出奇数" class="headerlink" title="5、两个线程交替打印，一个输出偶数，一个输出奇数"></a>5、两个线程交替打印，一个输出偶数，一个输出奇数</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>第一种，使用synchronize 关键字，锁住对象，每次只能一个线程进入。每打印一个数，就释放锁，然后挂起自己，如此往复：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainClass</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">        MainClass obj = <span class="keyword">new</span> MainClass();</span><br><span class="line"></span><br><span class="line">        Thread t1 = <span class="keyword">new</span> Thread(obj::printOdds);</span><br><span class="line">        Thread t2 = <span class="keyword">new</span> Thread(obj::printEven);</span><br><span class="line"></span><br><span class="line">        t2.start();</span><br><span class="line">        t1.start();</span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">printOdds</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= <span class="number">100</span>; i += <span class="number">2</span>) {</span><br><span class="line">            System.out.println(<span class="string">"t1---"</span> + i);</span><br><span class="line">            notify();</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                wait();</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">printEven</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt;= <span class="number">100</span>; i += <span class="number">2</span>) {</span><br><span class="line">            System.out.println(<span class="string">"t2---"</span> + i);</span><br><span class="line">            <span class="keyword">this</span>.notify();</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                wait();</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>第二种，使用volatile 来保证:</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainClass</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> num = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">boolean</span> flag = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line"></span><br><span class="line">        Thread t1 = <span class="keyword">new</span> Thread(){</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;=<span class="number">100</span>;){</span><br><span class="line">                    <span class="keyword">if</span> (!flag &amp;&amp; (num == <span class="number">0</span> || ++num %<span class="number">2</span> == <span class="number">0</span>)){<span class="comment">//打印偶数</span></span><br><span class="line">                        System.out.println(num);</span><br><span class="line">                        flag = <span class="keyword">true</span>;</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        };</span><br><span class="line"></span><br><span class="line">        Thread t2 = <span class="keyword">new</span> Thread(){</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;<span class="number">100</span>;){</span><br><span class="line">                    <span class="keyword">if</span> (flag &amp;&amp; ++num %<span class="number">2</span> != <span class="number">0</span>){<span class="comment">//打印奇数</span></span><br><span class="line">                        System.out.println(num);</span><br><span class="line">                        flag = <span class="keyword">false</span>;</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        };</span><br><span class="line"></span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码中 num 和flag 都必须为volatile ，根据短路机制，if 语句中基本上只需要管 flag的值，所以即使 ++num 这个操作是非原子性的，也无妨。</p>
-<blockquote>
-<p>以上内容参考<a target="_blank" rel="noopener" href="https://www.cnblogs.com/stateis0/p/9091254.html">莫那.鲁道的博客</a></p>
-</blockquote>
-<h3 id="如何控制某个方法允许并发访问线程的个数？"><a href="#如何控制某个方法允许并发访问线程的个数？" class="headerlink" title="如何控制某个方法允许并发访问线程的个数？"></a>如何控制某个方法允许并发访问线程的个数？</h3></details>
-
-<h2 id="6、Java创建线程的三种方式"><a href="#6、Java创建线程的三种方式" class="headerlink" title="6、Java创建线程的三种方式"></a>6、Java创建线程的三种方式</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ul>
-<li>继承Thread类。优点：使用简单 缺点：已经继承Thread 类，不能继承其它类。    </li>
-<li>实现runnable 接口，创建线程类。    </li>
-<li>通过Callable 和 Future 创建线程。</li>
-</ul>
-<blockquote>
-<p>以上内容参考自：<a target="_blank" rel="noopener" href="https://www.androidos.net.cn/codebook/AndroidRoad/java/concurrence/CreateThread.html">Java创建线程的三种方式</a></p>
-</blockquote>
-</details>
-
-<h2 id="7、synchronized原理"><a href="#7、synchronized原理" class="headerlink" title="7、synchronized原理"></a>7、synchronized原理</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>JVM基于进入和退出Monitor对象来实现 代码块同步 和 方法同步 ，两者实现细节不同。</p>
-<p>代码块同步： 在编译后通过将monitorenter指令插入到同步代码块的开始处，将monitorexit指令插入到方法结束处和异常处，通过反编译字节码可以观察到。任何一个对象都有一个monitor与之关联，线程执行monitorenter指令时，会尝试获取对象对应的monitor的所有权，即尝试获得对象的锁。</p>
-<p>方法同步： synchronized方法在method_info结构有ACC_synchronized标记，线程执行时会识别该标记，获取对应的锁，实现方法同步。</p>
-<p>两者虽然实现细节不同，但本质上都是对一个对象的监视器（monitor）的获取。任意一个对象都拥有自己的监视器，当同步代码块或同步方法时，执行方法的线程必须先获得该对象的监视器才能进入同步块或同步方法，没有获取到监视器的线程将会被阻塞，并进入同步队列，状态变为BLOCKED。当成功获取监视器的线程释放了锁后，会唤醒阻塞在同步队列的线程，使其重新尝试对监视器的获取。</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%A4%9A%E7%BA%BF%E7%A8%8B/synchronize%E5%8E%9F%E7%90%86.png" alt="对象、监视器、同步队列和执行线程间的关系"></p>
-<blockquote>
-<p>以上内容参考自：<a target="_blank" rel="noopener" href="http://www.androidos.net.cn/book/android-road/java/concurrence/synchronized-reentrantlock.html">synchronized原理</a></p>
-</blockquote>
-</details>
-
-<h2 id="8、线程间通信？"><a href="#8、线程间通信？" class="headerlink" title="8、线程间通信？"></a>8、线程间通信？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>1、通过内存共享，共享内存中的信息是公共可见的，但是需要显式地进行同步，可以使用Synchronize 和 Lock 来进行同步。    </p>
-<p>2、notify/wait 方法</p>
-<p>3、Condition 实现等待/通知</p>
-<blockquote>
-<p>以上内容部分参考自： <a target="_blank" rel="noopener" href="http://www.androidos.net.cn/book/android-road/java/concurrence/producer-consumer.html">线程通信</a></p>
-</blockquote>
-</details>
-
-<h2 id="9、单例中，为什么要使用volatile-修饰instance？"><a href="#9、单例中，为什么要使用volatile-修饰instance？" class="headerlink" title="9、单例中，为什么要使用volatile 修饰instance？"></a>9、单例中，为什么要使用volatile 修饰instance？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>主要在于instance = new Singleton()这句，这并非是一个原子操作，事实上在 JVM 中这句话大概做了下面 3 件事情:</p>
-<p>1.给 instance 分配内存<br>2.调用 Singleton 的构造函数来初始化成员变量<br>3.将instance对象指向分配的内存空间（执行完这步 instance 就为非 null 了）。</p>
-<p>但是在 JVM 的即时编译器中存在指令重排序的优化。也就是说上面的第二步和第三步的顺序是不能保证的，最终的执行顺序可能是 1-2-3 也可能是 1-3-2。如果是后者，则在 3 执行完毕、2 未执行之前，被线程二抢占了，这时 instance 已经是非 null 了（但却没有初始化），所以线程二会直接返回 instance，然后使用，然后顺理成章地报错。</p>
-</details>
-
-<h2 id="10、有三个线程T1，T2，T3，怎么确保它们按顺序执行？"><a href="#10、有三个线程T1，T2，T3，怎么确保它们按顺序执行？" class="headerlink" title="10、有三个线程T1，T2，T3，怎么确保它们按顺序执行？"></a>10、有三个线程T1，T2，T3，怎么确保它们按顺序执行？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>参考2个线程的即可：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainClass1</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> num = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> flag = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line"></span><br><span class="line">        Thread t1 = <span class="keyword">new</span> Thread(){</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;=<span class="number">100</span>;){</span><br><span class="line">                    <span class="keyword">if</span> (flag == <span class="number">1</span>){</span><br><span class="line">                        ++num;</span><br><span class="line">                        System.out.println(<span class="string">"t1-"</span>+ num);</span><br><span class="line">                        flag = <span class="number">2</span>;</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        };</span><br><span class="line"></span><br><span class="line">        Thread t2 = <span class="keyword">new</span> Thread(){</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;<span class="number">100</span>;){</span><br><span class="line">                    <span class="keyword">if</span> (flag == <span class="number">2</span>){</span><br><span class="line">                        ++num;</span><br><span class="line">                        System.out.println(<span class="string">"t2-"</span>+ num);</span><br><span class="line">                        flag = <span class="number">3</span>;</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        };</span><br><span class="line"></span><br><span class="line">        Thread t3 = <span class="keyword">new</span> Thread(){</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                <span class="keyword">super</span>.run();</span><br><span class="line">                <span class="keyword">for</span> (;num&lt;<span class="number">100</span>;){</span><br><span class="line">                    <span class="keyword">if</span> (flag == <span class="number">3</span>){</span><br><span class="line">                        ++num;</span><br><span class="line">                        System.out.println(<span class="string">"t3-"</span>+ num);</span><br><span class="line"></span><br><span class="line">                        flag = <span class="number">1</span>;</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        };</span><br><span class="line"></span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">        t3.start();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-</details>
-
-<h2 id="11、Java停止一个正在运行的线程"><a href="#11、Java停止一个正在运行的线程" class="headerlink" title="11、Java停止一个正在运行的线程"></a>11、Java停止一个正在运行的线程</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ul>
-<li>采用经过volatile 标记的变量来控制    </li>
-<li>Thread.stop() ，但是不推荐    </li>
-<li>使用FutureTash 时，可以使用其 cancel() 方法来取消任务    </li>
-<li>使用return 关键字    </li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> Thread(){</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">super</span>.run();</span><br><span class="line"></span><br><span class="line">            System.out.println(<span class="string">"开始执行"</span>);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">true</span>){</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            System.out.println(<span class="string">"return 之后"</span>);</span><br><span class="line">        }</span><br><span class="line">    }.start();</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>代码只会打印 “开始执行”  ，代码中if是需要的，不然会提示编译不通过。</p>
-<blockquote>
-<p>以上部分内容参考自：<a target="_blank" rel="noopener" href="https://blog.csdn.net/abreaking2012/article/details/83376951?utm_source=distribute.pc_relevant.none-task">Java如何停止线程</a></p>
-</blockquote>
-</details>
-
-<h2 id="12、Java线程池工作原理"><a href="#12、Java线程池工作原理" class="headerlink" title="12、Java线程池工作原理"></a>12、Java线程池工作原理</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="线程池好处"><a href="#线程池好处" class="headerlink" title="线程池好处"></a>线程池好处</h3><ul>
-<li>复用已经创建的线程，降低线程创建和销毁带来的损耗      </li>
-<li>提高响应速度。当任务到达时，可以复用已有线程，无需等到线程创建就能立即执行    </li>
-<li>提高线程的可管理性。线程是稀缺资源，如果无限制创建，不仅消耗系统资源，延长线程等待时间，还可能降低系统稳定性。</li>
-</ul>
-<h3 id="线程的几种状态"><a href="#线程的几种状态" class="headerlink" title="线程的几种状态"></a>线程的几种状态</h3><ol>
-<li>新建状态(New)：新建一个线程对象    </li>
-<li>就绪状态(Runnable)：调用线程的 start() 方法，线程变成可运行状态，其他资源都已经获取，只等cpu了     </li>
-<li>运行状态(Running)：就绪状态的线程获取CPU，执行    </li>
-<li>阻塞状态(Blocked)：由于某种原因放弃cpu使用权。可能是调用了线程的 wait() 方法、或者等待获取同步锁、或者是执行了sleep()或者其他线程执行了 join()    </li>
-<li>死亡状态(Dead)：线程执行完了或者因为一场退出run()     </li>
-</ol>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E5%A4%9A%E7%BA%BF%E7%A8%8B/%E7%BA%BF%E7%A8%8B%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png" alt="线程生命周期"></p>
-</details>
-
-<blockquote>
-<p>以上代码参考自：<a target="_blank" rel="noopener" href="https://itimetraveler.github.io/2018/02/13/%E3%80%90Java%E3%80%91%E7%BA%BF%E7%A8%8B%E6%B1%A0ThreadPoolExecutor%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">java线程池</a></p>
-</blockquote>
-<h2 id="13、死锁条件"><a href="#13、死锁条件" class="headerlink" title="13、死锁条件"></a>13、死锁条件</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>产生死锁的四个条件（满足才会死锁）：</p>
-<ol>
-<li>互斥使用    </li>
-<li>不可剥夺    </li>
-<li>请求保持    </li>
-<li>循环等待    </li>
-</ol>
-<p>破坏任意一个条件即可解锁</p>
-</details>
-
-<h2 id="14、引申-写个简单的死锁程序"><a href="#14、引申-写个简单的死锁程序" class="headerlink" title="14、引申-写个简单的死锁程序"></a>14、引申-写个简单的死锁程序</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-  <figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">      Object lock1 = <span class="keyword">new</span> Object();</span><br><span class="line">      Object lock2 = <span class="keyword">new</span> Object();</span><br><span class="line"></span><br><span class="line">      Thread thread1 = <span class="keyword">new</span> Thread(<span class="string">"thread1"</span>){</span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">              <span class="keyword">super</span>.run();</span><br><span class="line">              <span class="keyword">synchronized</span> (lock1){</span><br><span class="line">                  System.out.println(Thread.currentThread().getName() + <span class="string">"进入第1层锁"</span>);</span><br><span class="line">                  <span class="keyword">try</span> {</span><br><span class="line">                      sleep(<span class="number">1000</span>);</span><br><span class="line">                  } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                      e.printStackTrace();</span><br><span class="line">                  }</span><br><span class="line"></span><br><span class="line">                  <span class="keyword">synchronized</span> (lock1){</span><br><span class="line">                      System.out.println(Thread.currentThread().getName() + <span class="string">"进入第2层锁"</span>);</span><br><span class="line">                  }</span><br><span class="line">              }</span><br><span class="line">          }</span><br><span class="line">      };</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">      Thread thread2 = <span class="keyword">new</span> Thread(<span class="string">"thread1"</span>){</span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">              <span class="keyword">super</span>.run();</span><br><span class="line">              <span class="keyword">synchronized</span> (lock2){</span><br><span class="line">                  System.out.println(Thread.currentThread().getName() + <span class="string">"进入第1层锁"</span>);</span><br><span class="line">                  <span class="keyword">try</span> {</span><br><span class="line">                      sleep(<span class="number">1000</span>);</span><br><span class="line">                  } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                      e.printStackTrace();</span><br><span class="line">                  }</span><br><span class="line"></span><br><span class="line">                  <span class="keyword">synchronized</span> (lock2){</span><br><span class="line">                      System.out.println(Thread.currentThread().getName() + <span class="string">"进入第2层锁"</span>);</span><br><span class="line">                  }</span><br><span class="line">              }</span><br><span class="line">          }</span><br><span class="line">      };</span><br><span class="line"></span><br><span class="line">      thread1.start();</span><br><span class="line">      thread2.start();</span><br><span class="line">  }</span><br></pre></td></tr></tbody></table></figure>
-</details>
-
-
-<h2 id="15、synchronized-关键字"><a href="#15、synchronized-关键字" class="headerlink" title="15、synchronized 关键字"></a>15、synchronized 关键字</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>当执行如下代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line">        System.out.println(<span class="string">"Method 1 start"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>反编译之后能看到 monitorenter 和 monitorexit 字样，关于这两条指令，jvm中的解释如下：</p>
-<blockquote>
-<p>每个对象都有一个监视器锁(monitor)，当monitor 被占用时就处于锁定状态，线程执行 monitorenter 指令时，就尝试获取 monitor的所有权，过程如下：    </p>
-</blockquote>
-<blockquote>
-<p>1、如果 monitor 的进入数为 0 ，则该线程进入 monitor，然后将进入数设置为 1，即该现成为 monitor 的所有者。    </p>
-</blockquote>
-<blockquote>
-<p>2、如果有线程已经占有 monitor ，之后又重新进入，则 monitor 的进入数加 1。    </p>
-</blockquote>
-<blockquote>
-<p>3、如果其他线程已经占用了 monitor ，则当前线程进入阻塞状态，直到 monitor 的进入数为 0(之后被唤醒)，再重新获取 monitor 的所有权。</p>
-</blockquote>
-<p>反之，monitorexit 则是线程退出的一个过程。</p>
-<p>所以我们知道，修饰代码块时，synchronized 底层是通过 monitor 对象来完成的，<strong>其实，wait/notify方法也是依赖于 monitor 对象的，这也是为什么只有再同步块中才能调用 wait/notify 等方法(因为wait 等待的是啥？其实等待的就是对象的 monitor，由于所有类都是object ，里面内置有一个 monitor，因此自然所有类都应该有 wait/notify 方法)。</strong></p>
-<p>在修饰成员方法时，如下代码所示：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span> </span>{</span><br><span class="line">    System.out.println(<span class="string">"Hello World!"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>反编译过后就会有 ACC_SYNCHRONIZED 标识符(没有用 monitorenter 和 monitorexit，其实理论上也是可以的)，jvm 根据这个标识符来实现方法同步：当调用方法时，首先检查方法的 ACC_SYNCHRONIZED 标志是否被设置，如果设置了，则线程首先获取 monitor，获取成功后才能执行方法，方法执行完成后再释放 monitor，方法执行期间，其他对象无法再获得同一个 monitor。所以与修饰 代码块 的时候本质上是没有区别的。</p>
-<p>最后，如果修饰的是静态方法，则锁定的是 class 对象。</p>
-<blockquote>
-<p>以上内容参考自：<a target="_blank" rel="noopener" href="https://www.cnblogs.com/paddix/p/5367116.html">Synchronized及其实现原理</a></p>
-</blockquote>
-</details>
-
-<h2 id="16、synchronized-锁持有的object-是Thread-对象"><a href="#16、synchronized-锁持有的object-是Thread-对象" class="headerlink" title="16、synchronized 锁持有的object 是Thread 对象"></a>16、synchronized 锁持有的object 是Thread 对象</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>看过上面synchronized原理，我们来看一段代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    Thread threadTest = <span class="keyword">new</span> Thread() {</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            System.out.println(<span class="string">"执行线程中方法"</span>);</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    };</span><br><span class="line"></span><br><span class="line">    threadTest.start();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span> (threadTest) {<span class="comment">//这里不明白可以想象单例的 synchronized 用法</span></span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            threadTest.wait();</span><br><span class="line">        } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    System.out.println(<span class="string">"执行到了这里"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>我们知道，wait 必须在同步块中执行，上述代码也是这样的；同时我们也知道，wait() 方法后，必须收到 notify/notifyAll 之后才能结束等待状态。但是上述代码首先输出 “执行线程中方法”  ，之后输出 “执行到了这里” ，明明没有notify ，怎么就能结束 wait 状态呢？其实这是因为synchronized 获得对象锁是 Thread 对象的锁时，当该线程执行完成后，会调用线程自身的 notifyAll() 方法，通知所有等待在该线程对象上的线程。所以，用这种方式能够实现 join 的功能，使得线程依次执行。</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://blog.csdn.net/chenkaibsw/article/details/80912878">csdn上的博客</a></p>
-</blockquote>
-</details>
-
-<h2 id="17、引申-理解Java-中的-join"><a href="#17、引申-理解Java-中的-join" class="headerlink" title="17、引申-理解Java 中的 join"></a>17、引申-理解Java 中的 join</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>如果要用join 方法实现上述功能，可以这样：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    Thread threadTest = <span class="keyword">new</span> Thread() {</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            System.out.println(<span class="string">"执行线程中方法"</span>);</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    };</span><br><span class="line"></span><br><span class="line">    threadTest.start();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        threadTest.join();</span><br><span class="line">    } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">    System.out.println(<span class="string">"执行到了这里"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>join 方法从字面上理解就是新线程加入进来，等新线程执行完后，老的线程才继续执行。我们日常使用 join 方法是通过 join(0) 来实现的，我们看它的源码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">join</span><span class="params">(<span class="keyword">long</span> millis)</span></span></span><br><span class="line"><span class="function">   <span class="keyword">throws</span> InterruptedException </span>{</span><br><span class="line">       <span class="keyword">long</span> base = System.currentTimeMillis();</span><br><span class="line">       <span class="keyword">long</span> now = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">if</span> (millis &lt; <span class="number">0</span>) {</span><br><span class="line">           <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"timeout value is negative"</span>);</span><br><span class="line">       }</span><br><span class="line">       <span class="keyword">if</span> (millis == <span class="number">0</span>) {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//如果时执行的join(0)</span></span><br><span class="line">           <span class="keyword">while</span> (isAlive()) {        <span class="comment">//如果线程是运行状态，就会执行下面的等待</span></span><br><span class="line">               wait(<span class="number">0</span>);</span><br><span class="line">           }</span><br><span class="line">       } <span class="keyword">else</span> {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//如果是执行的join(time)</span></span><br><span class="line">           <span class="keyword">while</span> (isAlive()) {               <span class="comment">//如果线程时运行状态</span></span><br><span class="line">               <span class="keyword">long</span> delay = millis - now;</span><br><span class="line">               <span class="keyword">if</span> (delay &lt;= <span class="number">0</span>) {</span><br><span class="line">                   <span class="keyword">break</span>;</span><br><span class="line">               }</span><br><span class="line">               wait(delay);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="comment">//等待delay时间后自动返回继续执行</span></span><br><span class="line">               now = System.currentTimeMillis() - base;</span><br><span class="line">           }</span><br><span class="line">       }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其中 while (isAlive()) { wait(0) } ，我们日常调用的 wait() 方法就是调用的 wait(0) 实现，因此这里本质还是 执行了 wait 方法，就是让其一直等待。所以我们上述代码： threadTest.join() 本质是利用 threadTest 对象作为对象锁，当线程终止时，会调用线程自身的 notifyAll ，因此这个 wait 就解除了。</p>
-<p>再说下 while (isAlive())，这是在判断线程是否线程是否已经执行了start() 方法，因此如果还没有start() 则不会执行wait() 方法。可以用如下代码验证：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    <span class="keyword">final</span> Thread t1 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            System.out.println(<span class="string">"t1"</span>);</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">    Thread t2 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                t1.join();</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">            System.out.println(<span class="string">"t2"</span>);</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line"></span><br><span class="line">    t2.start();<span class="comment">//先启动t2</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">    } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    t1.start();<span class="comment">//延迟2秒后启动t1</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这段代码看起来执行了 t1.join() ，应该要等t1执行完了才会执行t2，但是呢，这里最终输出： t2  t1 ，即 t2 还是会先执行。这是因为在执行 t1.join() 的时候，t1并没有执行 start() ，isAlive() 为false，因此不生效。</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://blog.csdn.net/chenkaibsw/article/details/80912878">csdn上的博客</a></p>
-</blockquote>
-</details>
-
-<h2 id="18、wait-sleep-yield-join-方法"><a href="#18、wait-sleep-yield-join-方法" class="headerlink" title="18、wait/sleep/yield/join 方法"></a>18、wait/sleep/yield/join 方法</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>wait() 方法的作用是将当前线程挂起，让其进入阻塞状态，直到 notify/notifyAll 方法来唤醒线程，很容易理解，wait 是释放了锁资源的。</p>
-<p>wait(long timeout)方法与 wait 相似，区别在于如果再指定时间内没有被notify/notifyAll ，则自动唤醒。</p>
-<p>sleep方法只是暂时让出cpu执行权，并不释放锁，而 wait 是释放锁的。</p>
-<p>yield 方法只是暂停当前线程，以便其他线程有机会运行，不过不能指定暂停时间，也不能保证当前线程立即停止。yield 方法只是将thread 的状态由 Running 转变为 Runable 状态。不过<strong>调度器可能会忽略这个方法，并且Java官方建议只用这个方法用于调试和测试。</strong></p>
-<p>join 方法是父线程等待子线程执行完之后再执行。</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.cnblogs.com/paddix/p/5381958.html">cnblogs的博客</a></p>
-</blockquote>
-</details>
-
-<h2 id="19、实现线程安全的方法（三种）"><a href="#19、实现线程安全的方法（三种）" class="headerlink" title="19、实现线程安全的方法（三种）"></a>19、实现线程安全的方法（三种）</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ul>
-<li>互斥同步    </li>
-</ul>
-<blockquote>
-<p>指多个线程并发访问共享数据时，保证共享数据在同一时刻只被一个(再使用信号量的时候可以是一些)线程使用，Java中典型的互斥同步手段是 synchronized 关键字，以及 ReentrantLock 类。</p>
-</blockquote>
-<ul>
-<li>非阻塞同步    </li>
-</ul>
-<blockquote>
-<p>互斥同步主要的问题就是线程阻塞和唤醒带来的性能问题，因此也称为阻塞同步。非阻塞同步就是先进行操作，如果没有其它线程争用共享数据，操作就成功了，否则产生冲突再补偿(比如自旋不断重试，直到成功为止)，这种乐观方式无需把线程挂起和唤醒，CAS 的出现也为非阻塞同步提供了条件。</p>
-</blockquote>
-<ul>
-<li>无同步方案    </li>
-</ul>
-<blockquote>
-<p>如果方法本来就没有涉及共享数据，每次输入相同的数据就能得到相同的输出，这种情况当然无需进行同步。</p>
-</blockquote>
-</details>
-
-
-<h2 id="20、死锁"><a href="#20、死锁" class="headerlink" title="20、死锁"></a>20、死锁</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>产生死锁的四个条件（满足才会死锁）：</p>
-<ol>
-<li>互斥使用    </li>
-<li>不可剥夺    </li>
-<li>请求保持    </li>
-<li>循环等待    </li>
-</ol>
-<p>破坏任意一个条件即可解锁</p>
-<details>
-
-<h2 id="21、引申-写个简单的死锁程序"><a href="#21、引申-写个简单的死锁程序" class="headerlink" title="21、引申-写个简单的死锁程序"></a>21、引申-写个简单的死锁程序</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-  <figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">      Object lock1 = <span class="keyword">new</span> Object();</span><br><span class="line">      Object lock2 = <span class="keyword">new</span> Object();</span><br><span class="line"></span><br><span class="line">      Thread thread1 = <span class="keyword">new</span> Thread(<span class="string">"thread1"</span>){</span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">              <span class="keyword">super</span>.run();</span><br><span class="line">              <span class="keyword">synchronized</span> (lock1){</span><br><span class="line">                  System.out.println(Thread.currentThread().getName() + <span class="string">"进入第1层锁"</span>);</span><br><span class="line">                  <span class="keyword">try</span> {</span><br><span class="line">                      sleep(<span class="number">1000</span>);</span><br><span class="line">                  } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                      e.printStackTrace();</span><br><span class="line">                  }</span><br><span class="line"></span><br><span class="line">                  <span class="keyword">synchronized</span> (lock1){</span><br><span class="line">                      System.out.println(Thread.currentThread().getName() + <span class="string">"进入第2层锁"</span>);</span><br><span class="line">                  }</span><br><span class="line">              }</span><br><span class="line">          }</span><br><span class="line">      };</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">      Thread thread2 = <span class="keyword">new</span> Thread(<span class="string">"thread1"</span>){</span><br><span class="line">          <span class="meta">@Override</span></span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">              <span class="keyword">super</span>.run();</span><br><span class="line">              <span class="keyword">synchronized</span> (lock2){</span><br><span class="line">                  System.out.println(Thread.currentThread().getName() + <span class="string">"进入第1层锁"</span>);</span><br><span class="line">                  <span class="keyword">try</span> {</span><br><span class="line">                      sleep(<span class="number">1000</span>);</span><br><span class="line">                  } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                      e.printStackTrace();</span><br><span class="line">                  }</span><br><span class="line"></span><br><span class="line">                  <span class="keyword">synchronized</span> (lock2){</span><br><span class="line">                      System.out.println(Thread.currentThread().getName() + <span class="string">"进入第2层锁"</span>);</span><br><span class="line">                  }</span><br><span class="line">              }</span><br><span class="line">          }</span><br><span class="line">      };</span><br><span class="line"></span><br><span class="line">      thread1.start();</span><br><span class="line">      thread2.start();</span><br><span class="line">  }</span><br></pre></td></tr></tbody></table></figure>
-
-</details>
-
-<h2 id="22、synchronized-关键字"><a href="#22、synchronized-关键字" class="headerlink" title="22、synchronized 关键字"></a>22、synchronized 关键字</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>当执行如下代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line">        System.out.println(<span class="string">"Method 1 start"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>反编译之后能看到 monitorenter 和 monitorexit 字样，关于这两条指令，jvm中的解释如下：</p>
-<blockquote>
-<p>每个对象都有一个监视器锁(monitor)，当monitor 被占用时就处于锁定状态，线程执行 monitorenter 指令时，就尝试获取 monitor的所有权，过程如下：    </p>
-</blockquote>
-<blockquote>
-<p>1、如果 monitor 的进入数为 0 ，则该线程进入 monitor，然后将进入数设置为 1，即该现成为 monitor 的所有者。    </p>
-</blockquote>
-<blockquote>
-<p>2、如果有线程已经占有 monitor ，之后又重新进入，则 monitor 的进入数加 1。    </p>
-</blockquote>
-<blockquote>
-<p>3、如果其他线程已经占用了 monitor ，则当前线程进入阻塞状态，直到 monitor 的进入数为 0(之后被唤醒)，再重新获取 monitor 的所有权。</p>
-</blockquote>
-<p>反之，monitorexit 则是线程退出的一个过程。</p>
-<p>所以我们知道，修饰代码块时，synchronized 底层是通过 monitor 对象来完成的，<strong>其实，wait/notify方法也是依赖于 monitor 对象的，这也是为什么只有再同步块中才能调用 wait/notify 等方法(因为wait 等待的是啥？其实等待的就是对象的 monitor，由于所有类都是object ，里面内置有一个 monitor，因此自然所有类都应该有 wait/notify 方法)。</strong></p>
-<p>在修饰成员方法时，如下代码所示：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span> </span>{</span><br><span class="line">    System.out.println(<span class="string">"Hello World!"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>反编译过后就会有 ACC_SYNCHRONIZED 标识符(没有用 monitorenter 和 monitorexit，其实理论上也是可以的)，jvm 根据这个标识符来实现方法同步：当调用方法时，首先检查方法的 ACC_SYNCHRONIZED 标志是否被设置，如果设置了，则线程首先获取 monitor，获取成功后才能执行方法，方法执行完成后再释放 monitor，方法执行期间，其他对象无法再获得同一个 monitor。所以与修饰 代码块 的时候本质上是没有区别的。</p>
-<p>最后，如果修饰的是静态方法，则锁定的是 class 对象。</p>
-<blockquote>
-<p>以上内容参考自：<a target="_blank" rel="noopener" href="https://www.cnblogs.com/paddix/p/5367116.html">Synchronized及其实现原理</a></p>
-</blockquote>
-</details>
-
-<h2 id="23、synchronized-锁持有的object-是Thread-对象"><a href="#23、synchronized-锁持有的object-是Thread-对象" class="headerlink" title="23、synchronized 锁持有的object 是Thread 对象"></a>23、synchronized 锁持有的object 是Thread 对象</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>看过上面synchronized原理，我们来看一段代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    Thread threadTest = <span class="keyword">new</span> Thread() {</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            System.out.println(<span class="string">"执行线程中方法"</span>);</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    };</span><br><span class="line"></span><br><span class="line">    threadTest.start();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span> (threadTest) {<span class="comment">//这里不明白可以想象单例的 synchronized 用法</span></span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            threadTest.wait();</span><br><span class="line">        } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    System.out.println(<span class="string">"执行到了这里"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>我们知道，wait 必须在同步块中执行，上述代码也是这样的；同时我们也知道，wait() 方法后，必须收到 notify/notifyAll 之后才能结束等待状态。但是上述代码首先输出 “执行线程中方法”  ，之后输出 “执行到了这里” ，明明没有notify ，怎么就能结束 wait 状态呢？其实这是因为synchronized 获得对象锁是 Thread 对象的锁时，当该线程执行完成后，会调用线程自身的 notifyAll() 方法，通知所有等待在该线程对象上的线程。所以，用这种方式能够实现 join 的功能，使得线程依次执行。</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://blog.csdn.net/chenkaibsw/article/details/80912878">csdn上的博客</a></p>
-</blockquote>
-<details>
-
-<h2 id="24、引申-理解Java-中的-join"><a href="#24、引申-理解Java-中的-join" class="headerlink" title="24、引申-理解Java 中的 join"></a>24、引申-理解Java 中的 join</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>如果要用join 方法实现上述功能，可以这样：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    Thread threadTest = <span class="keyword">new</span> Thread() {</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            System.out.println(<span class="string">"执行线程中方法"</span>);</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    };</span><br><span class="line"></span><br><span class="line">    threadTest.start();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        threadTest.join();</span><br><span class="line">    } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">    System.out.println(<span class="string">"执行到了这里"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>join 方法从字面上理解就是新线程加入进来，等新线程执行完后，老的线程才继续执行。我们日常使用 join 方法是通过 join(0) 来实现的，我们看它的源码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">join</span><span class="params">(<span class="keyword">long</span> millis)</span></span></span><br><span class="line"><span class="function">   <span class="keyword">throws</span> InterruptedException </span>{</span><br><span class="line">       <span class="keyword">long</span> base = System.currentTimeMillis();</span><br><span class="line">       <span class="keyword">long</span> now = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">if</span> (millis &lt; <span class="number">0</span>) {</span><br><span class="line">           <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"timeout value is negative"</span>);</span><br><span class="line">       }</span><br><span class="line">       <span class="keyword">if</span> (millis == <span class="number">0</span>) {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//如果时执行的join(0)</span></span><br><span class="line">           <span class="keyword">while</span> (isAlive()) {        <span class="comment">//如果线程是运行状态，就会执行下面的等待</span></span><br><span class="line">               wait(<span class="number">0</span>);</span><br><span class="line">           }</span><br><span class="line">       } <span class="keyword">else</span> {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//如果是执行的join(time)</span></span><br><span class="line">           <span class="keyword">while</span> (isAlive()) {               <span class="comment">//如果线程时运行状态</span></span><br><span class="line">               <span class="keyword">long</span> delay = millis - now;</span><br><span class="line">               <span class="keyword">if</span> (delay &lt;= <span class="number">0</span>) {</span><br><span class="line">                   <span class="keyword">break</span>;</span><br><span class="line">               }</span><br><span class="line">               wait(delay);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="comment">//等待delay时间后自动返回继续执行</span></span><br><span class="line">               now = System.currentTimeMillis() - base;</span><br><span class="line">           }</span><br><span class="line">       }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其中 while (isAlive()) { wait(0) } ，我们日常调用的 wait() 方法就是调用的 wait(0) 实现，因此这里本质还是 执行了 wait 方法，就是让其一直等待。所以我们上述代码： threadTest.join() 本质是利用 threadTest 对象作为对象锁，当线程终止时，会调用线程自身的 notifyAll ，因此这个 wait 就解除了。</p>
-<p>再说下 while (isAlive())，这是在判断线程是否线程是否已经执行了start() 方法，因此如果还没有start() 则不会执行wait() 方法。可以用如下代码验证：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    <span class="keyword">final</span> Thread t1 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            System.out.println(<span class="string">"t1"</span>);</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">    Thread t2 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                t1.join();</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">            System.out.println(<span class="string">"t2"</span>);</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line"></span><br><span class="line">    t2.start();<span class="comment">//先启动t2</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">    } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    t1.start();<span class="comment">//延迟2秒后启动t1</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这段代码看起来执行了 t1.join() ，应该要等t1执行完了才会执行t2，但是呢，这里最终输出： t2  t1 ，即 t2 还是会先执行。这是因为在执行 t1.join() 的时候，t1并没有执行 start() ，isAlive() 为false，因此不生效。</p>
-<details>
-
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://blog.csdn.net/chenkaibsw/article/details/80912878">csdn上的博客</a></p>
-</blockquote>
-<h2 id="25、wait-sleep-yield-join-方法"><a href="#25、wait-sleep-yield-join-方法" class="headerlink" title="25、wait/sleep/yield/join 方法"></a>25、wait/sleep/yield/join 方法</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>wait() 方法的作用是将当前线程挂起，让其进入阻塞状态，直到 notify/notifyAll 方法来唤醒线程，很容易理解，wait 是释放了锁资源的。</p>
-<p>wait(long timeout)方法与 wait 相似，区别在于如果再指定时间内没有被notify/notifyAll ，则自动唤醒。</p>
-<p>sleep方法只是暂时让出cpu执行权，并不释放锁，而 wait 是释放锁的。</p>
-<p>yield 方法只是暂停当前线程，以便其他线程有机会运行，不过不能指定暂停时间，也不能保证当前线程立即停止。yield 方法只是将thread 的状态由 Running 转变为 Runable 状态。不过<strong>调度器可能会忽略这个方法，并且Java官方建议只用这个方法用于调试和测试。</strong></p>
-<p>join 方法是父线程等待子线程执行完之后再执行。</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.cnblogs.com/paddix/p/5381958.html">cnblogs的博客</a></p>
-</blockquote>
-<details>
-
-<h2 id="26、Java-中锁的种类"><a href="#26、Java-中锁的种类" class="headerlink" title="26、Java 中锁的种类"></a>26、Java 中锁的种类</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>大概可以分类为：</p>
-<ul>
-<li>乐观锁、悲观锁       </li>
-<li>独享锁、共享锁          </li>
-<li>公平锁、非公平锁           </li>
-<li>互斥锁、读写锁             </li>
-<li>可重入锁             </li>
-<li>分段锁                 </li>
-</ul>
-<p>其中乐观锁认为线程基本上是没有竞争的，一般采用CAS机制实现，悲观锁认为一个线程获取数据时，一定会有其他数据对数据进行更改，它的实现就是加锁，比如 synchronize 关键字</p>
-<p>至于独享锁：一次只能被一个线程拥有，ReentrantLock 这个可重入锁也是独享锁。而共享锁可以被多个线程持有，比如：ReentrantReadWrite 中的读锁ReadLock 是共享锁，写锁WriteLock 是独享锁。</p>
-<p>互斥锁的具体实现就是 synchronized、ReentrantLock 等实现；读写锁具体实现就是 ReadWriteLock。</p>
-<p>可重入锁：对于同一个线程，在外层方法获取锁的时候，在进入内层方法也会自动获取锁。</p>
-<p>公平锁：多线程竞争时排队，按照申请顺序获取锁；非公平锁：竞争时，先尝试插队，失败再排队。</p>
-<p>分段锁：并不是一种锁，只是细化锁的粒度。</p>
-<details>
-
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/112649693">知乎上的内容</a></p>
-<h2 id="27、Java-中锁优化的方式"><a href="#27、Java-中锁优化的方式" class="headerlink" title="27、Java 中锁优化的方式"></a>27、Java 中锁优化的方式</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ul>
-<li><strong>自旋锁与自适应自旋</strong>(主要解决互斥同步挂起和恢复需要转入内核态的问题。引入的自适应自旋，意味着自旋时间不再是固定的了，而是由前一次在同一个锁上的自旋时间及锁的拥有者的状态决定的，因为如果在同一个锁对象上，自旋等待刚获得过锁，并且持有锁的线程正在运行，那么虚拟机认为当前自旋也很有可能再次成功，进而允许自旋等待更长时间)       </li>
-<li>锁消除（虚拟机对于检测到不可能存在共享的数据进行锁消除）            </li>
-<li>锁消除(一般来说，加锁同步块区域尽量小，只锁真正共享的区域，以便在锁竞争的时候，能尽快释放。但是如果一系列的连续操作对同一个对象频繁反复加锁解锁，甚至是出现在循环体中，那就会导致不必要的性能损耗，典型的就是在 循环中执行StringBuilder 的append操作)</li>
-<li>轻量级锁（如果同步对象没有被锁定，虚拟机首先将将在当前线程的栈帧中建立一个名为锁记录-Lock Record 的空间，用于存储锁对象目前的 Mark Word的拷贝，然后虚拟机使用CAS操作尝试把对象的Mark Word 更新为指向 Lock Record 的指针，如果更新成功了，则代表线程拥有了这个对象的锁，对象Mark Word的锁标志也会标记为 “00”，即轻量级锁状态。如果这个cas操作失败，则意味着至少存在一条线程竞争，此时检查Mark Word 是否指向当前线程的栈帧，如果是，则说明已经拥，有了，直接进入同步块即可。否则，如果有两条以上线程争用一个锁，则必须膨胀微重量级锁。轻量级锁的依据是，“对于绝大部分锁，在整个同步周期内是不存在竞争的”，如果没有竞争，则轻量级锁通过CAS操作避免了使用互斥量的开销；当然，如果存在竞争，除了互斥量本身之外，还发生了CAS开销，反而更慢了）    </li>
-<li>偏向锁（它的目的是在无竞争的情况下消除CAS操作，进一步提升性能。当锁对象第一次被线程获取的时候，就将对象头中的偏向模式置为 “1”,即偏向模式，同时使用CAS操作把获取这个锁的线程的ID记录在Mark word 中，如果操作成功，持有偏向锁的线程以后每次进入这个锁相关的同步块都不需要进行同步操作，不过，一旦出现另外一个线程尝试去获取这个锁的情况，偏向模式马上结束。根据锁对象目前是否处于锁定状态来决定是否撤销偏向、恢复到未锁定或者轻量级锁定状态）</li>
-</ul>
-<blockquote>
-<p>以上内容参考自《深入理解Java虚拟机-第三版》</p>
-</blockquote>
-<details></details></details></details></details></details></details></details></details></details></details></details></details></body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -2908,7 +2509,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">124</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2994,7 +2595,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共298.7k字</span>
+  <span class="post-count">博客全站共299.8k字</span>
 </div>
 
 
