@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="识别插件的类方案：将所有的插件 dex 合并到 宿主中，具体步骤为：  根据宿主的 ClassLoader，获取宿主的 dexElements 字段  具体步骤为： 首先反射出 BaseDexClassLoader 的 pathList 字段，它是 DexPathList  类型的；第二步，反射出 DexPathList 的 dexElements 字段，他是个数组。   根据插件的 dexFil">
+<meta property="og:type" content="article">
+<meta property="og:title" content="特别篇：自己的总结">
+<meta property="og:url" content="https://glassx.gitee.io/2021/09/14/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="识别插件的类方案：将所有的插件 dex 合并到 宿主中，具体步骤为：  根据宿主的 ClassLoader，获取宿主的 dexElements 字段  具体步骤为： 首先反射出 BaseDexClassLoader 的 pathList 字段，它是 DexPathList  类型的；第二步，反射出 DexPathList 的 dexElements 字段，他是个数组。   根据插件的 dexFil">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-09-14T11:46:00.000Z">
+<meta property="article:modified_time" content="2021-09-14T13:39:21.253Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android插件化开发指南">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.gitee.io/2021/09/14/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>特别篇：自己的总结 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">30</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">127</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/14/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          特别篇：自己的总结
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-14 19:46:00 / 修改时间：21:39:21" itemprop="dateCreated datePublished" datetime="2021-09-14T19:46:00+08:00">2021-09-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="识别插件的类"><a href="#识别插件的类" class="headerlink" title="识别插件的类"></a>识别插件的类</h2><p>方案：将所有的插件 dex 合并到 宿主中，具体步骤为：</p>
+<ol>
+<li><p>根据宿主的 ClassLoader，获取宿主的 dexElements 字段</p>
+<blockquote>
+<p>具体步骤为： 首先反射出 BaseDexClassLoader 的 pathList 字段，它是 DexPathList  类型的；第二步，反射出 DexPathList 的 dexElements 字段，他是个<strong>数组</strong>。</p>
+</blockquote>
+</li>
+<li><p>根据插件的 dexFile ，反射出一个 Element 类型对象，这就是插件 dex</p>
+</li>
+<li><p>把插件 dex 和 宿主 dexElements 合并成一个新的 dex 数组，替换宿主之前的 dexElements 字段</p>
+</li>
+</ol>
+<h2 id="欺骗系统"><a href="#欺骗系统" class="headerlink" title="欺骗系统"></a>欺骗系统</h2><p>启动时，其实是启动 PlaceHoldActivity ，将真正要启动的 TargetActivity 放在 Intent 的数据里面，主要步骤：</p>
+<p>1、Hook 到 ActivityManagerNative （它里面的gDefault，这个字段是个单例），把 TargetActivity 替换为 PlaceHoldActivity    </p>
+<p>2、Hook 到 H（Handler） 类的 mCallback 字段，将 PlaceHoldActivity 换成真正的 TargetActivity。或者，如果不想使用这种 Hook，可以在创建Activity （execStartActivity）对象的时候再替换回来</p>
+<h2 id="资源使用"><a href="#资源使用" class="headerlink" title="资源使用"></a>资源使用</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><ol>
+<li>通过反射，构建一个 AssetManager 对象 <font color="#CD6889">mAssetManager</font>，之后，反射调用 mAssetManager 的 addAssetPath 方法，将宿主和插件的 dexPath 全部添加进去，这样，这个新的 mAssetManager 拥有宿主以及插件中的所有的资源了。</li>
+<li>根据上述的 mAssetManager 构建处一个 Resources 对象 <font color="#CD6889">mResources</font></li>
+<li>使用 newTheme 创建一个 Theme 对象 <font color="#CD6889">mTheme</font></li>
+<li>在 Activity 中重写 getAssets()、getResources()、getTheme() 方法，分别返回上述的mAssetManager、mResources、mTheme</li>
+</ol>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> void loadResources(){</span><br><span class="line">    <span class="keyword">try</span>{</span><br><span class="line">        AssetManager assetManager= AssetManager.<span class="keyword">class</span>.newInstance();</span><br><span class="line">        Method addAssetPath = assetManager.getClass().getMethod(<span class="string">"addAssetPath"</span>,String.<span class="keyword">class</span>);</span><br><span class="line">        addAssetPath.invoke(assetManager, dexPath);</span><br><span class="line">        mAssetManager = assetManager;</span><br><span class="line">    }<span class="keyword">catch</span> (Exception e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">    Resources superResources = <span class="keyword">super</span>.getResources();</span><br><span class="line">    mResources = new Resources(mAssetManager, superResources.getDisplayMetrics(), superResources.getConfiguration());</span><br><span class="line">    mTheme = mResources.newTheme();</span><br><span class="line">    mTheme.setTo(<span class="keyword">super</span>.getTheme());</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> AssetManager getAssets() {</span><br><span class="line">    <span class="keyword">if</span> (mAssetManager == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getAssets();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mAssetManager;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources getResources() {</span><br><span class="line">    <span class="keyword">if</span> (mResources == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getResources();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mResources;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources.Theme getTheme() {</span><br><span class="line">    <span class="keyword">if</span> (mTheme == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getTheme();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mTheme;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p><strong>注意一点，由于将所有资源集合在一块，所以资源id可能冲突</strong>，解决方案：修改AAPT命令，将宿主和插件之间的id前缀都区分开，比如宿主的资源id以 0x71 开头，插件1以 0x72，插件2以 0x73  等，避免冲突。</p>
+<p><strong>还有</strong>，如果插件需要使用宿主的资源，那么，可以在宿主中将id写死，具体方式为自定义一个public.xml ，在里面写死。然后插件中以 provided 的方式将宿主的aar引入（这样，打包的时候就不会将这个aar打进去），引用资源的时候，直接使用这个写死的id就行。</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--public.xml--&gt;</span></span><br><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="welcom" id="0x71050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="启动模式（LaunchMode）"><a href="#启动模式（LaunchMode）" class="headerlink" title="启动模式（LaunchMode）"></a>启动模式（LaunchMode）</h2><p>普通使用的都是Standard 模式，如果要解决其他 3 种 LaunchMode 问题，使用的是<strong>占位Activity的思想</strong>，即事先为这3种 LaunchMode 创建很多 PlaceHoldActivity。比如：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SingleInstancePlaceHoldActivity1</span><br><span class="line">SingleInstancePlaceHoldActivity2</span><br><span class="line">SingleInstancePlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTaskPlaceHoldActivity1</span><br><span class="line">SingleTaskPlaceHoldActivity2</span><br><span class="line">SingleTaskPlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTopPlaceHoldActivity1</span><br><span class="line">SingleTopPlaceHoldActivity2</span><br><span class="line">SingleTopPlaceHoldActivity3</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>接下来，从服务器下载一个 Json ，指定插件Activity 要使用哪个 PlaceHoldActivity ，这里所说的 Activity 只包括 LauncherMode 为 SingleTop、SingleTask、SingleInstance 的 Activity。我们无法指定插件 Activity 的 LaunchMode ，但是通过这种指定占位，<strong>当 ActivityA 和 SingleTaskPlaceHoldActivity1 建立对应关系之后，ActivityA 的 LaunchMode 就是 SingleTask 了！</strong></p>
+<p>但是这里还有个小bug，无论是SingleTop 还是 SingleTask ，再回到这个Activity时，并不会触发它的 onCreate ，而是触发 它的 onNewIntent 方法！为此，<strong>我们需要在Hook的 Handler.Callback 中拦截 onNewIntent 方法，把占位的 PlaceHoldActivity 替换回插件Activity</strong>： </p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MockClass2</span> <span class="keyword">implements</span> <span class="title">Handler</span>.<span class="title">Callback</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    <span class="keyword">switch</span>(msg.what) {</span><br><span class="line">      <span class="keyword">case</span> <span class="number">112</span>:</span><br><span class="line">        handleNewIntent(msg);</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleNewIntent</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    Object obj = msg.obj;</span><br><span class="line">    ArrayList intents = (ArrayList)RefInvoke.getFieldObject(obj, <span class="string">"intents"</span>);</span><br><span class="line">    <span class="keyword">for</span>(Object object: intents) {</span><br><span class="line">      Intent raw = (Intent)object;</span><br><span class="line">      Intent target = raw.getParcelableExtra(AMSHookHelper.EXTRA_TARGET_INTENT);</span><br><span class="line">      <span class="keyword">if</span>(target != <span class="keyword">null</span>) {</span><br><span class="line">        raw.setComponent(target.getComponent());</span><br><span class="line">        <span class="keyword">if</span>(target.getExtras() != <span class="keyword">null</span>) {</span><br><span class="line">          raw.putExtras(target.getExtras());</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/" rel="tag"># Android插件化开发指南</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/" rel="next" title="第7章：多态和扩展">
+                  <i class="fa fa-chevron-left"></i> 第7章：多态和扩展
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2021/09/14/%E9%9D%A2-%E7%9F%A5%E8%AF%86/http3/" rel="prev" title="网络-http3">
+                  网络-http3 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%86%E5%88%AB%E6%8F%92%E4%BB%B6%E7%9A%84%E7%B1%BB"><span class="nav-number">1.</span> <span class="nav-text">识别插件的类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AC%BA%E9%AA%97%E7%B3%BB%E7%BB%9F"><span class="nav-number">2.</span> <span class="nav-text">欺骗系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B5%84%E6%BA%90%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">资源使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">原理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8%E6%A8%A1%E5%BC%8F%EF%BC%88LaunchMode%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">启动模式（LaunchMode）</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">30</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共302.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '7e854fdd0251d9393c7f5d42a8196eff',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

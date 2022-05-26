@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="多态的不同方式当一个子类继承父类的时候，这就是子类型多态；另一种熟悉的多态是参数多态，泛型就是参数多态常见的形式。 对第三方类扩展考虑业务类 ClassA、ClassB是第三方引入的并且不能修改，如果我们想要给它们扩展一些方法，比如将对象转换为 Json 字符串，那么利用以前多态技术就会显得麻烦。幸运的是，Kotlin 支持扩展语法： 123fun ClassA.toJson(): String">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第7章：多态和扩展">
+<meta property="og:url" content="https://glassx.gitee.io/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="多态的不同方式当一个子类继承父类的时候，这就是子类型多态；另一种熟悉的多态是参数多态，泛型就是参数多态常见的形式。 对第三方类扩展考虑业务类 ClassA、ClassB是第三方引入的并且不能修改，如果我们想要给它们扩展一些方法，比如将对象转换为 Json 字符串，那么利用以前多态技术就会显得麻烦。幸运的是，Kotlin 支持扩展语法： 123fun ClassA.toJson(): String">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-09-10T11:29:00.000Z">
+<meta property="article:modified_time" content="2021-09-10T13:30:53.335Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="读书笔记-Kotlin核心编程">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.gitee.io/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第7章：多态和扩展 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">30</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">127</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第7章：多态和扩展
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-10 19:29:00 / 修改时间：21:30:53" itemprop="dateCreated datePublished" datetime="2021-09-10T19:29:00+08:00">2021-09-10</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="多态的不同方式"><a href="#多态的不同方式" class="headerlink" title="多态的不同方式"></a>多态的不同方式</h2><p>当一个子类继承父类的时候，这就是<strong>子类型多态</strong>；另一种熟悉的多态是<strong>参数多态</strong>，泛型就是参数多态常见的形式。</p>
+<h3 id="对第三方类扩展"><a href="#对第三方类扩展" class="headerlink" title="对第三方类扩展"></a>对第三方类扩展</h3><p>考虑业务类 ClassA、ClassB是第三方引入的并且<strong>不能修改</strong>，如果我们想要给它们扩展一些方法，比如将对象转换为 Json 字符串，那么利用以前多态技术就会显得麻烦。幸运的是，Kotlin 支持扩展语法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> ClassA.<span class="title">toJson</span><span class="params">()</span></span>: String = {</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>就可以很方便地添加了toJson方法，需要注意的是，<strong>扩展属性和方法的实现运行在ClassA的实例</strong>，他们的定义操作不会修改 ClassA 类本身，所以被扩展的第三方类免于被污染。</p>
+<h3 id="特设多态与运算符重载"><a href="#特设多态与运算符重载" class="headerlink" title="特设多态与运算符重载"></a>特设多态与运算符重载</h3><p>除了子类型多态、参数多态外，还有一种灵活的多态——<strong>特设多态</strong>。可能概念不好理解，举个具体的例子，你想定义一个通用的sum方法，也许会这么写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="title">sum</span><span class="params">(x: <span class="type">T</span>, y: <span class="type">T</span>)</span></span>: T = x + y</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但编译器会报错，因为某些类型不一定支持加法操作。这时候，我们希望定义一种通用的“加法语义上的操作”，可以定义一个通用的 Summable 接口，然后让需要支持假发操作的类来实现它：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">Sumable</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">  <span class="function"><span class="keyword">fun</span> <span class="title">plusThat</span><span class="params">(that: <span class="type">T</span>)</span></span>: T</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">Len</span></span>(<span class="keyword">val</span> v: <span class="built_in">Int</span>): Sumable&lt;Len&gt; {</span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">plusThat</span><span class="params">(that: <span class="type">Len</span>)</span></span> = Len(<span class="keyword">this</span>.v + that.v)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以发现，这并没有什么问题。然而，如果要针对不可修改的第三方类扩展加法操作时，这种方式也会遇到问题。于是，又想到了Kotlin的扩展，针对以上例子，我们完全可以采用扩展的语法来解决问题，此外，Kotlin 原生支持<strong>运算符重载</strong>可以很好解决上述问题：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">Area</span></span>(<span class="keyword">val</span> value: <span class="built_in">Double</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">operator</span> <span class="function"><span class="keyword">fun</span> Area.<span class="title">plus</span><span class="params">(that: <span class="type">Area</span>)</span></span>: Area {</span><br><span class="line">  <span class="keyword">return</span> Area(<span class="keyword">this</span>.value + that.value)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> {</span><br><span class="line">  println(Area(<span class="number">1.0</span>) + Area(<span class="number">2.0</span>)) <span class="comment">//运行结果： Area(value=3.0)</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>通过 operator 关键字以及Kotlin中<strong>内置可重载的运算符plus</strong>，就实现了功能。operator 的作用是，将一个函数标记为重载一个操作符或者实现一个约定，这里的<strong>plus是Kotlin规定的函数名</strong>。除了plus，我们还可以通过重载减法(minus)、乘法(times)、触发(div)、取余(mod，在kotlin 1.1 版本开始被 rem 替代)。此外，回忆kotlin中常用语法，也是用这种神奇的语言特性实现的，比如：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">a <span class="keyword">in</span> list<span class="comment">// 转换为 list.contains(a)</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="扩展：-为别的类添加方法、属性"><a href="#扩展：-为别的类添加方法、属性" class="headerlink" title="扩展： 为别的类添加方法、属性"></a>扩展： 为别的类添加方法、属性</h2><p>继续深入Kotlin 的特设多态语言特性</p>
+<h3 id="扩展与开放封闭原则"><a href="#扩展与开放封闭原则" class="headerlink" title="扩展与开放封闭原则"></a>扩展与开放封闭原则</h3><p>熟悉设计模式的读者知道，在修改现有代码时，我们应该遵循开放封闭原则，对扩展开放，对修改封闭。然而实际并不乐观，比如Android开发，为实现某个需求，引入了第三方库，但是需求发生变动后，当前库无法满足需求，且库的作者没有升级计划。这时候你也许就会考虑对源码修改，这就违背了开放封闭原则。</p>
+<p>Java中一种惯常做法是继承第三方类，添加新功能，但是，强行的继承可能违背“里氏替换原则”。更合理的方案，就是通过Kotlin的扩展功能。</p>
+<h3 id="使用扩展函数、属性"><a href="#使用扩展函数、属性" class="headerlink" title="使用扩展函数、属性"></a>使用扩展函数、属性</h3><p>扩展函数的声明的关键字是 <type> 。此外，我们需要一个“接收者类型”（通常是类或者接口）来作为它的前缀，以为 MutableList<int>扩展exchange方法为例：</int></type></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">  <span class="keyword">val</span> temp = <span class="keyword">this</span>[fromIndex]</span><br><span class="line">  <span class="keyword">this</span>[fromIndex] = <span class="keyword">this</span>[toIndex]</span><br><span class="line">  <span class="keyword">this</span>[toIndex] = temp</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>MutableList<t> 是Kotlin标准库中的类，这里作为接收者类型，exchange是扩展函数名。Kotlin的this要比Java的更灵活，这里扩展函数体内的this代表的是<strong>接收者类型的对象</strong>。注意，Kotlin中是严格区分接收者是否可空的，<strong>如果你的函数是可空的，你需要重写一个可空类型的扩展函数</strong>。</t></p>
+<h4 id="扩展函数的实现机制"><a href="#扩展函数的实现机制" class="headerlink" title="扩展函数的实现机制"></a>扩展函数的实现机制</h4><p>扩展函数这么方便，会不会对性能造成影响呢？以 MutableList<int>.exchange 为例，对应的Java代码为：</int></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 2,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u0012\n\u0000\n\u0002\u0010\u0002\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\u001a \u0010\u0000\u001a\u00020\u0001*\b\u0012\u0004\u0012\u00020\u00030\u00022\u0006\u0010\u0004\u001a\u00020\u00032\u0006\u0010\u0005\u001a\u00020\u0003¨\u0006\u0006"},</span></span><br><span class="line"><span class="meta">   d2 = {"exchange", "", "", "", "fromIndex", "toIndex", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">KotClassKt</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">exchange</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$exchange, <span class="keyword">int</span> fromIndex, <span class="keyword">int</span> toIndex)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$exchange, <span class="string">"$this$exchange"</span>);</span><br><span class="line">      <span class="keyword">int</span> temp = ((Number)$<span class="keyword">this</span>$exchange.get(fromIndex)).intValue();</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(fromIndex, $<span class="keyword">this</span>$exchange.get(toIndex));</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(toIndex, temp);</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>结合上述Java代码可以看出，我们可以将扩展函数近似理解为<strong>静态方法</strong>。我们知道静态方法的特点：不依赖类的特定实例，被该类所有的实例共享，并且，用public修饰，本质上也就是个全局方法，所以，<strong>扩展函数不会带来额外的性能消耗</strong>。</p>
+<h4 id="扩展函数的作用域"><a href="#扩展函数的作用域" class="headerlink" title="扩展函数的作用域"></a>扩展函数的作用域</h4><p>一般来说，我们习惯将扩展函数直接定义在包内，例如之前的 exchange 例子，我们可以将其放在 com.example.extension包下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.extension</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们知道，<strong>在同一个包内是可以直接调用exchange方法的，如果需要在其他包中调用，只需要import即可</strong>，这与Java全局静态方法类似。与此同时，在实际开发中，我们可能会将扩展函数定义在一个 Class 内部统一管理：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Extends</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">        <span class="keyword">val</span> temp = <span class="keyword">this</span>[fromIndex]</span><br><span class="line">        <span class="keyword">this</span>[fromIndex] = <span class="keyword">this</span>[toIndex]</span><br><span class="line">        <span class="keyword">this</span>[toIndex] = temp</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但你会发现，之前的exchange方法无法调用了！我们看下它的Java源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 1,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u001c\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0002\n\u0002\u0010\u0002\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\u0018\u00002\u00020\u0001B\u0005¢\u0006\u0002\u0010\u0002J \u0010\u0003\u001a\u00020\u0004*\b\u0012\u0004\u0012\u00020\u00060\u00052\u0006\u0010\u0007\u001a\u00020\u00062\u0006\u0010\b\u001a\u00020\u0006¨\u0006\t"},</span></span><br><span class="line"><span class="meta">   d2 = {"Lcom/glassx/Extends;", "", "()V", "exchange", "", "", "", "fromIndex", "toIndex", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Extends</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">exchange</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$exchange, <span class="keyword">int</span> fromIndex, <span class="keyword">int</span> toIndex)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$exchange, <span class="string">"$this$exchange"</span>);</span><br><span class="line">      <span class="keyword">int</span> temp = ((Number)$<span class="keyword">this</span>$exchange.get(fromIndex)).intValue();</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(fromIndex, $<span class="keyword">this</span>$exchange.get(toIndex));</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(toIndex, temp);</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们才发现exchange方法没有static关键字了，所以，<strong>当扩展方法在一个 Class 内部时，我们只能在该类和该类的子类中调用</strong>。</p>
+<h3 id="扩展属性"><a href="#扩展属性" class="headerlink" title="扩展属性"></a>扩展属性</h3><p>与扩展函数一样，我们还能为一个类添加扩展属性，比如为MutableList<int>添加一个判断和是否为偶数的属性：</int></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> MutableList&lt;<span class="built_in">Int</span>&gt;.sumIsEven: <span class="built_in">Boolean</span></span><br><span class="line">    <span class="keyword">get</span>() = <span class="keyword">this</span>.sum() % <span class="number">2</span> == <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">val</span> list = mutableListOf(<span class="number">2</span>,<span class="number">2</span>,<span class="number">4</span>)</span><br><span class="line">list.sumIsEven</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是，如果你准备给这个属性添加默认值，并且写出如下代码：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> MutableList&lt;<span class="built_in">Int</span>&gt;.sumIsEven: <span class="built_in">Boolean</span> = <span class="literal">false</span></span><br><span class="line">    <span class="keyword">get</span>() = <span class="keyword">this</span>.sum() % <span class="number">2</span> == <span class="number">0</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>代码会编译不通过，告知扩展属性不能有初始化器。这是为什么呢？其实，与扩展函数一样，其本质也是对应Java中的静态方法，反编译成Java后，会看到一个 getSumIsEven 的静态方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 2,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u0012\n\u0000\n\u0002\u0010\u000b\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\"\u001b\u0010\u0000\u001a\u00020\u0001*\b\u0012\u0004\u0012\u00020\u00030\u00028F¢\u0006\u0006\u001a\u0004\b\u0004\u0010\u0005¨\u0006\u0006"},</span></span><br><span class="line"><span class="meta">   d2 = {"sumIsEven", "", "", "", "getSumIsEven", "(Ljava/util/List;)Z", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ExtendsKt</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">getSumIsEven</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$sumIsEven)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$sumIsEven, <span class="string">"$this$sumIsEven"</span>);</span><br><span class="line">      <span class="keyword">return</span> CollectionsKt.sumOfInt((Iterable)$<span class="keyword">this</span>$sumIsEven) % <span class="number">2</span> == <span class="number">0</span>;</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>由于扩展没有实际地将成员插入类中，因此对扩展属性来说幕后字段是无效的，它们的行为只能由显式提供的 getters 和setters 定义</strong>。</p>
+<blockquote>
+<p>幕后字段：如果属性中存在访问器使用默认实现，那么Kotlin 会自动提供幕后字段 field ，其仅可用于 getter 和 setter 中。</p>
+</blockquote>
+<h3 id="扩展的特殊情况"><a href="#扩展的特殊情况" class="headerlink" title="扩展的特殊情况"></a>扩展的特殊情况</h3><h4 id="类似Java的静态扩展函数"><a href="#类似Java的静态扩展函数" class="headerlink" title="类似Java的静态扩展函数"></a>类似Java的静态扩展函数</h4><p>在Kotlin中，如果要声明一个静态的扩展函数，必须要有 伴生对象（companion object）上，所以我们要这样定义带有伴生对象的类：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Son</span> </span>{</span><br><span class="line">  <span class="keyword">companion</span> <span class="keyword">object</span> {</span><br><span class="line">    <span class="keyword">val</span> age = <span class="number">10</span></span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在已有伴生对象的情况下，如果不想再Son中定义扩展函数，而是在Son的伴生对象上定义，可以这么写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> Son.Companion.<span class="title">foo</span><span class="params">()</span></span> {</span><br><span class="line">  println(<span class="string">"age = <span class="variable">$age</span>"</span>)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//这样在没有Son的实例对象的情况下，也能调用，使用：</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> {</span><br><span class="line">  Son.foo()</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h4 id="成员方法优先级总是高于扩展函数"><a href="#成员方法优先级总是高于扩展函数" class="headerlink" title="成员方法优先级总是高于扩展函数"></a>成员方法优先级总是高于扩展函数</h4><p>如果扩展函数和现有类的成员方法一样，那么<strong>优先调用成员方法</strong>，这一点好理解，我们不应该更改原有实现。</p>
+<h4 id="类的实例与接收者实例"><a href="#类的实例与接收者实例" class="headerlink" title="类的实例与接收者实例"></a>类的实例与接收者实例</h4><p>略，没看清楚表达什么</p>
+<h3 id="标准库中的扩展函数：run、let、also、takeIf"><a href="#标准库中的扩展函数：run、let、also、takeIf" class="headerlink" title="标准库中的扩展函数：run、let、also、takeIf"></a>标准库中的扩展函数：run、let、also、takeIf</h3><p>略</p>
+<h2 id="Android中扩展的应用"><a href="#Android中扩展的应用" class="headerlink" title="Android中扩展的应用"></a>Android中扩展的应用</h2><p>略</p>
+<h2 id="扩展不是万能的"><a href="#扩展不是万能的" class="headerlink" title="扩展不是万能的"></a>扩展不是万能的</h2><p>略</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/" rel="tag"># 读书笔记-Kotlin核心编程</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2021/09/06/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC5%E7%AB%A0/" rel="next" title="第5章：类型系统">
+                  <i class="fa fa-chevron-left"></i> 第5章：类型系统
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2021/09/14/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/" rel="prev" title="特别篇：自己的总结">
+                  特别篇：自己的总结 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E6%80%81%E7%9A%84%E4%B8%8D%E5%90%8C%E6%96%B9%E5%BC%8F"><span class="nav-number">1.</span> <span class="nav-text">多态的不同方式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9%E7%AC%AC%E4%B8%89%E6%96%B9%E7%B1%BB%E6%89%A9%E5%B1%95"><span class="nav-number">1.1.</span> <span class="nav-text">对第三方类扩展</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%89%B9%E8%AE%BE%E5%A4%9A%E6%80%81%E4%B8%8E%E8%BF%90%E7%AE%97%E7%AC%A6%E9%87%8D%E8%BD%BD"><span class="nav-number">1.2.</span> <span class="nav-text">特设多态与运算符重载</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%EF%BC%9A-%E4%B8%BA%E5%88%AB%E7%9A%84%E7%B1%BB%E6%B7%BB%E5%8A%A0%E6%96%B9%E6%B3%95%E3%80%81%E5%B1%9E%E6%80%A7"><span class="nav-number">2.</span> <span class="nav-text">扩展： 为别的类添加方法、属性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%E4%B8%8E%E5%BC%80%E6%94%BE%E5%B0%81%E9%97%AD%E5%8E%9F%E5%88%99"><span class="nav-number">2.1.</span> <span class="nav-text">扩展与开放封闭原则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E6%89%A9%E5%B1%95%E5%87%BD%E6%95%B0%E3%80%81%E5%B1%9E%E6%80%A7"><span class="nav-number">2.2.</span> <span class="nav-text">使用扩展函数、属性</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%E5%87%BD%E6%95%B0%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6"><span class="nav-number">2.2.1.</span> <span class="nav-text">扩展函数的实现机制</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%E5%87%BD%E6%95%B0%E7%9A%84%E4%BD%9C%E7%94%A8%E5%9F%9F"><span class="nav-number">2.2.2.</span> <span class="nav-text">扩展函数的作用域</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%E5%B1%9E%E6%80%A7"><span class="nav-number">2.3.</span> <span class="nav-text">扩展属性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%E7%9A%84%E7%89%B9%E6%AE%8A%E6%83%85%E5%86%B5"><span class="nav-number">2.4.</span> <span class="nav-text">扩展的特殊情况</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%B1%BB%E4%BC%BCJava%E7%9A%84%E9%9D%99%E6%80%81%E6%89%A9%E5%B1%95%E5%87%BD%E6%95%B0"><span class="nav-number">2.4.1.</span> <span class="nav-text">类似Java的静态扩展函数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95%E4%BC%98%E5%85%88%E7%BA%A7%E6%80%BB%E6%98%AF%E9%AB%98%E4%BA%8E%E6%89%A9%E5%B1%95%E5%87%BD%E6%95%B0"><span class="nav-number">2.4.2.</span> <span class="nav-text">成员方法优先级总是高于扩展函数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%B1%BB%E7%9A%84%E5%AE%9E%E4%BE%8B%E4%B8%8E%E6%8E%A5%E6%94%B6%E8%80%85%E5%AE%9E%E4%BE%8B"><span class="nav-number">2.4.3.</span> <span class="nav-text">类的实例与接收者实例</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%87%E5%87%86%E5%BA%93%E4%B8%AD%E7%9A%84%E6%89%A9%E5%B1%95%E5%87%BD%E6%95%B0%EF%BC%9Arun%E3%80%81let%E3%80%81also%E3%80%81takeIf"><span class="nav-number">2.5.</span> <span class="nav-text">标准库中的扩展函数：run、let、also、takeIf</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Android%E4%B8%AD%E6%89%A9%E5%B1%95%E7%9A%84%E5%BA%94%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">Android中扩展的应用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%E4%B8%8D%E6%98%AF%E4%B8%87%E8%83%BD%E7%9A%84"><span class="nav-number">4.</span> <span class="nav-text">扩展不是万能的</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">30</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共302.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '81cbec9866439273b3a68cace2d9cf7b',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

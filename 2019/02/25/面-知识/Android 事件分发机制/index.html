@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="Android 事件分发机制当我们点击屏幕时，事件最先传递给Activity ，在 Activity 的dispatchTouchEvent() 回调中，默认首先调用 getWindow().superDispatchTouchEvent(ev) 将事件交给window 处理，如果window 返回true之后，则直接return true。在 getWindow().superDispatchT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android 事件分发机制">
+<meta property="og:url" content="https://glassx.gitee.io/2019/02/25/%E9%9D%A2-%E7%9F%A5%E8%AF%86/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="Android 事件分发机制当我们点击屏幕时，事件最先传递给Activity ，在 Activity 的dispatchTouchEvent() 回调中，默认首先调用 getWindow().superDispatchTouchEvent(ev) 将事件交给window 处理，如果window 返回true之后，则直接return true。在 getWindow().superDispatchT">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/Activity%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%B5%81%E7%A8%8B.webp">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/down-all.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/down-u.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-1.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-2.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-3.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-4.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-5.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-6.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-7.png">
+<meta property="article:published_time" content="2019-02-25T14:00:00.000Z">
+<meta property="article:modified_time" content="2021-02-22T08:43:26.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android机制">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.gitee.io/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/Activity%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%B5%81%E7%A8%8B.webp">
+
+<link rel="canonical" href="https://glassx.gitee.io/2019/02/25/%E9%9D%A2-%E7%9F%A5%E8%AF%86/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Android 事件分发机制 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">30</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">127</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/02/25/%E9%9D%A2-%E7%9F%A5%E8%AF%86/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Android 事件分发机制
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-02-25 22:00:00" itemprop="dateCreated datePublished" datetime="2019-02-25T22:00:00+08:00">2019-02-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-22 16:43:26" itemprop="dateModified" datetime="2021-02-22T16:43:26+08:00">2021-02-22</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E4%B8%93%E9%A2%98/" itemprop="url" rel="index">
+                    <span itemprop="name">专题</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h1 id="Android-事件分发机制"><a href="#Android-事件分发机制" class="headerlink" title="Android 事件分发机制"></a>Android 事件分发机制</h1><p>当我们点击屏幕时，事件最先传递给Activity ，在 Activity 的dispatchTouchEvent() 回调中，默认首先调用 getWindow().superDispatchTouchEvent(ev) 将事件交给window 处理，如果window 返回true之后，则直接return true。在 getWindow().superDispatchTouchEvent(ev) 调用的时候，我们能发现事件一步步传递：</p>
+<p>1、PhoneWindow.superDispatchTouchEvent<br>2、DecorView.dispatchTouchEvent()<br>3、ViewGroup. dispatchTouchEvent()     </p>
+<p>之后，就进入了ViewGroup的事件分发流程。用一张图(这张图转载自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/38015afcdb58">Carson_Ho</a>)来描绘下整体的过程：</p>
+<p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/Activity%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%B5%81%E7%A8%8B.webp" alt="Activity事件分发"></p>
+<p>接下来主要关注的是 Android 中 ViewGroup 事件分发机制。它总体来说可以用几张图说明白，相比在代码中打印Log，这种方式更容易理解和记住。</p>
+<h2 id="针对-ACTION-DOWN-事件"><a href="#针对-ACTION-DOWN-事件" class="headerlink" title="针对 ACTION_DOWN 事件"></a>针对 ACTION_DOWN 事件</h2><p>只针对 ACTION_DOWN 事件时，事件的完整流向是一个U形图，如下图所示：</p>
+<p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/down-all.png" alt="只考虑ACTION_DOWN 事件时事件流向图"></p>
+<p>如果没有中断事件，可能看起来更直观一些，Activity、ViewGroup、View的层次更加清晰：</p>
+<p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/down-u.png" alt="不中断事件"></p>
+<h2 id="针对-ACTION-MOVE-和-ACTION-UP"><a href="#针对-ACTION-MOVE-和-ACTION-UP" class="headerlink" title="针对 ACTION_MOVE 和 ACTION_UP"></a>针对 ACTION_MOVE 和 ACTION_UP</h2><p>上面讲解的都是针对ACTION_DOWN的事件传递，ACTION_MOVE和ACTION_UP在传递的过程中并不是和ACTION_DOWN 一样，你在执行ACTION_DOWN的时候返回了false，后面一系列其它的action就不会再得到执行了。简单的说，就是当dispatchTouchEvent在进行事件分发的时候，只有前一个事件（如ACTION_DOWN）返回true，才会收到ACTION_MOVE和ACTION_UP的事件。</p>
+<h3 id="ViewGroup1-的dispatchTouchEvent-中返回true消费事件"><a href="#ViewGroup1-的dispatchTouchEvent-中返回true消费事件" class="headerlink" title="ViewGroup1 的dispatchTouchEvent 中返回true消费事件"></a>ViewGroup1 的dispatchTouchEvent 中返回true消费事件</h3><p>红色的箭头代表ACTION_DOWN 事件的流向，蓝色的箭头代表ACTION_MOVE 和 ACTION_UP 事件的流向：</p>
+<p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-1.png" alt="viewgroup1消费"></p>
+<h3 id="ViewGroup2-的dispatchTouchEvent-中返回true消费事件"><a href="#ViewGroup2-的dispatchTouchEvent-中返回true消费事件" class="headerlink" title="ViewGroup2 的dispatchTouchEvent 中返回true消费事件"></a>ViewGroup2 的dispatchTouchEvent 中返回true消费事件</h3><p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-2.png" alt="viewgroup2消费"></p>
+<blockquote>
+<p>在View 的dispatchTouchEvent 返回true消费事件,就不画图了，效果和在ViewGroup2 的dispatchTouchEvent return true的差不多，同样的收到ACTION_DOWN 的dispatchTouchEvent函数都能收到 ACTION_MOVE和ACTION_UP。</p>
+</blockquote>
+<h3 id="在View-的onTouchEvent-中返回true消费事件"><a href="#在View-的onTouchEvent-中返回true消费事件" class="headerlink" title="在View 的onTouchEvent 中返回true消费事件"></a>在View 的onTouchEvent 中返回true消费事件</h3><p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-3.png" alt="在View 的onTouchEvent 中返回true消费事件"></p>
+<h3 id="在ViewGroup-2-的onTouchEvent-中返回true消费事件"><a href="#在ViewGroup-2-的onTouchEvent-中返回true消费事件" class="headerlink" title="在ViewGroup 2 的onTouchEvent 中返回true消费事件"></a>在ViewGroup 2 的onTouchEvent 中返回true消费事件</h3><p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-4.png" alt="在ViewGroup 2 的onTouchEvent 中返回true消费事件"></p>
+<h3 id="在ViewGroup-1-的onTouchEvent-中返回true消费事件"><a href="#在ViewGroup-1-的onTouchEvent-中返回true消费事件" class="headerlink" title="在ViewGroup 1 的onTouchEvent 中返回true消费事件"></a>在ViewGroup 1 的onTouchEvent 中返回true消费事件</h3><p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-5.png" alt="在ViewGroup 1 的onTouchEvent 返回true消费这次事件"></p>
+<h3 id="在View的dispatchTouchEvent-中返回false并且ViewGroup-1-的onTouchEvent-返回true消费事件"><a href="#在View的dispatchTouchEvent-中返回false并且ViewGroup-1-的onTouchEvent-返回true消费事件" class="headerlink" title="在View的dispatchTouchEvent 中返回false并且ViewGroup 1 的onTouchEvent 返回true消费事件"></a>在View的dispatchTouchEvent 中返回false并且ViewGroup 1 的onTouchEvent 返回true消费事件</h3><p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-6.png" alt="在View的dispatchTouchEvent 返回false并且Activity 的onTouchEvent 返回true消费这次事件"></p>
+<h3 id="在View的dispatchTouchEvent-中返回false并且Activity-的onTouchEvent-返回true消费事件"><a href="#在View的dispatchTouchEvent-中返回false并且Activity-的onTouchEvent-返回true消费事件" class="headerlink" title="在View的dispatchTouchEvent 中返回false并且Activity 的onTouchEvent 返回true消费事件"></a>在View的dispatchTouchEvent 中返回false并且Activity 的onTouchEvent 返回true消费事件</h3><p><img src="/assets/%E4%B8%93%E9%A2%98/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91/move-up-7.png" alt="在View的dispatchTouchEvent 返回false并且Activity 的onTouchEvent 返回true消费这次事件"></p>
+<p>经过这么多图能得出以下规律：</p>
+<blockquote>
+<p>ACTION_DOWN事件在哪个控件消费了（return true）， 那么ACTION_MOVE和ACTION_UP就会从上往下（通过dispatchTouchEvent）做事件分发往下传，就只会传到这个控件，不会继续往下传，如果ACTION_DOWN事件是在dispatchTouchEvent消费，那么事件到此为止停止传递，如果ACTION_DOWN事件是在onTouchEvent消费的，那么会把ACTION_MOVE或ACTION_UP事件传给该控件的onTouchEvent处理并结束传递。</p>
+</blockquote>
+<p>以上文章参考自 <a target="_blank" rel="noopener" href="https://www.jianshu.com/p/e99b5e8bd67b">Kelin</a> ,这里图片形式贴出来仅仅只是个人做的笔记，方便记忆。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android%E6%9C%BA%E5%88%B6/" rel="tag"># Android机制</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2019/02/16/%E6%9D%82-%E6%8A%98%E8%85%BE%E7%B3%BB%E7%BB%9F/%E9%BB%91%E8%8B%B9%E6%9E%9C%E6%8A%98%E8%85%BE%E8%AE%B0/" rel="next" title="黑苹果折腾记">
+                  <i class="fa fa-chevron-left"></i> 黑苹果折腾记
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2019/03/01/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-%E7%B1%BB%E4%BC%BC%E8%A1%8C%E6%B5%8B/" rel="prev" title="面试题-算法-类似行测">
+                  面试题-算法-类似行测 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Android-%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6"><span class="nav-number">1.</span> <span class="nav-text">Android 事件分发机制</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%92%88%E5%AF%B9-ACTION-DOWN-%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.1.</span> <span class="nav-text">针对 ACTION_DOWN 事件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%92%88%E5%AF%B9-ACTION-MOVE-%E5%92%8C-ACTION-UP"><span class="nav-number">1.2.</span> <span class="nav-text">针对 ACTION_MOVE 和 ACTION_UP</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ViewGroup1-%E7%9A%84dispatchTouchEvent-%E4%B8%AD%E8%BF%94%E5%9B%9Etrue%E6%B6%88%E8%B4%B9%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.2.1.</span> <span class="nav-text">ViewGroup1 的dispatchTouchEvent 中返回true消费事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ViewGroup2-%E7%9A%84dispatchTouchEvent-%E4%B8%AD%E8%BF%94%E5%9B%9Etrue%E6%B6%88%E8%B4%B9%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.2.2.</span> <span class="nav-text">ViewGroup2 的dispatchTouchEvent 中返回true消费事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8View-%E7%9A%84onTouchEvent-%E4%B8%AD%E8%BF%94%E5%9B%9Etrue%E6%B6%88%E8%B4%B9%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.2.3.</span> <span class="nav-text">在View 的onTouchEvent 中返回true消费事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8ViewGroup-2-%E7%9A%84onTouchEvent-%E4%B8%AD%E8%BF%94%E5%9B%9Etrue%E6%B6%88%E8%B4%B9%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.2.4.</span> <span class="nav-text">在ViewGroup 2 的onTouchEvent 中返回true消费事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8ViewGroup-1-%E7%9A%84onTouchEvent-%E4%B8%AD%E8%BF%94%E5%9B%9Etrue%E6%B6%88%E8%B4%B9%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.2.5.</span> <span class="nav-text">在ViewGroup 1 的onTouchEvent 中返回true消费事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8View%E7%9A%84dispatchTouchEvent-%E4%B8%AD%E8%BF%94%E5%9B%9Efalse%E5%B9%B6%E4%B8%94ViewGroup-1-%E7%9A%84onTouchEvent-%E8%BF%94%E5%9B%9Etrue%E6%B6%88%E8%B4%B9%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.2.6.</span> <span class="nav-text">在View的dispatchTouchEvent 中返回false并且ViewGroup 1 的onTouchEvent 返回true消费事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8View%E7%9A%84dispatchTouchEvent-%E4%B8%AD%E8%BF%94%E5%9B%9Efalse%E5%B9%B6%E4%B8%94Activity-%E7%9A%84onTouchEvent-%E8%BF%94%E5%9B%9Etrue%E6%B6%88%E8%B4%B9%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.2.7.</span> <span class="nav-text">在View的dispatchTouchEvent 中返回false并且Activity 的onTouchEvent 返回true消费事件</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">30</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共302.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '7351f772a9b70eab66099e791fb7af1a',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

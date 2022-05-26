@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP&#x2F;IP 网络有很多相似之处：  Bind">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第6章：进程间通信——Binder">
+<meta property="og:url" content="https://glassx.gitee.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP&#x2F;IP 网络有很多相似之处：  Bind">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/B-mmap.png">
+<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/A%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE.png">
+<meta property="article:published_time" content="2019-09-26T13:36:00.000Z">
+<meta property="article:modified_time" content="2019-11-17T13:48:53.000Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="深入理解Android内核设计思想-林学森">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png">
+
+<link rel="canonical" href="https://glassx.gitee.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第6章：进程间通信——Binder | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">30</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">127</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第6章：进程间通信——Binder
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-26 21:36:00" itemprop="dateCreated datePublished" datetime="2019-09-26T21:36:00+08:00">2019-09-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:48:53" itemprop="dateModified" datetime="2019-11-17T21:48:53+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。</p>
+<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：</p>
+<ul>
+<li>Binder 驱动 -&gt; 路由器</li>
+<li>Service Manager（本质也是个服务器） -&gt; DNS（本质也是个服务器）</li>
+<li>Binder Client -&gt; 客户端</li>
+<li>Binder Server -&gt; 服务器</li>
+</ul>
+<p>TCP/IP中一个典型的服务连接过程如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png" alt="TCP/IP连接"></p>
+<p>这个简化的流程图有以下几个步骤：</p>
+<ul>
+<li><p>Client 向dns 查询 google.com 的ip地址。<br>显然，Client 一定得先知道DNS 的 IP地址，才能向它发起查询，DNS 服务器的ip设置是在接入网络前就已经设置完成的。当然，client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；</p>
+</li>
+<li><p>DNS 将查询结果返回 Client。<br>Client的Ip地址对于 DNS 是必须的，不过这些信息会封装在 TCP/IP 包中。</p>
+</li>
+<li><p>Client 发起连接。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
+</li>
+</ul>
+<p>而对于Binder来说，Binder的 DNS (Service Manager)也不是必须的——前提是客户端能记住它要访问的进程的 Binder 标志（IP地址），<strong>尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取</strong>。因此，Service Manager 这个 DNS 的还是挺有必要的。</p>
+<blockquote>
+<p>既然Service Manager是 DNS 服务器，那么它的 IP 地址是多少呢？Binder 机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
+</blockquote>
+<h2 id="智能指针"><a href="#智能指针" class="headerlink" title="智能指针"></a>智能指针</h2><p>略</p>
+<h2 id="进程间的数据传递载体——Parcel"><a href="#进程间的数据传递载体——Parcel" class="headerlink" title="进程间的数据传递载体——Parcel"></a>进程间的数据传递载体——Parcel</h2><p>关于进程间如何传递，我们可以使用2个生活例子来类比：</p>
+<ul>
+<li>用快递寄衣服：虽然快递种类比较多，但是无论用哪个快递，用哪种运输方式，“衣服”本身始终是没有变过的，接收人拿到的还是原来那件衣服。    </li>
+<li>通过电子邮件发送图片：在接收人看到邮件中的图片时，我们无法确认这张图片在传输过程中被复制了多少次，但是可以肯定的是，对方看到的图片和原始图片是一样的。</li>
+</ul>
+<p>进程间通信的数据传递类似于第2种情况，如果只是一个int型数值，不断复制直到目标进程即可；如果是一个对象呢？我们直到，同一个进程中对象的传递实质上是传递了一个内存地址，但是在跨进程的情况下就无能为力了，因为采用了虚拟内存机制，两个进程都有自己独立的内存地址空间，所以跨进程传递的地址空间是无效的。</p>
+<p>进程间的数据传递是Binder 机制中的重要环节，而担负这一重任的就是Parcel。 Parcel 的直译是 “打包” ，上面提到，进程间数据传递直接传送对象的地址是行不通的，那把对象在进程 A 中占据的内存相关数据打包起来，然后寄送到内存 B 中，由 B 在自己的进程空间中“复现”这个对象，是否可行？ Parcel 就具有这种打包能力。</p>
+<p>Parcel 提供了很多接口方便程序使用，他可以存储多种类型的数据：</p>
+<ul>
+<li>原始数据类型 以及 原始数据类型数组     </li>
+<li>Parcelable    </li>
+<li>Bundle    </li>
+<li>Active Objects    </li>
+</ul>
+<blockquote>
+<p>通常我们存入Parcel 的是对象的内容，而 Active Objects 写入的则是他们的特殊标志引用。所以从 Parcel 中读取这些对象时，大家看到的并不是重新创建的对象实例，而是原来那个被写入的实例，能够以这种方式传递的对象目前主要有两类： Binder 以及 FileDescriptor (Linux 中的文件描述符)。</p>
+</blockquote>
+<ul>
+<li>Untyped Containers    </li>
+</ul>
+<blockquote>
+<p>它是用于读写标准的任意类型的 Java 容器，包括 ： writeArray(Object[])/readArray(ClassLoader)、writeList(list)/readList(list)</p>
+</blockquote>
+<p>Parcel 可以用集装箱来类比，理由如下：</p>
+<ul>
+<li>货物无关性： 不排斥运输的货物种类，电子产品、汽车等都可以    </li>
+<li>不同的货物需要不同的打包和卸货方案： 比如运载易碎物品和坚硬物品的装箱和卸货方式就有很大的不同。</li>
+</ul>
+<blockquote>
+<p>值得注意的是，Parcel 存/取 数据的方式都是一一对应的，如 writeByte(byte)/readByte() </p>
+</blockquote>
+<ul>
+<li>远程运输和组装： 集装箱的货物一般需要跨洋，这类似于 Parcel 的跨进程。不过集装箱运输公司本身并不负责所运输货物的组装，而 Parcel 会依据协议为接收方提供还原冤死数据对象的业务。   </li>
+</ul>
+<h3 id="Parcel-的工作方式（书上没有，自己添加）"><a href="#Parcel-的工作方式（书上没有，自己添加）" class="headerlink" title="Parcel 的工作方式（书上没有，自己添加）"></a>Parcel 的工作方式（书上没有，自己添加）</h3><p> Parcel 的 Parcel.obtain() 方法可以获取一个Parcel 对象，系统预先产生了一个大小为6的 Parcel 池 sOwnedPool，在obtain 操作时，如果 sOwnedPool 中还有现成的 Parcel 对象，则直接利用，否则通过 new Parcel(0) 创建 Parcel 对象。</p>
+<p> Parcel.java 实际上只是一个简单的中介，它的主要内容都是 JNI 层的 Parcel 实现的。Parcel 对象的初始化过程只是简单地给各个变量赋初始值，并没有设想中的内存分配动作，因为 Parcel 遵循的是“动态扩展”的内存申请原则，只有在需要时才申请内存，避免资源浪费。</p>
+<blockquote>
+<p>Parcel 提供数据当前位置的值 dataPosition，类似于游标。每当存储新数据时，都是从 dataPosition 位置接着往后存储，存储新数据时，会判断当前空间是否足够，如果不足，则申请新的空间（个人根据文中内容理解的，不太确定是否正确）。</p>
+</blockquote>
+<h2 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h2><p>Android 是 linux 内核的，因而 Binder 驱动也是标准的 linux 驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备。Binder 驱动运行于内核态，可提供 open()、ioctl()、mmap() 等常用文件操作。</p>
+<blockquote>
+<p>Android 系统为什么把 Binder 注册成 misc device 类型的驱动呢？因为 linux 字符设备通常要通过 alloc_chrdev_region()、cdev_init() 等操作才能在内核中注册自己；而 misc 类型驱动相对简单，只需要 misc_register() 就可轻松解决。</p>
+</blockquote>
+<p>Binder 驱动为上层提供了6个接口，但一般文件操作用到的 read() 和 write() 则没有出现，这是因为它们的功能完全可以用 ioctl() 和 mmap() 来代替，并且会更灵活。这6个接口中使用得最多的是 binder_ioctl,binder_mmap 和 binder_open，，以下分别介绍这三种接口。</p>
+<h3 id="打开Binder驱动——binder-open"><a href="#打开Binder驱动——binder-open" class="headerlink" title="打开Binder驱动——binder_open"></a>打开Binder驱动——binder_open</h3><p>上层进程在访问 Binder 驱动时，首先需要打开 /dev/binder 节点，这个操作最终的实现是在 binder_open() 中，在这个方法中，会创建一个 binder_proc 实体，这个实体用于记录各种管理数据(Binder 驱动会在 /proc 系统目录下生成各种管理信息)，并且，每个进程都有独立的记录。</p>
+<p>在完成proc 的初始化之后，就会把这个 proc 加入到 Binder 的全局管理中，这个过程涉及资源互斥，因而需要使用保护机制。到目前为止，Binder 驱动已经为用户创建了一个它自己的 binder_proc 实体，之后用户对Binder 设备的操作都以这个对象为基础。</p>
+<h3 id="binder-mmap"><a href="#binder-mmap" class="headerlink" title="binder_mmap"></a>binder_mmap</h3><p>对于 Binder 驱动来说，上层用户调用的 mmap() 最终对应了 binder_mmap()操作(<strong>应用程序最多只能申请 4M 的空间，如果超出这个大小，不会退出或者报异常，而只会满足用户 4M 的请求</strong>)，那么Binder 采用 mmap 的目的是什么呢？我们知道，mmap() 可以把设备指定的内存块直接映射到应用程序的内存空间中，但Binder 本身并不是硬件设备，而是基于内存的“伪硬件”，那么它映射了什么内存块到应用程序中呢？</p>
+<p>假设有连个进程A和B，其中进程B通过 open() 和 mmap() 与Binder驱动建立了联系，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/B-mmap.png" alt="进程B连接Binder"></p>
+<blockquote>
+<p>可以看到 ：</p>
+</blockquote>
+<blockquote>
+<ol>
+<li>对于进程B而言，通过mmap()返回值得到一个内存地址（当然是虚拟地址），这个地址最终会指向物理内存的某个位置（通过虚拟内存转换）。</li>
+</ol>
+</blockquote>
+<blockquote>
+<ol start="2">
+<li>对于Binder驱动而言，它也有个指针（binder_proc-&gt;buffer）指向某个虚拟内存地址，这个地址转换后，与进程B指向的物理内存地址位于同一个位置。</li>
+</ol>
+</blockquote>
+<p><strong>个人理解：进程B执行 mmap() ，最终是通过 Binder 的 binder_mmap() 来实现，在 B 拿到这块内存后(当然是经过虚拟内存转换后的虚拟内存地址)，Binder 驱动同时将这块内存赋值给了 binder_proc-&gt;buffer</strong>。这样，Binder和应用程序就拥有了<strong>若干公用的物理内存块</strong>，它们对着各自内存地址的操作，实际是在同一块内存中执行，这时候我们再把A进程加入进来，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/A%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE.png" alt="进程A复制数据"></p>
+<p>这时候，左半部分没有变化，右半部分Binder驱动通过copy_from_user()，把A进程中某段数据复制到其binder_proc-&gt;buffer所指向的内存空间，这时候我们惊喜发现，binder_proc-&gt;buffer在物理内存中的位置和进程B是共享的，进而，B进程可以直接访问到这段数据，<strong>也就是说，Binder驱动只用了一次复制，就实现了进程A和B之间的数据共享。</strong></p>
+<blockquote>
+<p>以上通过 mmap 映射的映射区是 <strong>只读</strong>的。</p>
+</blockquote>
+<h3 id="binder-ioctl"><a href="#binder-ioctl" class="headerlink" title="binder_ioctl"></a>binder_ioctl</h3><p>这是 Binder 接口函数中工作量最大的一个。前面提到过，Binder 并不提供 read() 和 write() 等常规文件操作，因为 ioctl 完全可以替代它们。它主要提供了以下命令：</p>
+<ul>
+<li>BINDER_WRITER_READ: 读写操作，可以用此命令向 Binder 读取或写入数据    </li>
+<li>BINDER_SET_MAX_THREAD: 设置支持的最大线程数，因为客户端可以并发向服务器端发送请求，如果Binder 驱动发现当前的线程数量已经超过设定值，就会告知 Binder server 停止启动新的线程。     </li>
+<li>BINDER_SET_CONTEXT_MGR: Service Manager 专用，让它把自己设置为“Binder”大管家。系统中只有一个 Service Manager。</li>
+</ul>
+<h3 id="Service-Manager"><a href="#Service-Manager" class="headerlink" title="Service Manager"></a>Service Manager</h3><p>Service Manager(后面简称 SM) 也就是Binder 中的 “DNS服务器”，既然是DNS，那么在用户可以浏览网页之前就必须就位，因此SM在有人使用Binder之前就处于正常工作状态。SM 的主要工作：</p>
+<ul>
+<li>从Binder驱动读取消息</li>
+<li>调用binder_parse 处理解析消息</li>
+<li>不断循环，而且永远不会主动退出，除非出现致命错误</li>
+</ul>
+<p>它提供的服务应该至少包括以下几种：</p>
+<ul>
+<li>注册——当一个Binder Server 创建后，它们要将自己的相关信息告知 SM 备案</li>
+<li>查询——应用程序可以向 SM 发起查询请求，已获知某个 Binder Server 对应的句柄。</li>
+</ul>
+<blockquote>
+<p>SM 的查询过程很简单，主要是调用 do_find_server 遍历内部列表，并返回目标 Server；注册 Binder server 也很简单，首先在 SM 维护的数据列表中查找是否已经有对应的节点存在，，如果没有，就创建一个新的节点记录这个 Server。</p>
+</blockquote>
+<p>实际上，我们获取 SM 也很简单，只需要以下几步：</p>
+<ol>
+<li>打开Binder设备</li>
+<li>执行mmap</li>
+<li>通过Binder驱动向 SM 发送请求（SM 的 handle是 0）</li>
+<li>获得结果</li>
+</ol>
+<h3 id="Binder-客户端"><a href="#Binder-客户端" class="headerlink" title="Binder 客户端"></a>Binder 客户端</h3><p>Binder 的最大消费者是Java层的应用程序，但是在各种上层的应用场景中切换“过于丝滑”，因此我们很少能感觉到Binder的存在，但是我们能够通过Android的四大组件的行为看出蛛丝马迹：</p>
+<ul>
+<li>Activity：通过 startActivity 可以启动目标进程，不论它是不是属于这个应用。</li>
+<li>Service：任何应用程序都可以通过startService 或者 bindService 来启动特定的服务，而不论后者是不是跨进程的。</li>
+<li>BroadCast：任何应用都可以通过 sendBroadcast 来发送一个广播，且无论广播接收者是不是在同一个进程中。</li>
+</ul>
+<p>组件的上述操作中，多数并不会特别指明要由哪个目标应用程序来响应请求，它们只需要通过Intent表达意愿，然后由系统找出最匹配的应用进程完成工作。为了更明确地说明个中的进程间通信，这里以binderService举例说明：</p>
+<ol>
+<li>首先Application1 填写Intent，调用 bindService 发出请求</li>
+<li>在Application1的运行空间中收到 bindService 请求，这时候会与 ActivityManagerService(AMS)，这就需要得到AMS的Binder句柄，就涉及到进程间通信了（需要ServiceManage.getService）,拿到句柄后，程序才能真正向它发起请求。</li>
+<li>AMS基于“最优匹配策略”，从其存储的所有服务组件中找到最符合Intent的一个，然后向它发送Service绑定请求（这也是进程间通信），如果目标进程还不存在的话，AMS还要负责将其启动</li>
+<li>“被绑定”的服务进程需要响应绑定，并在完成任务后通知AMS，然后由后者回调发起请求的Application1（回调接口是ServiceConnection）。</li>
+</ol>
+<h3 id="Server-服务端"><a href="#Server-服务端" class="headerlink" title="Server 服务端"></a>Server 服务端</h3><p>在建立服务之后，可以有两种方式向外面提供服务：</p>
+<ul>
+<li>Server在ServiceManager中注册，这样，调用者只需要通过 ServiceManager.getService(NAME)就可以获得句柄，随后与之通信。</li>
+<li>所谓的“匿名Server”，并不需要在ServiceManager中注册，那么Client是如何访问的呢？其实它通过其他Server作为中介，没错，就是通过一个“第三方”实名的Server，调用者首先通过ServiceManager获取这个实名的server，在由它提供匿名者的 Binder 句柄。</li>
+</ul>
+<h3 id="Binder-优点"><a href="#Binder-优点" class="headerlink" title="Binder 优点"></a>Binder 优点</h3><p>基于自己的理解而言，Binder具有以下优点：</p>
+<ul>
+<li>性能较好</li>
+</ul>
+<blockquote>
+<p>Binder只需要拷贝一次数据，仅次于共享内存（一次都不要），消息队列和管道采用存储-转发方式，即数据先从发送方缓存区拷贝到内核开辟的缓存区中，然后再从内核缓存区拷贝到接收方缓存区，至少有两次拷贝过程。</p>
+</blockquote>
+<ul>
+<li>稳定性好</li>
+</ul>
+<blockquote>
+<p>基于C/S架构在逻辑上更清晰，client有需求，Server完成。共享内存实现起来复杂，各方没有客户端与服务端之别，要考虑并发问题以及可能出现的死锁。</p>
+</blockquote>
+<ul>
+<li>安全性好</li>
+</ul>
+<blockquote>
+<p>传统 Linux IPC 的接收方要么无法获得对方进程可靠的 UID/PID ，从而无法鉴别对方身份；要么只能由用户在数据包里填入UID/PID。Android 为每个应用分配了自己的UID，前面提到 C/S 架构，Server 会根据权限控制策略判断 Client 的请求是否满足权限。并且Binder机制还有匿名 Binder ，压根无法直接获取句柄，安全性更好。</p>
+</blockquote>
+<ul>
+<li>使用简单。</li>
+</ul>
+<blockquote>
+<p>获得句柄之后，就像调用本地方法一样方便。并且Linux的IPC方式使用C语言，而Android应用层主要使用Java，这可能也是个因素。</p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E6%9E%97%E5%AD%A6%E6%A3%AE/" rel="tag"># 深入理解Android内核设计思想-林学森</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2019/09/23/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0/" rel="next" title="第12章: Java内存模型与线程">
+                  <i class="fa fa-chevron-left"></i> 第12章: Java内存模型与线程
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2019/10/09/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC7%E7%AB%A0/" rel="prev" title="第7章：Android启动过程简析">
+                  第7章：Android启动过程简析 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88"><span class="nav-number">1.</span> <span class="nav-text">智能指针</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92%E8%BD%BD%E4%BD%93%E2%80%94%E2%80%94Parcel"><span class="nav-number">2.</span> <span class="nav-text">进程间的数据传递载体——Parcel</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Parcel-%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%96%B9%E5%BC%8F%EF%BC%88%E4%B9%A6%E4%B8%8A%E6%B2%A1%E6%9C%89%EF%BC%8C%E8%87%AA%E5%B7%B1%E6%B7%BB%E5%8A%A0%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">Parcel 的工作方式（书上没有，自己添加）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Binder%E9%A9%B1%E5%8A%A8%E4%B8%8E%E5%8D%8F%E8%AE%AE"><span class="nav-number">3.</span> <span class="nav-text">Binder驱动与协议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%89%93%E5%BC%80Binder%E9%A9%B1%E5%8A%A8%E2%80%94%E2%80%94binder-open"><span class="nav-number">3.1.</span> <span class="nav-text">打开Binder驱动——binder_open</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#binder-mmap"><span class="nav-number">3.2.</span> <span class="nav-text">binder_mmap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#binder-ioctl"><span class="nav-number">3.3.</span> <span class="nav-text">binder_ioctl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Service-Manager"><span class="nav-number">3.4.</span> <span class="nav-text">Service Manager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Binder-%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">3.5.</span> <span class="nav-text">Binder 客户端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Server-%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="nav-number">3.6.</span> <span class="nav-text">Server 服务端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Binder-%E4%BC%98%E7%82%B9"><span class="nav-number">3.7.</span> <span class="nav-text">Binder 优点</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">30</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共302.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'eae4abf9bf7963d6070a0e894c0f28e1',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

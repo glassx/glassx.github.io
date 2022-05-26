@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="碰到的1、内存泄漏怎么检测？LeakCanary 原理  点击看答案 [参考以前的源码解析第10点](https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;11&#x2F;20&#x2F;%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;)   2、HashMap 源码？为什么要将链表转成红黑树？红">
+<meta property="og:type" content="article">
+<meta property="og:title" content="他山之石">
+<meta property="og:url" content="https://glassx.gitee.io/2020/05/02/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="碰到的1、内存泄漏怎么检测？LeakCanary 原理  点击看答案 [参考以前的源码解析第10点](https:&#x2F;&#x2F;glassx.gitee.io&#x2F;2019&#x2F;11&#x2F;20&#x2F;%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3&#x2F;)   2、HashMap 源码？为什么要将链表转成红黑树？红">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://img-blog.csdn.net/20150304164219975?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamluemh1b2p1bg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=A%20%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=B%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=B%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=A%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=A%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=B%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=A%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=B%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=m%5C">
+<meta property="og:image" content="https://www.nowcoder.com/equation?tex=n%5C">
+<meta property="article:published_time" content="2020-05-02T13:33:00.000Z">
+<meta property="article:modified_time" content="2021-12-19T03:32:10.905Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="他山之石">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://img-blog.csdn.net/20150304164219975?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamluemh1b2p1bg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+
+<link rel="canonical" href="https://glassx.gitee.io/2020/05/02/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>他山之石 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">30</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">127</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2020/05/02/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          他山之石
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-05-02 21:33:00" itemprop="dateCreated datePublished" datetime="2020-05-02T21:33:00+08:00">2020-05-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-12-19 11:32:10" itemprop="dateModified" datetime="2021-12-19T11:32:10+08:00">2021-12-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="碰到的"><a href="#碰到的" class="headerlink" title="碰到的"></a>碰到的</h2><p>1、内存泄漏怎么检测？LeakCanary 原理</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+[参考以前的源码解析第10点](https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/)
+</details>
+
+<p>2、HashMap 源码？为什么要将链表转成红黑树？红黑树特点？</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+[参考java基础中的第3点](https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/)
+
+</details>
+
+
+<p>3、消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>关于源码，可以从postDelay、IdleHandler、插队的msg 几个角度来讲。其中源码可以查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础中的3、4题</a>，后面两个可以参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的32、33题</a></p>
+</details>
+
+
+
+<p>4、多个Fragment在销毁后重建之后重叠怎么办</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="产生重叠的原因"><a href="#产生重叠的原因" class="headerlink" title="产生重叠的原因"></a>产生重叠的原因</h3><p>一般是由于我们采用show 和 hide 的方式( 而不是replace )来控制Fragment 的显示和隐藏，当Activity 由于内存不足被回收之后再恢复的时候，如果不做处理，那就会把这些fragment new 出来添加到Activity 中，由于是刚new出来的，并没有以前的show/hide 状态，因此就造成重叠。</p>
+<h3 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h3><p>在第一次进入Activity 初始化Fragment的时候，为添加的fragment 设置tag ，并且 tag 为fragment的全限定名，将这些tag以列表形式tags保存。在 onSaveInstanceState 回调的时候，保存tags。</p>
+<p>在恢复的时候，首先恢复出来tags，再依次遍历tags中的tag，使用FragmentManager.findFragmentByTag 查找fragment。如果查找出来的 fragment 不空，则直接使用，否则的话，就使用 savedInstanceState?.classLoader.loadClass(tag) 来反射新建这个fragment (因为我们的tag就是fragment 的全限定名嘛)。</p>
+<h3 id="replace-方式切换fragment-与-show-hide-方式切换fragment"><a href="#replace-方式切换fragment-与-show-hide-方式切换fragment" class="headerlink" title="replace 方式切换fragment 与 show/hide 方式切换fragment"></a>replace 方式切换fragment 与 show/hide 方式切换fragment</h3><p>replace 固然可以避免很多不必要的问题，但是它不能保存页面状态，对用户体验不友好，频繁切换还会导致卡顿。show/hide 方式只会控制隐藏/展示，所以效率上会好一些。</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/d2b088e7b6c0">简书上的博客</a>、<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_27258799/article/details/80489722">披萨大叔</a></p>
+</blockquote>
+<p>5、设计一个图片缓存框架，缓存算法用什么</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>缓存算法使用 LRUCache，其原理可以参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础-LruCache原理</a></p>
+</details>
+
+<p>6、有个ListView快速滑动 如何优化Bitmap的显示</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>监听列表的 onScrollChangeListener ，在快速滑动的时候， Fresco.getImagePipeline().pause() ,停下之后又 resume() 操作。</p>
+</details>
+
+<blockquote>
+<p>以上内容可以参考：<a target="_blank" rel="noopener" href="https://www.cnblogs.com/ldq2016/p/6646761.html">cnblogs上的博客</a></p>
+</blockquote>
+<p>7、Bitmap的复用听过没有</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>Bitmap 复用可以参考 <a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的58知识点</a></p>
+<p>大图加载可以参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础38知识点</a></p>
+</details>
+
+<p>kotlin 协程原理？怎么切换线程的？Kotlin 优点和缺点？</p>
+<p>调优、怎么瘦身，打包流程，模块化</p>
+<p>开发者模式中，GPUInfo 中柱状图颜色代表的含义；命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思</p>
+<p>Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的</p>
+<p>物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域</p>
+<p>binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体</p>
+<p>如何进行内存优化 减少内存消耗</p>
+<h2 id="虾"><a href="#虾" class="headerlink" title="虾"></a>虾</h2><p>1、try catch finally关于return的执行结果</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">java基础-Java finally与return执行顺序</a></p>
+</details>
+
+<p>2、treemap如何对两个元素进行比较? 非compareble对象比较?</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>如果是非 compareble 对象，则通过构造函数传入自定义的 Comparetor 比较器。</p>
+<p>参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">java基础第10个知识点</a></p>
+</details>
+
+<p>3、object有什么方法</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>clone、equals、finalize、getClass、hashCode、identityHashCode、identityHashCodeNative、internalClone、notify、notifyAll、toString、wait</p>
+</details>
+
+<blockquote>
+<p>以上内容参考自系统源码</p>
+</blockquote>
+<p>4、讲讲Android存在的设计模式</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ul>
+<li>Context 的装饰器模式       </li>
+<li>AlertDialog 使用了建造者模式     </li>
+<li>BitmapFactory 的工厂模式    </li>
+<li>View 的layout、measure、draw 就是 责任链模式</li>
+<li>aidl 代理模式     </li>
+<li>ListView、Gridview 等 使用的适配器模式      </li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/1a9f571ad7c0">简书上的文章</a></p>
+</blockquote>
+<p>5、android的事件分发</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>可以参考<a href="https://glassx.gitee.io/2019/02/25/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/">以前写的专题</a></p>
+</details>
+
+<p>6、android的消息机制</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的第4点</a></p>
+</details>
+
+<p>7、LeakCanary</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><a href="https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/">参考以前的源码解析第10点</a></p>
+</details>
+
+<p>8、讲个android的源码 自选</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>讲讲Handler，在<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的第4点</a>的基础上完善下表述。</p>
+</details>
+
+<p>9、hashcode 与 equals理解</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>可以看看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">Java基础的15~18知识点</a></p>
+</details>
+
+<p>10、设计模式讲讲有什么认识的，代理模式优缺点</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>代理模式优点：</p>
+<ul>
+<li>协调调用者和被调用者，降低耦合度    </li>
+<li>增强被调用者的功能。增加和更换代理无需修改被调用者源码，如何开闭原则，具有良好的可扩展性。      </li>
+<li>保护目标对象      </li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>增加了类         </li>
+<li>速度可能慢。在调用者和被调用者之间增加了代理对象，因此请求处理的速度可能会变慢    </li>
+<li>增加系统复杂度。实现代理模式需要额外的工作，有些可能还比较复杂，比如远程代理。      </li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/6991491be81a">简书上的博客</a></p>
+</blockquote>
+<p>图片 缓存机制</p>
+<p>首屏调优 内存调优</p>
+<h2 id="lazada"><a href="#lazada" class="headerlink" title="lazada"></a>lazada</h2><p>1、自我介绍一下    </p>
+<p>2、app网络防劫持 介绍下，出现劫持，解决方案呢？拦截了webview 网络请求后，用什么请求 </p>
+<p>3、性能优化，做了哪些工作</p>
+<p>4、强引用、弱引用和软引用。弱引用和软引用的区别。    </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考以前的<a href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">读书笔记</a></p>
+</details>
+
+<p>5、MVC 和 MVP 的区别。他们各个层次之间交互有什么区别 </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>以前写的关于<a href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">设计模式的内容</a> 第1题 </p>
+</details> 
+
+<p>6、SharedPreference 是线程/进程 安全的吗？apply 和 commit 有什么区别？(提交到哪？是本地的xml 还是 内存的xml？)，有什么坑？ </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a> 第20题即可     </p>
+</details> 
+
+<p>7、Handler 机制说一下？ 消息延迟是怎么做到的？我有个新消息，在已有的消息队列中我想让他先执行，可以吗。</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a> 第4题即可     </p>
+</details> 
+
+<p>8、最有挑战的项目？你负责做了什么？给公司带来什么价值？，这个sdk给你们的产品带来什么价值？如何判断你这个sdk是否好用？你们的业务成功率是多少，有统计吗？如果要设计这个监控这个sdk？你们有相关的埋点吗？感觉面试官隐约对app的监控感兴趣。</p>
+<p>9、http 和 http2 有什么区别。</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">网络知识</a> 第15题即可     </p>
+</details> 
+
+<p>10、http 和 https 有什么区别。告诉我它是怎么做到安全的呢？</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">网络知识</a> 第9、10题即可     </p>
+</details> 
+
+<p>11、kotlin 语言与java 语言相比有什么优点吗？</p>
+<p>12、kotlin 的协程了解吗？它的原理？协程相比线程创建的开销小一些？主线程使用协程是不是不会阻塞？假设我在主线程里面使用协程执行非常耗时的操作，我的主线程会ANR吗？为什么在io操作比较多的时候对协程有利呢？协程有自己的栈空间吗？  </p>
+<h2 id="BD"><a href="#BD" class="headerlink" title="BD"></a>BD</h2><p>线程同步方法（关键字，并发包）</p>
+<p>wait/notify,notify方法和notifyAll方法区别，notifyAll方法唤醒的线程，怎么决定哪一个线程得到运行</p>
+<p>HashMap(要很熟悉)，put过程，get过程</p>
+<p>现在key为double类型，需要将key的整数部分当成同一个key应该怎么做（提示：重写方法）</p>
+<p>内存泄露分析</p>
+<p>进程间通信方式(别忘了BroadcastReceiver)</p>
+<p>A跳转到B的生命周期调用，如果A的onStop方法方法发生在B的onResume方法之前会发生什么现象，如果B是singleTask又是什么情况？会调用B的哪些方法</p>
+<p>service运行在什么线程</p>
+<p>Handler内存泄露原理(message.target = handler，所以真正原因是由于message造成的)，解决方法，一个线程可以有多个Handler吗。</p>
+<p>handler的sendMessage方法和postRunable方法区别</p>
+<p>HandlerThread</p>
+<p>设计一个图片加载框架，LRUCache原理</p>
+<p>看过第三方库的源码吗</p>
+<p>排序算法，时间复杂度，快排为什么是NlogN</p>
+<p>完全二叉树高度</p>
+<p>弱引用和软引用</p>
+<p>今天面到的题目新的部分有几个  1include merge viewstub区别  2二叉树第n层节点个数  3touchdelegate </p>
+<h2 id="BD-1"><a href="#BD-1" class="headerlink" title="BD"></a>BD</h2><p>1、http状态码</p>
+<p><a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">网络知识</a>第16题</p>
+<p>onTouch、onTouchEvent、onClick 执行顺序</p>
+<p>onclick 不响应，如何排查    </p>
+<p>设计一个下载框架(考虑多线程)。</p>
+<p>单进程中，一个线程下载和用两个线程下载哪个更快？</p>
+<p>在主线程要优先执行一个任务咋办？除了消息栅栏外还有其他方法吗？<br>Thread.join，还有吗？如何发送消息栅栏，这是hide方法，自己如何发送异步消息。</p>
+<p>空闲的时候执行某个任务有什么方法？IdleHandler，还有其他方式吗</p>
+<p>IntentService 与 Service 区别，啥时候用IntentService  </p>
+<p>synchronized 锁优化策略</p>
+<p>线程安全的集合有哪些？CopyOnWriteList 在什么时候使用？HashTable 与 ConcurrentHashMap 的区别？</p>
+<p>线程池的拒绝策略有哪些？</p>
+<p>什么情况下singleTask 在一个进程中会有两个实例？ NEW_TASK A启动B，B启动C，C启动D，现在从D启动A，并且启动完成后只保留A，如何做？</p>
+<p>Okhttp 的 addInteceptor 与 addNetWorkInterceptor 的区别 </p>
+<p>如何保证dns的安全？自己建立dns服务器，httpdns</p>
+<p>做sdk的话，如何在接入的时候管理第三方依赖</p>
+<p>设计模式，整体和部分</p>
+<p>Okhttp 多个host，如何配置</p>
+<h2 id="TX"><a href="#TX" class="headerlink" title="TX"></a>TX</h2><p>了解插件化吗？有哪些第三方开源的方案？Tinker的原理</p>
+<p>行业内性能优化的方案有了解吗？页面如何秒开？</p>
+<p>串行GC的时候，会锁住堆挂起线程，那么无论线程处于什么状态都能挂起吗？</p>
+<p>多线程中的同步队列与等待队列(可能问的是 同步队列和条件队列)</p>
+<p>CAS是啥？AQS是啥<a target="_blank" rel="noopener" href="https://ddnd.cn/2019/03/15/java-abstractqueuedsynchronizer/">可以参考这里</a>？RetraintLock的原理</p>
+<p>锁的种类，什么是可重入锁</p>
+<p>如何让多个线程同时启动</p>
+<p>Java内存空间怎么划分</p>
+<p>有哪些GC算法，哪些对象可以作为GC Root</p>
+<p>JNI 中，Env是啥，它能干什么</p>
+<p>什么情况下本地方法栈会引用Java对象</p>
+<p>HashMap原理</p>
+<p>Android系统的启动流程，应用为什么用zygote来fork，有什么好处</p>
+<p>Apk的签名原理，v1和v2</p>
+<p>https相比http的优势是什么？除了安全之外呢？证书如何校验</p>
+<p>Java的堆与栈的区别，除了存储的对象不一样之外，还有其他不一样么？</p>
+<p>进程间通信为什么用Binder，Binder的原理？空间大小限制（貌似是4M）?</p>
+<p>可重入锁是什么？悲观锁和乐观锁的区别？</p>
+<p>什么时候用到TCP，什么时候用到UDP？举例</p>
+<p>https的攻击手段，https的证书是如何发送给客户端的？</p>
+<p>RecyclerView和ListView的区别</p>
+<h2 id="TX-1"><a href="#TX-1" class="headerlink" title="TX"></a>TX</h2><p>http状态码</p>
+<p>ontouch  ontouchEvent  onClick  执行顺序</p>
+<p>onClick不响应，应该怎么排查</p>
+<p>设计一个下载框架（还要考虑多线程），单进程中，一个线程下载和用两个线程下载谁快？（要充分利用cpu）</p>
+<p>在主线程我要优先执行一个任务咋办？消息栅栏，除了这种方法之外呢？如何发送消息栅栏？这是hide方法</p>
+<p>空闲的时候执行某个任务有什么方法？IdleHandler，thread. join，还有啥方法吗</p>
+<p>IntentService 与service区别？啥时候用IntentService </p>
+<p>synchronize锁优化策略</p>
+<p>线程安全集合有哪些？HashTable与ConcurrentHashMap 的区别？Copy onWrite List在啥时候用？</p>
+<p>线程池的拒绝策略有哪些</p>
+<p>什么情况下singleTask在一个进程中会有两个实例</p>
+<p>a启动b，b启动c，c再启动d，这时候直接回到a页面，并且只保留a页面，有啥方法？</p>
+<p>okhttp的addIntercept 与 add Network Interceptor 方法区别？</p>
+<p>dns安全，httpdns 方案</p>
+<p>做sdk管理第三方依赖</p>
+<p>设计模式，整体和部分</p>
+<p>自己发送异步消息</p>
+<p>okhttp多个host，多重配置</p>
+<p>异步创建view的原理</p>
+<p>如何插桩</p>
+<p>哪些地方匿名共享内存：堆，contentprovider，显示的时候</p>
+<p>sp原理</p>
+<p>事件分发</p>
+<p>hashtable concurrentHashMap</p>
+<h2 id="BD-2"><a href="#BD-2" class="headerlink" title="BD"></a>BD</h2><p>handler，IdleHandler原理，使用</p>
+<p>组件化，插件化，热修复</p>
+<p>断点续传</p>
+<p>用过哪些开源库？retrofit的原理</p>
+<p>反转二叉树</p>
+<p>做了哪些优化？gpu优化？</p>
+<p>hashmap原理，如何hash？为什么8个的时候要红黑树？</p>
+<p>a启动b生命周期怎么走</p>
+<p>gc算法，哪些可以作为gc root，分代算法是怎样的？</p>
+<p>volatile关键字作用？能保证原子性吗？</p>
+<p>webview内存泄露的原理，handler内存泄露原理</p>
+<p>如何发现内存泄露？LeakCanary的原理是什么？</p>
+<p>Activity的启动模式</p>
+<p>taskaffinity的作用？</p>
+<p>进程间通信方式有哪些？AIDL能传递的数据类型有哪些？AIDL怎么使用？AIDL的方法参数能传接口吗？都跨进程干什么</p>
+<p>app崩溃率多少？怎么统计的？能捕捉所有异常吗？如何捕捉native的崩溃？</p>
+<p>动态代理</p>
+<h2 id="TX-2"><a href="#TX-2" class="headerlink" title="TX"></a>TX</h2><p>relativelayout与constrantlayout（可以参考链接：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/gGR2itbY7hh9fo61SxaMQQ）">https://mp.weixin.qq.com/s/gGR2itbY7hh9fo61SxaMQQ）</a></p>
+<p>如何查看cursor之类的导致内存泄露问题</p>
+<p>onclick，onTouch执行顺序</p>
+<p>算法：链表的中间元素，判断链表是否有环，快排最好最差时间复杂度，快排是怎么操作的</p>
+<h2 id="TX3-面试"><a href="#TX3-面试" class="headerlink" title="TX3 面试"></a>TX3 面试</h2><p>近期有做什么优化或者重大技术？<br>DNS污染是怎么回事<br>https的证书是怎么起作用的？<br>用什么检测内存泄漏-LeakCanary<br>扫码登录是怎么做到的<br>多线程用过吗，乐观锁与悲观锁说下    </p>
+<h2 id="TX1"><a href="#TX1" class="headerlink" title="TX1"></a>TX1</h2><p>String可以继承吗？为什么？为什么设计成不可变？<br>快排原理<br>二分查找原理<br>Activity的几种启动方式，Service中怎么启动Activity（参考链接：<a target="_blank" rel="noopener" href="https://blog.csdn.net/fang323619/article/details/74388804），从源码角度来说，ActivityManager">https://blog.csdn.net/fang323619/article/details/74388804），从源码角度来说，ActivityManager</a> 为什么会对4种tag做处理</p>
+<p>事件传递的机制(触摸事件)？Activity 的顶级响应视图是啥？onTouchListener 与onClickListener 哪个先执行(onTouchListener)？onTouchListener 返回true 之后，onClickListener 还会执行吗(不会)？onTouchListener 和 onLongClick 哪个先执行？</p>
+<p>View的绘制流程？从掉帧的角度来说下 View 的绘制流程？<br>ScrollView 嵌套滑动冲突怎么去解决？在父view的up里面return 了true，子view会收到down事件吗？<br>tcp与udp区别，tcp三次握手做了什么<br>单例模式怎么写，为什么<br>大图一般是怎么优化的？fresco的源码有看过吗，它有什么缺点？有没有用过其他的图片框架？<br>Activitymanagerservice 源码<br>知道哪些app性能优化</p>
+<h2 id="lazada-1"><a href="#lazada-1" class="headerlink" title="lazada"></a>lazada</h2><p>自我介绍<br>性能优化做了哪些工作<br>四种引用的含义<br>mvp 与 mvc 区别<br>Handler 机制，如何实现消息延迟<br>最有挑战的项目，负责做了什么<br>业务监控怎么设计<br>http与http2的区别<br>http与https的区别<br>kotlin语言与java的区别，优点<br>kotlin的协程原理，有自己的栈空间吗，与线程区别</p>
+<p>英语自我介绍下？–妥妥挂了。。</p>
+<h2 id="猫总"><a href="#猫总" class="headerlink" title="猫总"></a>猫总</h2><p>为什么不用URLConnection而用OKHttp不了解</p>
+<h2 id="qq的music"><a href="#qq的music" class="headerlink" title="qq的music"></a>qq的music</h2><p>自我介绍下<br>性能优化的经验<br>如何设计措施，防止以后新人在主线程添加太多的任务<br>了解过启动框架吗<br>如何分阶段启动相关任务，这些任务有相互依赖，或者有向无关图<br>能达到什么效果，量化下<br>内存优化的内容<br>webp 占用内存小一些还是尺寸小一些？<br>图片框架本来就会做这些裁剪之类的功能，这样自己做是否就重复了<br>其它内存优化的点(我觉得可以说说大图加载，只加载一部分)<br>了解ashmem 吗，除了这个作用还能有其他作用吗<br>优化app的整体内存占用<br>第一步得分析吧。profile 工具<br>第二步、分析问题在哪，native 和 Java 层 的内存占用，如果native 和 Java 中图片占用都比较大，如何分析<br>第三步、是内存泄漏导致的、还是大数组、大对象</p>
+<p>用LRU 的话，一般不会引起内存很大占用，所以如果内存大，一般是内存泄漏导致的</p>
+<p>Talkingdata 统计些什么     </p>
+<p>监控dns的成功率，即用户使用你的ip直接请求的成功率了，以前系统直接解析，现在是用户直接打不开         </p>
+<p>尝试使用https 去解决吗</p>
+<p>网络成功率怎么优化      </p>
+<p>dark 和 art 的 gc 过程有了解吗        </p>
+<p>非并行 GC 的过程</p>
+<p>分配内存，不够，然后做什么操作，最后就会分配成功。分配不够的话，系统会扩容，扩容发生在什么时机           </p>
+<p>常用设计模式，单例模式怎么写      </p>
+<p>volatile ：</p>
+<p>性能优化了解不太多，尤其内存优化总结不多，数据量化</p>
+<h2 id="BD-3"><a href="#BD-3" class="headerlink" title="BD"></a>BD</h2><p>Fresco 架构上说下，MVC模式，说说 Fresco加载gift的流程和原理<br>4. 一个大的ViewGroup，上面显示两个不一样大小的图片，内容一样，怎么做（利用Fresco的缓存）<br>5. 一个图片是50 * 50，一个图片是100 * 100，内存大小是怎样的，比如 50<em>50的内存大小是1，100</em>100的内存大小是多少？  两张图片，内存变大了还是不变，内存副本有几份？<br>6. RecyclerView 滑动的时候，缓存机制<br>7. RecyclerView 下面一个子item，我手指按在RecylerView上，然后滑动，说出滑动过程<br>8. 海量数据中找出TOP N（堆）<br>9. 自定义帧动画机制，一边解压一边加载，用完之后回收，inBitmap进行内存复用。用了哪些数据结构，如何保证按顺序执行。<br>10. bitmap drawable 区别(互相转化，drawable包含bitmap)Bitmap是Drawable . Drawable不一定是Bitmap Drawable在内存占用和绘制速度这两个非常关键的点上胜过Bitmap</p>
+<p>1、   jni 方法调用是怎么实现之类的<br>2、   java  string 和 c++ string 有什么区之类的<br>3、   自己做的项目上遇到的技术难题和解决方案<br>4、   消息队列</p>
+<h2 id="看点1"><a href="#看点1" class="headerlink" title="看点1"></a>看点1</h2><p>React Native了解它的实现原理吗？除了组件映射，还有更深的理解吗？<br>Android哪一块比较熟比较擅长，聊聊？<br>可以给子线程创建消息队列吗？看过消息队列的底层原理吗？对，Native层的代码<br>Android里面什么是ANR？遇到ANR怎么排查？<br>硬件加速和非硬件加速有什么区别？<br>HARDWARE_LAYER 与 SOFT_LAYER 分别代表什么意思？<br>UI性能相关性能的优化有没有做过？比如一个列表滑动很卡顿，怎么优化？如何查看占用内存和cpu？GC怎么会影响性能？有什么手段可以降低布局层级？<br>Recyclerview与Listview的缓存原理？不同类型的item他们怎样缓存？<br>Android内存怎么优化？什么是内存泄漏？什么情况会出现内存泄漏？实际中举个例子？Handler为什么会泄漏Activity？<br>图片展示比较多的App，怎么解决内存占用问题？用了什么图片框架？为什么Fresco 在5.0以下具有优势？Fresco的实现原理，大概流程是怎样的？</p>
+<p>内存中未解码图片是啥样？<br>怎样为图片框架设置内存缓存策略？怎么决定淘汰哪些内存？<br>还有没有了解其他图片框架吗？<br>怎样尽量降低位图占用的空间大小？<br>图片列表，怎么优化性能？<br>视频播放相关的经验有吗？播放器用的是什么？videoView用的是哪个？TextureView 和 SurfaceView 有什么区别？哪个性能更好？为什么？这两个view和Android中普通的view有什么区别？使用方式有什么区别？</p>
+<blockquote>
+<h1 id="SurfaceTexture，TextureView区别"><a href="#SurfaceTexture，TextureView区别" class="headerlink" title="SurfaceTexture，TextureView区别"></a>SurfaceTexture，TextureView区别</h1><p>我们知道，一般Activity 包含多个View，他们组成树状结构，但是只有顶层的 DecorView 才是对 WMS 可见的，它在 WMS 中有一个对应的 WindowState ，相应地，在 SF中对应 Layer。</p>
+<p>而SurfaceView 继承自 View，因此本质上是个View，但是它有自己的Surface，这个 Surface 在 WMS 中有对应自己的 WindowState ，在 SF 中也会有自己的 Layer。如下图所示：</p>
+<p><img src="https://img-blog.csdn.net/20150304164219975?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamluemh1b2p1bg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt="SurfaceView示意"></p>
+<p>这样，虽然SurfaceView 仍然在 View 目录树中，但是其实它与主窗口是分离的，这个的好处就是<strong>这个surface的渲染可以放到单独的线程去做，渲染时，而已有自己的GL context</strong>，这对于游戏、视频等性能相关的应用非常有益，因为<strong>它不会影响主线程的响应</strong>。但是同样也有缺点：因为它有自己的Surface ，所以它不受<strong>view的属性控制，因此不能进行平移、缩放等变换以及动画</strong>。</p>
+<p>而 TextureView 在View 也继承自View，在目录树中以普通的View存在，因此支持旋转、缩放 以及动画，但是 TextureView  必须只能在<strong>支持硬件</strong>加速 的窗口中，它对draw方法进行了重载，<strong>把收到的数据作为纹理更新到对应的HardwareLayer 中</strong>。</p>
+<blockquote>
+<p>看不大懂，参考资料<a target="_blank" rel="noopener" href="https://blog.csdn.net/jinzhuojun/article/details/44062175">CSDN</a></p>
+</blockquote>
+</blockquote>
+<p>你觉得视频播放怎么优化视频首帧加载速度？有看过Exoplayer的实现吗？它的解码过程和原理？<br>FFmpeg有了解过吗？<br>有做过C/C++之类的开发吗？大概是个多大的代码量？<br>有用过OpenGL吗？<br>对Android的组件化有了解多少？了解Android的热修复吗？热修复的原理是什么？<br>https怎么实现安全的？https的握手比http的握手多了几个RTT ？<br>http 1.0 、2.0、3.0 之间的区别？http3.0 最大的优势？<br>其他看过的第三方开源的框架？</p>
+<h2 id="TX-MUSIC"><a href="#TX-MUSIC" class="headerlink" title="TX MUSIC"></a>TX MUSIC</h2><p>单例怎么写呢？volatile关键字在这里面的作用。如果我不需要懒加载，什么时候不需要做懒加载？</p>
+<blockquote>
+<p>关于单例的饿汉和懒汉加载模式，目前知道的一个答案就是：<strong>类中还有其他静态方法或变量时，饿汉模式才有优势，此时可以通过访问任一静态成员来实例化对象，这缘于首次访问静态成员会引发类的加载，而类加载时会初始化静态变量</strong>，具体可以参考<a target="_blank" rel="noopener" href="https://bbs.csdn.net/topics/394314888?list=lz">别人的提问</a></p>
+</blockquote>
+<p>用过反射吗？App发布的时候，需要混淆的，混淆对反射有什么影响？有没有用过Gson，有什么功能？知道它的工作原理吗？怎么知道类的成员变量的名字？我是一个泛型，我是一个List，类型是String，反射能不能拿到泛型的数据？泛型你知道有上界和下界这个东西？他们有什么用？</p>
+<p>sharedpreference 的apply 和commit有什么区别？apply什么时候同步到磁盘上去(pause和广播，跟广播有啥关系？)？apply是异步的对吧？</p>
+<p>有接触过插件化？插件化的原理是什么？怎么欺骗系统。</p>
+<p>handler的工作原理？如何移除消息屏障？handler怎么导致的内存泄漏？</p>
+<p>防止二次打包，是怎么做的？现在拿到一个包，想二次打包，而如果他做了二次打包的验证，你怎么绕过？我拿了别人的库，别人会校验签名，如果我想用这个库，怎么弄？你们的签名验证怎么做的？</p>
+<p>kotlin印象深刻的特性，举例一下？异步的代码写成同步，怎么写？怎么做到异步能写成同步的？正常来讲，我们是从上往下执行的，为毛它可以在中途切线程？怎么做到让出线程使用权限呢？但是如果是使用Java的wait、notify会阻塞，但是kotlin不会啊，咋做的？用kotlin从子线程切换到主线程，怎么做？GlobalScop 有什么不好的点吗？kotlin的空安全了解么？在定义变量的时候，就指定是否可以为空，你觉得这样好不好？lateinit的作用是啥？什么情况比较适合使用 lateinit？</p>
+<blockquote>
+<p>如果 lateinit 和 lazy 对比，lateinit <strong>只用于变量var</strong>，而 layzy <strong>只用于常量val</strong>，一般用于单例在变量第一次调用时才执行。其次，基于我个人的理解，lateinit 适用的场景是<strong>你不想指定一个变量为可空类型，但是又得在稍后(或者得等到满足某个参数时，假如RecyclerView的Adapter对象，可能得等到某个callback 初始化之后，才能作为参数来new 这个Adapter)才能初始化的那种变量</strong>。以上参考<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/5fe384a2575b">简书的博客</a></p>
+</blockquote>
+<p>https怎么做到安全？https的流程？怎么校验证书？你是说自己也计算一遍对吧？服务端发证书给你，中途被我换了，客户端能不能发现被换了？用我自己的私钥签名了，客户端如何发现的？证书链怎么验证？我做了个代理，做了个中间人攻击，一般我能听别人https的内容，为什么我能做到呢？你们本地https的证书校验的证书从哪里来？那你获取证书这部分我是不是可以中间人攻击，你们发的是tcp包还是http包？http包那你们也还是会有明文，就会有漏洞。对称加密的密钥是怎么生成的？为什么需要客户端和服务端一起作用来生成？为什么后面需要使用对称加密来做？</p>
+<p>知道DNS会有劫持吗？你们的情况不一定是dns劫持，可能是别人直接把你们的Http包给替换了？httpDNS 有什么好处？-更科学地翻译成ip，深圳访问不会被分配到北京。</p>
+<p>数组，找到数组里面第一个重复的数字，怎么做？HashSet去做时间复杂度多少？意思是遍历一次就行了是吧？</p>
+<p>如果App出现了频繁的GC，怎么排查？怎么排查有没有内存泄漏的？-leakcanary ，如果在IDE里面使用工具呢？如果我想看哪些对象被频繁申请，怎么搞？</p>
+<blockquote>
+<p>看起来面试官想要说出MAT，可以参考下<a target="_blank" rel="noopener" href="https://baijiahao.baidu.com/s?id=1596318542314042563&amp;wfr=spider&amp;for=pc">别人的博客</a>。但是其实目前已经无需MAT就能直接在AS里面操作了</p>
+</blockquote>
+<h2 id="BD-4"><a href="#BD-4" class="headerlink" title="BD"></a>BD</h2><p>挑一个比较有价值的项目聊聊？500彩票，那聊一聊做了哪些事情？模块化和mvp讲讲，mvp有什么优缺点？-MVP类增加了，寻找逻辑没那么直接。有没有做成组件化的形式吗，打包成aar之类的发布？</p>
+<p>插件化讲一讲？打包怎么办？插件用到宿主的资源咋办？怎么识别类，是将dex添加到dexlist中还是自定义 ClassLoader ？启动service、广播、ContentProvider？Activity去hook它的mCallback，但是假如高版本的时候不让你去反射咋办？宿主里面的类更新了，插件版本没有更新，这情况咋办？</p>
+<p>讲一下handler吧？</p>
+<p>用过哪些第三方组件，开源库？网络库用的啥？用过github上哪些轮子啊？okhttp源码有看过吗？他有很多拦截器，他是怎么弄的输入输出？</p>
+<p>注解有用过吗？除了用来替代枚举外还在哪里用过吗？</p>
+<p>写个算法题：单向链表，自己去定义结点，他有个值，还有个next指向下一个。我们输入两个这种链表，找到他们第一个公共节点返回，没有的话，返回null  。</p>
+<h2 id="BD二"><a href="#BD二" class="headerlink" title="BD二"></a>BD二</h2><p>做了哪些非业务的工作？所理解的网络劫持是什么样的？怎么发现网络劫持和预防？https可以解决DNS劫持问题吗？如果要篡改http可以在哪些环节篡改？你觉得谁会来篡改你们的App网络报文？https为什么可以保证不被篡改？介绍下Https的流程？我们要分析https的请求的话，可以怎么做吗？App又怎么去防这种事情呢？服务端拉取证书怎么保证安全呢？-ip直连去拉取证书。量很大的情况下，都通过ip去获取证书的话，服务端会不会扛不住？如果ip挂了，或者运营商给你封了，那你怎么办？-内置证书，防止重打包 。做了一些安全方面的事情，是哪些？为什么App签名本地校验是防君子不能防小人？</p>
+<p>sp做加密，出于什么目的？别人怎么读到你的sp存储的内容？哪些存储的内容需要加密？sp写的时候加密以及读的时候需要解密，这个性能会有影响吗？业界有没有好的方案来解决Sp吗？-替代方案是MMKV  。MMKV 是如何解决跨进程问题？为什么SP跨进程是不好的？</p>
+<p>性能上做了一些优化，做了哪些事情？App启动优化做了哪些事情？内存优化主要做了什么？hashmap 换成arrayMap 等会有多大的收益？这个内存收益怎么衡量？-启动App进入到彩票购彩页面。防止内存泄漏怎么去做的？线上如果要做一些这样的监控怎么做？-talkingdata 。 它的原理有去了解吗？内存泄漏经常会OOM，这种OOM怎么在线上怎么监控？-发生的时候，dump内存信息上传分析。更详细的没有去了解是吧？</p>
+<p>算法题目：给定一个字符串S，返回 反转后的 字符串。反转的规则：其中不是字母的字符都保留在原地，而所有字母的位置发生反转。</p>
+<p>例如：        输入：”ab-cd”        输出：”dc-ba”<br>输入：”a-bC-dEf-ghIj”        输出：”j-Ih-gfE-dCba”</p>
+<h2 id="BD-5"><a href="#BD-5" class="headerlink" title="BD"></a>BD</h2><p>视频播放采用什么播放器？视频播放首帧优化？有其他方式来优化视频播放，比如卡顿等体验？视频播放碰到过什么问题？</p>
+<p>选择SurfaceView还是TextureView ？视频有做过加密吗？视频地址是固定的吗？</p>
+<p>视频格式了解吗？分辨率、帧率、码率 都是什么含义？</p>
+<p>git 的merge  和 rebase 有什么区别？代码从本地到远端是怎么流转的，比如我新建一个文件，怎么到远端的？</p>
+<p>性能优化做了哪些内容？</p>
+<p>json解析耗时几百毫秒，是怎么统计到的？systrace 用过吗？</p>
+<p>不重要的任务是怎么去初始化的？</p>
+<p>用过线程池吗？对线程的管控怎么搞？如果有人在代码中直接去new  Thread，这个怎么管控？</p>
+<p>RxJava里面线程池的线程有限制吗？RxJava的原理有多少？RxJava的线程切换怎么实现的？RxJava是怎么切换的线程，比如他observeOn 和 subScribeOn 这两个操作符？这两个操作符有什么区别？多次调用他们会多次生效吗？为什么不能多次生效？</p>
+<p>协程的原理？同样作为操作线程的工具，它和RxJava的本质区别是什么？与RxJava比较还有没有别的优势？kotlin的作用域函数apply、also等，怎么确定什么时候用什么？</p>
+<p>图片规范的方式去使用，怎么规范？</p>
+<p>fresco 有几级缓存？</p>
+<p>组件化怎么弄的？组件化做到什么程度？</p>
+<p>module之间怎么通信？除了基础module，其他的module  A 想要和 module B 通信，A启动B里面的一个页面？</p>
+<p>为什么选择MVP？P层可能会无线膨胀，有没有什么解决办法</p>
+<p>最近jetpack的组件有没有了解？</p>
+<p>如何设计一个组件化的app<br>View的绘制流程<br>activity的启动模式<br>如何监控启动就crash的问题<br>如何独立编译单独的组件<br>对比一下图片加载模块，Glide 和Fresco , AsyncImageView</p>
+<p>主要还是通过项目发散开的问题：<br>1，android开发中常见的两种序列化，serializeble 和 parcelable 的区别<br>2，recyleview中的常见卡顿问题是如何解决的，如何监控到用户的卡顿（监控UI线程的message 处理逻辑，超过60ms）<br>3，项目比较大，编译比较慢的解决办法（插件化，组件化）<br>4，项目中遇到的一个小问题，是如何解决的<br>5，OOM类型的问题如何解决<br>6，内存泄漏如何监</p>
+<p>Android so如何减包<br>Android Camera采集渲染流程<br>如何排序一个比内存大的文件</p>
+<p>C++ 父类析构函数的virtual作用，怎么实现防止内存泄漏的<br>C++ 虚函数表是什么<br>JNI的attachCurrentThread作用是什么<br>JNI的LocalRef和GlobalRef new了是否要delete，可以不delete么？<br>简单介绍下libuv</p>
+<h2 id="BD3"><a href="#BD3" class="headerlink" title="BD3"></a>BD3</h2><p>http与https的差异有多少？https这个安全层是怎么做的，怎么保证安全的？非对称加密是在哪里使用？数字证书除了公钥之外还有其他的吗？数字证书和数字签名有什么关系？验证双方身份的时候，用了个什么结构，比如说，我发了个信息给你，怎么验证是我发给你的？是在https建立后，使用对称加密之后，如何验证双方的身份？</p>
+<blockquote>
+<p>http与https的区别，参考自己<a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">以前写的博客</a>-<font color="#ff0000">（要记得同步回博客中）</font>：</p>
+<ul>
+<li>scheme不一样，一个是http，一个是https</li>
+<li>Https是ssl加密传输，Http是明文传输     </li>
+<li>Https是使用端口443，而Http使用80     </li>
+<li>HttpsSSL+HTTP协议构建的可进行加密传输、身份认证的网络协议要比Http协议安全      </li>
+<li>Https协议需要到CA申请证书</li>
+</ul>
+</blockquote>
+<p>列举下自己所知道的http的状态码？</p>
+<blockquote>
+<p>1开头表示临时响应，还需要继续操作    </p>
+<p>2开头表示成功    </p>
+<p>3开头表示重定向，301表示永久移动，302表示临时移动</p>
+<p>4开头表示请求错误，比如：400表示服务器不理解请求语法，403表示禁止访问，404未找到  </p>
+<p>5表示服务端错误，比如：500服务器内部错误、502错误网关、503表示 服务不可用，维护或者超载了  </p>
+</blockquote>
+<p>get和post方法之间有多少差异？get不会对后台数据进行修改，post会修改？</p>
+<blockquote>
+<p>按照REST规范来说的话，get就是获取资源，不会有副作用，也就是这个操作是幂等的；post就是创建资源的意思，这个就不是幂等的。此外，put的含义就是replace，就是用来修改元素；delete就是用来删除。</p>
+<p>但是如果，纯粹说http的话，这个就很宽泛了，我们说get不能有body、get是幂等、post有body、post不是幂等，这些规则都是可以被打破的，比如，post的参数可以放在queryString里、header里，当然也能放在body里，当然也可以每个部分放一点；get也能做成等非幂等的，甚至于，我们在日常使用的时候，post都能做成幂等，这就要求后台判断重复订单了。</p>
+<p>以上文章参考自<a target="_blank" rel="noopener" href="https://www.zhihu.com/question/28586791">知乎上的文章</a>，<font color="#ff0000">（要记得同步回博客中）</font></p>
+</blockquote>
+<p>TCP 下的流量控制的核心内容？-本质是不要把对方buffer打爆  。 对方已经很拥堵了，怎么控制呢？</p>
+<p>java中静态方法能调用非静态方法吗？我从类对象角度讲的，但面试官感觉是要求从类加载的角度讲。</p>
+<blockquote>
+<p>因为静态方法属于类，在类加载的时候，就被加载到方法区了，因此在类没有创建对象的时候后也是可以调用的。而非静态方法则得在类创建对象之后才存在。因此并不能这样调用。内容可以参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_44325444/article/details/109273226">csdn的博客</a></p>
+</blockquote>
+<p>Java中，有多层for循环，有个场景需要在最里面的for循环中跳出多个for循环继续执行下面的代码，怎么搞？</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//比较简单的解决方案是：</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    loop: <span class="keyword">for</span>(<span class="keyword">int</span> i =<span class="number">0</span>;i&lt; <span class="number">5</span>;i++) {</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">0</span>;j &lt; <span class="number">4</span>;j++) {</span><br><span class="line">            <span class="keyword">if</span>(j == <span class="number">1</span>) {</span><br><span class="line">                <span class="keyword">break</span> loop;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//可以参考[博客园](https://www.cnblogs.com/fastfn/p/9777067.html)</span></span><br><span class="line">    </span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>创建fragment的时候，为什么官方不推荐构造方法，而要通过setArguments的方式？-为了考虑恢复。  了解到什么时候会有这种恢复的场景？-从前一个Activity返回到当前Activity。  Fragment 的两个adapter， 一个是 fragmentpageAdapter ，一个是 fragmentpageStateAdapter，他俩有什么区别？</p>
+<blockquote>
+<p>FragmentPagerAdapter与FragmentStatePagerAdapter的区别：<br>FragmentPagerAdapter拥有自己的缓存策略，当和ViewPager配合使用的时候，会缓存当前Fragment以及左边一个、右边一个，一共三个Fragment对象；<strong>在每次切换页面的时候，是将fragment进行分离(transaction.detach)，适合页面较少的fragment使用以保存一些内存，对系统内存不会有多大影响</strong>。</p>
+<p>FragmentStatePagerAdapter是PagerAdapter的子类，这个适配器对实现多个Fragment界面的滑动是非常有用的。<strong>当Fragment对用户不可见的时候，整个Fragment会被销毁(transaction.remove)，只会保存Fragment的保存状态</strong>。</p>
+<p>参考<a target="_blank" rel="noopener" href="https://liuqiang.blog.csdn.net/article/details/79793168">刘强的博客</a>、<a target="_blank" rel="noopener" href="https://blog.csdn.net/zhaokaiqiang1992/article/details/40342411">赵凯强的博客</a></p>
+</blockquote>
+<p>MeasureSpac 里面有三种模式，解释下？</p>
+<blockquote>
+<p>参考以前写的<a href="https://glassx.gitee.io/2019/03/08/%E9%9D%A2%E8%AF%95%E9%A2%98-%E9%92%88%E5%AF%B9%E7%AE%80%E5%8E%86%E7%9A%84%E9%97%AE%E9%A2%98/">面试题目第3题</a></p>
+</blockquote>
+<p>handler的post和sendMessage有什么区别？-post是runnable，send是message，post的runnable最终会封装成 message，并且what默认为1,——面试官看起来不满足这个解释。</p>
+<blockquote>
+<p>使用send时，由于是我们自己创建的Message，所以我们最终在handleMessage 方法中switch-case来处理Message。</p>
+<p>使用post的方式时，我们post过去的是一个runnable，在post方法中，会创建一个 Message，并且将这个runnable赋值给Message的callback字段。之后通过 sendMessageDelay(msg,0) 来实现。</p>
+<p>而我们知道，在Handler的dispatchMessage方法中，会首先判断msg.callback == null，如果不为null的话，就直接执行 msg.callback.run() 了；如果为null，则会判断 handler的mCallback字段是否为null，不null的话，直接调用 mCallback.handleMessage(msg) 将当前msg给处理了，并且直接return回去了；如果以上条件都不满足，则会调用我们通常覆写的  handleMessage() 方法，交由我们自己处理。</p>
+</blockquote>
+<p>上面内容主要是看系统源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">post</span><span class="params">(<span class="meta">@NonNull</span> Runnable r)</span> </span>{</span><br><span class="line">       <span class="keyword">return</span>  sendMessageDelayed(getPostMessage(r), <span class="number">0</span>);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> Message <span class="title">getPostMessage</span><span class="params">(Runnable r)</span> </span>{</span><br><span class="line">        Message m = Message.obtain();</span><br><span class="line">        m.callback = r;</span><br><span class="line">        <span class="keyword">return</span> m;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispatchMessage</span><span class="params">(<span class="meta">@NonNull</span> Message msg)</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (msg.callback != <span class="keyword">null</span>) {</span><br><span class="line">            handleCallback(msg);</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            <span class="keyword">if</span> (mCallback != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">if</span> (mCallback.handleMessage(msg)) {</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">            handleMessage(msg);</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>算法：</p>
+<p>给出两个有序的整数数组 <img src="https://www.nowcoder.com/equation?tex=A%20%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">，请将数组 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">合并到数组 <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">中，变成一个有序的数组<br>注意：<br>可以假设 <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">数组有足够的空间存放 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">数组的元素， <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">中初始的元素数目分别为 <img src="https://www.nowcoder.com/equation?tex=m%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=n%5C" alt="img"></p>
+<h3 id="TX1-1"><a href="#TX1-1" class="headerlink" title="TX1"></a>TX1</h3><p>全程参与的项目有哪几个？</p>
+<p>项目里面哪个对你成长帮助比较大，收获比较大？</p>
+<p>遇到什么问题？为什么想着优化H5？如何优化H5页面的打开速度？是预创建 WebView 是吧？</p>
+<p>项目中碰到什么难点，以及是怎么去攻克它的？</p>
+<p>如果插件化要做好兼容性，应该怎么做？</p>
+<p>如何保证App的安全？</p>
+<p>有用 Service 开发吗？</p>
+<p>你们的跨进程通信用的什么方式？你知道有哪些跨进程通信方式？这些跨进程通信方式各有什么优势或者特点，他们之间的差异是什么？</p>
+<p>介绍下APK的启动过程——描述下进程启动、应用启动？启动过程哪些过程可能产生ANR ？</p>
+<p>Apk 中有一些第三方的包 Jar，在应用启动过程中，这些 Jar 是怎么链接起来的 ？——Android会把这些 jar 打包成 dex ， 那么这些 dex 是什么时候加载呢？</p>
+<p>类似抖音功能遇到了什么难点？怎么解决的？——播放错乱，咋解决？</p>
+<p>Android的源码看过多少？有编译过Android的源码吗？</p>
+<p>adb命令会吗？我想查看手机的剩余电量，怎么拿？ Linux的一些命令呢？root 和 Hook 了解多少？</p>
+<p>NDK 开发有吗？</p>
+<p>主要开发语言，Java 、Kotlin ？</p>
+<p>ART 知道吗？与 Dalvik 的区别？GC有什么不同？</p>
+<p>如果让你一个人开发App，能 Cover 住吗？</p>
+<p>有做单元测试吗？</p>
+<h3 id="ALi"><a href="#ALi" class="headerlink" title="ALi"></a>ALi</h3><p>Java集合类有哪些？有什么特点？ ArrayList、LinkedList、HashMap？</p>
+<p>ConcurrentHashMap是线程安全？它是怎么实现线程安全的？</p>
+<p>Java的线程有哪些状态？创建线程，调用它的start() 方法，这时候它处于什么状态？</p>
+<p>Java 中处理多线程并发的方法有哪些？Synchronize 在底层是怎么保证加锁成功？Volatile 主要用在什么场景？</p>
+<p>是否有用过 ThreadLocal ？看 Handler 源码时看过</p>
+<p>线程的集中管理会用到线程池，有哪些比较关键的参数？</p>
+<p>Activity声明周期？Activity A 到 Activity B ，二者经历的生命周期是怎样的？启动模式介绍下？日常开发时，有没有碰到要用某种启动模式的？</p>
+<p>是否有多进程的场景？——做小程序的时候</p>
+<p>Handler 的机制简单说一下？子线程发送消息，如何流转到主线程的？</p>
+<p>讲下 View 的主要绘制流程？多层 View 和 Layout，怎么把这些操作传递下去吗？ViewRootImpl 有了解吗？</p>
+<p>涉及到多进程的话，如何进行多进程间的通信？Messager 主要用在什么场景？ AIDL 主要用在什么场景？Binder 的基本原理？为什么要引入Binder ，不用 Linux 的？</p>
+<p>性能优化，页面秒开是从哪些方面做的？发现性能会有问题才做性能优化吧？是怎么分析性能？怎么检测内存泄漏？LeakCanary的原理？后来有没有思考有没有哪些内容可以做得更好？最耗时的点是啥，怎么去优化的？</p>
+<p>做过小程序的开发，你们的小程序是自研的吗？有哪些权限限制？</p>
+<p>RN的了解？</p>
+<h2 id="国斌"><a href="#国斌" class="headerlink" title="国斌"></a>国斌</h2><p>1:<br>    （1）自我介绍<br>    （2）你主要负责什么模块、奖金优化是什么东西（奖金优化的前提是如果能中奖，中奖金额要怎么样）、如何将所有组合列出来、如何将注数分配出去、奖金范围怎么算的<br>    （3）APP的架构是怎么样的，为什么要这样子架构？MVP每块你们是怎么分工的<br>    （3）首屏怎么调优的、加快启动速度的，内存泄漏怎么检测，LeakCanary原理是什么<br>    （4）HashMap源码相关、为什么要将链转红黑树？红黑树特点、插入删除<br>    （5）消息循环源码、如何做到任务切换线程、想要提交一个任务有几种方式<br>    （6）Kotlin协程原理，怎么切换线程的，为什么要换Kotlin及其优缺点<br>    （6）一个无序、实际上是逆序的数组排序用什么算法好 我说的是快排、实际上应该用归并排序能获得最好的时间复杂度</p>
+<p>2：<br>    （1）还是奖金优化<br>    （2）还是性能调优、怎么瘦身、打包流程、模块化<br>    （3）开发者GPUInfo中的每条柱状图颜色代表含义、命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思<br>    （4）Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的<br>    （5）物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域<br>    （6）binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体<br>    （7）广度、深度搜索，拓朴排序、最短路径算法<br>    （8）ELF文件格式、反编译器原理<br>    （9）Kotlin优缺点</p>
+<p>3：<br>    （1）项目架构是怎么样的<br>    （2）画一下结构图<br>    （3）为什么要迁移项目到Kotlin<br>    （4）线程 协程 为什么需要线程池 他的状态变化是怎么样的 在Android中的应用<br>    （5）如何设计一个App的架构 该考虑什么<br>    （6）Flutter怎么从平台到Dart的 如何渲染的<br>    （7）你觉得面得怎么样</p>
+<p>4：</p>
+<p>讲个项目你负责的模块<br>多个Fragment在销毁后重建之后重叠怎么办<br>设计一个图片缓存框架<br>缓存算法用什么<br>有个ListView快速滑动 如何优化Bitmap的显示<br>Bitmap的复用听过没有<br>如何进行内存优化 减少内存消耗</p>
+<p>5：</p>
+<p>讲下项目的架构<br>负责的模块<br>算法 最大子序和<br>try catch finally关于return的执行结果<br>hashmap源码 treemap如何对两个元素进行比较 非compareble对象比较<br>hashcode equals区别<br>object有什么方法<br>讲讲Android存在的设计模式<br>android的消息机制<br>android的事件分发<br>讲个android的源码 自选<br>LeakCanary</p>
+<p>6：<br>android消息机制<br>android事件分发<br>设计模式讲讲有什么认识的 代理模式优缺点<br>图片 缓存机制<br>首屏调优 内存调优</p>
+<h2 id="cici"><a href="#cici" class="headerlink" title="cici"></a>cici</h2><p>1、数组实现队列</p>
+<p>2、gc的流程</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>可以查看 <a href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/">虚拟机</a> 第5题</p>
+</details> 
+
+<p>3、java软引用与弱引用区别  </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考以前的<a href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">读书笔记</a></p>
+</details>  
+
+<p>4、java中的this编译时的原理</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>我们知道，this关键字主要有三个用途：</p>
+<ul>
+<li>调用本类中的属性    </li>
+<li>调用本类中的其他方法    </li>
+<li>调用本类中的其他构造函数</li>
+</ul>
+<p>this编译时的原理：</p>
+<ol>
+<li>this指代的一定是对象(所以静态方法不能使用this)，且该对象的静态类型就是就是当前类      </li>
+<li>实例方法以及 <strong>构造方法</strong>的第一个参数都是this（在构造方法之前，jvm其实已经给对象在堆中分配好了内存了，构造方法的作用是对类<strong>初始化</strong>）     </li>
+<li>this一般出现在方法中；如果this出现在方法体外部，如：在类A中定义了成员变量 A a = this;最终这行代码仍然会<strong>被放入 A 类的构造函数中执行</strong>。</li>
+</ol>
+<p>参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_41920291/article/details/98118035">他人的博客</a></p>
+</details>  
+
+<p>5、final变量用反射修改</p>
+<p>6、HashMap的内部结构，给定一个key，如何找到对应的value，使用equal</p>
+<p>7、volatile</p>
+<p>8、Java线程池有什么作用</p>
+<p>9、Java动态代理</p>
+<p>10、handler机制</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a> 第4题即可     </p>
+</details> 
+
+<p>11、android跨进程通信的方式</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>阅读<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">以前的读书笔记</a></p>
+</details> 
+
+<p>12、自定义控件方式</p>
+<p>13、Canvas绘制过什么 手写功能</p>
+<p>14、断点续传的实现</p>
+<p>15、如何设计图片加载库</p>
+<p>16、有看过哪些安卓的源码 </p>
+<ul>
+<li>Activity启动    </li>
+<li>handler      </li>
+<li>ThreadHandler</li>
+<li>IntentThread     </li>
+</ul>
+<p>17、看过哪些开源项目    </p>
+<ul>
+<li>LeakCanary    </li>
+<li>Alpha    </li>
+<li>okhttp    </li>
+</ul>
+<p>18、app 启动速度的优化做过哪些</p>
+<p>19、fresco加载图片原理 优势是什么</p>
+<p>20、写程序时，堆和栈有什么优化点 内存回收时机 如何判断对象可被回收</p>
+<p>21、引用计数法和gc root法</p>
+<p>22、事件分发 cancel事件一般在什么时候被触发</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考<a href="">源码理解</a>中的12、13题</p>
+</details> 
+
+<p>23、touchdelagate 一个父view只能设置一个delegate，如何解决设置多个</p>
+<p>24、App整个架构了解么</p>
+<p>25、mvvm data binding</p>
+<p>26、webview</p>
+<p>27、fragment startactivity</p>
+<p>28、动画的原理</p>
+<p>黄油计划 vsync</p>
+<p>设计一个离线视频下载功能</p>
+<p>Activity 启动流程</p>
+<p>android  app签名原理</p>
+<p>Android查询资源文件layout原理</p>
+<p>设计一个decode bitmap方法</p>
+<p>启动Activity A后，按home键，再从桌面启动activity A ， Activity A的生命周期</p>
+<p>handler原理</p>
+<p>onSaveInstanceState调用时机</p>
+<p>Fragment View区别</p>
+<p>Java内存管理和内存回收</p>
+<p>Android scheme</p>
+<p>Activity怎么管理自己的生命周期，ActivityThread怎么运作</p>
+<p>消息事件分发</p>
+<p>进程之间通讯</p>
+<p>线程锁</p>
+<p>touch事件分发原理scrollview和viewpager之间的滑动如何防止冲突，里面listitem也需要支持滑动怎么办</p>
+<p>插件化的了解情况动态代理实现（自由发挥的）</p>
+<p>如何实现一个拥有取出最小值方法的堆栈，要求算法的事件复杂度是O(E)如何算</p>
+<p>二叉树节点之间的最小距离</p>
+<p>两个链表，可能很长，实现求和（大数求和），结果也是单向链表</p>
+<p>ActivityTask的使用</p>
+<p>onNewIntent的调用时机</p>
+<p>checkbox，up事件和down事件的区别</p>
+<p>怎么用Standard方式来实现一个SingleTop启动的Activity</p>
+<p>Http文件上传的具体过程</p>
+<h2 id="杂"><a href="#杂" class="headerlink" title="杂"></a>杂</h2><p>其实证书的本地校验还有一个步骤就是，将获取的新证书与老证书对比下，对比新旧证书</p>
+<p>在kotlin中各个部分的执行顺序：</p>
+<p>companion &gt; init &gt; constructor</p>
+<p>自己写代码如下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">KotlinTest</span> </span>{</span><br><span class="line">    <span class="keyword">init</span> {</span><br><span class="line">        println(<span class="string">"init"</span>);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">constructor</span>(){</span><br><span class="line">        println(<span class="string">"constructor init"</span>);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> {</span><br><span class="line">        <span class="keyword">init</span>{</span><br><span class="line">            println(<span class="string">"companion init"</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>会输出：</p>
+<blockquote>
+<p>companion init    </p>
+<p>init    </p>
+<p>constructor init</p>
+</blockquote>
+<p>对称加密哪些</p>
+<p>三次、四次握手</p>
+<p>注意postInvalidate的使用</p>
+<h2 id="关于如何排查ANR"><a href="#关于如何排查ANR" class="headerlink" title="关于如何排查ANR"></a>关于如何排查ANR</h2><h3 id="获取日志文件"><a href="#获取日志文件" class="headerlink" title="获取日志文件"></a>获取日志文件</h3><p>首先，获取日志文件：</p>
+<blockquote>
+<p>adb bugreport buglog</p>
+</blockquote>
+<p>之后，就会显示进度生成，有个时候会生成不成功，没关系，再来一次</p>
+<p>生成之后，这个文件被导入到当前项目的路径下，解压这个 buglog.zip 文件即可，打开 [机型]xxx.txt 查看里面的日志。</p>
+<h3 id="ANR类型和日志关键字"><a href="#ANR类型和日志关键字" class="headerlink" title="ANR类型和日志关键字"></a>ANR类型和日志关键字</h3><p>KeyDispatchTimeout-主要类型按键或触摸事件,input事件在5S内没有处理完成发生ANR</p>
+<p>日志关键字：Reason: Input dispatching timed out xxxx</p>
+<p>ServiceTimeout-bind，create，start，unbind等在主线程处理耗时，前台Service在20s内，后台Service在200s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout executing <a href="https://links.jianshu.com/go?to=http%3A%2F%2Fservice%2Fexecuting%2520service" target="_blank">service:/executing service</a> XXX</p>
+<p>3）BroadcastTimeout- BroadcastReceiver onReceiver处理事务时前台广播在10S内，后台广播在60s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout of broadcast XXX/Receiver during timeout:XXX/Broadcast of XXX</p>
+<p>4）ProcessContentProviderPublishTimedOutLocked-ContentProvider publish在10s内没有处理完成发生ANR<br>日志关键字：timeout publishing content providers</p>
+<h3 id="造成ANR的常见原因"><a href="#造成ANR的常见原因" class="headerlink" title="造成ANR的常见原因"></a>造成ANR的常见原因</h3><ul>
+<li>主线程耗时操作，如复杂的layout，庞大的for循环，IO等。    </li>
+<li>主线程被子线程同步锁block    </li>
+<li>主线程被Binder 对端block    </li>
+<li>Binder被占满导致主线程无法和SystemServer通信    </li>
+<li>得不到系统资源（CPU/Memory/IO）</li>
+</ul>
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/33d5e48e4a13">简书上的博客</a>、<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/082045769443">简书博客二</a></p>
+</blockquote>
+<h2 id="频繁GC、OOM-的排查"><a href="#频繁GC、OOM-的排查" class="headerlink" title="频繁GC、OOM 的排查"></a>频繁GC、OOM 的排查</h2><p>Android 的profile 功能-&gt;memory -&gt; dump ，得到 hprof 文件</p>
+<p>AS 现在直接能看到各个对象了，或者按照以前的，将 hprof 文件转一道，使用 MAT 打开</p>
+<h2 id="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"><a href="#两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛" class="headerlink" title="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"></a>两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛</h2><p>设先抛先吃的概率为p1， 后抛先吃的概率为p2</p>
+<p>那么有：</p>
+<p>p1 = 1/2 + 1/2 * p2</p>
+<p>p1 + p2 = 1</p>
+<p>解方程可得，</p>
+<p>p1 = 2/3</p>
+<blockquote>
+<p>参考自<a target="_blank" rel="noopener" href="https://www.nowcoder.com/questionTerminal/6f11c63cb97a4e0884bb40985cf95393?toCommentId=474963">牛客网</a></p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/" rel="tag"># 他山之石</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2020/05/01/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/" rel="next" title="Android开发技巧">
+                  <i class="fa fa-chevron-left"></i> Android开发技巧
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/" rel="prev" title="第3、4课-内存优化">
+                  第3、4课-内存优化 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A2%B0%E5%88%B0%E7%9A%84"><span class="nav-number">1.</span> <span class="nav-text">碰到的</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%A7%E7%94%9F%E9%87%8D%E5%8F%A0%E7%9A%84%E5%8E%9F%E5%9B%A0"><span class="nav-number">1.1.</span> <span class="nav-text">产生重叠的原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95"><span class="nav-number">1.2.</span> <span class="nav-text">解决办法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#replace-%E6%96%B9%E5%BC%8F%E5%88%87%E6%8D%A2fragment-%E4%B8%8E-show-hide-%E6%96%B9%E5%BC%8F%E5%88%87%E6%8D%A2fragment"><span class="nav-number">1.3.</span> <span class="nav-text">replace 方式切换fragment 与 show&#x2F;hide 方式切换fragment</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%99%BE"><span class="nav-number">2.</span> <span class="nav-text">虾</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lazada"><span class="nav-number">3.</span> <span class="nav-text">lazada</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD"><span class="nav-number">4.</span> <span class="nav-text">BD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD-1"><span class="nav-number">5.</span> <span class="nav-text">BD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TX"><span class="nav-number">6.</span> <span class="nav-text">TX</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TX-1"><span class="nav-number">7.</span> <span class="nav-text">TX</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD-2"><span class="nav-number">8.</span> <span class="nav-text">BD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TX-2"><span class="nav-number">9.</span> <span class="nav-text">TX</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TX3-%E9%9D%A2%E8%AF%95"><span class="nav-number">10.</span> <span class="nav-text">TX3 面试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TX1"><span class="nav-number">11.</span> <span class="nav-text">TX1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lazada-1"><span class="nav-number">12.</span> <span class="nav-text">lazada</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8C%AB%E6%80%BB"><span class="nav-number">13.</span> <span class="nav-text">猫总</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#qq%E7%9A%84music"><span class="nav-number">14.</span> <span class="nav-text">qq的music</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD-3"><span class="nav-number">15.</span> <span class="nav-text">BD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9C%8B%E7%82%B91"><span class="nav-number">16.</span> <span class="nav-text">看点1</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SurfaceTexture%EF%BC%8CTextureView%E5%8C%BA%E5%88%AB"><span class="nav-number"></span> <span class="nav-text">SurfaceTexture，TextureView区别</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#TX-MUSIC"><span class="nav-number">1.</span> <span class="nav-text">TX MUSIC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD-4"><span class="nav-number">2.</span> <span class="nav-text">BD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD%E4%BA%8C"><span class="nav-number">3.</span> <span class="nav-text">BD二</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD-5"><span class="nav-number">4.</span> <span class="nav-text">BD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BD3"><span class="nav-number">5.</span> <span class="nav-text">BD3</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#TX1-1"><span class="nav-number">5.1.</span> <span class="nav-text">TX1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ALi"><span class="nav-number">5.2.</span> <span class="nav-text">ALi</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%BD%E6%96%8C"><span class="nav-number">6.</span> <span class="nav-text">国斌</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cici"><span class="nav-number">7.</span> <span class="nav-text">cici</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9D%82"><span class="nav-number">8.</span> <span class="nav-text">杂</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E5%A6%82%E4%BD%95%E6%8E%92%E6%9F%A5ANR"><span class="nav-number">9.</span> <span class="nav-text">关于如何排查ANR</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6"><span class="nav-number">9.1.</span> <span class="nav-text">获取日志文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR%E7%B1%BB%E5%9E%8B%E5%92%8C%E6%97%A5%E5%BF%97%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-number">9.2.</span> <span class="nav-text">ANR类型和日志关键字</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%A0%E6%88%90ANR%E7%9A%84%E5%B8%B8%E8%A7%81%E5%8E%9F%E5%9B%A0"><span class="nav-number">9.3.</span> <span class="nav-text">造成ANR的常见原因</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%91%E7%B9%81GC%E3%80%81OOM-%E7%9A%84%E6%8E%92%E6%9F%A5"><span class="nav-number">10.</span> <span class="nav-text">频繁GC、OOM 的排查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%A4%E4%B8%AA%E4%BA%BA%E8%BD%AE%E6%B5%81%E6%8A%9B%E7%A1%AC%E5%B8%81%EF%BC%8C%E6%AD%A3%E9%9D%A2%E6%9C%9D%E4%B8%8A%E7%9A%84%E8%B5%A2%EF%BC%8C%E6%AD%A3%E5%8F%8D%E9%9D%A2%E6%A6%82%E7%8E%87%E4%B8%80%E6%A0%B7%EF%BC%8C%E4%BD%A0%E5%BA%94%E8%AF%A5%E5%85%88%E6%8A%9B%E8%BF%98%E6%98%AF%E5%90%8E%E6%8A%9B"><span class="nav-number">11.</span> <span class="nav-text">两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">30</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共302.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '52f91e35ffd928fc3db2af2b17882228',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
