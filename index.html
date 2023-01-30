@@ -154,7 +154,7 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">29</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">30</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">126</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">129</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,395 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2022/12/12/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%AC%AC3%E7%AB%A0%20%E5%86%B7%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/12/12/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%AC%AC3%E7%AB%A0%20%E5%86%B7%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/" class="post-title-link" itemprop="url">第3章 冷启动代码修复</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-12-12 16:35:00" itemprop="dateCreated datePublished" datetime="2022-12-12T16:35:00+08:00">2022-12-12</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-30 14:48:13" itemprop="dateModified" datetime="2023-01-30T14:48:13+08:00">2023-01-30</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>第3章： 冷启动代码修复</p>
+<p>热修复的根本原理是Native层方法替换，所以当类结构变化（如增减method/field）时热部署模式会受限。但冷部署可以突破这种约束，可以作为热部署的补充。</p>
+<h2 id="冷启动类加载原理"><a href="#冷启动类加载原理" class="headerlink" title="冷启动类加载原理"></a>冷启动类加载原理</h2><h3 id="冷启动方案概述"><a href="#冷启动方案概述" class="headerlink" title="冷启动方案概述"></a>冷启动方案概述</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>QQ空间</th>
+<th>Tinker</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>原理</td>
+<td>为解决Dalvik情况下 unexpected dex problem 异常而采用插桩，单独放一个帮助类在独立的dex让其他类调用，防止类被打上 CLASS_ISPREVERIFIED。 最后加载补丁dex得到一个Element对象插入到 dexElements数组的最前面</td>
+<td>提供差量包patch.dex，然后将patch.dex与应用的 classes.dex 合并成一个完整的 dex，完整的dex加载构建Element 然后整体替换掉旧的 Elements 数组</td>
+</tr>
+<tr>
+<td>优点</td>
+<td>产物小，灵活</td>
+<td>补丁包小，Dalvik情况下不影响性能，ART环境下也不存在必须包含父类/引用类的情况</td>
+</tr>
+<tr>
+<td>缺点</td>
+<td>Dalvik 下影响类加载性能</td>
+<td>dex合并内存消耗在 vm heap 上，容易导致 OOM</td>
+</tr>
+</tbody></table>
+<h4 id="插桩实现的前因后果"><a href="#插桩实现的前因后果" class="headerlink" title="插桩实现的前因后果"></a>插桩实现的前因后果</h4><p>如果直接把补丁类打入补丁包中而不做任何处理的话，在类加载的时候会产生异常并退出，来分析下异常产生的原因：</p>
+<p>加载一个dex文件时如果不存在 odex 文件，那么就会执行 dexopt 操作，这个操作里面会调用到 verifyAndOptimizeClass 执行真正的 verify/optimize 操作：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(doVerify) {</span><br><span class="line">    <span class="keyword">if</span>(dvmVerifyClass(clazz)) {<span class="comment">//执行类的verify</span></span><br><span class="line">        <span class="comment">//类被打上 CLASS_ISPREVERIFIED 标志</span></span><br><span class="line">        ((DexClassDef*)pClassDef)-&gt;accessFlags |= CLASS_ISPREVERIFIED;</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(doOpt) {</span><br><span class="line">    <span class="keyword">if</span>(...) {</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        ...</span><br><span class="line">        dvmOptmizeClass(clazz, <span class="literal">false</span>);</span><br><span class="line">        <span class="comment">//类被打上 CLASS_ISOPTIMIZED 标志</span></span><br><span class="line">        ((DexClassDef*)pClassDef)-&gt;accessFlags |= CLASS_ISOPTIMIZED;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>第一次安装 APK 时，会对原dex做 dexopt ，假如APK只有一个dex，dvmVerifyClass(clazz) 返回true，然后 APK 中所有的类都会被打上 CLASS_ISPREVERIFIED 标记。接下来执行 dvmOptimizeClass ，类接着被打上 CLASS_ISOPTIMIZED 标志。</p>
+<ul>
+<li><p>上述的 dvmVerifyClass 目的是防止校验类合法性被篡改，此时会对类的每个方法进行校验，这里只需要知道如果类所引用的道德类和当前类都在同一个dex中的话，就会返回为true</p>
+</li>
+<li><p>dvmOptmizeClass : 类优化，这过程会将部分指令优化成虚拟机内部指令，提升了方法的执行效率。</p>
+</li>
+</ul>
+<p>现在假定 A 是补丁中的类，所以 A 肯定在一个单独的 dex 中，这时候类B 引用到补丁类 A，所以会尝试解析类 A。但是由于 B 是已经被打上了 CLASS_ISPREVERIFIED，调用的类 A 又与 B 不在同一个 dex ，因此会报 dvmThrowIllegalAccessError 异常。</p>
+<p>为了解决这个问题，一个单独的无关类被放在一个单独的dex中，原 dex 中所有的类构造函数都引用这个类，一般的解决方案是侵入dex打包流程，利用 .class 字节码修改技术。插桩由此而来，根据前面的介绍，原dex 所有的类都没有 CLASS_ISPREVERIFIED 标志，因此不会报这个异常。</p>
+<p>但是，插桩会给类加载效率带来比较严重的影响，如果没有打上 CLASS_CLASS_ISPREVERIFIED / CLASS_ISOPTIMIZED 标志，那么累的校验和优化都将在类初始化阶段进行。正常情况下类的校验和优化都仅在APK 第一次安装执行 dexopt 阶段进行，单个类加载耗时并不多，但是同一时间加载大量类的情况下，这种耗时就会放大。</p>
+<h4 id="插桩类导致类加载性能影响"><a href="#插桩类导致类加载性能影响" class="headerlink" title="插桩类导致类加载性能影响"></a>插桩类导致类加载性能影响</h4><p>插桩导致所有类都非 preverify，从而导致应用刚启动的场景下一般会同时加载大量的类，因此启动的时候容易白屏，这是没法容忍的。</p>
+<h4 id="避免插桩的-QFix-方案"><a href="#避免插桩的-QFix-方案" class="headerlink" title="避免插桩的 QFix 方案"></a>避免插桩的 QFix 方案</h4><p>它的思路是，在dexopt 后，反编译 dex 为 smali 修改代码避免异常，但是由于是在 dexopt 后绕过的，dexopt 会改变原有的很多逻辑，这可能会导致比较严重的bug。因此，最终会采用自研的全量 dex 方案。</p>
+<h4 id="Art下冷启动实现"><a href="#Art下冷启动实现" class="headerlink" title="Art下冷启动实现"></a>Art下冷启动实现</h4></body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2022/12/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%83%AD%E6%9B%BF%E6%8D%A2%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/12/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%83%AD%E6%9B%BF%E6%8D%A2%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/" class="post-title-link" itemprop="url">第2章-热替换代码修复</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-12-05 14:02:00" itemprop="dateCreated datePublished" datetime="2022-12-05T14:02:00+08:00">2022-12-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-30 12:20:36" itemprop="dateModified" datetime="2023-01-30T12:20:36+08:00">2023-01-30</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="底层热替换的原理"><a href="#底层热替换的原理" class="headerlink" title="底层热替换的原理"></a>底层热替换的原理</h2><p>App 启动到一半的时候，所有需要发生变更的类已经被加载过了，<strong>Android 中无法对一个分类进行卸载的</strong>。腾讯系的方案是<strong>让 ClassLoader 去加载新类，因此只有在下次 App 重启的时候还没运行到业务逻辑之前抢先加载补丁中的新类</strong>。</p>
+<p>阿里系的 Andfix 采用的方法是<strong>直接在 Native 层替换了已经加载的类的方法</strong>。原理是：每一个 Java 方法在 Art 虚拟机中都对应一个 ArtMethod ，ArtMethod 记录了这个 Java 方法的所有信息，包括所属类、访问权限、代码执行地址等，<strong>可以获取 ArtMethod 的起始地址，然后强制转化为 ArtMethod 指针，从而对其包含的所有成员进行修改</strong>。</p>
+<p>但是，上述做法会导致兼容性问题，因为Android 是开源的，所以手机厂商可能对 ArtMethod 的结构体进行修改，举个例子：</p>
+<p>在 Andfix 中替换 declaring_class_ 的地方:</p>
+<blockquote>
+<p>smeth-&gt;declaring_class_ = dmeth-&gt;declaring_class_</p>
+</blockquote>
+<p>由于 declaring_class_ 是 官方 ArtMethod 的第一个成员，因此它和以下代码等价：</p>
+<blockquote>
+<p><em>(unit32_t</em>) (smeth + 0) = <em>(uit32_t</em>) (dmeth + 0)</p>
+</blockquote>
+<p>但如果手机厂商在 ArtMethod 的结构体 declaring_class_ 前面添加了 additional_ 字段，那么 additional_ 就成了第一个成员，所以 smeth + 0 在这台设备上实际就成了 additional_，代码含义就变化了。</p>
+<h3 id="突破底层差异"><a href="#突破底层差异" class="headerlink" title="突破底层差异"></a>突破底层差异</h3><p>起始，Native 层面替换思路，其实就是替换 ArtMethod 的所有成员。那么，如果不构造 ArtMethod 中的各个成员字段，只要把 ArtMethod 作为整体替换，这不就可以了吗？示意图如下：</p>
+<p><img src="/Users/panda/Desktop/%E4%B8%AA%E4%BA%BA/blogSource_WB/giteeBlog_WB/source/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-%E7%B9%81%E7%90%90%E6%9B%BF%E6%8D%A2.png" alt="ArtMethod整体替换对比"></p>
+<p>所以，一系列繁琐替换：</p>
+<p><img src="/Users/panda/Desktop/%E4%B8%AA%E4%BA%BA/blogSource_WB/giteeBlog_WB/source/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-ArtMethod%E7%9A%84%E6%95%B4%E4%BD%93%E6%9B%BF%E6%8D%A2%E5%AF%B9%E6%AF%94.png" alt="繁琐替换"></p>
+<p>都可以缩写为：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">memcpy</span>(smeth, dmeth, <span class="keyword">sizeof</span>(ArtMethod));</span><br></pre></td></tr></tbody></table></figure>
+
+<p>即使手机厂商把 ArtMethod 改得面目全非都无所谓，<strong>但是 sizeof(ArtMethod) 获取 ArtMethod 的 size 大小不容易，很容易导致替换区域超出边界或者没替换到</strong>。</p>
+<p>由于 ArtMethod 存在一个 ArtMethodArray 中，并且多个 ArtMethod 紧密排列，所以一个 ArtMethod 的大小刚好就是两个相邻 ArtMethod 的起始地址的差值，就这样巧妙获取到了 ArtMethod 的大小。所以，后续不管 ArtMethod 结构怎么变化，只要他们在 ArtMethodArray 中还是以线性排列，就能直接适配。</p>
+<h3 id="访问权限问题"><a href="#访问权限问题" class="headerlink" title="访问权限问题"></a>访问权限问题</h3><p>看到这里可能会疑惑，我们只是替换了 ArtMethod 的内容，但是**补丁方法所属的类和原有方法所属的类，是不同的类型，被替换的方法有权限访问这个类的其他 private 方法吗？</p>
+<p>需要注意的是，在构造函数调用同一个类的私有方法 func 时，没有做任何权限检查，也就是说，这时即使把 func 方法偷梁换柱，也能直接跳过去正常执行而不报错。可以推测在dex2oat 生成 AOT 代码的时候是有做一些检查和优化了，由于在 dex2oat 编译机器码时确认了两个方法同属一个类，所以机器码中就不存在权限检查。</p>
+<h4 id="相同包名的问题"><a href="#相同包名的问题" class="headerlink" title="相同包名的问题"></a>相同包名的问题</h4><p>但是，你会发现<strong>补丁中的类在访问同包名下的类时，会爆出访问权限异常</strong>。这个问题是如何产生的呢？</p>
+<p><strong>虽然 com.path.demo.BaseBug 和 com.path.demo.MyClass 是同一个包 com.path.demo 下的，但是由于我们替换了 com.path.demo.BaseBug.test 方法，而用于替换的 BaseBug.test 方法是从补丁包 Classloader 中加载的，与原有的 base 包就不是同一个 Classloader 了，就这样，导致两个类无法被判别为同包名。</strong></p>
+<p>解决办法就是设置新类的 Classloader 为原来类的就可以了，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Field classloaderField = Class.class.getDeclaredField(<span class="string">"classLoader"</span>);</span><br><span class="line">classloaderField.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">classloaderField.set(newClass, oldClass.getClassLoader());</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="反射调用非静态方法产生的问题"><a href="#反射调用非静态方法产生的问题" class="headerlink" title="反射调用非静态方法产生的问题"></a>反射调用非静态方法产生的问题</h4><p>当一个非静态的方法被热替换后，在反射调用这个方法时，会抛出异常。例子如下：</p>
+<p><img src="/Users/panda/Desktop/%E4%B8%AA%E4%BA%BA/blogSource_WB/giteeBlog_WB/source/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-%E5%8F%8D%E5%B0%84%E9%9D%9E%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95%E6%8A%9B%E5%87%BA%E5%BC%82%E5%B8%B8.png" alt="反射非静态方法抛出异常"></p>
+<p>这里面，expected receiver 的 BaseBug 和 got 的 BaseBug 不是同一个类，虽然路径名字都一样，前者是被热替换的方法所属的类，后者是作为被调用的实例对象 bb 所属的类，是原有的 BaseBug，二者是不同的。因为在执行 invoke 的时候会检查调用对象是否是类的一个实例，只有是它的实例才能调用。<strong>具体的解决办法我们采用另一种冷启动机制应对</strong>。</p>
+<p>为什么静态方法不会有问题呢？因为如果是静态方法，是在类级别直接调用的，就不需要接受对象实例作为参数，所以就没有这方面的检查。</p>
+<h2 id="即时生效带来的限制"><a href="#即时生效带来的限制" class="headerlink" title="即时生效带来的限制"></a>即时生效带来的限制</h2><p>这种直接在运行时修改底层结构的热修复方案，都存在一个限制：只能支持方法的<strong>替换</strong>，新增/减少方法或者增加/减少成员字段，都是不适用的。因为一旦补丁类中出现了方法的增加或者减少，就会导致这个类以及整个 Dex 的方法数变化，方法数的变化会伴随方法索引的变化，这样，在访问方法时无法正常地索引正确的方法。</p>
+<p>字段的变化也是一样的，所有字段的索引都会发生变化。更严重的是，如果程序运行中某个类突然增加了一个字段，那么对于原有这个类的实例，他们还是原来的结构，这是无法改变的；而新方法使用这些旧的实例对象时，访问新增字段就会产生不可预期的结果。<strong>不过，新增一个完整的、原有包里面不存在的新类是可以的</strong>。</p>
+<h2 id="编译期与语言特性的影响"><a href="#编译期与语言特性的影响" class="headerlink" title="编译期与语言特性的影响"></a>编译期与语言特性的影响</h2><h3 id="内部类编译"><a href="#内部类编译" class="headerlink" title="内部类编译"></a>内部类编译</h3><p>在修改外部类的某个方法时，最后打出的补丁竟然提示新增了一个方法！所以有必要了解内部类在编译期是怎么工作的，首先要知道<strong>内部类在编译期间会被编译为外部类一样的顶级类</strong>。</p>
+<h4 id="内部类和外部类互相访问"><a href="#内部类和外部类互相访问" class="headerlink" title="内部类和外部类互相访问"></a>内部类和外部类互相访问</h4><p>既然内部类实际上和外部类一样都是顶级类，那应该私有的 method/field 是无法被访问到的，事实上外部类为了访问内部类私有 域/方法 ，编译期间会为内部类自动生成 access$ 数字编号相关方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseBug</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">        InnerClass inner = <span class="keyword">new</span> InnerClass(<span class="string">"old apk"</span>);</span><br><span class="line">        Toast.makeText(context, inner.s, Toast.LENGTH_SHORT).show();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">InnerClass</span> </span>{</span><br><span class="line">        <span class="keyword">private</span> String s;</span><br><span class="line">        <span class="function"><span class="keyword">private</span> <span class="title">InnerClass</span><span class="params">(String s)</span> </span>{</span><br><span class="line">            <span class="keyword">this</span>.s = s;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>为了能在外部类实现 inner.s 这种调用，编译器会自动为 InnerClass 类合成 access$100 方法，这个方法简单返回私有域 s 的值。同样，如果此时匿名内部类需要访问外部类的私有属性/方法时，外部类也会自动生成access$</strong> 相关方法供内部类访问**。</p>
+<p>所以，出现问题的时候应该是出现了这样一种场景：打补丁前test方法没访问 inner.s 打补丁后访问了，那么补丁包中就会新增 access$100 方法！</p>
+<h4 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h4><p>既然知道是因为产生了自动生成的方法导致的，那么我们阻止方法的自动生成就好了：</p>
+<p><strong>把外部类、内部类的所有 method/field 的私有访问权限改为 protected 或者 public 或者默认访问权限</strong>。</p>
+<h3 id="匿名内部类特殊情形"><a href="#匿名内部类特殊情形" class="headerlink" title="匿名内部类特殊情形"></a>匿名内部类特殊情形</h3><p><strong>匿名内部类其实也是个内部类，所以也会有上面内部类的影响</strong>，但是新增一个匿名类（补丁热修复模式允许新增类），并且符合上述内部类解决方案的要求，但是还会提示 method 新增，所以接着了解匿名内部类。</p>
+<p>匿名内部类名称格式一般是： <strong>外部类$数字编号</strong>，后面的数字编号是编译期根据匿名内部类在外部类出现的先后关系，依次累加命名的。看如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DexFixDemo</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">        <span class="comment">/*new DialogInterface.OnlickListener() {</span></span><br><span class="line"><span class="comment">            @Override</span></span><br><span class="line"><span class="comment">            public void onClick(){</span></span><br><span class="line"><span class="comment">                Log.d("aa", "bb");</span></span><br><span class="line"><span class="comment">            }</span></span><br><span class="line"><span class="comment">        }*/</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">new</span> Thread(<span class="string">"thread-1"</span>) {</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>{</span><br><span class="line">                Log.d(<span class="string">"xx"</span>, <span class="string">"yy"</span>);</span><br><span class="line">            }</span><br><span class="line">        }.start();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>修复后新增 DialogInterface.OnlickListener 这个匿名内部类，但是最后补丁工具发现新增 onClick 方法！具体原因：<strong>修复之前只有一个 Thread 匿名内部类，此时它的名称应该是 DexFixDemo$1 ，然后打补丁后在 test 方法中新增了 DialogInterface.OnlickListener 匿名内部类，由于位置关系，它的名称变成了 DexFixDemo$1，而 Thread 的匿名内部类的名称变为 DexFixDemo$2 了 ！</strong>所以，前后2个 DexFixDemo$1 类进行对比差异，就会完全乱套。<strong>同理，减少一个匿名内部类也存在同样的情况</strong>。</p>
+<h4 id="匿名内部类解决方案"><a href="#匿名内部类解决方案" class="headerlink" title="匿名内部类解决方案"></a>匿名内部类解决方案</h4><p>新增或者减少匿名内部类，实际上是无解的，因为补丁工具拿到的是已经编译后的 .class 文件，根本没法区分 DexFixDemo$1 或者 DexFixDemo$1 类。所以，应当避免插入一个新的匿名内部类。<strong>当然，如果匿名内部类是插入到外部类的末尾，那么是允许的！</strong></p>
+<h3 id="有趣的域编译"><a href="#有趣的域编译" class="headerlink" title="有趣的域编译"></a>有趣的域编译</h3><p>热部署中也不支持 <clinit> 的修复，这个方法会在 Dalvik 虚拟机中<strong>类加载的时候</strong>进行初始化调用，Java中本身没有这个方法，是编译器自动生成的。<strong>静态的 field 的初始化和静态代码块实际上就会被编译在 <clinit> 方法中</clinit></strong>。也就是<strong>热修复不支持静态代码块和静态field **。顺便说一下，</strong>静态代码块和静态域初始化在 <clinit> 中的先后关系就是二者出现在源码中的先后关系**。</clinit></clinit></p>
+<p><strong>非静态域与非静态代码块被编译器翻译在 <init> 默认无参构造函数中</init></strong>，域 和 代码块出现在 <init> 的顺序也和源码中的顺序一致。<init> 是在对象初始化的时候被调用的，简单来说就是创建一个对象就会对这个对象进行初始化。</init></init></p>
+<h4 id="域编译热部署解决方案"><a href="#域编译热部署解决方案" class="headerlink" title="域编译热部署解决方案"></a>域编译热部署解决方案</h4><p>前面说了，<clinit> 方法不支持热部署，即静态 field 和静态代码块都不支持热部署。非静态的 field 和 代码块的变更会被编译到 <init> 中，热部署模式下会被视为一个普通方法的变更，因此热部署是不受影响的。</init></clinit></p>
+<h3 id="final-static-域编译"><a href="#final-static-域编译" class="headerlink" title="final static 域编译"></a>final static 域编译</h3><p>开始很自然地认为 final static 是一个静态域，因此自然认为会被编译到 <clinit> 方法中，所以热部署也是不支持的，<strong>但是测试发现，final static 修饰的基本类型或者 String 常量类型不会被编译到 <clinit> 中！</clinit></strong>static 和 final static 修饰的 field 的区别如下：</clinit></p>
+<ul>
+<li>final static 修饰的原始类型和String类型域（非引用类型,如： “haha”），并不会被编译在 <clinit> 方法中，而是在类初始化执行 initSFields 方法时初始化赋值</clinit></li>
+<li>final static 修饰的引用类型（如： new String(“haha)），仍然在 <clinit> 中初始化</clinit></li>
+</ul>
+<p>所以我们平时看到的说<em>如果一个field是常量，那么尽量推荐使用 static final 作为修饰符</em>，这句话应该是不完全正确的，得到优化的仅仅只是<strong>原始类型和String类型域（非引用类型）</strong>，如果是引用类型不会有任何优化。那到底这个优化过程是怎样的呢？如果只是 static ，那在获取 field 之前，还需要判断是否有解析所属的类，如果没有还要解析这个类，之后才能获得；但是 static final 就可以通过立即数就能获得（注意，对于字符串来说，获取的立即数只是字符串常量的索引，还需要去通常说的“字符串常量“区获取）。</p>
+<h4 id="final-static-热部署方案"><a href="#final-static-热部署方案" class="headerlink" title="final static 热部署方案"></a>final static 热部署方案</h4><ul>
+<li>对于 final static 修饰的基本类型或者非引用类型的 String 域，由于**在编译期间引用到基本类型的地方被立即数替换，所以在热部署模式下，最终所有引用到该 final static 域的方法都会被替换，所以是可以做热部署方案的。</li>
+<li>修改final static 引用类型域，是不允许的</li>
+</ul>
+<h3 id="有趣的方法编译"><a href="#有趣的方法编译" class="headerlink" title="有趣的方法编译"></a>有趣的方法编译</h3><p>除了以上内部类和匿名内部类可能造成 method 新增外，还有使用了混淆方法编译导致的<strong>内联和裁剪</strong>，也会导致最终 method 的新增或者减少。</p>
+<h4 id="方法内联"><a href="#方法内联" class="headerlink" title="方法内联"></a>方法内联</h4><p>实际上好几种情况会导致方法被内联：</p>
+<ul>
+<li>方法没有被任何地方引用，会被内联掉</li>
+<li>方法足够简单，比如方法只有一行代码，那么任何调用该方法的地方斗殴会被该方法的实现替换掉</li>
+<li>方法只被一个地方引用，就会被内联</li>
+</ul>
+<h4 id="方法裁剪"><a href="#方法裁剪" class="headerlink" title="方法裁剪"></a>方法裁剪</h4><p>比如如下方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseBug</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test</span> <span class="params">(Context context)</span> </span>{</span><br><span class="line">        Log.d(<span class="string">"aa"</span>, <span class="string">"bb"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是查看混淆 mapping.txt 映射文件：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">com.demo.BaseBug -&gt; com.demo.a;</span><br><span class="line">    <span class="keyword">void</span> test$faab20d() -&gt; a</span><br></pre></td></tr></tbody></table></figure>
+
+<p>因为context 没有被使用，所以 test 方法的 context 参数被裁剪，混淆任务首先生成 test$faab20d() 裁剪后的无参方法，然后再混淆。那怎么才能不发生裁剪呢？<strong>不让编译器在优化的时候认为引用了一个无用的参数就好了</strong>，方法很多，介绍一个最有效的方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (Boolean.FALSE.booleanValue()) {</span><br><span class="line">        context.getApplicationContext();</span><br><span class="line">    }</span><br><span class="line">    Log.d(<span class="string">"aa"</span>, <span class="string">"bb"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>注意，这里不能用基本类型 false，必须用包装类 Boolean，否则if语句也会被优化掉！</p>
+</blockquote>
+<h4 id="内联裁剪的热部署解决方案"><a href="#内联裁剪的热部署解决方案" class="headerlink" title="内联裁剪的热部署解决方案"></a>内联裁剪的热部署解决方案</h4><p>实际上只要在混淆配置文件中加上 -dontoptimize 项，就不会做方法的裁剪和内联。</p>
+<h3 id="switch-case语句编译"><a href="#switch-case语句编译" class="headerlink" title="switch-case语句编译"></a>switch-case语句编译</h3><p>在switch-case情况下，case 后面的id 可能替换不掉的情况。因为switch-case编译时会做优化，比如，case后面的值是连续的 1,3,5 ，那就会编译成 packed-switch 指令；如果是 1,3,10 这种没什么规律连续的，就编译为 sparse-switch。编译器会自行确定怎样才是连续的。</p>
+<h4 id="热部署方案"><a href="#热部署方案" class="headerlink" title="热部署方案"></a>热部署方案</h4><p>如果 case 被编译成 packed-switch 指令，那么如果不做任何处理的话，就会遇到资源id替换不完全的问题。解决方案也很简单，修改 smali 反编译流程，碰到 packed-switch 指令就强转为 sparse-switch指令，然后做资源ID的暴力替换，最后再回编译 smali 为 dex 。但是这也会导致打补丁变得慢了些。</p>
+<h3 id="泛型编译"><a href="#泛型编译" class="headerlink" title="泛型编译"></a>泛型编译</h3><p>泛型的使用也会导致 method 的新增。Java 语言的泛型基本完全在编译器中实现，由编译器执行类型检查和类型推断，然后生成普通的非泛型字节码。虚拟机是完全无感知的。</p>
+<p>有泛型的情况下，子类真正重写基类方法的是通过编译器<strong>桥接</strong>实现的。<strong>桥接方法的内部实现就是调用子类重写的方法。</strong></p>
+<h4 id="泛型的热部署方案"><a href="#泛型的热部署方案" class="headerlink" title="泛型的热部署方案"></a>泛型的热部署方案</h4><p>如果我们的代码由 class B extends A 变成了 B extends A<number> ，那么就可能增加对应的桥接方法，此时新增了方法，就只能通过冷部署修复。</number></p>
+<h3 id="Lambda表达式编译"><a href="#Lambda表达式编译" class="headerlink" title="Lambda表达式编译"></a>Lambda表达式编译</h3><p>Lambda 表达在编译期间会为外部类生成一个static 类型的辅助方法，该方法内部实现 Lambda 的逻辑。所以导致方法的新增。在这个过程中会在外部类中生成一个非静态的内部类。</p>
+<h4 id="Lambda-表达式热部署"><a href="#Lambda-表达式热部署" class="headerlink" title="Lambda 表达式热部署"></a>Lambda 表达式热部署</h4><p>由上面可知，修改源代码中的Lambda 也会出问题：</p>
+<ul>
+<li>如果基线包Lambda没有访问非静态field/method ，那么它就不会持有对外部类的引用；</li>
+<li>如果后续补丁包访问外部类非静态 field/method，则会持有外部类引用，会新增field，热修复失败</li>
+</ul>
+<p>所以总结如下：</p>
+<ul>
+<li>增加或者减少Lambda 表达式会导致类方法错乱，导致热部署失败</li>
+<li>修改Lambda 表达式可能导致新增 field ，导致热修复失败</li>
+</ul>
+<h3 id="访问权限检查对热修复的影响"><a href="#访问权限检查对热修复的影响" class="headerlink" title="访问权限检查对热修复的影响"></a>访问权限检查对热修复的影响</h3><p>如果当前类和实现接口（父类）是非 public 时，同时负责二者的 ClassLoader 不一样的情况下，直接检查失败；所以热修复如果不处理这里，会导致类加载阶段报错，因为我们当前的代码热修复方案是基于新的 ClassLoader 加载补丁类。</p>
+<p>如果补丁类中存在非 public 类的访问或非 public 方法或域的调用，那么会加载失败，并且在补丁加载阶段是检测不出来的，只有在运行阶段才会报错。</p>
+<h4 id="热修复方案"><a href="#热修复方案" class="headerlink" title="热修复方案"></a>热修复方案</h4><p>如果出现这种情况只能冷启动重启生效，因为类已经加载过了。</p>
+<h2 id="引申"><a href="#引申" class="headerlink" title="引申"></a>引申</h2><h3 id="关于内部类"><a href="#关于内部类" class="headerlink" title="关于内部类"></a>关于内部类</h3><p>静态内部类/非静态内部类的区别： 后者会持有外部类的引用，前者不会。<strong>在 smali 中的表现就是非静态内部类会在编译期间自动合成 this$0 域，这个 this$0 就是外部类的引用。</strong></p>
+<h3 id="关于proguard"><a href="#关于proguard" class="headerlink" title="关于proguard"></a>关于proguard</h3><p>preverification step ： 针对 .class 文件的预校验，在 .class 文件中添加 StackMa/StackMapTable 信息，这样在执行类校验阶段会省去一些步骤，这样类加载更快一些。但是Android 虚拟机执行的是 .dex 文件，会把所有的 .class 转为 .dex ，所以这个选项是没有任何意义的，反而降低打包速度。所以一般禁止这个选项： -dontpreverify 这一项</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2022/12/01/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC1%E7%AB%A0-%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E4%BB%8B%E7%BB%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/12/01/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC1%E7%AB%A0-%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">热修复技术介绍</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-12-01 10:12:00" itemprop="dateCreated datePublished" datetime="2022-12-01T10:12:00+08:00">2022-12-01</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-30 12:13:07" itemprop="dateModified" datetime="2023-01-30T12:13:07+08:00">2023-01-30</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h3 id="为什么需要热修复？"><a href="#为什么需要热修复？" class="headerlink" title="为什么需要热修复？"></a>为什么需要热修复？</h3><ul>
+<li>重新发版代价太大，用户更新还不及时</li>
+<li>bug修复不及时，用户体验差</li>
+<li>插件化？那就很小的改动也要发布一个模块</li>
+<li>Hybrid方案？需要将经常变更的业务以H5独立出来，但是如果无法转为H5,bug还是无法修复，并且需要开发人员新增技术栈</li>
+<li>热修复对用户的流量小，影响小，损失降到最低</li>
+</ul>
+<h3 id="从本质理解热修复的实现"><a href="#从本质理解热修复的实现" class="headerlink" title="从本质理解热修复的实现"></a>从本质理解热修复的实现</h3><p>AndroidManifest 出现bug是无法修复的，因为它是由系统进行解析的，解析过程不会访问补丁包，因此如果想要增加四大组件，通常来说是不可以直接添加的。<strong>通常的做法是预先在安装包AndroidManifest 中埋入代理的组件</strong>。</p>
+<p>代码如何修复，所有的java代码最终都编译为 class.dex 格式文件，因此，任何的热修复方案，都需要在补丁包中包含一个新逻辑的 dex 文件，并且改变执行流，引导执行到新 dex 文件。</p>
+<p>资源的修复，必须想办法把原油安装包替换为新的资源包，<strong>而有些资源，比如桌面图标、通知栏图标以及 RemoteView 之类的资源，是由系统直接解析安装包的资源得到的</strong>，对于这类资源，任何热修复方法都无法进行资源替换和修复。</p>
+<p>so的修复应该是最明确的，Android 系统中所有的 so 库都是由 System.load 进行加载，因此只要找到办法在加载的时候优先加载补丁包的 so，就能够进行底层代码替换了。</p>
+<h3 id="发展历程"><a href="#发展历程" class="headerlink" title="发展历程"></a>发展历程</h3><p>阿里最开始的 Dexposed 框架基于 Xposed 框架的 Java Method Hook 技术，但是对底层 Dalvik 结构过于依赖，最终无法继续兼容 Android 5.0 以后的 ART 虚拟机，后续作罢。</p>
+<p>后来提出的 Andfix 同样是底层结构替换的方案，做到了 Dalvik 和 ART 环境的兼容。再者，还有基于 Andfix 阿里百川 HotFix ，但是都是基于底层固定结构，使用有很多限制，只提供代码层修复，不支持资源和so层修复。</p>
+<p>行业内著名的还有： 腾讯空间超级补丁技术、微信的Tinker、饿了么的 Amigo、美团的 Robust等。</p>
+<p>最终，阿里推出了 Sophix 方案，支持 <strong>代码修复、资源修复、so修复</strong>。它的核心理念就是 <strong>非侵入性</strong>。不修改打包流程，也不插入任何 AOP 代码。唯一需要的就是 <strong>初始化和请求补丁</strong>两行代码。</p>
+<h3 id="代码修复"><a href="#代码修复" class="headerlink" title="代码修复"></a>代码修复</h3><p>代码修复主要有2大方案：</p>
+<ul>
+<li><strong>阿里的底层替换方案</strong>： 立即见效，加载也轻快，但是限制很多。</li>
+<li><strong>腾讯系的类加载方案</strong>：需要冷启动见效，修复范围广，限制少。</li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -966,590 +1355,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/21/%E4%B9%A6-Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/21/%E4%B9%A6-Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/" class="post-title-link" itemprop="url">第12章：封装控件</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-09-21 22:17:00 / 修改时间：22:18:08" itemprop="dateCreated datePublished" datetime="2021-09-21T22:17:00+08:00">2021-09-21</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="自定义属性与自定义-Style"><a href="#自定义属性与自定义-Style" class="headerlink" title="自定义属性与自定义 Style"></a>自定义属性与自定义 Style</h2><p>我们一般会自定义一个View，比如 MyCustomView，然后再设置自定义属性：在 res/values 目录下，创建一个 attrs.xml ，在其中编写 declare-styleable ：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">resources</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">declare-styleable</span> <span class="attr">name</span>=<span class="string">"MyCustomView"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">attr</span> <span class="attr">name</span>=<span class="string">"header"</span> <span class="attr">format</span>=<span class="string">"reference"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">attr</span> <span class="attr">name</span>=<span class="string">"age"</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">flag</span> <span class="attr">name</span>=<span class="string">"child"</span> <span class="attr">value</span>=<span class="string">"10"</span>/&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">flag</span> <span class="attr">name</span>=<span class="string">"young"</span> <span class="attr">value</span>=<span class="string">"18"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">attr</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">declare-styleable</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>这个过程有2点需要注意：</p>
-<ul>
-<li>declare-styleable 旁边的name属性，这个属性的取值对应所定义的<strong>类名</strong>。因为我们自定义的类名叫做 MyCustomView ，所以这里的name 取值也是 MyCustomView    </li>
-<li>自定义属性值可以组合使用，比如 <attr name="color" format="color|reference"> 表示既可以自定义 color 值（比如#ff0000），也可以利用 @color/xxx 来引用 color.xml 中已有的值    </attr></li>
-</ul>
-<p>当然，我们有时候也需要使用常量来表示，比如上述的 flag，相当于代码中的常量，比如 young 就表示数字 18。</p>
-<h3 id="在xml中使用自定义属性"><a href="#在xml中使用自定义属性" class="headerlink" title="在xml中使用自定义属性"></a>在xml中使用自定义属性</h3><p>要记得以 xmlns 导入自定义的属性集：</p>
-<blockquote>
-<p>xmlns:attrstest=”<a target="_blank" rel="noopener" href="http://schemas.android.com/apk/res-auto&quot;">http://schemas.android.com/apk/res-auto"</a></p>
-</blockquote>
-<p>在代码中获取自定义的属性主要使用 <strong>TypedArray</strong></p>
-<h3 id="declare-styleable-标签其他属性的用法"><a href="#declare-styleable-标签其他属性的用法" class="headerlink" title="declare-styleable 标签其他属性的用法"></a>declare-styleable 标签其他属性的用法</h3><p>暂略</p>
-<h2 id="测量与布局"><a href="#测量与布局" class="headerlink" title="测量与布局"></a>测量与布局</h2><h3 id="ViewGroup-的绘制流程"><a href="#ViewGroup-的绘制流程" class="headerlink" title="ViewGroup 的绘制流程"></a>ViewGroup 的绘制流程</h3><p>View 和ViewGroup 基本相同，只不过ViewGroup 不仅要绘制自己，还要绘制其子控件，而View 只需要绘制自己即可，所以就以 ViewGroup 来讲解。</p>
-<p>绘制流程分为 3 个步骤，测量（onMeasure）、布局（onLayout）、绘制（onDraw），需要注意的一点是：onMeasure 用于测量当前控件的大小，为正式布局提供建议（<strong>只是提供建议，至于用不用，需要看 onLayout 函数</strong>）。</p>
-<h3 id="onMeasure-函数与-MeasureSpec"><a href="#onMeasure-函数与-MeasureSpec" class="headerlink" title="onMeasure 函数与 MeasureSpec"></a>onMeasure 函数与 MeasureSpec</h3><p>测量过程通过 measure() 函数实现，是 View 树自顶向下的遍历，每个 View 在循环过程中将尺寸细节往下传递，<strong>当测量过程完成后，所有的 View 都存储了自己的尺寸。</strong></p>
-<p>并且，布局过程 layout 也是自顶向下实现的，在这个过程中，每个父 View 负责通过计算好的尺寸放置它的子 View。</p>
-<h4 id="onMeasure-函数"><a href="#onMeasure-函数" class="headerlink" title="onMeasure 函数"></a>onMeasure 函数</h4><p>该函数有2个int类型的参数 widthMeasureSpec 和 heightMeasureSpec ，这两个参数都是父View传递过来给当前 View 的一个<strong>建议值</strong>。</p>
-<h4 id="MeasureSpec-组成"><a href="#MeasureSpec-组成" class="headerlink" title="MeasureSpec 组成"></a>MeasureSpec 组成</h4><p>虽然上述参数是int 类型的，但是它们是由 mode + size 两部分组成的。它们转换成二进制后，<strong>前2位表示模式（mode），后30位表示数值（size）</strong>。模式主要有3种：</p>
-<ul>
-<li>UNSPECIFIED（mode位：00）：父元素不对子元素施加任何约束，子元素可以得到任意想要的大小    </li>
-<li>EXACTLY（mode位：01）：父元素决定子元素的确切大小，子元素将被限定在给定的便捷里而忽略它本身大小</li>
-<li>AT_MOST（mode位：10）:子元素至多能达到指定的大小值</li>
-</ul>
-<p>由以上特性，我们就可以很简单地直到模式和数值的提取：<strong>MODE_MASK，它的二进制表示中，前2位是1，其余30位都是 0，这样，我们只需要将widthMeasureSpec （或 heightMeasureSpec） 位与(&amp;)  MODE_MASK 就可以得到 mode 值，将 他们 &amp; ~MODE_MASK 即可得到数值</strong>。</p>
-<h4 id="mode-的用处"><a href="#mode-的用处" class="headerlink" title="mode 的用处"></a>mode 的用处</h4><p>参数 widthMeasureSpec 和 heightMeasureSpec 各自都有对应的mode，而这个mode 来自 XML 定义，简单来说xml 布局和 mode  有如下关系：</p>
-<ul>
-<li>Wrap_content -&gt; MeasureSpec.AT_MOST</li>
-<li>match_parent -&gt; MeasureSpec.EXACTLY</li>
-<li>具体值 -&gt; MeasureSpec.EXACTLY</li>
-</ul>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">com.example.FlowLayout</span></span></span><br><span class="line"><span class="tag">     <span class="attr">android:layout_width</span>=<span class="string">"match_parent"</span></span></span><br><span class="line"><span class="tag">     <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>比如上述例子中，FlowLayout 在 onMeasure() 函数中传值时，widthMeasureSpec 的mode 是 MeasureSpec.EXACTLY ，即父窗口宽度值；heightMeasureSpec 的mode是 MeasureSpec.AT_MOST ，即值不确定。一定要注意的是：<strong>当模式是 MeasureSpec.EXACTLY 时，就不必设定我们计算的值了，因为这个大小是用户指定的，我们不应该改。但当模式是 MeasureSpec.AT_MOST 时，就需要将大小设定为我们计算的数值，因为用户使用的是 wrap_content，没有设置具体值</strong>。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onMeasure</span><span class="params">(<span class="keyword">int</span> widthMeasureSpec,<span class="keyword">int</span> heightMeasureSpec)</span> </span>{</span><br><span class="line">  <span class="comment">//假设width 与 height 使我们计算得到控件应该占的宽和高，省略计算过程</span></span><br><span class="line">  <span class="keyword">int</span> width = ...;</span><br><span class="line">  <span class="keyword">int</span> height = ...;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">//假设 measureWidth 与 measureHeight 是获取到的后30位的value</span></span><br><span class="line">  <span class="keyword">int</span> measureWidth = ...;</span><br><span class="line">  <span class="keyword">int</span> measureHeight = ...;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">//在 onMeasure 函数中，最终我们必须要通过 setMeasuredDimension 来设置</span></span><br><span class="line">  setMeasuredDimension((widthMode == MeasureSpec.EXACTLY)?measureWidth: width, (heightMode == MeasureSpec.EXACTLY)? measureHeight: height,)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h3 id="onLayout-函数"><a href="#onLayout-函数" class="headerlink" title="onLayout 函数"></a>onLayout 函数</h3><p>前面说了 ，onLayout 实现了所有子View的布局，注意，是<strong>所有子View</strong>。那它自己的布局怎么办？这个后续说。其实 onLayout 是个抽象函数，也就是所有继承 ViewGroup 的类都要自己去实现这个函数，LinearLayout 和 RelativeLayout 都是如此，均重写了。</p>
-<h3 id="简单示例-自己加的章节"><a href="#简单示例-自己加的章节" class="headerlink" title="简单示例(自己加的章节)"></a>简单示例(自己加的章节)</h3><p>用一个简单示例说明 onMeasure 与 onLayout 的具体使用，比如要做如下效果图：</p>
-<p><img src="/assets/Book-Notes/Android%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8E%A7%E4%BB%B6%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/%E7%AE%80%E5%8D%95%E6%95%88%E6%9E%9C.png" alt="简单效果"></p>
-<p>这个效果图需要关注2点：（1）、三个TextView 竖直排列  （2）、背景Layout宽度是 match_parent ，高度是 wrap_content 。首先看下布局文件：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">com.example.myapplication.MyLinLayout</span> <span class="attr">xmlns:android</span>=<span class="string">"http://schemas.android.com/apk/res/android"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:layout_width</span>=<span class="string">"match_parent"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:background</span>=<span class="string">"#ff00ff"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    <span class="tag">&lt;<span class="name">TextView</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:background</span>=<span class="string">"#ff0000"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:text</span>=<span class="string">"第一个VIEW"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">TextView</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:background</span>=<span class="string">"#00ff00"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:text</span>=<span class="string">"第二个VIEW"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">TextView</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:background</span>=<span class="string">"#0000ff"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:text</span>=<span class="string">"第三个VIEW"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">com.example.myapplication.MyLinLayout</span>&gt;</span>                   </span><br></pre></td></tr></tbody></table></figure>
-
-<p>自定义的 MyLinLayout 的宽高分别为 match_parent 和 wrap_content。</p>
-<h4 id="MyLinLayout-重写-onMeasure-函数"><a href="#MyLinLayout-重写-onMeasure-函数" class="headerlink" title="MyLinLayout 重写 onMeasure() 函数"></a>MyLinLayout 重写 onMeasure() 函数</h4><p>前面提到 <strong>onMeasure 的作用就是根据 container 内部的子控件计算自己的宽和高 ，然后通过 setMeasuredDimension 方法设置进去</strong>。先看看完整的代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onMeasure</span><span class="params">(<span class="keyword">int</span> widthMeasureSpec, <span class="keyword">int</span> heightMeasureSpec)</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> measureWidth = MeasureSpec.getSize(widthMeasureSpec);</span><br><span class="line">    <span class="keyword">int</span> measureHeight = MeasureSpec.getSize(heightMeasureSpec);</span><br><span class="line">    <span class="keyword">int</span> measureWidthMode = MeasureSpec.getMode(widthMeasureSpec);</span><br><span class="line">    <span class="keyword">int</span> measureHeightMode = MeasureSpec.getMode(heightMeasureSpec);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> height = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">int</span> width = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">int</span> count = getChildCount();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; count; i++) {</span><br><span class="line">        <span class="comment">//测量子控件</span></span><br><span class="line">        View child = getChildAt(i);</span><br><span class="line">        measureChild(child, widthMeasureSpec, heightMeasureSpec);</span><br><span class="line">        <span class="comment">//获取子控件的宽高</span></span><br><span class="line">        <span class="keyword">int</span> childHeight = child.getMeasuredHeight();</span><br><span class="line">        <span class="keyword">int</span> childWidth = child.getMeasuredWidth();</span><br><span class="line">        <span class="comment">//得到最大宽度，并且累加高度</span></span><br><span class="line">        height += childHeight;</span><br><span class="line">        width = Math.max(childWidth, width);</span><br><span class="line">        setMeasuredDimension((measureWidthMode == MeasureSpec.EXACTLY) ? measureWidth : width, </span><br><span class="line">                (measureHeightMode == MeasureSpec.EXACTLY) ? measureHeight : height);</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>步骤如下：</p>
-<ol>
-<li>获取从父类传过来的建议宽高，提取mode 和value </li>
-<li>测量所有的子 View ，之后就能获取所有子View 的测量宽高</li>
-<li>根据所有子View 的宽高，来获得自己的<strong>计算宽高，这个值计算的其实就是自己宽和高都被设置为 wrap_content 情况下的值</strong>，因为 Exactly 的时候，并不建议我们去改value 的。</li>
-<li>因为是竖直排列，所以container 的高度应该是各个子View的高度和；宽度应该是各个子View 最大的宽度</li>
-<li>最后，根据当前用户设置的mode来判断是否需要将这个计算宽高设置进去，用它来实现当前container 所在的位置</li>
-</ol>
-<p>由于我们在上面的xml 布局文件中，将 MyLinLayout 的宽度设置为 match_parent ，高度为 wrap_content ，所以在onMeasure 里面，</p>
-<p>int measureWidthMode 应该是MeasureSpec.EXACTLY；  measureHeightMode 为 MeasureSpec.AT_MOST，<strong>换句话说，width 使用的是从父类传过来的 measureWidth ，高度是我们自己计算的 height</strong>，即实际情况应该等价于：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setMeasuredDimension(measureWidth, height);</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h3 id="MyLinLayout-重写-onLayout-函数"><a href="#MyLinLayout-重写-onLayout-函数" class="headerlink" title="MyLinLayout 重写 onLayout 函数"></a>MyLinLayout 重写 onLayout 函数</h3><p>在这一部分是根据自己的医院把 container 内部的各个控件排列起来，先看完整代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onLayout</span><span class="params">(<span class="keyword">boolean</span> changed, <span class="keyword">int</span> l, <span class="keyword">int</span> t, <span class="keyword">int</span> r, <span class="keyword">int</span> b)</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> top = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">int</span> count = getChildCount();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; count; i++) {</span><br><span class="line">        View child = getChildAt(i);</span><br><span class="line">        <span class="keyword">int</span> childHeight = child.getMeasuredHeight();</span><br><span class="line">        <span class="keyword">int</span> childWidth = child.getMeasuredWidth();</span><br><span class="line">        <span class="comment">//设置子View的位置</span></span><br><span class="line">        child.layout(<span class="number">0</span>, top, childWidth, top + childHeight);</span><br><span class="line">        top += childHeight;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>代码讲完，再讲一个非常容易混淆的问题：</p>
-<h4 id="getMeasuredWidth-与-getWidth"><a href="#getMeasuredWidth-与-getWidth" class="headerlink" title="getMeasuredWidth 与 getWidth"></a>getMeasuredWidth 与 getWidth</h4><p>这两个值大部分时候是相同的，但是含义根本不一样，二者区别主要体现在：</p>
-<ul>
-<li>getMeasuredWidth 函数在 measure 过程结束后就可以获取到宽度值，而getWidth 需要在 layout 完成后才能获取到高度值！</li>
-<li>getMeasuredWidth 获取的值是通过 setMeasuredDimension 函数来设置的；而 getWidth 函数值则是通过 layout（left,top,right,bottom） 函数来进行设置的</li>
-</ul>
-<p>看完两个函数后，我们也明白了 onMeasure 阶段提供的测量结果只是为布局提供建议的，最终要看 onLayout 函数。<strong>因为我们在 child.layout 的时候，直接通过 0 + child.measuredWidth 来计算right 的值，所以我 getMeasuredWidth 与 getWidth 函数返回的值就是一样的了</strong>。</p>
-<h4 id="疑问：container-自己什么时候被布局"><a href="#疑问：container-自己什么时候被布局" class="headerlink" title="疑问：container 自己什么时候被布局"></a>疑问：container 自己什么时候被布局</h4><p>这其实要追溯到 View 的 layout 里面：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">layout</span><span class="params">(<span class="keyword">int</span> l, <span class="keyword">int</span> t, <span class="keyword">int</span> r, <span class="keyword">int</span> b)</span> </span>{</span><br><span class="line">  ...省略代码</span><br><span class="line">        <span class="keyword">boolean</span> changed =  setFrame(l, t, r, b);</span><br><span class="line">    ...省略代码</span><br><span class="line">       onLayout(changed, l, t, r, b);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>setFrame 设置的是自己的位置，结束后才调用 onLayout 。此时，measure 和 layout 都结束了，但是我们还没考虑 margin。</p>
-<h3 id="获取子控件margin"><a href="#获取子控件margin" class="headerlink" title="获取子控件margin"></a>获取子控件margin</h3><p>如果要自定义 ViewGroup 支持子控件的 layout_margin 参数，则自定义的 ViewGroup 类<strong>必须重写 generateLayoutParams() 函数，并且在该函数返回一个 ViewGroup.MarginLayoutParams 派生类对象！</strong></p>
-<p>为了验证，我们可以在之前的 MyLinLayout 例子基础上，为 TextView 添加 margin ，但是我们能看到，压根就没有起作用，代码就先略了。这是为什么呢？因为测量和布局都是我们自己实现的，我们在 onLayout() 函数中没有根据 margin 来布局。</p>
-<p>需要注意的是，<strong>如果我们在 onLayout() 函数中根据 margin 来布局，那么 onMeasure() 函数中计算 container 的大小时，也要加上 layout_margin 参数，否则导致 container 太小而控件显示不全</strong>。</p>
-<h4 id="实例展示"><a href="#实例展示" class="headerlink" title="实例展示"></a>实例展示</h4><p>之前说的需要重写  generateLayoutParams()  函数，代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> LayoutParams <span class="title">generateLayoutParams</span><span class="params">(LayoutParams p)</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MarginLayoutParams(p);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> LayoutParams <span class="title">generateLayoutParams</span><span class="params">(AttributeSet attrs)</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MarginLayoutParams(getContext(), attrs);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> LayoutParams <span class="title">generateDefaultLayoutParams</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MarginLayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>至于为什么要这么写，稍后再讲。</p>
-<h4 id="重写-onMeasure-函数"><a href="#重写-onMeasure-函数" class="headerlink" title="重写 onMeasure() 函数"></a>重写 onMeasure() 函数</h4><p>略</p>
-<h2 id="实现-FlowLayout-容器"><a href="#实现-FlowLayout-容器" class="headerlink" title="实现 FlowLayout 容器"></a>实现 FlowLayout 容器</h2><p>先略</p>
-<p>当measure 完成之后，尺寸才会存到 View 属性中，我们才能获取到 View 的属性</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/20/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E9%98%B2%E6%AD%A2jar%E8%A2%AB%E5%8F%8D%E7%BC%96%E8%AF%91/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/20/%E9%9D%A2-%E7%9F%A5%E8%AF%86/%E9%98%B2%E6%AD%A2jar%E8%A2%AB%E5%8F%8D%E7%BC%96%E8%AF%91/" class="post-title-link" itemprop="url">Java基础-防止jar被反编译</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-09-20 18:25:00" itemprop="dateCreated datePublished" datetime="2021-09-20T18:25:00+08:00">2021-09-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-09-28 16:31:33" itemprop="dateModified" datetime="2021-09-28T16:31:33+08:00">2021-09-28</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>java作为解释型语言，因其高度抽象的特性导致其很容易被反编译，容易被反编译，自然有防止反编译的措施存在。常见的防反编译的技术有以下几种。</p>
-<h3 id="隔离Java程序"><a href="#隔离Java程序" class="headerlink" title="隔离Java程序"></a>隔离Java程序</h3><p>最简单的方法就是让用户不能够访问到 Java Class 程序，这种方法是最根本的方法。具体方法有很多，比如：</p>
-<ul>
-<li>将关键的Java Class 放在服务端，客户端通过访问接口来获得服务，而不是直接访问 Class 文件，这样黑客就没法反编译 Class 文件。</li>
-</ul>
-<p>但是有很多应用场景不适合这种保护方式，比如<strong>单机运行的程序</strong> 就无法格力Java 程序。</p>
-<h3 id="对-Class-文件进行加密"><a href="#对-Class-文件进行加密" class="headerlink" title="对 Class 文件进行加密"></a>对 Class 文件进行加密</h3><p>为了防止Class 文件被直接反编译，许多开发人员将一些关键的 Class 文件进行加密，例如，<strong>注册码、序列号管理</strong>等相关的类。</p>
-<p>在使用这些类之前，程序寿险需要对这些类进行解密，然后再将这些类装在到 JVM 中，<strong>这些类的加密可以由硬件完成，也可以使用软件完成</strong>。</p>
-<h3 id="转换成-Native-Code"><a href="#转换成-Native-Code" class="headerlink" title="转换成 Native Code"></a>转换成 Native Code</h3><p>Native Code 往往难以被反编译，开发人员可以选择将整个应用程序转换成 Native Code，也可以选择将关键模块转换为 Native Code。</p>
-<p>当然，这么做的同时，<strong>也牺牲了Java 的跨平台特性</strong>。如果仅仅转换关键部分，Java 程序在使用这些模块时，需要使用 JNI 技术调用。</p>
-<p>为了保证Native 代码不被修改和替代，通常需要对这些代码<strong>进行数字签名</strong>。在使用前，往往需要先对 Native Code 进行认证。</p>
-<h3 id="代码混淆"><a href="#代码混淆" class="headerlink" title="代码混淆"></a>代码混淆</h3><p>代码混淆是对 Class 文件进行重新组织和处理，功能虽然还保证，但是很难被反编译，即使反编译后也非常难懂。</p>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/BTH73KaZKqwX3JL2O1T-PA">如何防止你的java jar被反编译</a></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/09/19/%E4%B9%A6-Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC2%E7%AB%A0-%E7%BB%84%E4%BB%B6%E5%8C%96%E7%BC%96%E7%A8%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/19/%E4%B9%A6-Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC2%E7%AB%A0-%E7%BB%84%E4%BB%B6%E5%8C%96%E7%BC%96%E7%A8%8B/" class="post-title-link" itemprop="url">第2章：组件化编程</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-09-19 11:22:00" itemprop="dateCreated datePublished" datetime="2021-09-19T11:22:00+08:00">2021-09-19</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-12-24 17:36:47" itemprop="dateModified" datetime="2021-12-24T17:36:47+08:00">2021-12-24</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="信息传递（自己起的，感觉书起的章节很乱）"><a href="#信息传递（自己起的，感觉书起的章节很乱）" class="headerlink" title="信息传递（自己起的，感觉书起的章节很乱）"></a>信息传递（自己起的，感觉书起的章节很乱）</h2><p>Android中提供了很多不同的信息传递方式，本节主要衡量每种传递方式的效率和使用场景。</p>
-<p>在最基础的组件化架构中，组件层中的模块是相互独立的，并不存在依赖，没有依赖就没法传递消息，那该如何传递消息呢？我们需要第三方协助，也就是基础层（BaseModule），如下图所示：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E5%9F%BA%E7%A1%80%E5%8C%96%E7%BB%84%E4%BB%B6%E7%9A%84%E9%80%9A%E4%BF%A1.png" alt="基础组件化通信"></p>
-<p>从图可以看出，<strong>Base module 就是跨越组件化层级通信的关键，也是模块间交流的基础</strong>。</p>
-<h3 id="方式1、本地广播"><a href="#方式1、本地广播" class="headerlink" title="方式1、本地广播"></a>方式1、本地广播</h3><p>本地广播与全局广播比较：</p>
-<ul>
-<li>本地广播只能动态注册，全局广播可以动态和静态注册</li>
-<li>本地广播只局限于当前App（严谨说是当前进程），全局广播可以跨进程</li>
-<li>本地广播使用Handler 实现，就在当前进程传播，因此效率比全局广播高</li>
-</ul>
-<p>但是，<strong>在用于组件间通信时，本地广播将一切全交给系统负责了，无法干预传输途中的任何步骤</strong>。</p>
-<h3 id="方式2、事件总线"><a href="#方式2、事件总线" class="headerlink" title="方式2、事件总线"></a>方式2、事件总线</h3><p>事件总线主要有 EventBus 和 RxBus。</p>
-<p>事件总线通过记录对象、使用监听者模式来通知对象各种事件。工作机制如下图：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E4%BA%8B%E4%BB%B6%E6%80%BB%E7%BA%BF%E5%B7%A5%E4%BD%9C%E7%A4%BA%E6%84%8F.png" alt="事件总线工作示意"></p>
-<p>其中，EventBus 是一款针对Android优化的发布/订阅事件总线，主要功能是替代 Intent、Handler、BroadCast，在Fragment、Activity、Service、线程之间传递消息，<strong>优点是开销小，代码更优雅，发送和接收者解耦；缺点是依附的对象销毁时一定要记得取消订阅，否则由于强引用会导致内存泄漏，并且，每个事件都必须自定义一个事件类，造成事件类太多</strong>。</p>
-<blockquote>
-<p>注意： EventBus 2.x 使用的是 运行时注解，很大程度上是依赖于反射规则的，采用反射的方式对整个注册的类的所有方法进行扫描来完成注册；而Eventbus 3.x 使用的是 编译时注解，在编译的时候，就会将相应操作编译成 .class 文件，在编译时就进行操作这样运行时的速度就会快很多。</p>
-</blockquote>
-<p>RxBus 是基于RxJava 衍生而来的，只要引入了 RxJava 和 R小Android 就能很方便地使用 RxBus ，它的实现很有意思，<strong>采用静态内部类的单例，由于内部静态类只会被加载一次，所以实现方式是线程安全的</strong>（可以与volatile + double check 对比着看）：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RxBus</span> </span>{</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Subject bus;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">RxBus</span><span class="params">()</span> </span>{</span><br><span class="line">    bus = <span class="keyword">new</span> SerializedSubject&lt;&gt;(PublishSubject.create());</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> RxBus <span class="title">getInstance</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> RxBusHolder.mInstance;</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">RxBusHolder</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> RxBus mInstance = <span class="keyword">new</span> RxBus();</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h3 id="组件化事件总线考量"><a href="#组件化事件总线考量" class="headerlink" title="组件化事件总线考量"></a>组件化事件总线考量</h3><p>通信事件都要放到公共的Base模块中，Base模块也需要依赖于事件总线框架，信息组件都都需要放在Base模块中，我们看一下总线传递的流程：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E6%80%BB%E7%BA%BF%E4%BC%A0%E9%80%92%E6%B5%81%E7%A8%8B.png" alt="总线传递流程"></p>
-<p>组件化要求功能模块独立，应该尽量少影响 App module 和 Base module ，其中 Base module 尽量做得通用，不受其他模块影响。而<strong>如果上述事件总线放在 Base module 中，每个模块增删时，都需要添加或者删除Base module 的事件</strong>，而增删事件会让其他代码索引到这些事件的代码时造成错误，这样会破坏组件化设计的规则。</p>
-<p>这就是目前组件化通信会遇到的瓶颈。两种比较适合现阶段组件化通信的方式：</p>
-<ul>
-<li>ModuleBus： 能传递一些基础类型数据，不需要在 Base module 添加额外的类，所以不会影响 Base模块的架构，但也无法动态移除信息接收端代码，而自定义的事件信息模型还是需要添加到 Base module    </li>
-<li>组件化架构的 ModularizationArchitecture 库。每个功能模块都需要使用注解建立 Action 时间，每个 Action 完成一个事件动作，没有用到反射，参数通过 HashMap&lt;Stirng,String&gt;传递，无法传递对象    </li>
-</ul>
-<p>但是，<strong>如果一定要使用 EventBus 或者 RxBus事件总线</strong>，这里提供一种架构方案，最大限度地解耦：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/EventBus%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E4%BD%BF%E7%94%A8.png" alt="EventBus正确使用使用"></p>
-<p>其中xxBus独立为一个module ，Base module 依赖 xxBus 对事件通信的解耦，抽离事件到 xxBus 事件总线模块，以后天啊及事件的Event 的实体都需要在上面创建。</p>
-<h2 id="组件间跳转"><a href="#组件间跳转" class="headerlink" title="组件间跳转"></a>组件间跳转</h2><p>在组件化中，两个功能模块是不存在直接依赖的，<strong>其依赖规则是通过 Base module 间接依赖的</strong>。</p>
-<p>Activity 跳转，直观的跳转就是startActivity 发送一个包装好的 intent去实现。但是如果Activity 在其他 moudle ，则无法索引到 Activity 类，这时候我们会很自然想到使用 intent 包装隐式 Action 实现。隐式跳转的方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//方法1 通过AndroidManifest中声明的action来启动</span></span><br><span class="line">Intent intent = <span class="keyword">new</span> Intent(<span class="string">"material.com.settings"</span>);</span><br><span class="line">startActivity(intent);</span><br><span class="line"></span><br><span class="line"><span class="comment">//方法2 包名 + 类名的方式</span></span><br><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">intent.setClassName(<span class="string">"模块包名"</span>, <span class="string">"Activity路径"</span>);</span><br><span class="line">intent.setComponent(<span class="keyword">new</span> ComponentName(<span class="string">"模块包名"</span>,<span class="string">"Activity路径"</span>));</span><br><span class="line">startActivity(intent);</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>但是第2种方式会产生崩溃，提示Activity并没有在AndroidManifest中注册，可是明明注册了啊？这里真正需要理解的是， setClassName 和 setComponent 函数第一个参数的真正含义，<strong>它们是 App 的包名而不是所在的 module 的包名 ！</strong>这在第1章的时候已经聊过了，<strong>当最终合成 AndroidManifest 后，module的包名压根就不存在了</strong>（<font color="#ff0000">有空需要自己去验证下</font>）。</p>
-<p>由于隐式跳转有可能找不到目标Activity 而导致崩溃，所以，我们应该首先判断intent是否能够正常跳转。</p>
-<p>此外，还有对安全问题的考虑，因为其他App也能通过隐式的 Intent 来启动 Activity （<strong>隐式跳转是原生的，作用范围是整个Android系统</strong>），为了确保只有自己的 App 能启动组件，需要设置 exported = false。</p>
-<h3 id="ARouter-路由跳转"><a href="#ARouter-路由跳转" class="headerlink" title="ARouter 路由跳转"></a>ARouter 路由跳转</h3><p>ARouter 使用 AOP 切面编程可以进行控制跳转的过滤。在 Application 中进行 init 之后，我们就对跳转目标做处理：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//声明</span></span><br><span class="line"><span class="meta">@Route(path="gank_web/1")</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WebActivity</span> <span class="keyword">extends</span> <span class="title">BaseActivity</span> </span>{}</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line">ARouter.getInstance().build(<span class="string">"gank_web/1"</span>)</span><br><span class="line">  .withString(<span class="string">"url"</span>,url)</span><br><span class="line">  .navigation();</span><br><span class="line"></span><br><span class="line"><span class="comment">//获取传递的参数</span></span><br><span class="line">Intent intent = getIntent();</span><br><span class="line">String url = intent.getStringExtra(<span class="string">"url"</span>);</span><br></pre></td></tr></tbody></table></figure>
-
-<p>整一个过程还是非常优雅的。</p>
-<h3 id="组件化最佳路由"><a href="#组件化最佳路由" class="headerlink" title="组件化最佳路由"></a>组件化最佳路由</h3><p>既然已经存在隐式跳转，为什么我们还要选择路由呢？<strong>在组件化架构中，假如移除一些功能  module 和跳转关系，则跳转无法成功，此时，如果要做一些提示，将迁入更多的判断机制代码。而使用路由机制，可以统一对这些索引不到的 module 页面进行提前拦截和做出提示。</strong></p>
-<p>路由除了跳转，另一个重要作用就是拦截，比如可以在跳转前进行登录状态验证，路由表的引入，也不需要在 AndroidManifest 中声明隐式跳转。</p>
-<p><strong>路由的选择：</strong>现在开源软件中有不少路由结构，比如： ActivityRouter、天猫统跳协议、ARouter、DeepLinkDispatch、OkDeepLink 等。如果你的项目没有引入 RxJava，那么 ARouter 的介入成本低，是首选；如果接入了，那 OkDeepLink 可以 兼容 RxJava ，可以做考虑。当然，OkDeepLink 会在 Intent 中加入 FLAG_ACTIVITY_NEW_TASK 标识，那么创建每个Activity 都会创建新的任务栈来装载 ！这样无法做到标准的压栈。</p>
-<h3 id="空类索引"><a href="#空类索引" class="headerlink" title="空类索引"></a>空类索引</h3><p>如果不想使用第三方路由，可以采用空类索引的方式实现跳转，它的原理就是：<strong>使用空类来欺骗编译。</strong>具体的步骤为（个人理解，不一定对）：</p>
-<ol>
-<li>在各个 module 编写好，但还没实现跨 module 跳转之前</li>
-<li>将所有 module 打包，就会生成 apk 了，只是还暂时不能跳转而已</li>
-<li>通过某种手段（人工或者工具）解压 apk ，并读取 AndroidManifest.xml 文件中的四大组件信息，生成一个 jar 包 </li>
-<li>这个 jar 包里面的内容是空的四大组件，比如，AndroidManifest 中有个 com.example.ActivityA ，那么在 jar 包中也会声明（同路径、同类名）一个 com.example.ActivityA，并且继承 Activity </li>
-<li>之后，将这个 jar 包以 provided 形式（只是引入，不会编译进去）到各个 module 中</li>
-<li>此后，各个 module 便可以直接以普通的显式 Intent 来 startActivity 了！</li>
-</ol>
-<h2 id="动态创建"><a href="#动态创建" class="headerlink" title="动态创建"></a>动态创建</h2><p>动态创建也是为了解耦</p>
-<h3 id="动态创建-Fragment"><a href="#动态创建-Fragment" class="headerlink" title="动态创建 Fragment"></a>动态创建 Fragment</h3><p>如果在单Activity + 多Fragment情景中，可以使用动态创建 Fragment （反射的方式），之后添加到 ViewPager 里面，这种方式用于模块间的解耦是非常合适的。因为普通方式使用 Fragment 的话，需要强引用 Fragment，而这些Fragment 可能不在当前使用的 module 中，而且因为ARouter 也支持这种 Fragment 方式，所以直接使用 ARouter 是不错的。当然，由于我们是通过反射方式创建实例的，因此需要防止Fragment所在的 module 被移除之后产生 Exception，并且反射也会消耗性能。</p>
-<h3 id="动态配置Application"><a href="#动态配置Application" class="headerlink" title="动态配置Application"></a>动态配置Application</h3><p>前面介绍了 Application 产生的替换原则。如果某些功能模块需要做一些初始化操作，<strong>则只能强引用到主 module 的 Application 中</strong>，是否有方法可以降低耦合呢？</p>
-<p><strong>第一种方案：</strong>通过主 module 获取各个 module 的初始化文件，然后通过反射初始化的 Java 文件来调用初始化方法：</p>
-<ol>
-<li><p>Base module 中定义接口 BaseAppInit，里面有 init() 方法</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">BaseAppInit</span> </span>{</span><br><span class="line">  <span class="function"><span class="keyword">boolean</span> <span class="title">init</span><span class="params">(Application app)</span></span></span><br><span class="line"><span class="function">}</span></span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>在 module 中使用 BaseAppInit ，实现它：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NewsInit</span> <span class="keyword">implements</span> <span class="title">BaseAppInit</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">init</span><span class="params">(Application app)</span> </span>{</span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>在 PageConfig 中添加配置</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String NEWS_INIT = <span class="string">"material.com.news.api.NewsInit"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> String[] initModules = {</span><br><span class="line">  NEWS_INIT</span><br><span class="line">};</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>在主 module 的 Application 中实现初始化方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initModules</span><span class="params">()</span> </span>{</span><br><span class="line">  <span class="keyword">for</span> (String init: PageConfig.initModules) {</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">      Class&lt;?&gt; clazz = Class.forName(init);</span><br><span class="line">      BaseAppInit moduleInit = (BaseAppInit)clazz.newInstance();</span><br><span class="line">      moduleInit.init(<span class="keyword">this</span>);</span><br><span class="line">    } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">      e.printStack();</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>在 Application的 onCreate 中调用 上述的 initModules 方法即可</p>
-</li>
-</ol>
-<p><strong>第二种方案：</strong>在 Base module 中创建 BaseApplication ，之后主 Module 中的 Application 继承 BaseApplication 即可：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//在 Base Module 中创建</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseAppLogic</span> </span>{</span><br><span class="line">  <span class="keyword">protected</span> BaseApplication mApplication;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setApplication</span><span class="params">(BaseApplication application)</span></span>{</span><br><span class="line">    mApplication = application;</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>{}</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onLowMemory</span><span class="params">()</span> </span>{}</span><br><span class="line">  ...<span class="comment">//其余一些 Application 中重要的回调</span></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//Base Module 中的 BaseApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseApplication</span> <span class="keyword">extends</span> <span class="title">Application</span> </span>{</span><br><span class="line">  </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>{</span><br><span class="line">    initLogic();</span><br><span class="line">    logicCreate();</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onLowMemory</span><span class="params">()</span></span>{</span><br><span class="line">    logicLowMemory();</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="comment">//供主module 调用</span></span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">logicCreate</span><span class="params">()</span></span>;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">//供主module 调用</span></span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">logicLowMemory</span><span class="params">()</span></span>;</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>唉，第二次了还是没看懂这个方案，先不写了（<font color="#ff0000">以上内容代码没写完的</font>）。我个人觉得可以参考 ARouter 的思路，给子 module 自定义的 Application 加编译时注解，在编译的时候把这些 Application 找出来，生成新的类，然后就可以反射调用子module的 Application 方法了。</p>
-<h2 id="数据存储"><a href="#数据存储" class="headerlink" title="数据存储"></a>数据存储</h2><p>存储方式主要5种，网络存储、File I/O 、SQLite、ContentProvider、SharedPreference，根据 安全、效率、量级 三个维度去决定使用哪种方式：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E6%95%B0%E6%8D%AE%E5%AD%98%E5%82%A8%E8%80%83%E8%99%91%E7%BB%B4%E5%BA%A6.png" alt="数据存储考虑维度"></p>
-<h3 id="组件化存储"><a href="#组件化存储" class="headerlink" title="组件化存储"></a>组件化存储</h3><p>Android 原生的存储体系是全局的，在组件化开发中，五中原生的存储方式是完全通用的。文中介绍了 greeDAO 这个关系映射的数据库框架，greeDAO 是目前众多ORM（对象关系映射）数据库中最稳定、速度最快、编写体验最好的框架，并且<strong>支持数据加密，RxJava，</strong>它能通过对象的方式去操作关系型数据库，但是它的底层还是 SQLite ，它的原理是将一个实体对象转换成意向数据，然后保存到SQLite。也正因为基于SQLite ，所以不能存储图片这样的大文件。关于数据库在组件化的应用，实体类放在本身的module 是无法传递的，需要放在一个统一的 module 中来管理这些类的产生和引用，其greenDao 需要在 Base module 中引入，编写时注解生成的对象也应该在 Base module 中，这样全部的模块才能引用到这个数据：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E5%85%B3%E7%B3%BB%E5%9E%8B%E6%95%B0%E6%8D%AE%E5%BA%93%E7%AE%80%E5%8D%95%E6%9E%B6%E6%9E%84.png" alt="关系型数据库简单架构"></p>
-<p>当然，更好的设计，文中也建议与事件总线一样，如下图：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E5%85%B3%E7%B3%BB%E5%9E%8B%E6%95%B0%E6%8D%AE%E5%BA%93%E6%9E%B6%E6%9E%84.png" alt="关系型数据库架构"></p>
-<h2 id="权限管理"><a href="#权限管理" class="headerlink" title="权限管理"></a>权限管理</h2><h3 id="组件化权限"><a href="#组件化权限" class="headerlink" title="组件化权限"></a>组件化权限</h3><p>通过查看 AndroidManifest 文件，可以看到各个 module 中的权限申请，最终会被合并到完整 AndroidManifest 中。这时候，我们有两种权限放置方案：</p>
-<ol>
-<li>将 normal 级别的权限申请都放到 Base module 中，然后在各个 module 中分别申请 dangerous 权限，这样分配的好处在于：<strong>当添加或者移除一个模块时，隐私权限的申请也跟随移除，做到最大限度地解耦</strong></li>
-<li>还有人提议，将权限全部转交给每个 module 中，达到最大程度的解耦，这样做的缺点在于：<strong>会增加AndroidManifest 的合并检测的耗时</strong></li>
-</ol>
-<p>当项目需要适配到 Android 6.0 以上的动态权限申请时，需要在 Base module 中添加自己封装的一套权限申请工具，其他组件层的 module 都能使用这套工具，书中推荐选择 AndPermission 。</p>
-<h3 id="动态权限框架"><a href="#动态权限框架" class="headerlink" title="动态权限框架"></a>动态权限框架</h3><p>AndPermission  使用简单，并且最大程度适配国内各大厂商的 ROM。</p>
-<h3 id="路由拦截"><a href="#路由拦截" class="headerlink" title="路由拦截"></a>路由拦截</h3><p>当调用其他模块的功能时，就是路由拦截器起作用的时候了，<strong>将路由拦截器和权限申请结合在一起</strong>，前面介绍的 ARouter 是跳转钱是会遍历 Interceptor 的，因此我们可以设置拦截器来实现：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SettingsIntercptor</span> <span class="keyword">implements</span> <span class="title">IInterceptor</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(Postcard postcard, InterceptorCallback callback)</span> </span>{</span><br><span class="line">    <span class="comment">//通过 postcard 中的跳转地址过滤</span></span><br><span class="line">    <span class="keyword">if</span> (postcard.getPath.equals(<span class="string">"/gank_setting/1"</span>)) {</span><br><span class="line">      <span class="comment">//权限申请处理</span></span><br><span class="line">  </span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>在上述过程可能涉及到弹出 Dialog ，那么我们首先要获取当前的 Activity 。我们可以通过在 Base module 中的 BaseApplication 中做 registerActivityLifecycle 来保存栈顶的 Activity，有两种方案：</p>
-<ol>
-<li>在onCreate 的时候持有这个 Activity ，但是这可能引起内存泄漏</li>
-<li><strong>我们在 resume 的时候持有 这个activity ，由于 下一个 Activity 的 resume 肯定比当前 Activity 的 destroy 要先执行</strong>，所以可以肯定静态持有栈顶 Activity 不会导致内存泄漏（细品就知道了）。</li>
-</ol>
-<h2 id="静态常量"><a href="#静态常量" class="headerlink" title="静态常量"></a>静态常量</h2><p>在 Application module 中查看 R.java 文件：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">R</span> </span>{</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">anim</span> </span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> abc_fade_in = <span class="number">0x7f050000</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> abc_fade_out = <span class="number">0x7f050001</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> abc_fade_from_bottom = <span class="number">0x7f050002</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>但是，在 Lib module 中查看 R.java 文件：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">R</span> </span>{</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">anim</span> </span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> abc_fade_in = <span class="number">0x7f050000</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> abc_fade_out = <span class="number">0x7f050001</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> abc_fade_from_bottom = <span class="number">0x7f050002</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>仔细观察会发现，<strong>在 Lib module 中的静态变量没有被赋予 final 属性</strong>。在第1章提及，各个 module 会生成 aar 文件，并且被引用到 Application  module 中，最终合并成 apk 文件，当各个次级 module 在 Application module 中被解压后，在编译时 R.java 会被重新解压到 build/generated/source/r/debug(release)/包名/R.java 中。</p>
-<p><strong>合并后的 R.java 中 的id 属性会被添加 final 修饰符</strong>。（<font color="#ff0000">这是我自己理解的，需要验证</font>）</p>
-<h3 id="组件化的静态变量"><a href="#组件化的静态变量" class="headerlink" title="组件化的静态变量"></a>组件化的静态变量</h3><p>在 Lib module 中，R.java 文件没有了 final 关键字会导致什么问题呢？</p>
-<p><strong>这就会导致凡是规定必须采用常量的地方都无法直接使用 R.java 中的变量，包括 switch-case  和注解。</strong>为此，我们只能抛弃 switch-case 而只能使用 if-else 来实现，if 里面不需要常量。</p>
-<p>（<font color="#ff0000">这个知识点是自己加的</font>&gt;）不同的 module 之间无法保证 R.java 中变量对应的数值不同，但是我们可以保证 R.java 的值不同，为了避免R.java 中资源的冲突，不同的 module 中，我们资源命名最好加前缀加以区分，比如登录module ，资源以 login_ 开头，比如社区module ，资源可以以 comm_ 开头等等。</p>
-<h3 id="R2-java-的秘密"><a href="#R2-java-的秘密" class="headerlink" title="R2.java 的秘密"></a>R2.java 的秘密</h3><p>ButterKnife ，一个专注于 Android View 的注入框架，可以大量减少 findviewById 和 setOnClickListener 操作的第三方库。当使用注入View 绑定时：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@BindView(R2.id.submit)</span></span><br><span class="line"><span class="keyword">public</span> Toolbar mToolbar;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>编译成 class 后，R的值会替换为常量：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@BindView(2131492966)</span></span><br><span class="line"><span class="keyword">public</span> Toolbar mToolbar;</span><br></pre></td></tr></tbody></table></figure>
-
-<p><strong>注解中只能使用常量</strong>，如果不是常量就会报错，那么 ButterKnife 是如何解决的呢？它的原理是使用替换的方法，<strong>将 R.java 文件复制一份，命名为 R2.java ，然后给 R2.java 的变量加上 final 修饰符，在相关的地方直接使用 R2 资源！</strong>这一点，可以从 ButterKnife Gradle 中的 ButterKnifePlugin 源码中找到答案，源码略。最终生成的 R2 与 R 文件在同一个目录。</p>
-<p>当然，ButterKnife 中处理后代码还是会用 findViewById ，用的是 R 的，而不是 R2， 但是 onClick 的时候，用的还是 R2，因为我们 view.getId() 返回的是 R 中的id ，而 R2 是 R 的副本，所以是一致的，不会有问题。</p>
-<p>值得注意的是，library 使用 R2 的方式时，会出现 library 和 Application 切换 R 文件资源的引用问题，这里全部使用 R2 的方式生成引用资源 id，则不会出现此问题。</p>
-<h2 id="资源冲突"><a href="#资源冲突" class="headerlink" title="资源冲突"></a>资源冲突</h2><h3 id="组件化的资源汇合"><a href="#组件化的资源汇合" class="headerlink" title="组件化的资源汇合"></a>组件化的资源汇合</h3><p>全部功能都依赖 Base module ，但是 Application module 最终还是得将功能 module 的 aar 文件汇总后，才能开始编译，那会不会出现多个 Base module 呢，不会，我们可以通过 gradle 命令查看 module 的依赖树：</p>
-<blockquote>
-<p>./gradlew module_name: dependencies</p>
-</blockquote>
-<p>则会展示依赖树，有些传递依赖标记了 * ，表示这个依赖被忽略了，因为有其他定级依赖中也依赖了这个传递的依赖。</p>
-<h3 id="AndroidManifest-冲突问题"><a href="#AndroidManifest-冲突问题" class="headerlink" title="AndroidManifest 冲突问题"></a>AndroidManifest 冲突问题</h3><p>前面说了，AndroidManifest 中 Application 的 app:name 冲突时，需要使用 “tools:replace=android:name” 声明可替换</p>
-<h3 id="包冲突"><a href="#包冲突" class="headerlink" title="包冲突"></a>包冲突</h3><p>包冲突可以先检查依赖报告，用以下命令查看依赖目录树：</p>
-<blockquote>
-<p>./gradlew module_name: dependencies</p>
-</blockquote>
-<p>有冲突可以使用 exclude 解决：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">compile(<span class="string">'com.facebook.fresco:fresco:0.10.0'</span>) {</span><br><span class="line">  exclude group: <span class="string">'com.android.support'</span>, <span class="keyword">module</span>:<span class="string">'support-v4'</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-
-
-<h3 id="资源名冲突"><a href="#资源名冲突" class="headerlink" title="资源名冲突"></a>资源名冲突</h3><p>因为无法保证不同的module 中资源名称不同，<strong>那么Gradle 就会合并相同命名的资源，并且后编译的模块会覆盖之前编译的模块中的资源字段中的内容</strong>。所以，一般在一开始命名的时候，不同的 module 加上不同的前缀即可解决。只能一点可以采用 gradle 命名提示机制，resourcePrefix字段：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">android {</span><br><span class="line">    resourcePrefix "组件名_"</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h2 id="组件化混淆"><a href="#组件化混淆" class="headerlink" title="组件化混淆"></a>组件化混淆</h2><h3 id="混淆基础"><a href="#混淆基础" class="headerlink" title="混淆基础"></a>混淆基础</h3><p>混淆包括了代码压缩，代码混淆以及资源压缩等优化过程。AS 中的 ProGuard 是一个压缩、优化和混淆Java 字节码的工具，可以删除无用类、字段、方法和属性，还可以删除无用注释，最大限度优化字节码文件。</p>
-<p>不能混淆的情况有以下：</p>
-<ul>
-<li>反射中使用的元素</li>
-<li>最好不让一些Bean 对象混淆</li>
-<li>四大组件要在AndroidManifest中声明，混淆后类名发生改变，因此不要混淆</li>
-<li>注解不要混淆，注解一般要用到反射</li>
-<li>不能混淆枚举红的 value 和 valueOf ，因为这两个方法是静态添加到代码中运行的，也会被反射使用</li>
-<li>JNI 调用 java 的方法，需要通过类名和方法名构成地址形成</li>
-<li>java 使用 Native 方法，Native 是C/C++ 编写的，方法是无法一同混淆的</li>
-<li>JS 调用 java的方法（-keepattributes *JavascriptInterface*） </li>
-<li>webview中 Javascript 的调用方法不能混淆</li>
-<li>第三方库建议使用自身混淆规则</li>
-<li>Parcelable 的子类和 Creator 的静态成员变量不混淆</li>
-</ul>
-<h3 id="资源混淆"><a href="#资源混淆" class="headerlink" title="资源混淆"></a>资源混淆</h3><p>proguard 可以混淆代码，其实资源名也是能混淆的，混淆后变为 R.string.a 之类的，它有3种方案：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/%E8%B5%84%E6%BA%90%E6%B7%B7%E6%B7%86%E6%96%B9%E6%A1%88.png" alt="资源混淆方案"></p>
-<p>书中推荐使用 微信的 AndResGuard 混淆机制，它的工作流程如下：</p>
-<p><img src="/assets/Book-Notes/Android%E7%BB%84%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84/%E7%AC%AC%E4%BA%8C%E7%AB%A0/AndResGuard%E6%B7%B7%E6%B7%86%E6%B5%81%E7%A8%8B.png" alt="资源混淆方案"></p>
-<h3 id="组件化混淆-1"><a href="#组件化混淆-1" class="headerlink" title="组件化混淆"></a>组件化混淆</h3><p>重点是保证只混淆一次：</p>
-<ul>
-<li><p>第一种方案：只在 Application module 中设置混淆，其他module 都关闭混淆，所有的规则都放在 Application 的module 中</p>
-<blockquote>
-<p>缺点：当某些模块移除之后，需要手动移除混淆规则，虽然理论上混淆规则多了不会崩溃或者编译不过，但是会对编译效率造成影响</p>
-</blockquote>
-</li>
-</ul>
-<ul>
-<li><p>第二种方案：命令将 所有的 module 中的 proguard-rule.pro 文件合成，然后覆盖 Application module 中的混淆文件</p>
-<blockquote>
-<p>有合成操作，也会影响编译效率</p>
-</blockquote>
-</li>
-</ul>
-<ul>
-<li><p>第三种方案： 将 proguard-rule.pro 文件打进 aar</p>
-<p>Library module 自身拥有将 proguard-rule.pro 文件打包到 aar 中的设置，如添加一个 consumerProguardFiles 属性：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">defaultConfig {</span><br><span class="line">  consumerProguardFiles <span class="string">'proguard-fules.pro'</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-</li>
-</ul>
-<p>开源库中可以依赖此标志来指定库的混淆方式，consumerProguardFiles 属性会将 *.pro 文件打包进aar ，混淆时会自动使用次混淆配置文件。不过，以 consumerProguardFiles 形式添加 混淆文件具有以下特性：</p>
-<ol>
-<li>proguard.txt 文件会在aar文件中</li>
-<li>proguard 配置会在混淆时使用    </li>
-<li>此配置只针对aar</li>
-<li>此配置只针对 库文件有效，对应用程序无效</li>
-</ol>
-<p>当 Application module 将全部代码汇总混淆的时候， Library module 会被打包为 release.aar ，然后被引用汇总，通过 proguard.txt 规则各自混淆，保证只混淆一次。</p>
-<p>第三种方案可以最大限度地解耦混淆解耦工作。</p>
-<h2 id="多渠道打包"><a href="#多渠道打包" class="headerlink" title="多渠道打包"></a>多渠道打包</h2><p>可以使用几种方式打渠道包：</p>
-<ul>
-<li><p>使用Python 打包，推荐 AndroidMultiChannelBuildTool</p>
-</li>
-<li><p>美团批量打包工具 Walle </p>
-<blockquote>
-<p>其原理是修改 V2 内容区，V2签名以一组 ID-value 的形式保存在这个区块中，可以自定义一组 ID-value 并写入到这个区域</p>
-</blockquote>
-</li>
-<li><p>在apk文件后面添加 zip comment，推荐 packer-ng-plugin，它也提供了python 和 gradle 两种打包方式</p>
-<blockquote>
-<p>Apk 的本质是一个带签名信息的 zip 文件，符合zip文件的格式规范，不过 V2会校验包实际大小了，因此不能添加 comment 了</p>
-</blockquote>
-</li>
-<li><p>使用官方的方式打包</p>
-<p>重点说下官方打包，包含有几个步骤：</p>
-<ol>
-<li><p>在 AndroidManifest 文件中假如渠道区分标识，写入一个 meta 标签</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;meta-data android:name=<span class="string">"channel"</span> android:value=<span class="string">"${channel}"</span>/&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-</li>
-</ol>
-</li>
-</ul>
-<ol start="2">
-<li><p>在App目录的build.gradle 中配置 productFlavors</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">productFlavors {</span><br><span class="line">    qihu360{}</span><br><span class="line">    baidu {}</span><br><span class="line">    //...省略其他渠道</span><br><span class="line">    </span><br><span class="line">    productFlavors.all {</span><br><span class="line">        flavor -&gt; flavor.manifestPlaceholders = [channel: name]</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-</li>
-</ol>
-<ol start="3">
-<li><p>在 AS 的 Build -&gt; Generate signed apk 中选择设置渠道</p>
-<blockquote>
-<p>当然如果要一次性打出全部的渠道，只需要 执行 .gradlew build 即可，就可以打出所有的 Release 和 Debug 包</p>
-</blockquote>
-</li>
-</ol>
-<h2 id="多渠道模块设置"><a href="#多渠道模块设置" class="headerlink" title="多渠道模块设置"></a>多渠道模块设置</h2><p>有个时候，我们的App可能要打包成 管理员端、普通用户端 ，等等此类需求是比较棘手的，不同的版本依赖的module不一样，这时候怎么弄呢？我们可以使用原生的 Gradle 来配置构建，下面演示一个用户版本和管理版本：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">//下面的代码都在根目录的 build.gradle 中</span><br><span class="line"></span><br><span class="line">productFlavors {</span><br><span class="line">   //用户版</span><br><span class="line">   client {</span><br><span class="line">       manifestPlaceholders = [</span><br><span class="line">           channel: "10086", //渠道号</span><br><span class="line">           verNum: "1", //版本号</span><br><span class="line">           app_name: "Gank" //App名</span><br><span class="line">       ]</span><br><span class="line">   }</span><br><span class="line">   </span><br><span class="line">   //服务版</span><br><span class="line">   server {</span><br><span class="line">       manifestPlaceholders = [</span><br><span class="line">           channel: "10087", //渠道号</span><br><span class="line">           verNum: "1", //版本号</span><br><span class="line">           app_name: "Gank服务版" //App名</span><br><span class="line">       ]</span><br><span class="line">   }   </span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">dependencies {</span><br><span class="line">    clientCompile project(':settings') //引入客户版特定module</span><br><span class="line">    clientCompile project(':submit')//我怀疑书上打错了，应该这里只是 compile 吧？是客户版与服务版公用的？</span><br><span class="line">    serverCompile project(':server_settings') //引入服务版特定module</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>上面通过 productFlavors 属性设置多渠道，而 manifestPlaceholders 设置不同渠道中的不同属性，<strong>这些属性需要在 AndroidManifest 中声明才能使用</strong>。<strong>在 dependencies 中通过设置 xxxCompile 来配置不同渠道需要引用的 module 文件。</strong>接下来，我们要在 App module 的 AndroidManifest 文件中声明：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;application</span><br><span class="line">    android:allowBackup="true"</span><br><span class="line">    &lt;!--app引用名--&gt;</span><br><span class="line">    android:label="${app_name}"</span><br><span class="line">    &lt;!--标记可替代--&gt;</span><br><span class="line">    tools:replace="label"&gt;</span><br><span class="line">    </span><br><span class="line">    &lt;!--版本号声明--&gt;</span><br><span class="line">    &lt;meta-data android:name="verNum" android:value="${verNum}"/&gt;</span><br><span class="line">    </span><br><span class="line">    &lt;!--渠道号声明--&gt;</span><br><span class="line">    &lt;meta-data android:name="channel" android:value="${channel}"/&gt;</span><br><span class="line">&lt;/application&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>其中，android:label 属性用于更改签名，${xxx} 会自动引用 manifestPlaceholders 对应的 key 值， tools:replace 属性在以前的 Application 替代中提到，最后替换的属性名需要添加 tools:replace ，这里提示编译器需要替换的 label 属性。</p>
-<p>声明 meta-data 用于某些额外自定义的属性，这些属性都可以通过代码读取：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//获取metadata的方法，当然，要防止异常，这里省略了</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title">getMetaData</span><span class="params">(Context context, String metaName)</span></span>{</span><br><span class="line">  String pkgName = context.getPackageName();</span><br><span class="line">  ApplicationInfo appInfo = context.getPackageManager().getApplicationInfo(pkgName, PackageManager.GET_META_DATA);</span><br><span class="line">  Object obj = appInfo.metaData.get(metaName);</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">return</span> obj;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//获取  channel</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">getChannelNum</span> <span class="params">(Context context)</span></span>{</span><br><span class="line">  Object obj = getMetaData(context);</span><br><span class="line">  <span class="keyword">return</span> (<span class="keyword">int</span>)obj;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//之后，在路由跳转的时候，可以根据 channel 来做跳转拦截，代码略</span></span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>以上shi值调用，至于需要某个类调用，则可以直接将路径以值的形式来传递（同样在meta-data中），然后解析处meta-data，最后用反射方式就能完成对象的创建，之后就能调用了，代码就略了。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1600,7 +1405,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">126</span>
+          <span class="site-state-item-count">129</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1613,7 +1418,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">29</span>
+        <span class="site-state-item-count">30</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -1657,7 +1462,7 @@
 <div class="copyright">
   
   &copy; 2015 – 
-  <span itemprop="copyrightYear">2022</span>
+  <span itemprop="copyrightYear">2023</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
@@ -1686,7 +1491,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共267.6k字</span>
+  <span class="post-count">博客全站共273.8k字</span>
 </div>
 
 

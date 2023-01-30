@@ -154,7 +154,7 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">29</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">30</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">126</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">129</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,319 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/28/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/28/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/" class="post-title-link" itemprop="url">第11章：BroadcastReceiver的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-03-28 11:41:00 / 修改时间：17:03:38" itemprop="dateCreated datePublished" datetime="2021-03-28T11:41:00+08:00">2021-03-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Receiver概述"><a href="#Receiver概述" class="headerlink" title="Receiver概述"></a>Receiver概述</h2><p>Receiver分为动态和静态两种，简单讨论下区别：</p>
+<ul>
+<li>静态广播在 AndroidManifest 中注册，因为Android系统重启时，PMS都会解析App中的AndroidManifest，所以<strong>静态广播都存在于 PMS 中</strong>      </li>
+<li>动态广播通过 Context 的registerReceiver 方法最终调用 AMN.getDefault().registerReceiver 方法，所以，<strong>动态广播的注册信息存在于 AMS 中</strong>       </li>
+</ul>
+<p>除了注册方式不一样，后续发送和接收的过程就一样了。整个过程简单如下：1、Context 发送广播，最终通过 AMN.getDefault().broadcastIntent，把要发送的广播告诉AMS。2、AMS收到消息后，根据intent-filter 筛选 PMS 和 AMS (即静态广播和动态广播)中符合条件的接收器，通知App进程启动这些广播(调用这些广播的 onReceive)。</p>
+<h2 id="动态广播的插件化解决方案"><a href="#动态广播的插件化解决方案" class="headerlink" title="动态广播的插件化解决方案"></a>动态广播的插件化解决方案</h2><p>对于动态广播，我们只需要确保宿主App能加载插件中的这个动态广播类就行(因为这里并不需要直接与AMS打交道，只是个类而已)。通过9.3节的dex合并技术，就能做到了。</p>
+<h2 id="静态广播解决方案"><a href="#静态广播解决方案" class="headerlink" title="静态广播解决方案"></a>静态广播解决方案</h2><p>静态广播无法像Activity那样，即使没在AndroidManifest 中注册也能生效，因为无论是注册还是发送广播，都必须有 IntentFilter，其中的action是可以随意设置的，所以我们对于 Receiver 压根就不能通过类似 Activity 的插桩方式。只有另辟蹊径。</p>
+<h3 id="静态广播当做动态广播处理"><a href="#静态广播当做动态广播处理" class="headerlink" title="静态广播当做动态广播处理"></a>静态广播当做动态广播处理</h3><p>具体分为两步：</p>
+<ol>
+<li>PMS 只能读取宿主 App 的AndroidManifest 文件，读取其中的静态广播并注册。我们可以反射，手动控制PMS读取插件AndroidManifest 中声明的静态广播列表。     </li>
+<li>遍历这个静态广播列表，使用 classLoader 加载列表中每个广播类，实例化成一个对象，<strong>然后作为动态广播注册到AMS中</strong>           </li>
+</ol>
+<h3 id="静态广播的插件化终极解决方案"><a href="#静态广播的插件化终极解决方案" class="headerlink" title="静态广播的插件化终极解决方案"></a>静态广播的插件化终极解决方案</h3><p>上述静态广播当做动态广播的方案，这丧失了静态广播的特性——不需要启动App就可以启动一个静态广播。所以我们仍要探寻如何不启动App也能和插件中的静态广播通信。</p>
+<p>回忆一下前面介绍的Activity 和 Service 插件化的占位思想：</p>
+<ul>
+<li>Activity 只需要一个占位 StubActivity 就能面对大部分插件Activity了，对于LaunchMode 的其他三种形式，则需要更多的占位 StubActivity 应对     </li>
+<li>Service 也需要占位 StubService ，但是一个 StubService 只能对应一个插件中的Service，所以我们需要在宿主App中占位多个 StubService，通过json来配置映射关系。    </li>
+</ul>
+<p>如果也用占位的思想，每个静态广播需要携带一个或者多个Action，StubReceiver 也不例外，如果 StubReceiver 和插件中的静态广播是一对多的关系，那么从外界发送一个广播到App，<strong>就会触发插件中的所有静态广播</strong>。由此得出：<strong>StubReceiver 和插件中的广播只能是一对一的关系</strong>。</p>
+<p>不过，我们可以为一个广播设置多个Action，这样我们就不需要预先创建很多个StubReceiver用来面对插件中的静态广播了，只需要一个 StubReceiver ，为它配置很多个 action 即可。这样，插件中的静态广播就要和这些 action 建立一对一的关系，还是以前的思路，使用<strong>Json配置映射关系就行</strong>。</p>
+<p>还有，AndroidManifest 中<strong>支持为每个组件配置 metadata</strong>，利用这个特性，为插件中每个静态广播配置对应的 StubReceiver 中的 action ，如下所示：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">receiver</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">".MyReceiver"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span> &gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">baobao/</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span> <span class="attr">android:name</span>=<span class="string">"oldAction"</span> <span class="attr">android:value</span>=<span class="string">"jianqiang1"</span>&gt;</span><span class="tag">&lt;/<span class="name">meta-data</span>&gt;</span> </span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br><span class="line"> </span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">".MyReceiver2"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span> &gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"baobao2"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span> <span class="attr">android:name</span>=<span class="string">"oldAction"</span> <span class="attr">android:value</span>=<span class="string">"jianqiang2"</span>&gt;</span>&lt;/meta-data&gt; </span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>解析插件中的 AndroidManifest 文件，可以借助11.3章节介绍的ReceiverHelper 类的 preLoadReceiver 方法，在遍历插件中的每个静态的 Receiver 时，去除Receiver 的metadata 数据，根据oldAction值，对应到Receiver，比如 MyReceiver 对应 jianqiang1，MyReceiver2 对应 jianqiang2 。</p>
+<p>之后，把插件中的Receiver 手动注册为动态广播。宿主中定义的<strong>StubReceiver占位广播的作用是分发</strong>。</p>
+<p>这就解决了静态广播的问题，<strong>我们可以在App没启动的时候，就启动插件中的静态广播</strong>(我其实还是没看懂怎么在没有启动App的情况，就能启动这个静态广播，后续长丝下)。美中不足的是，这个StubReceiver 需要配置很多个 Action 。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Service的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-27 21:29:00" itemprop="dateCreated datePublished" datetime="2021-03-27T21:29:00+08:00">2021-03-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:16:28" itemprop="dateModified" datetime="2021-03-29T22:16:28+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Android界的荀彧和荀攸：Service和Activity"><a href="#Android界的荀彧和荀攸：Service和Activity" class="headerlink" title="Android界的荀彧和荀攸：Service和Activity"></a>Android界的荀彧和荀攸：Service和Activity</h2><p>根据Context的族谱，Service 是 Activity 的叔叔，结合作用来看，二者有太多相似，但是备份不同，类似三国时期的荀彧和荀攸。不过，二者的区别也挺明显：</p>
+<ul>
+<li>Activity 是面向用户的，有大量的用户交互的方法，而Service 是后台运行的，生命周期函数很少    </li>
+<li>Activity 中有LaunchMode 的概念，每个Activity启动时都会放在栈顶，根据不同的 LaunchMode 可能会有复用以前的实例或者不复用以前的实例。但是Service不同，<strong>同一个 Service 调用多次startService并不会启动多个实例，只会有一个实例</strong>，所以，只用一个StubActivity 是应付不了多个插件的Service 的     </li>
+<li>ActivityThread 最终通过Instrumentation 启动一个Activity。而ActivityThread 启动Service 并不借助于 Instrumentation ，而是直接把Service 反射出来就启动了    </li>
+</ul>
+<p>注意一点，Service 有两种形式： 由 startService 启动的服务；由 bindService 绑定的服务。二者的区别在于：startService 以及对应的 stopService ，就是简单地启动和停止 Service ；bindService 执行时会传递一个 ServiceConnection 对象给 AMS ，接下来 Service 在执行 onBind 时，可以把生成的 binder 对象返回给 App 调用端，这个值存于 ServiceConnection 对象的 onServiceConnected 回调函数的第二个参数中。       </p>
+<h2 id="预先占位"><a href="#预先占位" class="headerlink" title="预先占位"></a>预先占位</h2><p>前面说过，Service 与 Activity 不一样，它只会存在一个实例，所以只用一个StubService 是应付不了多个插件Service 的。考虑到在绝大部分App中Service 数据不会超过10个，所以我们完全可以在宿主App 中创建 10 个 StubService ，StubService1，StubService2…StubService10 ，每个 StubService 只对应插件中的一个Service，如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png" alt="StubService占位示意"></p>
+<p>接下来就是让每个插件Service匹配一个宿主中的 StubService 了，有两种匹配方式：</p>
+<ul>
+<li>服务器下发一个 JSON 字符串，给出二者的一一对应关系     </li>
+<li>在每个插件 App 的 assets 目录中，创建一个 plugin_config 配置文件，把这个 JSON 字符串放进去</li>
+</ul>
+<p>第2种做法更自然，不需要和服务器交互，json文件解析类似如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">String strJson = Utils.readZipFileString(dexFile.getAbsolutePath(), <span class="string">"assets/plugin_config.json"</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (strJson == <span class="keyword">null</span> || TextUtils.isEmpty(strJson)) {</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">JSONObject jobject = <span class="keyword">new</span> JSONObject(strJson.replaceAll(<span class="string">"\r|\n"</span>, <span class="string">""</span>));</span><br><span class="line">JSONArray jsonArray = jobject.getJSONArray(<span class="string">"plugins"</span>);</span><br><span class="line"><span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; jsonArray.length(); i++) {</span><br><span class="line">    JSONObject jsonObject = (JSONObject) jsonArray.get(i);</span><br><span class="line">    UPFApplication.pluginServices.put(</span><br><span class="line">        jsonObject.optString(<span class="string">"PluginService"</span>),</span><br><span class="line">        jsonObject.optString(<span class="string">"StubService"</span>));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们将 JSON 转化为一个 HashMap ，<strong>以插件的类名作为key，以宿主的替身作为value</strong>，这个HashMap 存放在宿主App 的 UPFApplication 的 plutinServices 中，是一个全局变量。</p>
+<h2 id="startService-的解决方案"><a href="#startService-的解决方案" class="headerlink" title="startService 的解决方案"></a>startService 的解决方案</h2><p>Service 的插件化机制和Activity 很像，因为它们是亲戚。我们首先从简单的startService 和 stopService 的插件化做起。</p>
+<p>首先，把插件和宿主的dex合并，之前有封装过 BaseDexClassLoaderHookHelper 类，合并后才能随心所欲加载类；其次，采用“欺骗AMS”方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//即 Hook AMN 的 gDefault，它是一个Singleton 对象，之后创建它的代理对象 MockClass1 ，然后替换这个字段</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//之后，再Hook 到 Handler 类型的 H 类的 mCallback 字段，替换为 MockClass2</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>主要流程分析一下：</p>
+<ol>
+<li><p>Hook AMN，让 AMS 启动 StubService，这次要拦截的是 startServcie 和 stopService 这两个方法(也即在AMN中就拦截这两个方法，将要操作的目标Service替换成相应的StubService)。不过，这次不再需要把 Intent 缓存了，因为有了 UPFApplication 中的 plutinServices ，我们可以根据插件 Service 找到对应的 StubService，也可以根据 StubService 反向找到 Service</p>
+</li>
+<li><p>AMS 被“欺骗”之后，它原本会通知App启动StubService，而我们要Hook掉ActivityThread 的 mH 对象的 mCallback 对象，仍然截获它的 handleMessage 方法，只不过这次截获的是 “CREATE_SERVICE” 分支，这个分支执行 ActivityThread 的 handleCreateService 方法。在 handleCreateService 中，并不能获取到 App 发送给 AMS 的 Intent，AMS 要启动那个Service ，这个信息是存在 handleCreateService 方法的 dat 参数中，是 CreateServiceData 类型的。Android系统的实现如下：   </p>
+</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleCreateService</span> <span class="params">(CreateServiceData data)</span> </span>{ </span><br><span class="line">    LoadedApk packageinfo = getPackageinfoNoCheck(data.info.applicationinfo, data.compatInfo);</span><br><span class="line">    Service service = <span class="keyword">null</span>; </span><br><span class="line">    java.lang.ClassLoader cl= packageinfo.getClassLoader(); </span><br><span class="line">    service = (Service) cl.loadClass(data.info.name).newinstance(); </span><br><span class="line">    <span class="comment">//省略无关代码</span></span><br><span class="line">    service . onCreate ();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上面代码中，data.info.name 就是Service 的名称，<strong>所以我们只需要将这个值 Hook 为插件的Service即可</strong>。至此，一个支持 startService 的插件化框架就完成了。</p>
+<h2 id="bindService-的解决方案"><a href="#bindService-的解决方案" class="headerlink" title="bindService 的解决方案"></a>bindService 的解决方案</h2><p>有了前面的基础，Service 的 bind 与 unbind 就非常简单了，只要在 AMN 的Hook 中添加一个分支，在 “bindService” 的时候 “欺骗AMS” 就行：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (”bindService”.equals(method . getName())) { </span><br><span class="line">    <span class="comment">//找到参数里面的第一个 Intent 对象</span></span><br><span class="line">    <span class="keyword">int</span> index = <span class="number">0</span>; </span><br><span class="line">    <span class="keyword">for</span> (inti= <span class="number">0</span>; i &lt; args . length ; i++) { </span><br><span class="line">        <span class="keyword">if</span> (args [i) <span class="keyword">instanceof</span> Intent) { </span><br><span class="line">            index = i ; </span><br><span class="line">            <span class="keyword">break</span>; </span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    Intent rawintent = (Intent) args[index); </span><br><span class="line">    String rawServiceName = rawintent.getComponent().getClassName(); </span><br><span class="line">    String stubServiceName = UPFApplication.pluginServces.get(rawServiceName)</span><br><span class="line">    <span class="comment">//替换 Plugin Service of StubService </span></span><br><span class="line">    ComponentName componentName =<span class="keyword">new</span> ComponentName(stubPackage, stubServiceName); </span><br><span class="line">    Intent newintent = <span class="keyword">new</span> Intent(); </span><br><span class="line">    newintent.setComponet(componentName);</span><br><span class="line">    <span class="comment">//替换 Intent ，欺骗 AMS</span></span><br><span class="line">    args[index] = newintent ; </span><br><span class="line">    Log.d(TAG, ” hook success <span class="string">"); </span></span><br><span class="line"><span class="string">    return method.invoke(mBase , args);</span></span><br><span class="line"><span class="string">}</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个过程就完成了，接下来就是使用：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnBind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        <span class="keyword">final</span> Intent = <span class="keyword">new</span> Intent();</span><br><span class="line">        intent.setComponent(<span class="keyword">new</span> ComponentName(<span class="string">"jianqiang.com.testservice1"</span>), <span class="string">"jianqiang.com.testservice1.MyService2"</span>);</span><br><span class="line">        bindService(intent, conn, Service.BIND_AUTO_CREATE);</span><br><span class="line">    }</span><br><span class="line">});</span><br><span class="line"></span><br><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnUnbind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        unbindService(conn);</span><br><span class="line">    }</span><br><span class="line">});</span><br></pre></td></tr></tbody></table></figure>
+<p>看了上面的使用方法，可能会有疑惑了：</p>
+<ul>
+<li>上半场，对于unbind行为，为什么不像bind一样在 unbind 的时候做“欺骗AMS”？    </li>
+<li>下半场，为什么不用在MockClass2中写代码，把StubService2 换回 MyService2？        </li>
+</ul>
+<p>关于第一个问题，因为我们 unbind 的语法是这样的 <em>unbindService(conn)</em> ，只需要一个 ServiceConnection 类型的参数 conn 即可，这个 conn 在前面的bindService 时用到了，<strong>AMS 会根据这个conn 来找到对应的Service，所以并不需要在unbind的时候去做欺骗</strong>。</p>
+<p>第二个问题，这要从Android 系统源码说起，bindService 过程在 AMS通知 App 下半场的流程图如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/bindService%E8%BF%87%E7%A8%8BAMS%E9%80%9A%E7%9F%A5App%E8%BF%99%E4%B8%8B%E5%8D%8A%E5%9C%BA.png" alt="bindService过程AMS通知App这下半场"></p>
+<p>也就是说，bindService 先走114(handleCreateSrvice)分支，再走 121 (handleBindService) ，在 handleCreateSrvice 中已经把我们要启动的 MyService2 放到了 mService 这个集合中了，那么，在 handleBindService 和 handleUnbindService 中，都会从 mService 集合中找到 Service2 。在之前章节，为了解决 createService ，已经拦截了 114 分支把 StubService2 换回了 MyService2 了，所以我们不需要要拦截 121 和 122 了， 无需再MockClass2 添加额外代码。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这里给出Service第一种解决方案——预先占位，在宿主中预先声明若干个StubService。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/" class="post-title-link" itemprop="url">第9章：Activity的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-27 20:05:00" itemprop="dateCreated datePublished" datetime="2021-03-27T20:05:00+08:00">2021-03-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:17:24" itemprop="dateModified" datetime="2021-03-29T22:17:24+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Activity的插件化需要解决3方面的技术问题：</p>
+<ul>
+<li>宿主App可以加载插件App中的类         </li>
+<li>宿主App可以加载插件中的App资源           </li>
+<li>宿主App可以加载插件中的Activity          </li>
+</ul>
+<h2 id="启动没有在AndroidManifest中声明的插件Activity"><a href="#启动没有在AndroidManifest中声明的插件Activity" class="headerlink" title="启动没有在AndroidManifest中声明的插件Activity"></a>启动没有在AndroidManifest中声明的插件Activity</h2><p>在5.4节介绍了启动没有在AndroidManifest 中声明的 Activity，借助宿主App中的StubActivity ，在 AMN 中欺骗，在ActivityThread 中欺骗。这种方式的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参见： https://github.com/BaoBaoJianqiang/ActivityHook1</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="基于动态替换的Activity插件化解决方案"><a href="#基于动态替换的Activity插件化解决方案" class="headerlink" title="基于动态替换的Activity插件化解决方案"></a>基于动态替换的Activity插件化解决方案</h2><p>这章节好混乱，压根就没说这里解决的是什么问题</p>
+<h2 id="加载插件中类的方案2：-合并多个dex"><a href="#加载插件中类的方案2：-合并多个dex" class="headerlink" title="加载插件中类的方案2： 合并多个dex"></a>加载插件中类的方案2： 合并多个dex</h2><h2 id="对LaunchMode的支持"><a href="#对LaunchMode的支持" class="headerlink" title="对LaunchMode的支持"></a>对LaunchMode的支持</h2><p>前面介绍的 Activity 插件化技术，对于LaunchMode 都是standard的情况是完全适用的。对于 SingleTop、SingleTask 和 SingleInstance 需要重新考虑。</p>
+<p>解决LaunchMode 的问题，适用的还是 <strong>占位Activity</strong> 的思想，即实现为这3种 LaunchMode 创建很多StubActivity，如下图所示：</p>
+<p><img src="" alt="占位思想解决LaunchMode问题"></p>
+<p>我们可以从服务端下载一个Json，指定插件中的Activity 对应哪种 StubActivity ，写Demo的时候，可以直接在本地 Mock 这些数据，保存在 MyApplication 中，然后再 Mock1Class 接货 startActivity 的时候，如果发现要启动的Activity 在 MyApplication 的 pluginActivities 集合中，那就使用这个插件 Activity 对应的占位 StubActivity，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.3</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来可以测试下。这里有个小bug，无论singleTop还是singleTask，再回到这个Activity时，并不会触发它的onCreate，而是会触发它的onNewIntent(其实这里说的bug我并没有明白，等测试后再说)。为此，我们需要在MockClass2 中，拦截onNewIntent方法，把占位 StubActivity 替换回插件Activity，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参考上面的链接</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="加载插件中类的方案3：修改App原生的ClassLoader"><a href="#加载插件中类的方案3：修改App原生的ClassLoader" class="headerlink" title="加载插件中类的方案3：修改App原生的ClassLoader"></a>加载插件中类的方案3：修改App原生的ClassLoader</h2><p>..</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1123,294 +1436,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2021/03/11/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC1%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/11/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章：插件化昨天、今天与明天</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-03-11 21:30:00" itemprop="dateCreated datePublished" datetime="2021-03-11T21:30:00+08:00">2021-03-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-03-21 22:36:34" itemprop="dateModified" datetime="2021-03-21T22:36:34+08:00">2021-03-21</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="插件化是什么"><a href="#插件化是什么" class="headerlink" title="插件化是什么"></a>插件化是什么</h2><p>如果做一个游戏平台，不可能把所有的游戏都包含进去，因为这样体积太大，浪费流量，浪费用户存储空间。只有用户需要玩什么游戏的时候，再动态下载安装某个游戏，这就是插件化的思想。</p>
-<h2 id="为什么需要插件化"><a href="#为什么需要插件化" class="headerlink" title="为什么需要插件化"></a>为什么需要插件化</h2><p>如果某个插件功能有问题，则只需要改好bug打包这个插件就ok，不需要发版，用户不需要去应用商店更新App，就能够修复好的版本。这样，交易不会丢失。</p>
-<p>此外，对于和竞争对手抢占市场的情况下，需要不断迭代发布新版本，发版周期太长，用户体验不到新功能；太短会引起用户反感，如果有插件化技术，做完新功能就能让用户看到新功能，这样就非常具有竞争力了。</p>
-<h2 id="后续发展趋势"><a href="#后续发展趋势" class="headerlink" title="后续发展趋势"></a>后续发展趋势</h2><p>在插件化风行一段时间之后，Android热修复技术和 React Native 开始出现，与Android的插件化平分秋色，插件化技术不再是唯一选择。</p>
-<h2 id="插件化的用途"><a href="#插件化的用途" class="headerlink" title="插件化的用途"></a>插件化的用途</h2><p>真是场景下，<strong>插件化 80% 的应用场景是为了修复线上bug</strong>，在这一点上，插件化与 Tinker、Robust 这类修复工具有相同的能力，甚至更出色。</p>
-<p>其实，插件化更适合游戏领域，游戏经常上线新英雄，或者新的皮肤，这些都不用发版。</p>
-<p>还有一个很好的场景： <strong>ABTest</strong>，当产品为两种风格的设计举棋不定的时候，那么把两种策略做成两个插件包，让 50% 的用户下载A策略，另外 50% 下载B策略，一周后看数据即可。</p>
-<h2 id="更好的替代品：React-Native"><a href="#更好的替代品：React-Native" class="headerlink" title="更好的替代品：React Native"></a>更好的替代品：React Native</h2><p>React Native 这种映射思路(Android 和 ios 中的控件在RN中都能找到映射)，能够跨越 Android 和 ios 的系统差别。使用RN和纯原生相比，性能差距不大，在两个平台都很流畅。对于中小型企业来说，还能节省一端人力。</p>
-<p>在jsPatch 被禁止后，RN 其实是ios 上最合适的热修复方案了。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2020/06/28/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/28/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/" class="post-title-link" itemprop="url">存储优化<上>-常见的存储方式</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-28 18:36:00" itemprop="dateCreated datePublished" datetime="2020-06-28T18:36:00+08:00">2020-06-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-04 11:45:58" itemprop="dateModified" datetime="2020-07-04T11:45:58+08:00">2020-07-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="Android存储安全"><a href="#Android存储安全" class="headerlink" title="Android存储安全"></a>Android存储安全</h2><p>在4.3以前，应用都在自己的沙盒里，沙盒使用标准Linux保护机制，为每个应用创建唯一 Linux UID 来定义。<strong>简单来说，就是保证微信不能访问淘宝的数据</strong>。</p>
-<p>4.3以后引入SELinux，进一步定义应用沙盒边界。即使我们进程有root权限也不能为所欲为(想干事情必须先在安全策略配置文件中赋予权限)。</p>
-<p>数据加密：Android 两种加密，全盘加密和文件加密。全盘加密在4.4引入，在 5.0 后默认打开</p>
-<h2 id="常见数据存储方法"><a href="#常见数据存储方法" class="headerlink" title="常见数据存储方法"></a>常见数据存储方法</h2><p>综合来看,Android提供了 SharedPreferences /ContentProvider/文件/数据库</p>
-<h3 id="SharedPreferences"><a href="#SharedPreferences" class="headerlink" title="SharedPreferences"></a>SharedPreferences</h3><p>非常简便，但是问题比较多:</p>
-<ul>
-<li>跨进程不安全       </li>
-<li>加载缓慢(使用异步加载，且没设置线程优先级，就有可能出现主线程等待低优先级线程所问题)        </li>
-<li>全量写入(无论commit还是apply，即使只改动一个条目，也会把全部内容写入，并且多次写入一个同一文件，也不会合并为一次)       </li>
-<li>卡顿(收到系统广播或onPause等时机，系统会强制把sp文件写到磁盘，此过程或阻塞)      </li>
-<li>还有，存储json等复杂文件时，会有转义等操作，会额外耗时     </li>
-</ul>
-<p>如果我们想的话，可以使用 MMKV 替代sp，<strong>它利用文件锁保证跨进程安全</strong>，并且性能也比较好</p>
-<h3 id="ContentProvider"><a href="#ContentProvider" class="headerlink" title="ContentProvider"></a>ContentProvider</h3><p><strong>ContentProvider 的生命周期默认在 Application 的onCreate 之前，而且是在主线程的</strong>，ContentProvider 跨进程传递数据是利用 Android 的 Binder 和匿名共享内存机制。简单来说，<strong>就是通过 Binder 传递 (CusorWindow 对象内部的）匿名共享内存的文件描述符</strong>，这样数据无需跨进程。</p>
-<p>ContentProvider 主要存在以下几个问题：</p>
-<ul>
-<li>自定义的 ContentProvider 的构造函数、静态代码块、onCreate 函数尽量不要做耗时操作       </li>
-<li>性能。传输数据比较小的时候，使用 ContentProvider 不一定划算    </li>
-<li>安全：ContentProvider本身提供了很好的安全，但是如果是exported，当支持执行 sql 语句时，就要注意 sql 注入问题。     </li>
-</ul>
-<p>简而言之，ContentProvider 适合相对比较笨重，适合传输量大的数据</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/" class="post-title-link" itemprop="url">第21课-UI优化-优化UI渲染</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-27 11:00:00" itemprop="dateCreated datePublished" datetime="2020-06-27T11:00:00+08:00">2020-06-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 16:59:33" itemprop="dateModified" datetime="2021-05-05T16:59:33+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="UI优化-lt-下-gt"><a href="#UI优化-lt-下-gt" class="headerlink" title="UI优化<下>"></a>UI优化&lt;下&gt;</h2><h3 id="ui渲染测量"><a href="#ui渲染测量" class="headerlink" title="ui渲染测量"></a>ui渲染测量</h3><p>测试工具： Profile GPU Rendeing 和 Show GPU Overdraw ，定位方法可以参考<a target="_blank" rel="noopener" href="https://developer.android.com/studio/profile/inspect-gpu-rendering">官方文档，检查GPU渲染速度和过度绘制</a></p>
-<p>问题定位工具可以使用 Systrace 和 Tracer for OpenGL ES，具体可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/topic/performance/vitals/render">官方文档：渲染速度慢</a></p>
-<h3 id="适用于自动化测试场景的测试方式-自己加的标题"><a href="#适用于自动化测试场景的测试方式-自己加的标题" class="headerlink" title="适用于自动化测试场景的测试方式(自己加的标题)"></a>适用于自动化测试场景的测试方式(自己加的标题)</h3><p>虽然图形化界面工具非常好用，但是难以用在自动化测试场景，以下测量方式可以用于自动化测试：</p>
-<h4 id="gfxinfo"><a href="#gfxinfo" class="headerlink" title="gfxinfo"></a>gfxinfo</h4><p>gfxinfo 可以输出包含各个阶段发生的动画以及帧相关的性能信息，以及渲染相关的内存和View hierachy 信息，命令如下：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename></packagename></p>
-</blockquote>
-<p>在Android 6.0 之后，gxfinfo 命令新增了 framestats 参数，可以拿到最近120帧每个绘制阶段的耗时信息：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename> framestats</packagename></p>
-</blockquote>
-<h4 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h4><p>除了耗时，还需要关心渲染使用的内存，4.1以后每个 Surface 都会有 3个 Graphic Buffer，那如何查看 Graphic Buffer 占用的内存，可以通过如下命令查看相应信息：</p>
-<blockquote>
-<p>adb shell dumpsys SurfaceFlinger</p>
-</blockquote>
-<p>这部分内存大小和 屏幕分辨率，以及Surface的个数有关。</p>
-<h3 id="UI优化的常用手段"><a href="#UI优化的常用手段" class="headerlink" title="UI优化的常用手段"></a>UI优化的常用手段</h3><p>我们的目标是实现app的帧率达到 60fps，意味着所有操作要在 16.7 ms 内完成，这期间要做的事情如下所示：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/UI%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B.png" alt="UI渲染流程"></p>
-<p>我们优化，就是拆解渲染的各个阶段耗时，找到瓶颈，加以优化。ui优化的方法如下：</p>
-<h4 id="1、尽量使用硬件加速。"><a href="#1、尽量使用硬件加速。" class="headerlink" title="1、尽量使用硬件加速。"></a>1、尽量使用硬件加速。</h4><p>硬件加速绘制的性能是远远高于软件绘制的，所以ui优化第一个手段应该尽量使用硬件加速。但是有些api不支持硬件加速，这个需要注意，比如 渐变、磨砂、圆角等，它们的渲染性能比较低。</p>
-<h4 id="2、View-的创建优化"><a href="#2、View-的创建优化" class="headerlink" title="2、View 的创建优化"></a>2、View 的创建优化</h4><p>View 的创建在UI线程，对于复杂的界面，这部分耗时不容忽视。View 的创建过程中，会包括xml的读取io，解析xml 以及生成对象的时间(Framework会大量使用反射)</p>
-<p>因此建议：</p>
-<p>1、使用代码创建view 对象缺点是不能直接预览<br>2、提前创建、异步创建<br>3、View 重用(模仿ListView、RecyclerView，不过重用要注意先清空状态)。  </p>
-<p>如果异步创建，那么会导致系统抛出异常。这时候，我们可以通过非常取巧的方式来异步创建ui：<strong>先把线程的Looper的MessageQueue替换成Looper的Queue：</strong></p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AD%90%E7%BA%BF%E7%A8%8B%E5%88%9B%E5%BB%BAui.png" alt="子线程创建ui"></p>
-<p><strong>要注意的是，在创建完成view之后，需要把线程的Looper恢复成原来的。</strong></p>
-<h4 id="3、measure-layout-优化"><a href="#3、measure-layout-优化" class="headerlink" title="3、measure/layout 优化"></a>3、measure/layout 优化</h4><p>这两部分也是在ui线程执行的，一般的优化方法有：</p>
-<ul>
-<li>减少UI布局层次      </li>
-<li>优化layout开销。尽量不要使用 RelativeLayout 和 weighted LinearLayout ，它们开销很大，建议使用 ConstranLayout    </li>
-<li>背景优化。尽量不要重复设置背景，<strong>尤其注意的是主题背景，theme默认会是一个纯色背景，如果我们自定义了界面背景，那么主题背景对我们来说是无用的</strong>，由于主题背景是设置在DecorView 中的，所以会带来重复绘制，也会带来绘制性能损耗。     </li>
-</ul>
-<h4 id="4、UI优化进阶"><a href="#4、UI优化进阶" class="headerlink" title="4、UI优化进阶"></a>4、UI优化进阶</h4><p>可以采用flutter</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1461,7 +1486,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">126</span>
+          <span class="site-state-item-count">129</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1474,7 +1499,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">29</span>
+        <span class="site-state-item-count">30</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -1518,7 +1543,7 @@
 <div class="copyright">
   
   &copy; 2015 – 
-  <span itemprop="copyrightYear">2022</span>
+  <span itemprop="copyrightYear">2023</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
@@ -1547,7 +1572,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共267.6k字</span>
+  <span class="post-count">博客全站共273.8k字</span>
 </div>
 
 
