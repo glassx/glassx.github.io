@@ -56,21 +56,21 @@
   <meta name="description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP&#x2F;IP 网络有很多相似之处：  Bind">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第6章：进程间通信——Binder">
-<meta property="og:url" content="https://glassx.gitee.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/index.html">
+<meta property="og:url" content="https://glassx.github.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。 既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP&#x2F;IP 网络有很多相似之处：  Bind">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/B-mmap.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/A%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/B-mmap.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/A%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE.png">
 <meta property="article:published_time" content="2019-09-26T13:36:00.000Z">
 <meta property="article:modified_time" content="2019-11-17T13:48:53.000Z">
 <meta property="article:author" content="glassx">
 <meta property="article:tag" content="深入理解Android内核设计思想-林学森">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png">
+<meta name="twitter:image" content="https://glassx.github.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png">
 
-<link rel="canonical" href="https://glassx.gitee.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
+<link rel="canonical" href="https://glassx.github.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
 
 
 <script id="page-configurations">
@@ -226,7 +226,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">

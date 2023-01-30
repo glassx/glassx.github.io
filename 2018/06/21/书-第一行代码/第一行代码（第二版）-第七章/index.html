@@ -56,20 +56,20 @@
   <meta name="description" content="可能你会有些疑惑，为什么要将我们程序中的数据共享给其他程序呢？当然，这是视情况而定的，比如账号密码之类的隐私数据显然是不能共享给其他程序的，不过一些可以让其他程序进行二次开发的基础性数据，我们还是可以选择共享。例如联系人程序、短信程序、多媒体库等，它们的数据库中保存了很多基础数据，如果不允许其他应用进行访问，则方便性就会大打折扣。 运行时权限Android的权限机制在一开始就存在，但是在6.0以前">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第7章： 数据存储全方案——跨程序共享数据：探究内容提供器">
-<meta property="og:url" content="https://glassx.gitee.io/2018/06/21/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/index.html">
+<meta property="og:url" content="https://glassx.github.io/2018/06/21/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="可能你会有些疑惑，为什么要将我们程序中的数据共享给其他程序呢？当然，这是视情况而定的，比如账号密码之类的隐私数据显然是不能共享给其他程序的，不过一些可以让其他程序进行二次开发的基础性数据，我们还是可以选择共享。例如联系人程序、短信程序、多媒体库等，它们的数据库中保存了很多基础数据，如果不允许其他应用进行访问，则方便性就会大打折扣。 运行时权限Android的权限机制在一开始就存在，但是在6.0以前">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE1.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE2.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE1.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE2.png">
 <meta property="article:published_time" content="2018-06-21T00:00:00.000Z">
 <meta property="article:modified_time" content="2019-11-17T13:50:51.000Z">
 <meta property="article:author" content="glassx">
 <meta property="article:tag" content="读书笔记-第一行代码（第二版）">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE1.png">
+<meta name="twitter:image" content="https://glassx.github.io/assets/Book-Notes/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/chapter-7/%E5%9B%BE1.png">
 
-<link rel="canonical" href="https://glassx.gitee.io/2018/06/21/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/">
+<link rel="canonical" href="https://glassx.github.io/2018/06/21/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/">
 
 
 <script id="page-configurations">
@@ -225,7 +225,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/06/21/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2018/06/21/%E4%B9%A6-%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E4%B8%83%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">

@@ -56,24 +56,24 @@
   <meta name="description" content="如果有两个进程A和B需要将扫描的文档记录到CD上，进程A请求扫描仪并被授权使用，请求CD时发现已被B占用了，于是被拒绝，同理，B请求扫描仪也会被拒绝，于是产生死锁。在一个数据库系统中，为了避免竞争，可对若干记录加锁，如果进程A对R1加锁了，进程B对R2加了锁，接着这两个进程又试图把各自对方的记录也加锁，这是也会产生死锁。所以，软硬件资源都可能出现死锁。 资源和死锁条件资源分为两类，一类是可抢占资源">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第6章：死锁">
-<meta property="og:url" content="https://glassx.gitee.io/2018/05/30/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/index.html">
+<meta property="og:url" content="https://glassx.github.io/2018/05/30/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="如果有两个进程A和B需要将扫描的文档记录到CD上，进程A请求扫描仪并被授权使用，请求CD时发现已被B占用了，于是被拒绝，同理，B请求扫描仪也会被拒绝，于是产生死锁。在一个数据库系统中，为了避免竞争，可对若干记录加锁，如果进程A对R1加锁了，进程B对R2加了锁，接着这两个进程又试图把各自对方的记录也加锁，这是也会产生死锁。所以，软硬件资源都可能出现死锁。 资源和死锁条件资源分为两类，一类是可抢占资源">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE1.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE2.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE3.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE4.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE5.png">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE6.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE1.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE2.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE3.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE4.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE5.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE6.png">
 <meta property="article:published_time" content="2018-05-30T10:00:00.000Z">
 <meta property="article:modified_time" content="2019-11-17T13:50:18.000Z">
 <meta property="article:author" content="glassx">
 <meta property="article:tag" content="读书笔记-现代操作系统（第三版）">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE1.png">
+<meta name="twitter:image" content="https://glassx.github.io/assets/Book-Notes/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/chapter-6/%E5%9B%BE1.png">
 
-<link rel="canonical" href="https://glassx.gitee.io/2018/05/30/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/">
+<link rel="canonical" href="https://glassx.github.io/2018/05/30/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/">
 
 
 <script id="page-configurations">
@@ -229,7 +229,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2018/05/30/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2018/05/30/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">

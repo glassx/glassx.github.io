@@ -56,19 +56,19 @@
   <meta name="description" content="对象已死吗引用计数法很多教科书判断对象是否存活的算法是这样的：给对象中添加一个引用计数器，每当一个地方引用它时，计数器值就加1；当引用失效时，计数器值就减1；任何时刻计数器为0的对象就是不可能再被使用的。客观地说，引用计数法的实现简单，但它很难解决对象之间相互循环引用的问题，所以，主流实现中，并不使用这种方式。 可达性分析在主流实现中，都是通过可达性分析来判定对象是否存活。这个算法的基本思路就是通">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第3章：垃圾收集器与内存分配策略">
-<meta property="og:url" content="https://glassx.gitee.io/2019/04/03/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/index.html">
+<meta property="og:url" content="https://glassx.github.io/2019/04/03/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/index.html">
 <meta property="og:site_name" content="glassx的小黑屋">
 <meta property="og:description" content="对象已死吗引用计数法很多教科书判断对象是否存活的算法是这样的：给对象中添加一个引用计数器，每当一个地方引用它时，计数器值就加1；当引用失效时，计数器值就减1；任何时刻计数器为0的对象就是不可能再被使用的。客观地说，引用计数法的实现简单，但它很难解决对象之间相互循环引用的问题，所以，主流实现中，并不使用这种方式。 可达性分析在主流实现中，都是通过可达性分析来判定对象是否存活。这个算法的基本思路就是通">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E6%A0%87%E8%AE%B0-%E6%95%B4%E7%90%86%E7%AE%97%E6%B3%95.png">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E6%A0%87%E8%AE%B0-%E6%95%B4%E7%90%86%E7%AE%97%E6%B3%95.png">
 <meta property="article:published_time" content="2019-04-03T13:10:00.000Z">
 <meta property="article:modified_time" content="2019-11-17T13:49:12.000Z">
 <meta property="article:author" content="glassx">
 <meta property="article:tag" content="深入理解Java虚拟机-JVM高级特性与最佳实践(第2版)">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://glassx.gitee.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E6%A0%87%E8%AE%B0-%E6%95%B4%E7%90%86%E7%AE%97%E6%B3%95.png">
+<meta name="twitter:image" content="https://glassx.github.io/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E6%A0%87%E8%AE%B0-%E6%95%B4%E7%90%86%E7%AE%97%E6%B3%95.png">
 
-<link rel="canonical" href="https://glassx.gitee.io/2019/04/03/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">
+<link rel="canonical" href="https://glassx.github.io/2019/04/03/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">
 
 
 <script id="page-configurations">
@@ -224,7 +224,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.gitee.io/2019/04/03/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/04/03/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
