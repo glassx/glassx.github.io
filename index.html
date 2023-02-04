@@ -251,7 +251,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-01-30 23:01:16" itemprop="dateModified" datetime="2023-01-30T23:01:16+08:00">2023-01-30</time>
+                <time title="修改时间：2023-02-04 16:39:03" itemprop="dateModified" datetime="2023-02-04T16:39:03+08:00">2023-02-04</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -308,17 +308,99 @@
 
 <p>第一次安装 APK 时，会对原dex做 dexopt ，假如APK只有一个dex，dvmVerifyClass(clazz) 返回true，然后 APK 中所有的类都会被打上 CLASS_ISPREVERIFIED 标记。接下来执行 dvmOptimizeClass ，类接着被打上 CLASS_ISOPTIMIZED 标志。</p>
 <ul>
-<li><p>上述的 dvmVerifyClass 目的是防止校验类合法性被篡改，此时会对类的每个方法进行校验，这里只需要知道如果类所引用的道德类和当前类都在同一个dex中的话，就会返回为true</p>
+<li><p>上述的 dvmVerifyClass 目的是防止校验类合法性被篡改，此时会对类的每个方法进行校验，这里只需要知道如果类所引用到的类和当前类都在同一个dex中的话，就会返回为true</p>
 </li>
 <li><p>dvmOptmizeClass : 类优化，这过程会将部分指令优化成虚拟机内部指令，提升了方法的执行效率。</p>
 </li>
 </ul>
 <p>现在假定 A 是补丁中的类，所以 A 肯定在一个单独的 dex 中，这时候类B 引用到补丁类 A，所以会尝试解析类 A。但是由于 B 是已经被打上了 CLASS_ISPREVERIFIED，调用的类 A 又与 B 不在同一个 dex ，因此会报 dvmThrowIllegalAccessError 异常。</p>
 <p>为了解决这个问题，一个单独的无关类被放在一个单独的dex中，原 dex 中所有的类构造函数都引用这个类，一般的解决方案是侵入dex打包流程，利用 .class 字节码修改技术。插桩由此而来，根据前面的介绍，原dex 所有的类都没有 CLASS_ISPREVERIFIED 标志，因此不会报这个异常。</p>
-<p>但是，插桩会给类加载效率带来比较严重的影响，如果没有打上 CLASS_CLASS_ISPREVERIFIED / CLASS_ISOPTIMIZED 标志，那么累的校验和优化都将在类初始化阶段进行。正常情况下类的校验和优化都仅在APK 第一次安装执行 dexopt 阶段进行，单个类加载耗时并不多，但是同一时间加载大量类的情况下，这种耗时就会放大。</p>
-<h4 id="插桩类导致类加载性能影响"><a href="#插桩类导致类加载性能影响" class="headerlink" title="插桩类导致类加载性能影响"></a>插桩类导致类加载性能影响</h4><p>插桩导致所有类都非 preverify，从而导致应用刚启动的场景下一般会同时加载大量的类，因此启动的时候容易白屏，这是没法容忍的。</p>
+<p>但是，插桩会给类加载效率带来比较严重的影响，如果没有打上 CLASS_CLASS_ISPREVERIFIED / CLASS_ISOPTIMIZED 标志，那么累的校验和优化都将在类初始化阶段进行。正常情况下类的校验和优化都仅在APK 第一次安装执行 dexopt 阶段进行，单个类加载耗时并不多，但是同一时间加载大量类的情况下，这种耗时就会放大。因此启动的时候容易白屏，这是没法容忍的。</p>
 <h4 id="避免插桩的-QFix-方案"><a href="#避免插桩的-QFix-方案" class="headerlink" title="避免插桩的 QFix 方案"></a>避免插桩的 QFix 方案</h4><p>它的思路是，在dexopt 后，反编译 dex 为 smali 修改代码避免异常，但是由于是在 dexopt 后绕过的，dexopt 会改变原有的很多逻辑，这可能会导致比较严重的bug。因此，最终会采用自研的全量 dex 方案。</p>
-<h4 id="Art下冷启动实现"><a href="#Art下冷启动实现" class="headerlink" title="Art下冷启动实现"></a>Art下冷启动实现</h4></body></html>
+<h4 id="Art下冷启动实现"><a href="#Art下冷启动实现" class="headerlink" title="Art下冷启动实现"></a>Art下冷启动实现</h4><p><strong>为了解决 Art 下类地址写死的问题，Tinker 通过 dex merge 成一个全新的 dex 整体替换掉旧的 dexElements 数组。</strong></p>
+<p>Dalvik 虚拟机尝试加载一个压缩文件的时候，只会加载 classes.dex ，如果压缩文件中有多个 dex， 其他 dex 文件会被直接忽略掉；而 Art 虚拟机则不一样，优先加载 primary dex （也就是 classes.dex），后续会加载其他 dex 。<strong>所以，在 Art 环境下，补丁类只需要放到 classes.dex 中即可！后续出现在其他 dex 中的 “补丁类”是不会被重复加载的</strong>，所以 Art 下冷启动解决方案：</p>
+<blockquote>
+<p>将补丁 dex 命名为 classes.dex ，原来的dex依次命名为 classes(2,3,4…)，然后一起打包为一个压缩文件，通过 DexFile.loadDex 得到 DexFile 对象，最后整体替换老旧的 dexElements 数组即可。</p>
+</blockquote>
+<p>该方案和Tinker 的方案对比如下：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-3-Art%E5%86%B7%E5%90%AF%E5%8A%A8%E6%96%B9%E6%A1%88%E4%B8%8ETinker%E5%AF%B9%E6%AF%94.png" alt="Art冷启动方案与Tinker对比"></p>
+<h4 id="其他方面"><a href="#其他方面" class="headerlink" title="其他方面"></a>其他方面</h4><p>DexFile.loadDex 把 dex 文件解析并加载到 native 内存的时候，如果dex 不存在 odex ，则会生成一个优化的 odex （Dalvik 和 Art 都会），所以虚拟机最后执行的是 odex。现在假如补丁 dex 足够大，那么 生成 odex 是很耗时的。不过上面的冷启动方案，在 Dalvik 下影响比较小，因为 loadDex 只是操作补丁包；但是在Art 环境下影响比较大了，因为 loadDex 是补丁 dex 和原有 dex 合并的完整包，所以是比较耗时的。</p>
+<p>为了解决这个问题，要把 loadDex 当做一个事务，如果中途被打断，那就删除 odex 文件，重启的时候时候如果发现 odex ，loadDex 完之后 ，反射注入/替换 dexElements 数组，实现打包。如果不存在 odex 文件，那么重启一个子线程 loadDex ，重启后再生效。</p>
+<p>为了补丁包安全，要对补丁包进行签名校验，防止整个补丁包被篡改，但是虚拟机执行的是 odex ，因此还需要对 odex 文件进行 MD5 校验，如果匹配，则直接加载，否则，重新生成 odex 文件，防止 odex 文件被篡改。</p>
+<h3 id="完整的方案考虑"><a href="#完整的方案考虑" class="headerlink" title="完整的方案考虑"></a>完整的方案考虑</h3><p>冷启动修复方案机会可以修复任何场景下的代码缺陷，但是注入前被加载的类（如： Application 类）肯定是不能修复的。所以我们将其作为保底方案，<strong>在没法应用热部署或者热部署失败的情况下，最后都会应用代码冷启动方案，所以我们的补丁是同一套的。</strong>具体实施方案对 Dalvik 和 Art 下分别做了处理：</p>
+<ul>
+<li><p>在Dalvik 下采用自研的全量 dex 方案</p>
+</li>
+<li><p>Art 本身支持多 dex，我们仅仅把补丁dex 作为主dex （classes.dex） 加载而已</p>
+</li>
+</ul>
+<h3 id="冷启动方案限制"><a href="#冷启动方案限制" class="headerlink" title="冷启动方案限制"></a>冷启动方案限制</h3><h4 id="重新认识多态"><a href="#重新认识多态" class="headerlink" title="重新认识多态"></a>重新认识多态</h4><p>实现多态的技术一般叫做动态绑定，是指在执行期间判断所引用对象的实际类型，根据实际类型调用相应方法。多态一般指的是非静态非私有方法的多态，field 和 静态方法都不具有多态性。</p>
+<p>虚拟机在加载类时回味其生成一张 vtable 表，里面存放当前类所有 virtual 方法的一个数组，当前类和所有继承父类的 public/protected/default 方法就是 virtual 方法，因为 public/protected/default 方法是可以被继承的， private/static 不再这个范畴，因为不能继承。具体操作：</p>
+<ul>
+<li><p>整体复制父类 vtable 到子类的 vtable</p>
+</li>
+<li><p>遍历子类的 virtual 方法集合，如果方法圆形一致，说明是重写父类方法，那么在相同索引位置处，子类重写方法覆盖掉 vtable 中父类的方法</p>
+</li>
+<li><p>若方法原型不一致，那么把该方法添加到 vtable 末尾</p>
+</li>
+</ul>
+<p>所以就有：假如父类A的 vtable[0]=A.a_t1 ,vtable[1]=A.a_t2  方法，那么类B可能是： vtable[0]=B.a_t1, vtable[1]=A.a_t2, vtable[2]=B.b_t1  。</p>
+<p>至于为什么field 和 static 方法为什么不具多态性质，主要是因为： <strong>在这场景下，是从当前变量的引用类型而不是实际类型中查找，如果找不到，再去父类递归查找。</strong></p>
+<h4 id="限制"><a href="#限制" class="headerlink" title="限制"></a>限制</h4><p>预先储备多态知识，来看如下例子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test_addMethod</span><span class="params">()</span> </span>{</span><br><span class="line">        A obj = <span class="keyword">new</span> A();</span><br><span class="line">        obj.a_t2();</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> a = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">//补丁中新增 a_t1 方法</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">a_t1</span><span class="params">()</span> </span>{</span><br><span class="line">        Log.d(<span class="string">"Sophix"</span>, <span class="string">"A a_t1"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">a_t2</span><span class="params">()</span> </span>{</span><br><span class="line">        Log.d(<span class="string">"Sophix"</span>, <span class="string">"A a_t2"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>也就是修复之后，A 类中新增了 a_t1 方法，Demo 类不做任何修复，测试发现应用补丁后，test_addMethod() 方法执行输出了 Sophix：A a_t1 ，表明在执行 t2 方法的时候，实际调用了 t1 方法！</p>
+<p>前面说了，dex 文件第一次加载的时候会有 verify 和 optimize 过程，优化过程会把 invoke-virtual 重写为 invoke-virtual-quick，<strong>后面跟的立即数就是该方法在类 vtable 中的索引值</strong>，这样执行更高效。所以我们知道了问题的根源了：<strong>打包前类A的 vtable 值为 vtable[0]=A.a_t2，打包后类 A 新增了 ,A.a_t1 方法，那么类A的vtable 变为了： vtable[0]=A.a_t1 ,vtable[1]=A.a_t2，但是 test_addMethod 中执行 obj.a_t2() 已经被优化为了 A.vtable[0]，所以修复前调用的是 a_t2方法，修复后变成了调用 a_t1 方法了，导致方法调用错乱！</strong></p>
+<h3 id="终极解决方案"><a href="#终极解决方案" class="headerlink" title="终极解决方案"></a>终极解决方案</h3><p>由上面可知，由于多态影响，QFix方案会遇到问题，我们最后的希望就只能依靠类似Tinker的完整dex解决方案，并且利用Google 已经开源的 DexMerge 方案，把补丁 dex 和原 dex 合并成一个完整的dex 似乎是可行的。但是，<strong>这样还是不够的，多dex下如果DexMerge抛出 65535 方法数异常，DexMerge 会导致内存风暴，内存不足的情况下容易更新失败，完整的 dex 合成需要在移动端进行，实现复杂。</strong></p>
+<h3 id="Dalvik-下完整dex方案的新探索"><a href="#Dalvik-下完整dex方案的新探索" class="headerlink" title="Dalvik 下完整dex方案的新探索"></a>Dalvik 下完整dex方案的新探索</h3><h4 id="冷启动类加载修复"><a href="#冷启动类加载修复" class="headerlink" title="冷启动类加载修复"></a>冷启动类加载修复</h4><p>冷启动类加载修复最早实现方案是 QQ空间提出的 dex 插入方案：把心dex插入到 ClassLoader 索引最前端，这样在加载一个类时，会优先查找补丁中的类。但是，这类插入dex的方案都会在 Dalvik 虚拟机下遇到 pre-verify问题。腾讯三大热修复方案解决该问题的思路如下：</p>
+<ul>
+<li><p>QQ空间插桩，每个类中插入一个来自其他 dex 的 hack.class ，使得所有类都无法满足 pre-verified 条件</p>
+</li>
+<li><p>Tinker 的方案是合成全量的 dex ，这样所有类都在全量 dex 中解决，从而消除类重复带来的冲突</p>
+</li>
+<li><p>QFix 的方式是获取虚拟机中的某些底层函数，提前解析所有补丁类，以此绕过 pre-verify 检查</p>
+</li>
+</ul>
+<p>以上三种方案，插桩会侵入打包流程，并且插桩添加臃肿的代码，不优雅；QFix 方案需要获取底层虚拟机的函数，不稳定可靠。并且，<strong>插桩和 QFix 方案都不能新增 public 函数，具体原因后续讲解。</strong> Tinker 需要从 dex 方法和指令维度全量合成dex ，虽然节省空间，但是性能消耗比较严重。</p>
+<h4 id="一种全新的全量-Dex-方案"><a href="#一种全新的全量-Dex-方案" class="headerlink" title="一种全新的全量 Dex 方案"></a>一种全新的全量 Dex 方案</h4><p>一般来说，合成完整dex，思路就是把原有 dex 和补丁包里的 dex 重新合并成一个，然而我们的思路是反过来的。<strong>可以这样考虑，既然补丁中已经有变动类了，那么只要在原先基线包里的dex中，去掉补丁中也有的类，这样，补丁+去除了补丁类的基线包，不就等于新 App 中所有类了吗？</strong></p>
+<blockquote>
+<p>参照Android原生的 multi-dex 理解： multi-dex 是把一个 APK 里用到的所有类拆分到 classes.dex、classes2.dex 、classes3.dex 等，每个dex 只包含了部分类定义，但是单个 dex 也是可以加载的，只要把所有dex 都加载进去，本 dex 中不存在的类就可以在运行期间在其他 dex 中找到。</p>
+</blockquote>
+<p>基线 dex 在去掉了补丁中的类后只包含不变的类了，这些不变的类在用到补丁中的新类时会自动找到补丁 dex ，补丁dex 中的心累在需要用到不变的类时也会找到基线 dex 的类。这样做的好处是： <strong>基线包里面不使用补丁中类的仍然可以按照原来的逻辑做 odex，最大限度地保证了 dexopt 效果</strong>。同时，避免了传统dex 合成遇到的 65535 方法数超了的问题、对dex破坏性重构的问题。</p>
+<p>现在，问题简化为<strong>如何在基线包中去掉补丁包中包含的所有类！</strong>。需要注意的是：<strong>并不是要把某个类的所有信息都从dex移除，因为这样做的话，会导致dex 的各个部分都要发生变化。我们只需移除定义的入口，解析这个dex的时候找不到这个类的定义即可。</strong>最大限度地减少修改。</p>
+<blockquote>
+<p>具体实现方案是：在 dex 的 pHeader-&gt;classDefOff 偏移处 ，把相应的 ClassDef 移除即可</p>
+</blockquote>
+<h4 id="对于-Application的处理"><a href="#对于-Application的处理" class="headerlink" title="对于 Application的处理"></a>对于 Application的处理</h4><p>Application 是整个App入口，在进入到替换的完整 dex 之前，一定会通过 Application 代码，所以，Application 一定是加载在原来的 dex 里面的，只有在补丁加载后使用的类，会在新的完整 dex 里面找到。在补丁加载后，如果 Application 类使用其他新 dex 里的类，由于不在同一个 dex 里， 而如果 Application 被打上了 pre-verify 标记，这时候就会抛出以前说的异常。</p>
+<blockquote>
+<p>解决方案：在 JNI 层清除掉它的 pre-verify 标记即可</p>
+</blockquote>
+<p>但这样还会引出问题：Dalvik 发现某个类没有 pre-verifid，就会在初始化这个类的时候做 verify 操作，对这个类使用到的类都要进行 opt操作。此时补丁还未进行加载，所以就会导致提前加载到原始dex中的类，当补丁加载完毕之后，当这些已经加载的类用到新dex 中的类，并且又是 pre-verified 时就会报错。这种问题在单 dex 情况下不会出现，但是多 dex 情形就会发生，解决办法如下：</p>
+<ul>
+<li><p>让 Application 用到的所有非系统类都和 Application 位于同一个 dex ，这样可以保证 pre-verified 被打上，而在补丁加载完成后，再清除 pre-verified 标志</p>
+</li>
+<li><p>把 Application 里面除了热修复框架代码外的其他代码都剥离到一个其他类中，这样使得Application 不会直接用到过多非系统类，这样，保证这个单独拿出来的类和Application  处于同一个 dex 的概率还是很大的。如果要更保险，Application 可以采用反射的方式访问这个单独的类，这样彻底把 Application 和 其他类隔绝。</p>
+</li>
+</ul>
+<p>其他方案针对 Application 的解决办法：</p>
+<ul>
+<li><p>Tinker 方案是在 AndroidManifest.xml 中要求开发者写Tinker 的 Application ，真正的 Application 在 初始化 TinkerApplication 时作为参数传入，这样，TinkerApplication 会接管真正的 Application。如果对 Application 有更多扩展的话，开发者接入成本也是比较高的。</p>
+</li>
+<li><p>Amigo 的方案是在编译过程中，用 Amigo 自定义的 gradle 插件将 App 的 Application 换成 Amigo 自己的 Application，并且保存真正的 Application 的name，在问题修复完成之后，再反射真正的 Application 之后调用其 attach(context) 方法。虽然开发者无感，但是这种系统反射本身是有一定风险的。</p>
+</li>
+</ul>
+<h3 id="入口类与初始化时机"><a href="#入口类与初始化时机" class="headerlink" title="入口类与初始化时机"></a>入口类与初始化时机</h3><p>如果要使热修类之前使用的其他类最少，只能放在Application中。那么，放在 Activity 中是不是也可以呢？当然，如果你没有 Application ，放到Activity中似乎没什么问题。但是，如果AndroidManifest 中注册了ContentProvider ，那么 ContentProvider 的 onCreate 方法是先于 Activity 的onCreate 调用的（事实上比Application的onCreate 都早）。这就可能导致某些类被提前引入了。</p>
+<p>如果放在Application中又有2中选择：</p>
+<ul>
+<li><p>放attachBaseContext中，这是 Application 中最早被执行的代码了，当然没问题，但是App申请的权限还没授予完成，会遇到无法访问网络之类的问题，因此无法下载新补丁</p>
+</li>
+<li><p>放在 onCreate 中，和Activity 一样，也会晚于 ContentProvider，这就需要自己保证没有 ContentProvider 以及第三方库也没有</p>
+</li>
+</ul>
+<blockquote>
+<p>注意：真实的启动顺序： Application.attachBaseContext-&gt;ContentProvider.onCreate-&gt;Application.onCreate-&gt; Activity.onCreate</p>
+</blockquote>
+</body></html>
       
     </div>
 
@@ -1491,7 +1573,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共273.8k字</span>
+  <span class="post-count">博客全站共276.9k字</span>
 </div>
 
 
