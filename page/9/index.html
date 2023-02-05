@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">130</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">132</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,323 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/10/09/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/10/09/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：Android启动过程简析</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-10-09 22:00:00" itemprop="dateCreated datePublished" datetime="2019-10-09T22:00:00+08:00">2019-10-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:48:59" itemprop="dateModified" datetime="2019-11-17T21:48:59+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="第一个系统进程-init"><a href="#第一个系统进程-init" class="headerlink" title="第一个系统进程(init)"></a>第一个系统进程(init)</h2><p>Android设备的启动必须经历3个阶段： Boot Loader、Linux Kernel 以及 Android 系统服务，默认情况下它们都有各自的启动画面。作为Android 中第一个被启动的进程，init的 PID 的值为 0，它通过解析 init.rc 脚本来构建出系统的初始运行形态——其中最重要的就是启动 ServiceManager、Zygote 和 SystemServer。</p>
+<h3 id="Android-的“DNS服务器”——ServiceManager"><a href="#Android-的“DNS服务器”——ServiceManager" class="headerlink" title="Android 的“DNS服务器”——ServiceManager"></a>Android 的“DNS服务器”——ServiceManager</h3><p>ServiceManager 是Binder 机制中的“DNS服务器”，负责域名(某Binder服务在 ServiceManager 注册时提供的名称) 到IP地址(由底层Binder驱动分配的值)的解析。</p>
+<p>ServiceManager 所属class 是core ，并且带有 critical 选项，说明它是系统的关键进程——意味着如果进程不幸在4分钟内异常退出4次，则设备将重启并进入还原模式。当 ServiceManager 重启时，zygote、media、surfaceflinger 等都会被重启。</p>
+<h3 id="“孕育”-新的线程和进程——Zygote"><a href="#“孕育”-新的线程和进程——Zygote" class="headerlink" title="“孕育” 新的线程和进程——Zygote"></a>“孕育” 新的线程和进程——Zygote</h3><p>这个单词是”受精卵”的意思，正如其名所示，Android 中大多数的应用进程和系统进程都是通过 Zygote 来生成的。它所在的程序名叫做”app_process” ，而不像 ServiceManager 一样在一个独立的进程中。在init 进程的帮助下，通过zygote 逐步建立起 SystemServer 的运行环境。</p>
+<h3 id="Android的“系统服务”——SystemServer"><a href="#Android的“系统服务”——SystemServer" class="headerlink" title="Android的“系统服务”——SystemServer"></a>Android的“系统服务”——SystemServer</h3><p>SystemServer 是 Android 进入 Launcher 前的最后准备。ZygoteInit 通过 Zygote.forkSystemServer 来生成一个新的进程，用于承载各系统服务。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：进程间通信——Binder</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-26 21:36:00" itemprop="dateCreated datePublished" datetime="2019-09-26T21:36:00+08:00">2019-09-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:48:53" itemprop="dateModified" datetime="2019-11-17T21:48:53+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。</p>
+<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：</p>
+<ul>
+<li>Binder 驱动 -&gt; 路由器</li>
+<li>Service Manager（本质也是个服务器） -&gt; DNS（本质也是个服务器）</li>
+<li>Binder Client -&gt; 客户端</li>
+<li>Binder Server -&gt; 服务器</li>
+</ul>
+<p>TCP/IP中一个典型的服务连接过程如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png" alt="TCP/IP连接"></p>
+<p>这个简化的流程图有以下几个步骤：</p>
+<ul>
+<li><p>Client 向dns 查询 google.com 的ip地址。<br>显然，Client 一定得先知道DNS 的 IP地址，才能向它发起查询，DNS 服务器的ip设置是在接入网络前就已经设置完成的。当然，client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；</p>
+</li>
+<li><p>DNS 将查询结果返回 Client。<br>Client的Ip地址对于 DNS 是必须的，不过这些信息会封装在 TCP/IP 包中。</p>
+</li>
+<li><p>Client 发起连接。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
+</li>
+</ul>
+<p>而对于Binder来说，Binder的 DNS (Service Manager)也不是必须的——前提是客户端能记住它要访问的进程的 Binder 标志（IP地址），<strong>尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取</strong>。因此，Service Manager 这个 DNS 的还是挺有必要的。</p>
+<blockquote>
+<p>既然Service Manager是 DNS 服务器，那么它的 IP 地址是多少呢？Binder 机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
+</blockquote>
+<h2 id="智能指针"><a href="#智能指针" class="headerlink" title="智能指针"></a>智能指针</h2><p>略</p>
+<h2 id="进程间的数据传递载体——Parcel"><a href="#进程间的数据传递载体——Parcel" class="headerlink" title="进程间的数据传递载体——Parcel"></a>进程间的数据传递载体——Parcel</h2><p>关于进程间如何传递，我们可以使用2个生活例子来类比：</p>
+<ul>
+<li>用快递寄衣服：虽然快递种类比较多，但是无论用哪个快递，用哪种运输方式，“衣服”本身始终是没有变过的，接收人拿到的还是原来那件衣服。    </li>
+<li>通过电子邮件发送图片：在接收人看到邮件中的图片时，我们无法确认这张图片在传输过程中被复制了多少次，但是可以肯定的是，对方看到的图片和原始图片是一样的。</li>
+</ul>
+<p>进程间通信的数据传递类似于第2种情况，如果只是一个int型数值，不断复制直到目标进程即可；如果是一个对象呢？我们直到，同一个进程中对象的传递实质上是传递了一个内存地址，但是在跨进程的情况下就无能为力了，因为采用了虚拟内存机制，两个进程都有自己独立的内存地址空间，所以跨进程传递的地址空间是无效的。</p>
+<p>进程间的数据传递是Binder 机制中的重要环节，而担负这一重任的就是Parcel。 Parcel 的直译是 “打包” ，上面提到，进程间数据传递直接传送对象的地址是行不通的，那把对象在进程 A 中占据的内存相关数据打包起来，然后寄送到内存 B 中，由 B 在自己的进程空间中“复现”这个对象，是否可行？ Parcel 就具有这种打包能力。</p>
+<p>Parcel 提供了很多接口方便程序使用，他可以存储多种类型的数据：</p>
+<ul>
+<li>原始数据类型 以及 原始数据类型数组     </li>
+<li>Parcelable    </li>
+<li>Bundle    </li>
+<li>Active Objects    </li>
+</ul>
+<blockquote>
+<p>通常我们存入Parcel 的是对象的内容，而 Active Objects 写入的则是他们的特殊标志引用。所以从 Parcel 中读取这些对象时，大家看到的并不是重新创建的对象实例，而是原来那个被写入的实例，能够以这种方式传递的对象目前主要有两类： Binder 以及 FileDescriptor (Linux 中的文件描述符)。</p>
+</blockquote>
+<ul>
+<li>Untyped Containers    </li>
+</ul>
+<blockquote>
+<p>它是用于读写标准的任意类型的 Java 容器，包括 ： writeArray(Object[])/readArray(ClassLoader)、writeList(list)/readList(list)</p>
+</blockquote>
+<p>Parcel 可以用集装箱来类比，理由如下：</p>
+<ul>
+<li>货物无关性： 不排斥运输的货物种类，电子产品、汽车等都可以    </li>
+<li>不同的货物需要不同的打包和卸货方案： 比如运载易碎物品和坚硬物品的装箱和卸货方式就有很大的不同。</li>
+</ul>
+<blockquote>
+<p>值得注意的是，Parcel 存/取 数据的方式都是一一对应的，如 writeByte(byte)/readByte() </p>
+</blockquote>
+<ul>
+<li>远程运输和组装： 集装箱的货物一般需要跨洋，这类似于 Parcel 的跨进程。不过集装箱运输公司本身并不负责所运输货物的组装，而 Parcel 会依据协议为接收方提供还原冤死数据对象的业务。   </li>
+</ul>
+<h3 id="Parcel-的工作方式（书上没有，自己添加）"><a href="#Parcel-的工作方式（书上没有，自己添加）" class="headerlink" title="Parcel 的工作方式（书上没有，自己添加）"></a>Parcel 的工作方式（书上没有，自己添加）</h3><p> Parcel 的 Parcel.obtain() 方法可以获取一个Parcel 对象，系统预先产生了一个大小为6的 Parcel 池 sOwnedPool，在obtain 操作时，如果 sOwnedPool 中还有现成的 Parcel 对象，则直接利用，否则通过 new Parcel(0) 创建 Parcel 对象。</p>
+<p> Parcel.java 实际上只是一个简单的中介，它的主要内容都是 JNI 层的 Parcel 实现的。Parcel 对象的初始化过程只是简单地给各个变量赋初始值，并没有设想中的内存分配动作，因为 Parcel 遵循的是“动态扩展”的内存申请原则，只有在需要时才申请内存，避免资源浪费。</p>
+<blockquote>
+<p>Parcel 提供数据当前位置的值 dataPosition，类似于游标。每当存储新数据时，都是从 dataPosition 位置接着往后存储，存储新数据时，会判断当前空间是否足够，如果不足，则申请新的空间（个人根据文中内容理解的，不太确定是否正确）。</p>
+</blockquote>
+<h2 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h2><p>Android 是 linux 内核的，因而 Binder 驱动也是标准的 linux 驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备。Binder 驱动运行于内核态，可提供 open()、ioctl()、mmap() 等常用文件操作。</p>
+<blockquote>
+<p>Android 系统为什么把 Binder 注册成 misc device 类型的驱动呢？因为 linux 字符设备通常要通过 alloc_chrdev_region()、cdev_init() 等操作才能在内核中注册自己；而 misc 类型驱动相对简单，只需要 misc_register() 就可轻松解决。</p>
+</blockquote>
+<p>Binder 驱动为上层提供了6个接口，但一般文件操作用到的 read() 和 write() 则没有出现，这是因为它们的功能完全可以用 ioctl() 和 mmap() 来代替，并且会更灵活。这6个接口中使用得最多的是 binder_ioctl,binder_mmap 和 binder_open，，以下分别介绍这三种接口。</p>
+<h3 id="打开Binder驱动——binder-open"><a href="#打开Binder驱动——binder-open" class="headerlink" title="打开Binder驱动——binder_open"></a>打开Binder驱动——binder_open</h3><p>上层进程在访问 Binder 驱动时，首先需要打开 /dev/binder 节点，这个操作最终的实现是在 binder_open() 中，在这个方法中，会创建一个 binder_proc 实体，这个实体用于记录各种管理数据(Binder 驱动会在 /proc 系统目录下生成各种管理信息)，并且，每个进程都有独立的记录。</p>
+<p>在完成proc 的初始化之后，就会把这个 proc 加入到 Binder 的全局管理中，这个过程涉及资源互斥，因而需要使用保护机制。到目前为止，Binder 驱动已经为用户创建了一个它自己的 binder_proc 实体，之后用户对Binder 设备的操作都以这个对象为基础。</p>
+<h3 id="binder-mmap"><a href="#binder-mmap" class="headerlink" title="binder_mmap"></a>binder_mmap</h3><p>对于 Binder 驱动来说，上层用户调用的 mmap() 最终对应了 binder_mmap()操作(<strong>应用程序最多只能申请 4M 的空间，如果超出这个大小，不会退出或者报异常，而只会满足用户 4M 的请求</strong>)，那么Binder 采用 mmap 的目的是什么呢？我们知道，mmap() 可以把设备指定的内存块直接映射到应用程序的内存空间中，但Binder 本身并不是硬件设备，而是基于内存的“伪硬件”，那么它映射了什么内存块到应用程序中呢？</p>
+<p>假设有连个进程A和B，其中进程B通过 open() 和 mmap() 与Binder驱动建立了联系，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/B-mmap.png" alt="进程B连接Binder"></p>
+<blockquote>
+<p>可以看到 ：</p>
+</blockquote>
+<blockquote>
+<ol>
+<li>对于进程B而言，通过mmap()返回值得到一个内存地址（当然是虚拟地址），这个地址最终会指向物理内存的某个位置（通过虚拟内存转换）。</li>
+</ol>
+</blockquote>
+<blockquote>
+<ol start="2">
+<li>对于Binder驱动而言，它也有个指针（binder_proc-&gt;buffer）指向某个虚拟内存地址，这个地址转换后，与进程B指向的物理内存地址位于同一个位置。</li>
+</ol>
+</blockquote>
+<p><strong>个人理解：进程B执行 mmap() ，最终是通过 Binder 的 binder_mmap() 来实现，在 B 拿到这块内存后(当然是经过虚拟内存转换后的虚拟内存地址)，Binder 驱动同时将这块内存赋值给了 binder_proc-&gt;buffer</strong>。这样，Binder和应用程序就拥有了<strong>若干公用的物理内存块</strong>，它们对着各自内存地址的操作，实际是在同一块内存中执行，这时候我们再把A进程加入进来，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/A%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE.png" alt="进程A复制数据"></p>
+<p>这时候，左半部分没有变化，右半部分Binder驱动通过copy_from_user()，把A进程中某段数据复制到其binder_proc-&gt;buffer所指向的内存空间，这时候我们惊喜发现，binder_proc-&gt;buffer在物理内存中的位置和进程B是共享的，进而，B进程可以直接访问到这段数据，<strong>也就是说，Binder驱动只用了一次复制，就实现了进程A和B之间的数据共享。</strong></p>
+<blockquote>
+<p>以上通过 mmap 映射的映射区是 <strong>只读</strong>的。</p>
+</blockquote>
+<h3 id="binder-ioctl"><a href="#binder-ioctl" class="headerlink" title="binder_ioctl"></a>binder_ioctl</h3><p>这是 Binder 接口函数中工作量最大的一个。前面提到过，Binder 并不提供 read() 和 write() 等常规文件操作，因为 ioctl 完全可以替代它们。它主要提供了以下命令：</p>
+<ul>
+<li>BINDER_WRITER_READ: 读写操作，可以用此命令向 Binder 读取或写入数据    </li>
+<li>BINDER_SET_MAX_THREAD: 设置支持的最大线程数，因为客户端可以并发向服务器端发送请求，如果Binder 驱动发现当前的线程数量已经超过设定值，就会告知 Binder server 停止启动新的线程。     </li>
+<li>BINDER_SET_CONTEXT_MGR: Service Manager 专用，让它把自己设置为“Binder”大管家。系统中只有一个 Service Manager。</li>
+</ul>
+<h3 id="Service-Manager"><a href="#Service-Manager" class="headerlink" title="Service Manager"></a>Service Manager</h3><p>Service Manager(后面简称 SM) 也就是Binder 中的 “DNS服务器”，既然是DNS，那么在用户可以浏览网页之前就必须就位，因此SM在有人使用Binder之前就处于正常工作状态。SM 的主要工作：</p>
+<ul>
+<li>从Binder驱动读取消息</li>
+<li>调用binder_parse 处理解析消息</li>
+<li>不断循环，而且永远不会主动退出，除非出现致命错误</li>
+</ul>
+<p>它提供的服务应该至少包括以下几种：</p>
+<ul>
+<li>注册——当一个Binder Server 创建后，它们要将自己的相关信息告知 SM 备案</li>
+<li>查询——应用程序可以向 SM 发起查询请求，已获知某个 Binder Server 对应的句柄。</li>
+</ul>
+<blockquote>
+<p>SM 的查询过程很简单，主要是调用 do_find_server 遍历内部列表，并返回目标 Server；注册 Binder server 也很简单，首先在 SM 维护的数据列表中查找是否已经有对应的节点存在，，如果没有，就创建一个新的节点记录这个 Server。</p>
+</blockquote>
+<p>实际上，我们获取 SM 也很简单，只需要以下几步：</p>
+<ol>
+<li>打开Binder设备</li>
+<li>执行mmap</li>
+<li>通过Binder驱动向 SM 发送请求（SM 的 handle是 0）</li>
+<li>获得结果</li>
+</ol>
+<h3 id="Binder-客户端"><a href="#Binder-客户端" class="headerlink" title="Binder 客户端"></a>Binder 客户端</h3><p>Binder 的最大消费者是Java层的应用程序，但是在各种上层的应用场景中切换“过于丝滑”，因此我们很少能感觉到Binder的存在，但是我们能够通过Android的四大组件的行为看出蛛丝马迹：</p>
+<ul>
+<li>Activity：通过 startActivity 可以启动目标进程，不论它是不是属于这个应用。</li>
+<li>Service：任何应用程序都可以通过startService 或者 bindService 来启动特定的服务，而不论后者是不是跨进程的。</li>
+<li>BroadCast：任何应用都可以通过 sendBroadcast 来发送一个广播，且无论广播接收者是不是在同一个进程中。</li>
+</ul>
+<p>组件的上述操作中，多数并不会特别指明要由哪个目标应用程序来响应请求，它们只需要通过Intent表达意愿，然后由系统找出最匹配的应用进程完成工作。为了更明确地说明个中的进程间通信，这里以binderService举例说明：</p>
+<ol>
+<li>首先Application1 填写Intent，调用 bindService 发出请求</li>
+<li>在Application1的运行空间中收到 bindService 请求，这时候会与 ActivityManagerService(AMS)，这就需要得到AMS的Binder句柄，就涉及到进程间通信了（需要ServiceManage.getService）,拿到句柄后，程序才能真正向它发起请求。</li>
+<li>AMS基于“最优匹配策略”，从其存储的所有服务组件中找到最符合Intent的一个，然后向它发送Service绑定请求（这也是进程间通信），如果目标进程还不存在的话，AMS还要负责将其启动</li>
+<li>“被绑定”的服务进程需要响应绑定，并在完成任务后通知AMS，然后由后者回调发起请求的Application1（回调接口是ServiceConnection）。</li>
+</ol>
+<h3 id="Server-服务端"><a href="#Server-服务端" class="headerlink" title="Server 服务端"></a>Server 服务端</h3><p>在建立服务之后，可以有两种方式向外面提供服务：</p>
+<ul>
+<li>Server在ServiceManager中注册，这样，调用者只需要通过 ServiceManager.getService(NAME)就可以获得句柄，随后与之通信。</li>
+<li>所谓的“匿名Server”，并不需要在ServiceManager中注册，那么Client是如何访问的呢？其实它通过其他Server作为中介，没错，就是通过一个“第三方”实名的Server，调用者首先通过ServiceManager获取这个实名的server，在由它提供匿名者的 Binder 句柄。</li>
+</ul>
+<h3 id="Binder-优点"><a href="#Binder-优点" class="headerlink" title="Binder 优点"></a>Binder 优点</h3><p>基于自己的理解而言，Binder具有以下优点：</p>
+<ul>
+<li>性能较好</li>
+</ul>
+<blockquote>
+<p>Binder只需要拷贝一次数据，仅次于共享内存（一次都不要），消息队列和管道采用存储-转发方式，即数据先从发送方缓存区拷贝到内核开辟的缓存区中，然后再从内核缓存区拷贝到接收方缓存区，至少有两次拷贝过程。</p>
+</blockquote>
+<ul>
+<li>稳定性好</li>
+</ul>
+<blockquote>
+<p>基于C/S架构在逻辑上更清晰，client有需求，Server完成。共享内存实现起来复杂，各方没有客户端与服务端之别，要考虑并发问题以及可能出现的死锁。</p>
+</blockquote>
+<ul>
+<li>安全性好</li>
+</ul>
+<blockquote>
+<p>传统 Linux IPC 的接收方要么无法获得对方进程可靠的 UID/PID ，从而无法鉴别对方身份；要么只能由用户在数据包里填入UID/PID。Android 为每个应用分配了自己的UID，前面提到 C/S 架构，Server 会根据权限控制策略判断 Client 的请求是否满足权限。并且Binder机制还有匿名 Binder ，压根无法直接获取句柄，安全性更好。</p>
+</blockquote>
+<ul>
+<li>使用简单。</li>
+</ul>
+<blockquote>
+<p>获得句柄之后，就像调用本地方法一样方便。并且Linux的IPC方式使用C语言，而Android应用层主要使用Java，这可能也是个因素。</p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1459,314 +1776,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/07/28/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC7%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/28/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章: 虚拟机类加载机制</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-28 11:00:00" itemprop="dateCreated datePublished" datetime="2019-07-28T11:00:00+08:00">2019-07-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:49:31" itemprop="dateModified" datetime="2019-11-17T21:49:31+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？</p>
-<p>虚拟机把描述类的数据从Class文件加载到内存，<strong>并对数据进行校验、转换解析和初始化</strong>，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能开销，但是会为Java应用程序提供高度的灵活性。</p>
-<blockquote>
-<p>例如，可以等到运行时再指定其实际的实现类：用户可以通过Java预定义和自定义的类加载器，让一个本地的应用程序可以在运行时从网络或者其他地方加载一个二进制流作为程序代码的一部分。</p>
-</blockquote>
-<h2 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h2><p>类从被加载到虚拟机内存中开始，到卸载出内存为止，整个生命周期如下图所示：</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC7%E7%AB%A0/%E7%B1%BB%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png" alt="类的生命周期"></p>
-<p>总共有7个阶段，其中验证、准备、解析 这3个部分统称为<strong>连接(Linking)</strong>，并且加载、验证、准备、初始化和卸载这5个阶段的顺序是确定的，类的加载按照上述顺序按部就班地开始（不是“进行”，也不是“完成”，只是按部就班地“开始”，因为这些阶段通常都是相互交叉地混合式进行）。</p>
-<p>虚拟机规范中<strong>严格规定</strong>了<strong>有且只有5种</strong>情况必须立即对类进行初始化（而加载、验证、准备自然需要在此之前开始）：</p>
-<ol>
-<li>遇到new、getstatic、putstatic或invokestatic这4条字节码指令时，如果类没有进行过初始化，则需要先触发其初始化。</li>
-</ol>
-<blockquote>
-<p>这4条指令的最常见的Java代码中的场景是：使用new关键字实例化对象、读取或者设置一个类的静态字段（被final修饰、已在编译器把结果放入常量池的静态字段除外）、以及调用一个类的静态方法。</p>
-</blockquote>
-<ol start="2">
-<li>使用java.lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则先触发其初始化。</li>
-<li>当初始化一个类，如果发现其父类还没有进行过初始化，则需要先触发其父类初始化。</li>
-<li>虚拟机启动时，虚拟机会先初始化用户指定的主类（包含main()方法的那个类）</li>
-<li>当使用JDK 1.7的动态语言支持时，如果一个java.lang.invoke.MethodHandle实例最后的解析结果REF_getStatic、REF_putStatic、REF_invokeStatic 的方法句柄，并且这个方法句柄所对应的类没有进行过初始化，则需要先触发其初始化。</li>
-</ol>
-<p>以上5种场景中的行为称为对一个类进行主动引用，<strong>除此之外，所有引用类的方式都不会触发初始化，称为被动引用</strong>。以下举3个例子来说明何为被动引用。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示一：</span></span><br><span class="line"><span class="comment">//通过子类引用父类的静态字段，不会导致子类初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SuperClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.printlin(<span class="string">"SuperClass init!"</span>);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> value = <span class="number">123</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SubClass</span> <span class="keyword">extends</span> <span class="title">SuperClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.printlin(<span class="string">"SubClass init!"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//非主动使用类字段演示</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        System.out.printlin(Subclass.value);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码运行后，只会输出 “SuperClass init!” ，对于静态字段，只有直接定义这个字段的类才会被初始化，因此通过其子类来引用父类中定义的静态字段，只会触发父类的初始化而不会触发子类的初始化。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示二：</span></span><br><span class="line"><span class="comment">//通过数组定义来引用类，不会触发此类的初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        SuperClass[] sca = <span class="keyword">new</span> SuperClass[<span class="number">10</span>];</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这里复用了上面的 SuperClass ，运行之后，发现没有输出 “SuperClass init!” ，说明没有触发 SuperClass 的初始化阶段。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示二：</span></span><br><span class="line"><span class="comment">//常量在便一阶段会存入调用类的常量池中，本质上并没有直接引用到定义常量的类，因此不会触发定义常量的类的初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConstClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.printlin(<span class="string">"ConstClass init!"</span>);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String HELLOWORLD = <span class="string">"hello world"</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        Systemt.out.printlin(ConstClass. HELLOWORLD);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码运行之后，也没有输出 “ConstClass init!” ，虽然在 Java 源码中引用了 ConstClass 中的常量 HELLOWORLD ，但其实在编译阶段通过常量传播优化，已经将此常量值 “hello world” 存储到了 NotInitialization 类的常量池中，以后 NotInitialization 对常量 ConstClass. HELLOWORLD 的引用时机都被转化为 NotInitialization 对自身常量池的引用了。也就是说，实际上 NotInitialization 的 Class 文件之中并没有 ConstClass 类的符号引用入口，这两个类在编译成 Class 之后就不存在任何联系了。</p>
-<p>接口的加载过程与类加载过程稍有一些不同，接口与类真正有所区别的是前面讲述的5种“有且仅有”需要开始初始化场景中的第3种：当一个类在初始化时，要求其父类全部都已经初始化过了，但是一个接口在初始化时，并不要求其父接口全部都完成了初始化，只有在真正使用到父接口的时候（如引用接口中定义的常量）才会初始化。</p>
-<blockquote>
-<p>顺带说明一下，上面的代码都是用静态语句块 “static{}”来输出初始化信息的，但接口中不能使用 “static{}”语句块。</p>
-</blockquote>
-<h2 id="类加载过程"><a href="#类加载过程" class="headerlink" title="类加载过程"></a>类加载过程</h2><h3 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h3><p>“加载”是“类加载(Class Loading)”过程的一部分，不要混淆。在加载阶段，虚拟机需要完成以下3件事情：</p>
-<ol>
-<li>通过类的全限定名获取类的二进制字节流</li>
-<li>将字节流所代表的静态存储结构转化为方法区的运行时数据结构</li>
-<li>在内存中生成一个代表这个类的 java.lang.Class 对象，作为方法区这个类的各种数据的访问入口。</li>
-</ol>
-<p>这3点规范并不算具体，例如第一条，并没有指明要从哪里获取，怎么获取，因此充满创造力的开发人员玩出了各种花样：</p>
-<ul>
-<li>从 zip 包中读取，最终成为日后 jar、ear、war 格式的基础</li>
-<li>从网络中获取，比如Applet</li>
-<li>运行时计算生成，这种场景用得最多的就是动态代理技术。</li>
-</ul>
-<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>验证是连接阶段的第一步，这个阶段是否严谨，直接决定了Java虚拟机是否能承受恶意代码的攻击。从整体来看，验证阶段大致上会完成下面4个阶段的检验动作：</p>
-<p><strong>文件格式验证</strong>  </p>
-<blockquote>
-<p>魔数0xCAFEBABE开头、主次版本是否在虚拟机处理范围内等。</p>
-</blockquote>
-<p><strong>元数据验证</strong>  </p>
-<blockquote>
-<p>是否有父类-除Object外，所有类都有父类、父类是否继承了不允许被继承的类-final修饰，是否实现了父类或者接口要求实现的所有方法。</p>
-</blockquote>
-<p><strong>字节码验证</strong>  </p>
-<blockquote>
-<p>通过数据流和控制流分析，确定程序语义是否合法、符合逻辑的。如果一个类方法体的字节码没有通过字节码验证，那肯定是有问题的；如果一个方法体通过了字节码验证，也不能说明其一定就是安全的。</p>
-</blockquote>
-<p><strong>符号引用验证</strong>  </p>
-<blockquote>
-<p>这个校验发生在虚拟机将符号引用转化为直接引用的时候，这个转化动作将在解析阶段发生。通常校验：通过全限定名是否能找到对应的类、符号引用中的类、字段、方法的访问性(private、protected、public、default)是否可以被当前类访问 等等。</p>
-</blockquote>
-<h3 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h3><p>准备阶段正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。</p>
-<p>这里两个容易产生的混淆的概念强调一下：首先，这时候进行内存分配的仅仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时一起分配在java堆中。其次，这里说的初始值“通常情况”下是数据类型的零值，假设一个类变量定义为： </p>
-<blockquote>
-<p>public static int value = 123;</p>
-</blockquote>
-<p>那变量value在准备阶段过后的初始值为 0 而不是 123。<strong>把value赋值为123的动作将在初始化阶段才会执行</strong>。</p>
-<h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>解析阶段是虚拟机将常量池内的符号引用替换成直接引用的过程。</p>
-<p><strong>符号引用(Symbolic References)：</strong>符号引用以一组符号来描述所引用的目标，符号可以是任何形式的字面量，只要使用时能无歧义地定位到目标即可。</p>
-<p><strong>直接引用(Symbolic References)：</strong>直接引用可以是直接指向目标的指针、相对偏移量或是一个能间接定位到目标的句柄。</p>
-<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>到了初始化阶段，才真正开始执行类中定义的Java程序代码(或者说是字节码)。在准备阶段，变量已经赋过一次系统要求的初始值，而在初始化阶段，则根据程序员通过程序自定的主观计划去初始化类变量和其他资源。换一个角度来表达就是：<strong>初始化阶段是执行类构造器<clinit>()方法的过程</clinit></strong>。以下介绍下<clinit>()方法执行过程中一些可能会影响程序运行行为的特点和细节：</clinit></p>
-<ul>
-<li><clinit>()方法由编译器自动收集类中的所有类变量的赋值动作和静态语句块(static{}块)中的语句合并产生的，编译器收集的顺序是由语句<strong>在源文件中出现的顺序决定</strong>的，静态语句块中<strong>只能访问到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但不能访问</strong>。一个例子说明：</clinit></li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span></span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i =<span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.print(i);<span class="comment">//正常使用</span></span><br><span class="line">        </span><br><span class="line">        j = <span class="number">0</span>;<span class="comment">//给变量赋值可以正常编译</span></span><br><span class="line">        Systemt.out.print(j);<span class="comment">//这句提示“非法向前引用”</span></span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> j =<span class="number">1</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li><clinit>()方法与类的构造函数（实例构造器<init>()）不同,它不需要显式地调用父类构造器，虚拟机会保证在子类的 <clinit>() 执行之前，父类的<clinit>()已经执行完毕。因此，在虚拟机中第一个被执行<clinit>()方法的类肯定是 java.lang.Object。<strong>这其实也意味着，父类定义的静态语句块要优先于子类变量赋值操作</strong>。一个例子说明：</clinit></clinit></clinit></init></clinit></li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Parent</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> A = <span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        A = <span class="number">2</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sub</span> <span class="title">extentds</span> <span class="title">Parent</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> B = A;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span></span>{</span><br><span class="line">    Systemt.out.println(Sub.B)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>以上代码将打印出 2 而不是 1。</p>
-<ul>
-<li><p><clinit>()方法对于类或者接口不是必需的，如果类中没有静态语句块，也没有对变量的赋值，那么编译器可以不为这个类生成<clinit>()方法。</clinit></clinit></p>
-</li>
-<li><p>接口中不能使用静态语句块，但是可以有变量初始化的赋值操作，因此接口与类一样都会生成 <clinit>()方法 。但接口的 <clinit>()方法 无须先执行父接口的<clinit>()方法，只有父接口中定义的变量使用时，父接口才会初始化（接口的实现类在初始化时也不会执行接口的<clinit>()方法）。</clinit></clinit></clinit></clinit></p>
-</li>
-<li><p>虚拟机会保证一个类的 <clinit>()方法 在多线程环境中会被正确地加锁、同步，所以，多线程同时去初始化一个类，那么只会有一个县城执行这个类的&lt;clinit&gt;()方法，其他的线程都会阻塞等待。举个例子：</clinit></p>
-</li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">DeadLoopClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        <span class="comment">//如果不加上这个if语句，编译器将报错，并拒绝编译</span></span><br><span class="line">        <span class="keyword">if</span>(<span class="keyword">true</span>){</span><br><span class="line">            System.out.println(Thread.currentThread() + <span class="string">"init DeadLoopClass"</span>);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>){</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        Runnable script = <span class="keyword">new</span> Runnable(){</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>{</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"start"</span>);</span><br><span class="line">                DeadLoopClass dlc = <span class="keyword">new</span> DeadLoopClass();</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"run over"</span>);</span><br><span class="line">            }</span><br><span class="line">           </span><br><span class="line">        };</span><br><span class="line">        </span><br><span class="line">        Thread thread1 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        Thread thread2 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        thread1.start();</span><br><span class="line">        thread2.start();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码在死循环以模拟长时间操作，另外一条线程在阻塞等待，将打印以下结果：</p>
-<blockquote>
-<p>Thread[Thread-0,5,main]start<br>Thread[Thread-1,5,main]start<br>Thread[Thread-0,5,main]init DeadLoopClass</p>
-</blockquote>
-<h2 id="类加载器"><a href="#类加载器" class="headerlink" title="类加载器"></a>类加载器</h2><p>虚拟机设计团队把类加载阶段中的“通过一个类的全限定名来获取描述此类的二进制字节流”这个动作放到Java虚拟机外部去实现，以便让应用程序自己决定如何去获取所需要的类。</p>
-<h3 id="类与类加载器"><a href="#类与类加载器" class="headerlink" title="类与类加载器"></a>类与类加载器</h3><p>对于任意一个类，都需要由加载它的类加载器和这个类本身一同确立其在Java虚拟机中的唯一性，每一个类加载器，都拥有一个独立的类名称空间。通俗地说，比较两个类是否“相等”，只有在这两个类都是由同一个类加载器加载的前提下才有意义，否则，即使这两个类来源于同一个Class文件，都被同一个虚拟机加载，只要加载它们的类加载器不同，那这两个类就必定不相等。</p>
-<p>这里的“相等”，包括代表类的Class对象的 equals() 、isAssignableFrom()、isInstance() 方法返回的结果，也包括使用 instanceof 关键字做对象所属关系判定等情况。以下代码演示了不同类加载器对instanceof关键字运算的结果的影响：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClassLoaderTest</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">        ClassLoader myLoader = <span class="keyword">new</span> ClassLoader(){</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException{</span><br><span class="line">                <span class="keyword">try</span>{</span><br><span class="line">                    String fileName = name.substring(name.lastIndexOf(<span class="string">"."</span>) + <span class="number">1</span>);</span><br><span class="line">                    InputStream is = getClass().getResourceAsStream(fileName);</span><br><span class="line">                    <span class="keyword">if</span>(is == <span class="keyword">null</span>){</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">super</span>.loadClass(name);</span><br><span class="line">                    }</span><br><span class="line">                    <span class="keyword">byte</span>[] b = <span class="keyword">new</span> <span class="keyword">byte</span>[is.available()];</span><br><span class="line">                    is.read(b);</span><br><span class="line">                    <span class="keyword">return</span> defineClass(name,b,<span class="number">0</span>,b.length);</span><br><span class="line">                }<span class="keyword">catch</span>(){</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ClassNotFoundException();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        Object obj = myLoader.loadClass(<span class="string">"org.example.classloading. ClassLoaderTest"</span>);</span><br><span class="line">        </span><br><span class="line">        Systemt.out.println(obj.getClass());</span><br><span class="line">        System.out.println(obj <span class="keyword">instanceof</span> org.example.classloading. ClassLoaderTest);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>返回结果：   </p>
-<blockquote>
-<p>class org.example.classloading. ClassLoaderTest<br>false </p>
-</blockquote>
-<p>从结果可以看出，对象确实是类 “org.example.classloading. ClassLoaderTest” 的类，并实例化了这个类的对象。但这个对象与类 org.example.classloading. ClassLoaderTest 做所属类型检查的时候却返回了false，这是因为虚拟机中存在了两个 ClassLoaderTest 类，一个由系统应用程序类加载器加载的，另外一个是由我们自定义的类加载器加载的，虽然都来自同一个Class文件，但依然是两个独立的类。</p>
-<h3 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h3><p>从java虚拟机角度来讲，只存在两种类加载器：一种是启动类加载器(Bootstrap ClassLoader)，是虚拟机自身的一部分；另一种就是所有其他的类加载器，这些类加载器都由Java语言实现，独立于虚拟机外部，并且全部继承自抽象类 java.lang.ClassLoader。</p>
-<p>如下图所示的类加载器之间的这种层次关系，称为双亲委派模型(Parent Delegation Model)。</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC7%E7%AB%A0/%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%A8%A1%E5%9E%8B.png" alt="类的生命周期"></p>
-<p>双亲委派模型要求除了顶层的启动类加载器外，其余的类加载器都应当有自己的父类加载器，这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合(Composition)关系来复用父加载器的代码。</p>
-<p>双亲委派模型的工作过程是：<strong>如果一个类加载器收到了类加载请求，它首先不会自己去尝试加载这个类，而是把请求委派给父类加载器去完成，因此所有的加载请求最终都应该传送到顶层的启动类加载器中。只有当父加载器反馈自己无法完成这个加载请求（它的搜索范围中没有找到所需的类）时，子加载器才会尝试自己去加载。</strong></p>
-<p>双亲委派模型一个显而易见的好处就是：<strong>Java 类随着它的类加载器一起具备了一种带有优先级的层次关系。</strong></p>
-<blockquote>
-<p>例如类 java.lang.Object ，无论哪一个类加载器都要加载这个类（因为所有的类都直接或间接地继承了它），最终都是委派给处于模型最顶端的启动类加载器进行加载，因此，Object 类在程序中的各种类加载器环境中都是同一个类。相反，如果不使用双亲委派模型，由各个类加载器自行去加载的话，如果用户自己编写了一个称为 java.lang.Object 的类，并放在 ClassPath 中，那系统中将将会出现多个不同的Object 类，Java类型体系中最基础的行为也就无法保证。</p>
-</blockquote>
-<h3 id="破坏双亲委派模型"><a href="#破坏双亲委派模型" class="headerlink" title="破坏双亲委派模型"></a>破坏双亲委派模型</h3><p>略</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/07/27/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/27/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章: 类文件结构</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-27 14:56:00" itemprop="dateCreated datePublished" datetime="2019-07-27T14:56:00+08:00">2019-07-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:49:25" itemprop="dateModified" datetime="2019-11-17T21:49:25+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>计算机只认识0和1，但是最近10年虚拟机以及大量建立在虚拟上的语言的发展，将我们编写的程序编译成二进制本地机器码（Native Code）已不再是唯一的选择，越来越多的程序语言选择了与操作系统和机器指令集无关的、平台中立的格式作为程序编译后的存储格式。</p>
-<h2 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h2><p>Sun公司及其他虚拟机提供商发布了许多可以运行在各种不同平台上的虚拟机，这些虚拟机都可以载入和执行同一种平台无关的字节码，从而实现程序的“一次编写，到处运行”。而各种不同平台的虚拟机以及平台无关的字节码（ByteCode）是构成平台无关性的基石。  </p>
-<p>到目前为止，或许大部分程序员都还认为Java虚拟机执行Java程序是一件理所当然的事情，但在Java发展之初，Java的规范就分为Java语言规范以及Java虚拟机规范，时至今日，Java语言之外已经有一大批语言运行在Java虚拟机之上，如 Groovy、JRuby、Jython等。  </p>
-<p>Java 虚拟机不和包括Java在内的任何语言绑定，它只与“Class 文件”这种特定的二进制文件格式所关联，任一门功能性语言都可以表示为一个能被Java虚拟机所接受的有效的Class文件。</p>
-<h2 id="Class-类文件的结构"><a href="#Class-类文件的结构" class="headerlink" title="Class 类文件的结构"></a>Class 类文件的结构</h2><p>Class 文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑地排列在Class文件中，中间没有任何分隔符。遇到需要占用8位字节以上空间的数据项时，会按照高位在前的方式分割成若干个8位字节进行存储。</p>
-<p>Class 文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构只有两种数据类型： 无符号数和表。</p>
-<p>无符号数属于基本的数据类型，以u1、u2、u4、u8分别代表1、2、4、8个字节的无符号数，无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8 编码构成的字符串值。</p>
-<p>表示由多个无符号数或者其他表作为数据项的复合数据类型，表用于描述有层次关系的复合结构的数据，整个Class文件本质就是一张表。</p>
-<h3 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h3><p>Class文件的头4个字节称为魔数（Magic Number），它的唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件。Class 文件的魔数值为 0xCAFEBABE (咖啡宝贝？)，很有浪漫气息。紧接着魔数的4个字节存储着Class文件的版本号，高版本的JDK能乡下兼容以前版本的Class文件，但不能运行以后版本的Class文件。</p>
-<blockquote>
-<p>很多文件存储标准中都使用魔数来进行身份识别，如gif和jpeg等在文件头中都存有魔数。使用魔数而不是扩展名来识别主要是基于安全考虑： 文件扩展可以随意改动。</p>
-</blockquote>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC6%E7%AB%A0/%E9%AD%94%E6%95%B0.png" alt="魔数示意图"></p>
-<h3 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h3><p>版本号之后是常量池入口，该区域可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，由于常量池中常量的数量是不固定的，所以在常量池的入口需要放置一项u2类型的数据，代表常量池容量计数值。</p>
-<p>常量池中主要存放两大类常量：字面量（Literal） 和 符号引用（Symbolic References）。<strong>字面量比较接近于Java语言层面的常量概念，如 文本字符串、声明为final的常量值等</strong>，而符号引用则属于编译原理方面的概念，包括了下面三类常量：</p>
-<ul>
-<li>类和接口的全限定名(Fully Qualified Name)</li>
-<li>字段的名称和描述符(Descriptor)</li>
-<li>方法的名称和描述符</li>
-</ul>
-<p>Java代码在javac编译的时候，并不像c和c++那样有“连接”这一步骤，而是在虚拟机加载 Class 文件的时候进行动态连接，也就是说，在Class文件中不会保存各个方法、字段的最终内存布局信息。虚拟机运行时，需要从常量池获得对应的符号引用，再在类创建时解析、翻译到具体的内存地址中。</p>
-<h3 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h3><p>常量池结束后，紧接着2个字节代表访问标志（access_flags<br>），这个标志用于识别一些类或者接口层次的访问信息，包括： 这个Class 是类还是接口；是否定义为public类型；是否定义为abstract类型；如果是类的话，是否被声明为final等等。</p>
-<h3 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h3><p>类索引（this_class） 和父类索引(super_class)都是一个u2类型的数据，而接口索引集合(interfaces)是一组u2类型的数据的集合，class 文件中由这三项数据来确定这个类的继承关系。</p>
-<p>其中，类索引用于确定这个类的全限定名，父类索引用于确定这个类的父类的全限定名，由于Java不允许多重继承，所以父类索引只有一个，除了java.lang.Object之外，所有的Java类都有父类，因此，父类索引都不为0。接口索引集合用来描述这个类实现了哪些接口，按照implement语句后的接口顺序从左到右排列在接口索引集合中。</p>
-<h3 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h3><p>字段表(field_info)用于描述接口或者类中声明的变量，包括类级变量和实例级变量，不包括方法内的局部变量。这个描述可以包括的信息有： 字段的作用域(public、private、protected修饰符)、实例变量还是类变量(static修饰符)、可变性(final)、并发可见性(volatile 修饰符，是否强制从主内存读写)、可否被序列化(transient修饰符) 等等。</p>
-<h3 id="方法表集合"><a href="#方法表集合" class="headerlink" title="方法表集合"></a>方法表集合</h3><p>Class 文件存储格式中对方法的描述与对字段的描述几乎采用了完全一致的方式，方法表的结构如同字段表一样，只是些微的区别，比如volatile关键字和transient关键字不能修饰方法 。</p>
-<h3 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h3><p>在Class文件、字段表、方法表都可以携带自己的属性表集合，以用于描述某些场景专有的信息(这一块内容也没耐心看下去，下次看明白再补)。</p>
-<h2 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h2><p>这章离App开发比较远，因此第一遍的时候先略过。</p>
-<h2 id="公有设计和私有实现"><a href="#公有设计和私有实现" class="headerlink" title="公有设计和私有实现"></a>公有设计和私有实现</h2><p>理解公有设计与私有实现之间的分界线是非常有必要的，Java虚拟机实现必须能够读取Class文件并精确实现包含在其中的Java虚拟机代码的语义。按照Java虚拟机规范一成不变地逐字实现其中要求的内容是一种可行的途径，但是一个优秀的虚拟机实现，在满足虚拟机规范的约束下对具体实现做出修改和优化也是完全可行的。虚拟机实现的方式主要有以下两种：</p>
-<ul>
-<li>将输入的Java虚拟机代码在加载或执行时翻译成另外一种虚拟机的指令集。</li>
-<li>将输入的Java虚拟机代码在加载或执行翻译成宿主机CPU的本地指令集（即 JIT 代码生成技术）</li>
-</ul>
-<h2 id="Class-文件结构的发展"><a href="#Class-文件结构的发展" class="headerlink" title="Class 文件结构的发展"></a>Class 文件结构的发展</h2><p>略。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/8/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/">8</a><span class="page-number current">9</span><a class="page-number" href="/page/10/">10</a><span class="space">&hellip;</span><a class="page-number" href="/page/13/">13</a><a class="extend next" rel="next" href="/page/10/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/8/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/">8</a><span class="page-number current">9</span><a class="page-number" href="/page/10/">10</a><span class="space">&hellip;</span><a class="page-number" href="/page/14/">14</a><a class="extend next" rel="next" href="/page/10/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1812,7 +1826,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">130</span>
+          <span class="site-state-item-count">132</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1898,7 +1912,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共277.2k字</span>
+  <span class="post-count">博客全站共279.2k字</span>
 </div>
 
 

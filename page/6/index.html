@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">130</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">132</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,195 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/" class="post-title-link" itemprop="url">第13讲-存储优化<中>-如何优化数据存储</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-06-25 11:36:00" itemprop="dateCreated datePublished" datetime="2020-06-25T11:36:00+08:00">2020-06-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-05-05 17:43:48" itemprop="dateModified" datetime="2021-05-05T17:43:48+08:00">2021-05-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h3 id="Serializable-的原理"><a href="#Serializable-的原理" class="headerlink" title="Serializable 的原理"></a>Serializable 的原理</h3><p>Serializable 的原理是<strong>通过 ObjectInputStream 和 ObjectOutputStream 来实现的</strong>，通过 Android 6.0 的源码可以看到 ObjectOutPutStream 的部分源码实现：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeFieldValues</span><span class="params">(Object obj, ObjectStreamClass classDesc)</span>  </span>{</span><br><span class="line">    <span class="keyword">for</span> (ObjectStreamField fieldDesc : classDesc.fields()) {</span><br><span class="line">        ...</span><br><span class="line">        Field field = classDesc.checkAndGetReflectionField(fieldDesc);</span><br><span class="line">        ...</span><br></pre></td></tr></tbody></table></figure>
+
+<p>整个序列化过程使用了大量反射(比如说获取整个类的所有属性，反射意味着效率低)和临时变量(临时变量意味着GC)，并且，<strong>在序列化对象时，不仅会序列化当前对象本身，还需要地柜序列化对象引用的其他对象</strong>，可以参考<a target="_blank" rel="noopener" href="https://juejin.cn/post/6844904049997774856">别人的博客</a>。</p>
+<h3 id="Serializable-的进阶"><a href="#Serializable-的进阶" class="headerlink" title="Serializable 的进阶"></a>Serializable 的进阶</h3><p>Serializable 序列化支持使用自定义 writeObject和readObject，他会先反射判断是否存在我们自己实现的 序列化writeObject方法和反序列化readObject 方法。<strong>通过这两个方法，我们可以对某些字段做修改，也能实现序列化的加密功能。</strong></p>
+<p>还有，Serializable 的反序列默认是不会执行构造函数的</p>
+<h3 id="Parcelable-的永久存储"><a href="#Parcelable-的永久存储" class="headerlink" title="Parcelable 的永久存储"></a>Parcelable 的永久存储</h3><p>一般来说，我们使用 parcelable 只是会在内存中序列化操作，并不会存储到磁盘。其实，我们也可以存储到磁盘的：<strong>通过 Parcel.java 中的 marshall 接口获取byte 数组，然后存在文件中，从而实现 Parcelable 的永久存储。</strong></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Returns the raw bytes of the parcel.</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] marshall() {</span><br><span class="line">    <span class="keyword">return</span> nativeMarshall(mNativePtr);</span><br><span class="line">}</span><br><span class="line"><span class="comment">// Set the bytes in data to be the raw bytes of this Parcel.</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">unmarshall</span><span class="params">(<span class="keyword">byte</span>[] data, <span class="keyword">int</span> offset, <span class="keyword">int</span> length)</span> </span>{</span><br><span class="line">    nativeUnmarshall(mNativePtr, data, offset, length);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>不过，一般不推荐这样做，因为可能会有系统版本兼容性问题，因为我们无法保证所有的 Android 版本的 Parcel.cpp 实现完全一致。还有就是数据前后的兼容性，这里并没有类似 Serializable 里面有个 serialVersionUID 来保证版本一致性。</p>
+<h2 id="14-数据库优化"><a href="#14-数据库优化" class="headerlink" title="14-数据库优化"></a>14-数据库优化</h2><p>SQLite 默认支持多进程并发操作，它通过文件锁来控制多进程的并发，但是SQLite 的锁粒度并没有非常细，针对的是整个DB文件，简单来说，多进程可以同事获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库</p>
+<p>数据库使用注意：</p>
+<ul>
+<li>防止注入   </li>
+<li>防止窃取      </li>
+<li>小表无需维护索引，因为索引是需要一直维护的，有代价        </li>
+<li>慎用 “select * “ 需要多少列，就取多少列      </li>
+<li>定期删除无用数据             </li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/30/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/05/30/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/" class="post-title-link" itemprop="url">第7、8课-启动优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-05-30 10:00:00 / 修改时间：10:00:40" itemprop="dateCreated datePublished" datetime="2020-05-30T10:00:00+08:00">2020-05-30</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="启动优化-lt-上-gt-第7讲"><a href="#启动优化-lt-上-gt-第7讲" class="headerlink" title="启动优化<上>-第7讲"></a>启动优化&lt;上&gt;-第7讲</h2><h3 id="启动分析"><a href="#启动分析" class="headerlink" title="启动分析"></a>启动分析</h3><p>着手优化之前，首先分析启动过程。</p>
+<ol>
+<li>首先预览窗口，系统拉起App进程之前，会根据app的Theme属性创建预览窗口。当然，我们禁用预览窗口或者预览窗口为透明时，用户依然可以看到桌面。               </li>
+<li>进程和闪屏页创建完毕，可以看到广告图片界面                 </li>
+<li>主窗口创建完成可以看到首页了         </li>
+<li>首页加载完，才能操作起来            </li>
+</ol>
+<h3 id="启动遇到的问题"><a href="#启动遇到的问题" class="headerlink" title="启动遇到的问题"></a>启动遇到的问题</h3><ul>
+<li>点击图标很久都不响应。可能是禁用了预览窗口或者透明皮肤           </li>
+<li>首页显示太慢。闪屏广告、其它准备工作都要在启动阶段完成，如果耗时太多就慢            </li>
+<li>首页显示后无法操作。工作异步延后之后，首页就会出现白屏，或者首页出来无法操作         </li>
+</ul>
+<h3 id="启动优化"><a href="#启动优化" class="headerlink" title="启动优化"></a>启动优化</h3><p>优化工具：综合看来，在卡顿优化中提到的 “systrace + 函数插桩” 是比较理想的方案，而且还能看到一些关键事件：GC、SystemServer 、CPU 调度等       </p>
+<p><strong>准确的评估之后，才能指引优化的方向</strong></p>
+<h4 id="优化方式"><a href="#优化方式" class="headerlink" title="优化方式"></a>优化方式</h4><ul>
+<li>闪屏优化。今日头条把预览窗口与是县城闪屏效果，用户在很短时间内看到“预览闪屏”，不过这种实现对于低端机型会把总的闪屏时间拉长。所以比较推荐在 6.0及以上的版本才采用“预览闪屏”      </li>
+<li>业务梳理。清楚启动过程中每一个运行的模块，哪些是一定需要的，哪些是可以砍掉，可以懒加载的。<strong>还有，懒加载要防止集中化，容易出现首页用户无法操作的情况</strong>。       </li>
+<li>线程优化。主要在于减少cpu调度带来的波动，让应用启动更加稳定。具体做法是，一方面控制县城的数量，要有线程池(我们是采用Rxjava，统一管理线程池)；还有一个就是管理线程的锁，比如业务有先后顺序，或者优先级不同，这一点可以采用第三方启动框架来解决，比如<a target="_blank" rel="noopener" href="https://github.com/alibaba/alpha">阿里开源的Alpha</a>、<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/6Q818XA5FaHd7jJMFBG60w?">微信内部使用的mmkernel</a>            </li>
+</ul>
+<h2 id="启动优化-lt-下-gt-第8讲"><a href="#启动优化-lt-下-gt-第8讲" class="headerlink" title="启动优化<下>-第8讲"></a>启动优化&lt;下&gt;-第8讲</h2><h3 id="启动进阶方法"><a href="#启动进阶方法" class="headerlink" title="启动进阶方法"></a>启动进阶方法</h3><p>启动过程不建议出现网络io</p>
+<p>还有，就是数据结构选择问题，在启动时，只需要读写很少量的 sp文件，如果与很大的sp文件一起解析，这个解析时间可能就要超过  100ms了(可以说我们的application中的sp解析是花了很长时间的)。</p>
+<h3 id="黑科技"><a href="#黑科技" class="headerlink" title="黑科技"></a>黑科技</h3><p>应用加固对启动速度来说是灾难</p>
+<h3 id="启动监控"><a href="#启动监控" class="headerlink" title="启动监控"></a>启动监控</h3><ul>
+<li>实验室监控，如果客观地反映启动耗时，视频录制是非常好的选择，尤其是我们拿不到竞品的数据(通过分析竞品，我们制定了秒开的标准，可以取平均值、最大值、最小值)              </li>
+<li>线上监控。我们使用talkingdata来监测。(但是我们要注意监测的耗时)，最终衡量指标呢，使用平均法容易忽略掉性能差的手机，可以使用快开慢开比：比如2秒快开比，5秒快开比；另一种就是 90% 用户启动时间，如果90%用户启动时间都小于5秒，那我们90%区间启动耗时就是5秒。                </li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1304,659 +1493,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/03/15/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E7%B2%BE%E9%80%89TOP%E9%9D%A2%E8%AF%95%E9%A2%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/03/15/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E7%B2%BE%E9%80%89TOP%E9%9D%A2%E8%AF%95%E9%A2%98/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-精选TOP面试题</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-03-15 10:15:00" itemprop="dateCreated datePublished" datetime="2020-03-15T10:15:00+08:00">2020-03-15</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-11 21:04:45" itemprop="dateModified" datetime="2020-04-11T21:04:45+08:00">2020-04-11</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了"><a href="#注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了" class="headerlink" title="注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)"></a>注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)</h2><h3 id="350、两个数组的交集II"><a href="#350、两个数组的交集II" class="headerlink" title="350、两个数组的交集II"></a>350、两个数组的交集II</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ol>
-<li>hashmap 记录第一个数组每个元素出现次数，再遍历第二个数组    2. 先给两个数组排序，再遍历**</li>
-</ol>
-<p>自己写的时候的问题：<strong>Integer 写错、HashMap&lt;Integer,Integer&gt; 在 int times = get(key) 的时候，要注意判空</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/intersection-of-two-arrays-ii/solution/liang-ge-shu-zu-de-jiao-ji-ii-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="412、Fizz-Buzz，写一个程序，输出从-1-到-n-数字的字符串表示。1-如果-n-是3的倍数，输出“Fizz”；2-如果-n-是5的倍数，输出“Buzz”；3-如果-n-同时是3和5的倍数，输出-“FizzBuzz”。"><a href="#412、Fizz-Buzz，写一个程序，输出从-1-到-n-数字的字符串表示。1-如果-n-是3的倍数，输出“Fizz”；2-如果-n-是5的倍数，输出“Buzz”；3-如果-n-同时是3和5的倍数，输出-“FizzBuzz”。" class="headerlink" title="412、Fizz Buzz，写一个程序，输出从 1 到 n 数字的字符串表示。1. 如果 n 是3的倍数，输出“Fizz”；2. 如果 n 是5的倍数，输出“Buzz”；3.如果 n 同时是3和5的倍数，输出 “FizzBuzz”。"></a>412、Fizz Buzz，写一个程序，输出从 1 到 n 数字的字符串表示。1. 如果 n 是3的倍数，输出“Fizz”；2. 如果 n 是5的倍数，输出“Buzz”；3.如果 n 同时是3和5的倍数，输出 “FizzBuzz”。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>计算 n%3==0 及 n%5==0 的 boolean 值。之后分别输出</p>
-<p>自己写的时候的问题：<strong>canDivid3 的时候，应该使用遍历的下标i ，而不是传入的参数n %3 == 0</strong></p>
-</details>
-
-<blockquote>
-<p> <a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/fizz-buzz/solution/fizz-buzz-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="13、-罗马数字转整数"><a href="#13、-罗马数字转整数" class="headerlink" title="13、 罗马数字转整数"></a>13、 罗马数字转整数</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>前一个数比后一个数小</p>
-<p>自己写的时候的问题：<strong>map写成了 HashMap&lt;String,Integer&gt; ，应该是 HashMap&lt;Character,Integer&gt;，还有，throw 抛出异常的时候，应该要有new关键字，即 throw new IllegalArgumentException(“error input!”);</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/roman-to-integer/solution/yong-shi-9993nei-cun-9873jian-dan-jie-fa-by-donesp/">LeetCode</a></p>
-</blockquote>
-<h3 id="387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回-1"><a href="#387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回-1" class="headerlink" title="387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回 -1"></a>387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回 -1</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>第一次遍历，次数存放在HashMap中，第二次遍历，找到第一个不重复的。</p>
-<p>自己写的时候的问题：<strong>无</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/first-unique-character-in-a-string/solution/zi-fu-chuan-zhong-de-di-yi-ge-wei-yi-zi-fu-by-leet/">LeetCode</a></p>
-</blockquote>
-<h3 id="28、实现-strStr-，给定一个-haystack-字符串和一个-needle-字符串，在-haystack-字符串中找出-needle-字符串出现的第一个位置-从0开始-。如果不存在，则返回-1。"><a href="#28、实现-strStr-，给定一个-haystack-字符串和一个-needle-字符串，在-haystack-字符串中找出-needle-字符串出现的第一个位置-从0开始-。如果不存在，则返回-1。" class="headerlink" title="28、实现 strStr()，给定一个 haystack 字符串和一个 needle 字符串，在 haystack 字符串中找出 needle 字符串出现的第一个位置 (从0开始)。如果不存在，则返回  -1。"></a>28、实现 strStr()，给定一个 haystack 字符串和一个 needle 字符串，在 haystack 字符串中找出 needle 字符串出现的第一个位置 (从0开始)。如果不存在，则返回  -1。</h3><p>示例：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">输入: haystack = <span class="string">"hello"</span>, needle = <span class="string">"ll"</span></span><br><span class="line">输出: <span class="number">2</span></span><br></pre></td></tr></tbody></table></figure>
-<details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>只有第一个字符匹配上才需要比较</p>
-<p>自己写的时候的问题：<strong>haystack = “” 且 needle = “” 时，我返回了 -1，应该是  0，还有计算String的长度应该是 str.length() ,而不是 str.leng ,不过数组倒是可以这样做 arr.length</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/implement-strstr/solution/shi-xian-strstr-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="38、外观数列"><a href="#38、外观数列" class="headerlink" title="38、外观数列"></a>38、外观数列</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>读懂题目很重要，递归</p>
-<p>自己写的时候的问题：<strong>throw 要 new ！</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/count-and-say/solution/di-gui-by-zhaowenhai/">LeetCode</a></p>
-</blockquote>
-<h3 id="69、x的平方根，计算并返回-x-的平方根，其中-x-是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是-2-28…，则结果取2即可"><a href="#69、x的平方根，计算并返回-x-的平方根，其中-x-是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是-2-28…，则结果取2即可" class="headerlink" title="69、x的平方根，计算并返回 x 的平方根，其中 x 是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是 2.28…，则结果取2即可"></a>69、x的平方根，计算并返回 x 的平方根，其中 x 是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是 2.28…，则结果取2即可</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>我自己的写法，没有考虑数字越界：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">mySqrt</span><span class="params">(<span class="keyword">int</span> x)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span>(x &lt; <span class="number">0</span>){</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"error input!"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(x == <span class="number">0</span> || x == <span class="number">1</span>){</span><br><span class="line">        <span class="keyword">return</span> x;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> result = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i * i &lt;= x; i++){</span><br><span class="line">        System.out.println(<span class="string">"i = "</span> + i);</span><br><span class="line">        result = i;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其他数字都对，但是如果输入 2147395600 ，则在 i= 46340 时，i就已经是结果了，但是这里的循环条件还是会继续执行，这时候 i= 46341 时，就超出 int 的取值范围越界了，因此不对。<strong>如果非要用这种方法去实现，可以在 for 语句里面加个条件： i * i &gt; 0 。因为Java 中的int型数据是有符号数，最高位表示符号，越界的时候，最高位变成1了，也就是变成负数，所以这个条件在刚发生越界的时候就不满足了，就能得到正确的结果</strong>。</p>
-<p>使用二分查找法要注意几点：首先 (a/2)² &gt; a ，则可以解出来正整数解是 a &gt; 4，即在 a &gt; 4的情况下 a/2 &gt; 根号a 是必然的，再综合 1,2,3,4 这几个特殊数字，我们可以得出，a开根号的值在 [1,a/2] 这种闭合区间。还有，<strong>开根号这里可能会有小数，但是我们只要返回正数，所以可以要求 front == tail ，最后是返回tail的值，要注意</strong>。</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/sqrtx/solution/x-de-ping-fang-gen-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="371、两整数之和，不使用运算符-和-，计算两个整数-a、b之和"><a href="#371、两整数之和，不使用运算符-和-，计算两个整数-a、b之和" class="headerlink" title="371、两整数之和，不使用运算符 + 和 -，计算两个整数 a、b之和"></a>371、两整数之和，不使用运算符 + 和 -，计算两个整数 a、b之和</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>异或求出普通位相加，与操作求出进位</p>
-<p>自己写的时候的问题：<strong>a 要暂存 无进位结果，我写的时候忘了暂存了。因为无进位结果 + 进位 还有可能产生进位，所以要有 while 循环。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/sum-of-two-integers/solution/wei-yun-suan-xiang-jie-yi-ji-zai-python-zhong-xu-y/">LeetCode</a></p>
-</blockquote>
-<h3 id="283、移动零，给定一个数组-nums，编写一个函数将所有-0-移动到数组的末尾，同时保持非零元素的相对顺序"><a href="#283、移动零，给定一个数组-nums，编写一个函数将所有-0-移动到数组的末尾，同时保持非零元素的相对顺序" class="headerlink" title="283、移动零，给定一个数组 nums，编写一个函数将所有 0 移动到数组的末尾，同时保持非零元素的相对顺序"></a>283、移动零，给定一个数组 nums，编写一个函数将所有 0 移动到数组的末尾，同时保持非零元素的相对顺序</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>2个指针，1次遍历</p>
-<p>自己写的时候的问题：<strong>无</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/move-zeroes/solution/dong-hua-yan-shi-283yi-dong-ling-by-wang_ni_ma/">LeetCode</a></p>
-</blockquote>
-<h3 id="1、两数之和，给定一个整数数组-nums-和一个目标值-target，请你在该数组中找出和为目标值的那-两个-整数，并返回他们的数组下标。"><a href="#1、两数之和，给定一个整数数组-nums-和一个目标值-target，请你在该数组中找出和为目标值的那-两个-整数，并返回他们的数组下标。" class="headerlink" title="1、两数之和，给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。"></a>1、两数之和，给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>使用 HashMap 辅助</p>
-<p>自己写的时候的问题：<strong>无</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/two-sum/solution/jie-suan-fa-1-liang-shu-zhi-he-by-guanpengchn/">LeetCode</a></p>
-</blockquote>
-<h3 id="101、对称二叉树-给定一个二叉树，检查它是否是镜像对称的"><a href="#101、对称二叉树-给定一个二叉树，检查它是否是镜像对称的" class="headerlink" title="101、对称二叉树,给定一个二叉树，检查它是否是镜像对称的"></a>101、对称二叉树,给定一个二叉树，检查它是否是镜像对称的</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>递归判断</p>
-<p>自己写的时候的问题：<strong>要懂递归啊，这是乱写成功的。不会递归时，把条件列出来，估计就有思路了。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/symmetric-tree/solution/hua-jie-suan-fa-101-dui-cheng-er-cha-shu-by-guanpe/">LeetCode</a></p>
-</blockquote>
-<h3 id="108-还未写-、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树"><a href="#108-还未写-、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树" class="headerlink" title="108(还未写)、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树"></a><font color="#ff0000">108(还未写)、</font>将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>二叉树遍历</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/convert-sorted-array-to-binary-search-tree/solution/jiang-you-xu-shu-zu-zhuan-huan-wei-er-cha-sou-s-15/">LeetCode</a></p>
-</blockquote>
-<h3 id="118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行"><a href="#118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行" class="headerlink" title="118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行"></a>118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>按照描述的方法，暴力解就好</p>
-<p>自己写的时候的问题：<strong>自己想的 for语句，依次生成前面的行</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/pascals-triangle/solution/yang-hui-san-jiao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。"><a href="#125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。" class="headerlink" title="125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。"></a>125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>自己写的时候的问题：<strong>自己写的感受还是使用双指针，效率高，转小写，然后去掉无关的符号这种操作效率太低。注意Character的方法 toLowerCase()、 isDigit() 和 isLetter() 就可以了</strong>。</p>
-</details>
-
-<blockquote>
-<p>[LeetCode](<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-palindrome/solution/java-da-dao-zhi-jian-6xing-by-rabbitzhao/）">https://leetcode-cn.com/problems/valid-palindrome/solution/java-da-dao-zhi-jian-6xing-by-rabbitzhao/）</a></p>
-</blockquote>
-<h3 id="268、缺失数字，给定一个包含-0-1-2-…-n-中-n-个数的序列，找出-0-n-中没有出现在序列中的那个数。"><a href="#268、缺失数字，给定一个包含-0-1-2-…-n-中-n-个数的序列，找出-0-n-中没有出现在序列中的那个数。" class="headerlink" title="268、缺失数字，给定一个包含 0, 1, 2, …, n 中 n 个数的序列，找出 0 .. n 中没有出现在序列中的那个数。"></a>268、缺失数字，给定一个包含 0, 1, 2, …, n 中 n 个数的序列，找出 0 .. n 中没有出现在序列中的那个数。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ol>
-<li>数组中所有数字异或，结果再与 0<del>n 异或，得到的结果就是缺失的那个数字(因为相同的数字异或结果为0)    2. 0</del>n 这些数字的和-数组所有数字的和 = 缺失的数字</li>
-</ol>
-<p>自己写的时候的问题：<strong>自己写的时候，感觉使用 异或 操作简单方便</strong>。</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/missing-number/solution/que-shi-shu-zi-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="171、Excel-表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A-gt-1，B-gt-2，Z-gt-26，AA-gt-27，AB-gt-28"><a href="#171、Excel-表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A-gt-1，B-gt-2，Z-gt-26，AA-gt-27，AB-gt-28" class="headerlink" title="171、Excel 表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A -> 1，B -> 2，Z -> 26，AA -> 27，AB -> 28"></a>171、Excel 表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A -&gt; 1，B -&gt; 2，Z -&gt; 26，AA -&gt; 27，AB -&gt; 28</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>我们常用的 10 进制数字，0~9 共 10 个数字。题目A-Z，26个字母，所以是26进制，故，AB= 26 + 2 = 28**</p>
-<p>自己写的时候的问题：<strong>看做26进制的数字，从字符串尾部开始遍历，计算每个char所在位的 base ，要注意输入小写字母，所以要统一转为小写去比较</strong>。</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/excel-sheet-column-number/solution/hua-jie-suan-fa-171-excelbiao-lie-xu-hao-by-guanpe/">LeetCode</a></p>
-</blockquote>
-<h3 id="172、-阶乘后的零，给定一个整数-n，返回-n-结果尾数中零的数量，你算法的时间复杂度应为-O-log-n"><a href="#172、-阶乘后的零，给定一个整数-n，返回-n-结果尾数中零的数量，你算法的时间复杂度应为-O-log-n" class="headerlink" title="172、 阶乘后的零，给定一个整数 n，返回 n! 结果尾数中零的数量，你算法的时间复杂度应为 O(log n)"></a>172、 阶乘后的零，给定一个整数 n，返回 n! 结果尾数中零的数量，你算法的时间复杂度应为 O(log n)</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>可以转换为n的质因数中5的个数</p>
-<p>自己写的时候的问题：*<em>自己写的时候，使用for循环(从 5 到 n，每次进5) 的方式来计算5的个数，结果超时，虽然放在 IntelliJ 中运行结果是对的。因此，应该使用更高效的方式， n /= 5; result += n; *</em>。</p>
-</details>
-
-<blockquote>
-<p>[LeetCode](<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/factorial-trailing-zeroes/solution/xiang-xi-tong-su-de-si-lu-fen-xi-by-windliang-3/）">https://leetcode-cn.com/problems/factorial-trailing-zeroes/solution/xiang-xi-tong-su-de-si-lu-fen-xi-by-windliang-3/）</a></p>
-</blockquote>
-<h3 id="189、旋转数组，给定一个数组，将数组中的元素向右移动-k-个位置，其中-k-是非负数。"><a href="#189、旋转数组，给定一个数组，将数组中的元素向右移动-k-个位置，其中-k-是非负数。" class="headerlink" title="189、旋转数组，给定一个数组，将数组中的元素向右移动 k 个位置，其中 k 是非负数。"></a>189、旋转数组，给定一个数组，将数组中的元素向右移动 k 个位置，其中 k 是非负数。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>首先能想到的是：新建一个数组，然后将原数组中的数字按照旋转后的顺序放到新数组  ，其次就是：首先将整个数组旋转，再分别旋转前面部分和后面部分</p>
-<p>自己写的时候的问题：<strong>写了3次，旋转3次是没问题，关键是处理好 k &gt; nums.length 的情况。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/rotate-array/solution/xuan-zhuan-shu-zu-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="190、-还未写-颠倒二进制位-颠倒给定的-32-位无符号整数的二进制位。"><a href="#190、-还未写-颠倒二进制位-颠倒给定的-32-位无符号整数的二进制位。" class="headerlink" title="190、(还未写)颠倒二进制位,颠倒给定的 32 位无符号整数的二进制位。"></a>190、<font color="#ff0000">(还未写)</font>颠倒二进制位,颠倒给定的 32 位无符号整数的二进制位。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary><summary>
-
-<p>每次取1位反转</p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-bits/solution/yi-dong-zui-hou-yi-wei-dao-di-yi-wei-4-xing-dai-ma/">LeetCode</a></p>
-</blockquote>
-<h3 id="191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为-‘1’-的个数"><a href="#191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为-‘1’-的个数" class="headerlink" title="191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为 ‘1’ 的个数"></a>191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为 ‘1’ 的个数</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>n&amp;(n-1) 或者 一直往右移</p>
-<p>自己写的时候的问题：<strong>无符号数有点难，还么有完全理解。while 条件写成 n &gt; 0 ，应该要写成  n != 0。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/number-of-1-bits/solution/wei-1de-ge-shu-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="198、打家劫舍-小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额"><a href="#198、打家劫舍-小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额" class="headerlink" title="198、打家劫舍,小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额"></a>198、打家劫舍,小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>奇偶，然后选较大</p>
-<p>自己写的时候的问题：<strong>求偶数和的时候，先计算当前偶数和，再与奇数和比较，计算当前偶数和的最终值</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/house-robber/solution/da-jia-jie-she-by-ikaruga/">LeetCode</a></p>
-</blockquote>
-<h3 id="202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为-1，也可能是无限循环但始终变不到-1。如果可以变为-1，那么这个数就是快乐数。"><a href="#202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为-1，也可能是无限循环但始终变不到-1。如果可以变为-1，那么这个数就是快乐数。" class="headerlink" title="202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为 1，也可能是无限循环但始终变不到 1。如果可以变为 1，那么这个数就是快乐数。"></a>202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为 1，也可能是无限循环但始终变不到 1。如果可以变为 1，那么这个数就是快乐数。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>快慢指针用来终止无限循环</p>
-<p>自己写的时候的问题：<strong>主要是要细心，自己写的时候写成 result = temp * temp ,应该是 result += temp * temp</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/happy-number/solution/shi-yong-kuai-man-zhi-zhen-si-xiang-zhao-chu-xun-h/">LeetCode</a></p>
-</blockquote>
-<h3 id="204、计数质数，统计所有小于非负整数-n-的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）"><a href="#204、计数质数，统计所有小于非负整数-n-的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）" class="headerlink" title="204、计数质数，统计所有小于非负整数 n 的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）"></a>204、计数质数，统计所有小于非负整数 n 的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>质数的判断：for (int i = 2; i * i &lt;= n; i++)</p>
-<p>自己写的时候的问题：<strong>最优解暂时有点难理解，还是先只要注意 i * i &lt;= n 这样的优化方式吧</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/count-primes/solution/ru-he-gao-xiao-pan-ding-shai-xuan-su-shu-by-labula/">LeetCode</a></p>
-</blockquote>
-<h3 id="234、回文链表，判断链表是否是回文链表"><a href="#234、回文链表，判断链表是否是回文链表" class="headerlink" title="234、回文链表，判断链表是否是回文链表"></a>234、回文链表，判断链表是否是回文链表</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>1、反转链表，对比反转后和原链表是否相同  2、链表值复制到数组中，再采用前后双指针</p>
-<p>自己写的时候的问题：<strong>写得很完美，第一步，快慢指针找到中间节点  第二步、反转中间节点之后的部分 第三步、对比前半部分和反转后的后半部分</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/palindrome-linked-list/solution/hui-wen-lian-biao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="326、3的幂，给定一个整数，写一个函数来判断它是否是-3-的幂次方。"><a href="#326、3的幂，给定一个整数，写一个函数来判断它是否是-3-的幂次方。" class="headerlink" title="326、3的幂，给定一个整数，写一个函数来判断它是否是 3 的幂次方。"></a>326、3的幂，给定一个整数，写一个函数来判断它是否是 3 的幂次方。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>1、不断求余，不断除以3，看结果  2、转换成3进制，看是不是前面1个1，后面全是0</p>
-<p>自己写的时候的问题：<strong>老老实实一直除以 3 ，但是，要注意数字 0 ，否则 n % 3 == 0 会进入死循环</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/power-of-three/solution/3de-mi-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="242、有效的字母异位词，给定两个字符串-s-和-t-，编写一个函数来判断-t-是否是-s-的字母异位词。"><a href="#242、有效的字母异位词，给定两个字符串-s-和-t-，编写一个函数来判断-t-是否是-s-的字母异位词。" class="headerlink" title="242、有效的字母异位词，给定两个字符串 s 和 t ，编写一个函数来判断 t 是否是 s 的字母异位词。"></a>242、有效的字母异位词，给定两个字符串 s 和 t ，编写一个函数来判断 t 是否是 s 的字母异位词。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>大小26的数组，两个字符串遍历每个字符，s遍历就在相应下标+1，而遍历t时在相应下标-1</p>
-<p>自己写的时候的问题：<strong>只有小写字母，所以用数组实现了，不难</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-anagram/solution/you-xiao-de-zi-mu-yi-wei-ci-by-leetcode/">LeetCode</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E8%85%BE%E8%AE%AF%E7%B2%BE%E9%80%89%E7%BB%83%E4%B9%A050%E9%A2%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E8%85%BE%E8%AE%AF%E7%B2%BE%E9%80%89%E7%BB%83%E4%B9%A050%E9%A2%98/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-腾讯精选练习50题</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-03-08 15:18:00" itemprop="dateCreated datePublished" datetime="2020-03-08T15:18:00+08:00">2020-03-08</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-06 22:45:07" itemprop="dateModified" datetime="2020-04-06T22:45:07+08:00">2020-04-06</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列"><a href="#注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列" class="headerlink" title="注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列"></a>注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列</h2><h3 id="237、删除链表中的节点"><a href="#237、删除链表中的节点" class="headerlink" title="237、删除链表中的节点"></a>237、删除链表中的节点</h3><p>编写一个函数，使其可以删除某个链表中给定的(非末尾)节点，函数将只会传给你要被删除的节点(坑在这里，注意：<strong>传给你的不是head节点和要删除的值，而是直接传给你要删除的那个节点</strong>)。</p>
-<details>
-<summary>点击看答案</summary><summary>
-
-<p>仅仅只是删除而已，简直是脑筋急转弯，被坑进去了</p>
-<p>自己写的时候的问题：<strong>没啥，主要是审题</strong></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/delete-node-in-a-linked-list/solution/shan-chu-lian-biao-zhong-de-jie-dian-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="344、反转字符串"><a href="#344、反转字符串" class="headerlink" title="344、反转字符串"></a>344、反转字符串</h3><details>
-<summary>点击看答案</summary><summary> 
-
-<p>首尾双指针</p>
-<p>自己写的时候的问题：<strong>尴尬，忘了 i++,j– 了</strong></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-string/solution/fan-zhuan-zi-fu-chuan-by-leetcode">LeetCode</a></p>
-</blockquote>
-<h3 id="7、整数反转"><a href="#7、整数反转" class="headerlink" title="7、整数反转"></a>7、整数反转</h3><details>
-<summary>点击看答案</summary><summary>
-
-<p>每次反转一个数字，注意防止溢出(可以考虑result使用long类型)</p>
-<p>自己写的时候的问题：<strong>要注意负数的最小值，和整数最大值一样处理</strong></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-integer/solution/hua-jie-suan-fa-7-zheng-shu-fan-zhuan-by-guanpengc/">LeetCode</a></p>
-</blockquote>
-<h3 id="9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？"><a href="#9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？" class="headerlink" title="9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？"></a>9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？</h3><details>
-<summary>点击看答案</summary><summary>反转后一半数字
-
-<p>自己写的时候的问题：*<em>通过不断除以10，搞清楚这个值到底是什么数量级，比如99，那 div 就是10级，比如 999，那 div 就是 100级，然后通过 n/div 就能得到第一位， n%10，得到最后一位，比较他们的值。依次往复 *</em></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/palindrome-number/solution/dong-hua-hui-wen-shu-de-san-chong-jie-fa-fa-jie-ch/">LeetCode</a></p>
-</blockquote>
-<h3 id="14、-还未做-最长公共前缀"><a href="#14、-还未做-最长公共前缀" class="headerlink" title="14、(还未做)最长公共前缀"></a>14、<font color="#ff0000">(还未做)</font>最长公共前缀</h3><details>
-<summary>点击看答案</summary><summary>
-
-<p>直接看链接，这个不大会</p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/longest-common-prefix/solution/hua-jie-suan-fa-14-zui-chang-gong-gong-qian-zhui-b/">LeetCode</a></p>
-</blockquote>
-<h3 id="88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组-假设nums有足够空间-。"><a href="#88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组-假设nums有足够空间-。" class="headerlink" title="88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组(假设nums有足够空间)。"></a>88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组(假设nums有足够空间)。</h3><details>
-<summary>点击看答案</summary><summary>
-
-<p>从后往前，注意 nums1 中剩余的元素</p>
-<p>自己写的时候的问题：<strong>没问题，从尾到头合并即可</strong></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/merge-sorted-array/solution/he-bing-liang-ge-you-xu-shu-zu-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="20、有效的括号：给定一个只包括-‘-‘，’-’，’-‘，’-’，’-‘，’-’-的字符串，判断字符串是否有效-即括号的开闭符合规则-。"><a href="#20、有效的括号：给定一个只包括-‘-‘，’-’，’-‘，’-’，’-‘，’-’-的字符串，判断字符串是否有效-即括号的开闭符合规则-。" class="headerlink" title="20、有效的括号：给定一个只包括 ‘(‘，’)’，’{‘，’}’，’[‘，’]’ 的字符串，判断字符串是否有效(即括号的开闭符合规则)。"></a>20、有效的括号：给定一个只包括 ‘(‘，’)’，’{‘，’}’，’[‘，’]’ 的字符串，判断字符串是否有效(即括号的开闭符合规则)。</h3><details>
-<summary>点击看答案</summary><summary>
-
-<p>使用HashMap 建立映射关系，Stack 用于遍历</p>
-<p>自己写的时候的问题：<strong>记住 Stack 的 isEmpty() 、pop 、push 方法即可</strong></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-parentheses/solution/you-xiao-de-gua-hao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的-假设链表元素顺序由小到大"><a href="#21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的-假设链表元素顺序由小到大" class="headerlink" title="21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的(假设链表元素顺序由小到大)"></a>21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的(假设链表元素顺序由小到大)</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>双指针，注意其中一个链表到表尾时，另一个链表整个接上去</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/merge-two-sorted-lists/solution/hua-jie-suan-fa-21-he-bing-liang-ge-you-xu-lian-bi/">LeetCode</a></p>
-</blockquote>
-<h3 id="292、Nim-游戏，桌上一堆石头，两人轮流拿1-3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。"><a href="#292、Nim-游戏，桌上一堆石头，两人轮流拿1-3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。" class="headerlink" title="292、Nim 游戏，桌上一堆石头，两人轮流拿1~3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。"></a>292、Nim 游戏，桌上一堆石头，两人轮流拿1~3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>当 n%4 != 0 时，就可以赢</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/nim-game/solution/292nimyou-xi-by-redsnapper/">LeetCode</a></p>
-</blockquote>
-<h3 id="26、删除排序数组中的重复项，你必须在-原地-修改输入数组-并在使用-O-1-额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。"><a href="#26、删除排序数组中的重复项，你必须在-原地-修改输入数组-并在使用-O-1-额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。" class="headerlink" title="26、删除排序数组中的重复项，你必须在 原地 修改输入数组 并在使用 O(1) 额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。"></a>26、删除排序数组中的重复项，你必须在 原地 修改输入数组 并在使用 O(1) 额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>后一个元素与当前重复，则直到不重复的元素，移过来，覆盖重复元素。</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/remove-duplicates-from-sorted-array/solution/shuang-zhi-zhen-shan-chu-zhong-fu-xiang-dai-you-hu/">LeetCode</a></p>
-</blockquote>
-<h3 id="53、最大子序和"><a href="#53、最大子序和" class="headerlink" title="53、最大子序和"></a>53、最大子序和</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>前面的和是否是正数，是正数就有增益</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/maximum-subarray/solution/hua-jie-suan-fa-53-zui-da-zi-xu-he-by-guanpengchn/">LeetCode</a></p>
-</blockquote>
-<h3 id="70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？"><a href="#70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？" class="headerlink" title="70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？"></a>70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>斐波那契数列</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/climbing-stairs/solution/pa-lou-ti-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="104、二叉树的最大深度"><a href="#104、二叉树的最大深度" class="headerlink" title="104、二叉树的最大深度"></a>104、二叉树的最大深度</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>记住递归方法，好用的递归的方法</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/maximum-depth-of-binary-tree/solution/er-cha-shu-de-zui-da-shen-du-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="121、买卖股票的最佳时机，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。"><a href="#121、买卖股票的最佳时机，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。" class="headerlink" title="121、买卖股票的最佳时机，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。"></a>121、买卖股票的最佳时机，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>遍历，记录当前最小的值，以及之后相对应的最大利润</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/best-time-to-buy-and-sell-stock/solution/121-mai-mai-gu-piao-de-zui-jia-shi-ji-by-leetcode-/">LeetCode</a></p>
-</blockquote>
-<h3 id="122、买卖股票的最佳时机-II，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）"><a href="#122、买卖股票的最佳时机-II，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）" class="headerlink" title="122、买卖股票的最佳时机 II，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）"></a>122、买卖股票的最佳时机 II，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>简单的一次遍历,相邻依次减下去</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/best-time-to-buy-and-sell-stock-ii/solution/mai-mai-gu-piao-de-zui-jia-shi-ji-ii-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素"><a href="#136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素" class="headerlink" title="136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素"></a>136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>所有元素异或</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/single-number/solution/xue-suan-fa-jie-guo-xiang-dui-yu-guo-cheng-bu-na-y/">LeetCode</a></p>
-</blockquote>
-<h3 id="141、环形链表，给定一个链表，判断链表中是否有环"><a href="#141、环形链表，给定一个链表，判断链表中是否有环" class="headerlink" title="141、环形链表，给定一个链表，判断链表中是否有环"></a>141、环形链表，给定一个链表，判断链表中是否有环</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>快慢指针，并且快指针每次走两步，慢指针每次走一步</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/linked-list-cycle/solution/huan-xing-lian-biao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="557、反转字符串中的单词-III"><a href="#557、反转字符串中的单词-III" class="headerlink" title="557、反转字符串中的单词 III"></a>557、反转字符串中的单词 III</h3><blockquote>
-<p>输入: “Let’s take LeetCode contest”<br>输出: “s’teL ekat edoCteeL tsetnoc”       </p>
-</blockquote>
-<details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>使用辅助栈</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-words-in-a-string-iii/solution/pei-pian-rang-wen-ti-bian-jian-dan-zhan-mo-ni-by-p/">LeetCode</a></p>
-</blockquote>
-<h3 id="155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈"><a href="#155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈" class="headerlink" title="155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈"></a>155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>两个栈，一个正常存放元素，一个不同步存放小元素</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/min-stack/solution/shi-yong-fu-zhu-zhan-tong-bu-he-bu-tong-bu-python-/">LeetCode</a></p>
-</blockquote>
-<h3 id="160、相交链表，编写一个程序，找到两个单链表相交的起始节点"><a href="#160、相交链表，编写一个程序，找到两个单链表相交的起始节点" class="headerlink" title="160、相交链表，编写一个程序，找到两个单链表相交的起始节点"></a>160、相交链表，编写一个程序，找到两个单链表相交的起始节点</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>两个指针分别遍历两个链表，到尾结点后切换到另一个链表的头结点，两个指针相交的地方就是第一个相交的节点</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/intersection-of-two-linked-lists/solution/tu-jie-xiang-jiao-lian-biao-by-user7208t/">LeetCode</a></p>
-</blockquote>
-<h3 id="169、多数元素，给定一个大小为-n-的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于-⌊-n-2-⌋-的元素"><a href="#169、多数元素，给定一个大小为-n-的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于-⌊-n-2-⌋-的元素" class="headerlink" title="169、多数元素，给定一个大小为 n 的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于 ⌊ n/2 ⌋ 的元素"></a>169、多数元素，给定一个大小为 n 的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于 ⌊ n/2 ⌋ 的元素</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>排序，中间那个元素就是</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/majority-element/solution/duo-shu-yuan-su-by-leetcode-solution/">LeetCode</a></p>
-</blockquote>
-<h3 id="206、反转链表"><a href="#206、反转链表" class="headerlink" title="206、反转链表"></a>206、反转链表</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>pre节点和current 节点</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-linked-list/solution/fan-zhuan-lian-biao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="217、存在重复元素，给定一个整数数组，判断是否存在重复元素。"><a href="#217、存在重复元素，给定一个整数数组，判断是否存在重复元素。" class="headerlink" title="217、存在重复元素，给定一个整数数组，判断是否存在重复元素。"></a>217、存在重复元素，给定一个整数数组，判断是否存在重复元素。</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>HashSet</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/contains-duplicate/solution/cun-zai-zhong-fu-yuan-su-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="231、2的幂，给定一个整数，编写一个函数来判断它是否是-2-的幂次方。"><a href="#231、2的幂，给定一个整数，编写一个函数来判断它是否是-2-的幂次方。" class="headerlink" title="231、2的幂，给定一个整数，编写一个函数来判断它是否是 2 的幂次方。"></a>231、2的幂，给定一个整数，编写一个函数来判断它是否是 2 的幂次方。</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>二进制数据中只有1个1</strong><p></p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/power-of-two/solution/power-of-two-er-jin-zhi-ji-jian-by-jyd/">LeetCode</a></p>
-</blockquote>
-<h3 id="二叉搜索树的最近公共祖先-给定一个二叉搜索树-找到该树中两个指定节点的最近公共祖先。"><a href="#二叉搜索树的最近公共祖先-给定一个二叉搜索树-找到该树中两个指定节点的最近公共祖先。" class="headerlink" title="二叉搜索树的最近公共祖先,给定一个二叉搜索树, 找到该树中两个指定节点的最近公共祖先。"></a>二叉搜索树的最近公共祖先,给定一个二叉搜索树, 找到该树中两个指定节点的最近公共祖先。</h3><details>
-<summary>点击看答案</summary>
-
-<p><strong></strong></p><summary><strong>直接看链接</strong><p></p>
-</summary></details>
-
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/lowest-common-ancestor-of-a-binary-search-tree/solution/er-cha-sou-suo-shu-de-zui-jin-gong-gong-zu-xian--2/">LeetCode</a></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/5/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><span class="page-number current">6</span><a class="page-number" href="/page/7/">7</a><span class="space">&hellip;</span><a class="page-number" href="/page/13/">13</a><a class="extend next" rel="next" href="/page/7/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/5/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><span class="page-number current">6</span><a class="page-number" href="/page/7/">7</a><span class="space">&hellip;</span><a class="page-number" href="/page/14/">14</a><a class="extend next" rel="next" href="/page/7/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -2002,7 +1543,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">130</span>
+          <span class="site-state-item-count">132</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2088,7 +1629,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共277.2k字</span>
+  <span class="post-count">博客全站共279.2k字</span>
 </div>
 
 
