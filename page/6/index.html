@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">129</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">130</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,89 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/" class="post-title-link" itemprop="url">第5、6课-卡顿优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-05-27 21:50:00" itemprop="dateCreated datePublished" datetime="2020-05-27T21:50:00+08:00">2020-05-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-05-05 16:58:02" itemprop="dateModified" datetime="2021-05-05T16:58:02+08:00">2021-05-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化<上>"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
+<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1869,140 +1952,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-%E6%A6%82%E5%BF%B5/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-%E6%A6%82%E5%BF%B5/" class="post-title-link" itemprop="url">面试题-算法-概念</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-03-08 12:55:00" itemprop="dateCreated datePublished" datetime="2020-03-08T12:55:00+08:00">2020-03-08</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-05-08 23:52:03" itemprop="dateModified" datetime="2020-05-08T23:52:03+08:00">2020-05-08</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="二叉查找树-也称二叉搜索树"><a href="#二叉查找树-也称二叉搜索树" class="headerlink" title="二叉查找树(也称二叉搜索树)"></a>二叉查找树(也称二叉搜索树)</h2><ul>
-<li>左子树上的节点值都<strong>小于等于</strong>根节点的值    </li>
-<li>右子树上的节点值都<strong>大于等于</strong>根节点的值    </li>
-<li>左右子树也是二叉搜索树    </li>
-</ul>
-<p>它是基于二分查找的思想，<strong>查找最大的次数为二叉树高度</strong>     </p>
-<h3 id="查找代价"><a href="#查找代价" class="headerlink" title="查找代价"></a>查找代价</h3><ul>
-<li>当左右子树高度大致平衡时，时间复杂度在 O(logN)     </li>
-<li>当先后插入的关键字<strong>有序</strong>时，退化成链表，查找的时间复杂度就在 O(N)了     </li>
-</ul>
-<h3 id="插入代价"><a href="#插入代价" class="headerlink" title="插入代价"></a>插入代价</h3><p>新节点插入到树的叶子节点上，因此，插入节点和查找一个不存在的数据的代价相同    </p>
-<h3 id="删除代价"><a href="#删除代价" class="headerlink" title="删除代价"></a>删除代价</h3><ul>
-<li>如果被删除的节点左、右 有一个为null时，代价仅为 O(1)      </li>
-<li>如果左右子树都存在，时间复杂度最大也不会超过O(logN)      </li>
-</ul>
-<p>缺陷：</p>
-<p>极端情况可能退化成链表，时间复杂度为  n。这主要是由于树不平衡导致的</p>
-<h2 id="平衡二叉查找树-平衡二叉搜索树"><a href="#平衡二叉查找树-平衡二叉搜索树" class="headerlink" title="平衡二叉查找树(平衡二叉搜索树)"></a>平衡二叉查找树(平衡二叉搜索树)</h2><p>是严格的平衡二叉树，它是空树或者左右两个子树的高度差 <strong>小于等于1</strong>，同时，左右两个子树也是平衡二叉搜索树</p>
-<h3 id="查找代价-1"><a href="#查找代价-1" class="headerlink" title="查找代价"></a>查找代价</h3><p>时间很稳定，查找效率最好最坏都是  O(logN)</p>
-<h3 id="插入代价-1"><a href="#插入代价-1" class="headerlink" title="插入代价"></a>插入代价</h3><p>由于要保证严格的平衡，插入时可能要进行再平衡(最多旋转一次)，因此插入的整体代价还在 O(logN)</p>
-<h3 id="删除代价-1"><a href="#删除代价-1" class="headerlink" title="删除代价"></a>删除代价</h3><p>和插入一样，要考虑再平衡，但是最多需要O(logN)次旋转，所以时间复杂度为  O(2logN)</p>
-<h2 id="红黑树-Red-Black-Tree"><a href="#红黑树-Red-Black-Tree" class="headerlink" title="红黑树(Red-Black Tree)"></a>红黑树(Red-Black Tree)</h2><p>它并不严格地平衡，最长路径长度不超过最短路径长度的2倍。它删除和插入引起平衡性改变的概率要远低于平衡二叉搜索树</p>
-<h3 id="查找代价-2"><a href="#查找代价-2" class="headerlink" title="查找代价"></a>查找代价</h3><p>查找代价基本上维持在 O(logN) 级别，最差情况下肯定比平衡二叉搜索树要差，因为没有那么平衡</p>
-<h3 id="插入代价-2"><a href="#插入代价-2" class="headerlink" title="插入代价"></a>插入代价</h3><p>不容易引起失衡，整体代价和平衡二叉搜索树差不多，也是 O(logN) 级别(虽然涉及变色，但是变色的代价很小)</p>
-<h3 id="删除代价-2"><a href="#删除代价-2" class="headerlink" title="删除代价"></a>删除代价</h3><p>相对平衡二叉搜索树，不容易引起失衡，时间复杂度也在 O(logN) 级别</p>
-<h3 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h3><p>平衡二叉搜索树由于插入和删除，会引起需要调整，可以通过 ：变色、左旋转、右旋转  三种方式调整。是否需要调整要根据红黑树的特性：</p>
-<ul>
-<li>节点是红色或黑色    </li>
-<li>根节点是黑色    </li>
-<li>叶子节点都是黑色的空节点    </li>
-<li>红色节点的两个子节点都是黑的(红节点不能连续出现)    </li>
-<li>任一点到每个叶子节点的路径包含相同数目的黑节点    </li>
-</ul>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/54084335">zhihu</a>、<a target="_blank" rel="noopener" href="https://blog.csdn.net/z702143700/article/details/49079107">csdn</a>、<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/31805309">知乎</a></p>
-</blockquote>
-<h2 id="B-树和B-树"><a href="#B-树和B-树" class="headerlink" title="B-树和B+ 树"></a>B-树和B+ 树</h2><p>我们所谓的B-树，其实并不是B减树，中间是横线，不是减号；B + 就是 B加树了</p>
-<p>如 os 的文件目录存储、数据库中的索引结构的存储，不可能在内存中建立查找结构，必须在磁盘中建立好结构。</p>
-<p>在磁盘组织结构下，从任何一个节点指向其他节点都可能读取一次磁盘，再将数据写入内存比较。这回带来大量的IO操作，所以我们需要新的数据结构，即 B树和B+树。</p>
-<p>B树是一种<strong>多路平衡查找树</strong>，每个节点最多包含k个孩子，k称为B树的阶。K大小取决于<strong>磁盘页的大小</strong>。</p>
-<h2 id="一些算法上的概念"><a href="#一些算法上的概念" class="headerlink" title="一些算法上的概念"></a>一些算法上的概念</h2><h3 id="B树"><a href="#B树" class="headerlink" title="B树"></a>B树</h3><p>理解平衡二叉树后，就会更好理解后续的B树。</p>
-<h4 id="平衡二叉树"><a href="#平衡二叉树" class="headerlink" title="平衡二叉树"></a>平衡二叉树</h4><p>平衡二叉树是一棵二叉树，每个节点的左边节点小于当前节点的值，右边节点的值大于当前节点的值。</p>
-<p>因为二叉树的遍历性能和树的层级成反比，层级h越小查询越快，为了保证树的结构左右两端数据大致平衡以降低二叉树高度，一般会采用算法机制实现节点的平衡，如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%97%E6%B3%95/%E4%BA%8C%E5%8F%89%E6%A0%91%E5%B9%B3%E8%A1%A1.jpg" alt="平衡树的高度"></p>
-<h4 id="B-树"><a href="#B-树" class="headerlink" title="B 树"></a>B 树</h4><p>当上述的平衡二叉树深度很深无法存储所有的节点数据时，需要读取磁盘。从而树的深度越大，需要的I/O操作次数越多，因此效率也越低，因此我们需要想办法降低树的高度。</p>
-<p>B 树的思路和平衡二叉树一样，但是采用了多叉的方式降低了高度。</p>
-<p>B树的具体实现比较难描述，看下面的参考链接更清晰，就不赘述。</p>
-<blockquote>
-<p>以上内容参考自： <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/27700617">勤劳的小手</a>、<a target="_blank" rel="noopener" href="http://www.androidos.net.cn/book/android-road/data-structure/tree/b-tree.html">B树概念</a></p>
-</blockquote>
-<h3 id="字符串匹配"><a href="#字符串匹配" class="headerlink" title="字符串匹配"></a>字符串匹配</h3><p>主要是利用KMP算法，这个很令人头大，这里贴出算法代码，如果需要详细了解，可以去查看<a target="_blank" rel="noopener" href="https://blog.csdn.net/v_july_v/article/details/7041827">July大神的这篇文章</a>。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">kmp</span><span class="params">(String str, String dest,<span class="keyword">int</span>[] next)</span></span>{<span class="comment">//str文本串  dest 模式串</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>, j = <span class="number">0</span>; i &lt; str.length(); i++){</span><br><span class="line">            <span class="keyword">while</span>(j &gt; <span class="number">0</span> &amp;&amp; str.charAt(i) != dest.charAt(j)){</span><br><span class="line">                j = next[j - <span class="number">1</span>];</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">if</span>(str.charAt(i) == dest.charAt(j)){</span><br><span class="line">                j++;</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">if</span>(j == dest.length()){</span><br><span class="line">                <span class="keyword">return</span> i-j+<span class="number">1</span>;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span>[] kmpnext(String dest){</span><br><span class="line">        <span class="keyword">int</span>[] next = <span class="keyword">new</span> <span class="keyword">int</span>[dest.length()];</span><br><span class="line">        next[<span class="number">0</span>] = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>,j = <span class="number">0</span>; i &lt; dest.length(); i++){</span><br><span class="line">            <span class="keyword">while</span>(j &gt; <span class="number">0</span> &amp;&amp; dest.charAt(j) != dest.charAt(i)){</span><br><span class="line">                j = next[j - <span class="number">1</span>];</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">if</span>(dest.charAt(i) == dest.charAt(j)){</span><br><span class="line">                j++;</span><br><span class="line">            }</span><br><span class="line">            next[i] = j;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> next;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-
-<p>next数组的计算主要跟模式串有关，与文本串并没有关系，因为，模式串前后公共最长子序列。这样才会让我们跳过大量的重复计算</p>
-<h3 id="数字排列"><a href="#数字排列" class="headerlink" title="数字排列"></a>数字排列</h3><p>题目：用1，2，2，3，4，5 这6个数字，写一个方法，打印出所有不同的排列，如 512234、412235等，要求4不能再第三位，3与5不能相连。</p>
-<blockquote>
-<p>思路：问题可以归结为<strong>图的遍历</strong>，实际上6个数字就是6个结点，把6个结点连成无向连通图，对于每个结点求这个图形的遍历路径，所有结点的遍历路径就是最后对这6个数字的排列组合结果集。当然，这样获取的结果集未达到题目要求：<br>（1）3与5不能相连，这个可以在构造图的时候就满足条件；<br>（2）不能重复，有两个2，明显会存在重复结果，得最后去重（可以放在treeSet中）；<br>（3）4不能排在第三位，这个仍旧在结果集中排除即可。</p>
-</blockquote>
-<p>具体代码略。</p>
-<h3 id="手写算法题。猫扑素数；1到n，求1的个数；单词反转。"><a href="#手写算法题。猫扑素数；1到n，求1的个数；单词反转。" class="headerlink" title="手写算法题。猫扑素数；1到n，求1的个数；单词反转。"></a>手写算法题。猫扑素数；1到n，求1的个数；单词反转。</h3><h3 id="算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别"><a href="#算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别" class="headerlink" title="算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别"></a>算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别</h3><h3 id="快速排序底层原理简单描述。"><a href="#快速排序底层原理简单描述。" class="headerlink" title="快速排序底层原理简单描述。"></a>快速排序底层原理简单描述。</h3></body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -2053,7 +2002,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">129</span>
+          <span class="site-state-item-count">130</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2139,7 +2088,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共276.9k字</span>
+  <span class="post-count">博客全站共277.2k字</span>
 </div>
 
 
