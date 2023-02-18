@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="JVM 的Synchrod 轻量级锁使用 CAS 进行自旋抢锁，并且处于用户态下，所以轻量级锁开销较小。 3.1 什么是 CASJDK 5 增加的 JUC (java.util.concurrent) 并发包对操作系统的底层 CAS 原子操作进行了封装，为上层提供了 CAS 操作的 API 。 3.1.1 Unsafe 类中的 CAS 方法Unsafe 是位于 sun.misc 包下的一个类，主要">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第1章：CAS原理与JUC原子类">
+<meta property="og:url" content="https://glassx.github.io/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC3%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="JVM 的Synchrod 轻量级锁使用 CAS 进行自旋抢锁，并且处于用户态下，所以轻量级锁开销较小。 3.1 什么是 CASJDK 5 增加的 JUC (java.util.concurrent) 并发包对操作系统的底层 CAS 原子操作进行了封装，为上层提供了 CAS 操作的 API 。 3.1.1 Unsafe 类中的 CAS 方法Unsafe 是位于 sun.misc 包下的一个类，主要">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-02-16T06:50:00.000Z">
+<meta property="article:modified_time" content="2023-02-16T13:46:27.380Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Java高并发核心编程(卷2)">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC3%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第1章：CAS原理与JUC原子类 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">31</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">9</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">137</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC3%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第1章：CAS原理与JUC原子类
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-02-16 14:50:00 / 修改时间：21:46:27" itemprop="dateCreated datePublished" datetime="2023-02-16T14:50:00+08:00">2023-02-16</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>JVM 的Synchrod 轻量级锁使用 CAS 进行自旋抢锁，并且处于用户态下，所以轻量级锁开销较小。</p>
+<h2 id="3-1-什么是-CAS"><a href="#3-1-什么是-CAS" class="headerlink" title="3.1 什么是 CAS"></a>3.1 什么是 CAS</h2><p>JDK 5 增加的 JUC (java.util.concurrent) 并发包对操作系统的底层 CAS 原子操作进行了封装，为上层提供了 CAS 操作的 API 。</p>
+<h3 id="3-1-1-Unsafe-类中的-CAS-方法"><a href="#3-1-1-Unsafe-类中的-CAS-方法" class="headerlink" title="3.1.1 Unsafe 类中的 CAS 方法"></a>3.1.1 Unsafe 类中的 CAS 方法</h3><p>Unsafe 是位于 sun.misc 包下的一个类，主要提供一些用于执行低级别、不安全的底层操作，如直接访问系统内存资源、自主管理内存资源等。从名字都可以看出这个类对普通程序员来说是“危险”的，官方也不建议直接在程序中使用这些类。</p>
+<h5 id="获取-Unsafe-实例"><a href="#获取-Unsafe-实例" class="headerlink" title="获取 Unsafe 实例"></a>获取 Unsafe 实例</h5><p>Unsafe 类时一个final 修饰的不允许继承的类，并且构造函数是 private 类型，源码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Unsafe</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> {</span><br><span class="line">        Reflection.registerMethodsToFilter(Unsafe.class, Set.of(<span class="string">"getUnsafe"</span>));</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Unsafe</span><span class="params">()</span> </span>{}</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Unsafe theUnsafe = <span class="keyword">new</span> Unsafe();</span><br><span class="line">    ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以我们无法在外部对 Unsafe 实例化，那么应该怎么获取呢？可以通过反射方式获取 theUnsafe 实例：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JvmUtil</span> </span>{</span><br><span class="line">    <span class="comment">//自定义地获取Unsafe实例的辅助方法</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Unsafe <span class="title">getUnsafe</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            Field theUnsafe = Unsafe.class.getDeclaredField(<span class="string">"theUnsafe"</span>);</span><br><span class="line">            theUnsafe.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">            <span class="keyword">return</span> (Unsafe) theUnsafe.get(<span class="keyword">null</span>);</span><br><span class="line">        } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> AssertionError(e);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    <span class="comment">// 省略不相干代码</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h5 id="Unsafe提供的-CAS-方法"><a href="#Unsafe提供的-CAS-方法" class="headerlink" title="Unsafe提供的 CAS 方法"></a>Unsafe提供的 CAS 方法</h5><p>总共提供了如下3种方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSwapObject</span><span class="params">(Object o, <span class="keyword">long</span> offset, Object expected,Object x)</span> </span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSwapInt</span><span class="params">(Object o, <span class="keyword">long</span> offset,  <span class="keyword">int</span> expected,  <span class="keyword">int</span> x)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSwapLong</span><span class="params">(Object o, <span class="keyword">long</span> offset,<span class="keyword">long</span> expected, <span class="keyword">long</span> x)</span></span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这些方法首先将内存位置的值与预期值比较，如果相匹配，那么CPU 会自动将该内存位置的值更新为新值，并返回true；否则，CPU不做任何操作，并返回false。</p>
+<h3 id="3-1-2-使用-CAS-进行无锁编程"><a href="#3-1-2-使用-CAS-进行无锁编程" class="headerlink" title="3.1.2 使用 CAS 进行无锁编程"></a>3.1.2 使用 CAS 进行无锁编程</h3><p>CAS 是一种无锁算法，底层CPU 利用原子操作判断 <strong>内存值与期望值是否相等，如果相等就给内存地址赋新值，否则不做任何操作。</strong>使用 CAS 进行无锁编程的步骤大概如下：</p>
+<ol>
+<li><p>获得字段的期望值(oldValue)</p>
+</li>
+<li><p>计算出需要替换的新值(newValue)</p>
+</li>
+<li><p>通过 CAS 将 newValue 放在字段的内存地址上，如果 CAS 失败就重复从第1步开始，直到 CAS 成功。<strong>这种重复俗称“自旋”</strong></p>
+</li>
+</ol>
+<p>举例： 假如 2 个线程 A 和B 对一个共享变量做 +1 操作，用 CAS 去做这个操作。但是线程是并发进行的，假如 A 和 B 都读到旧值是 1 ，然后并发通过 CAS 操作，都是 CAS(1, 2)  ，但是CAS 是原子操作，同一个内存地址的 CAS 在同一个时刻只能执行一个，因此，假设 A 先执行，A 的 CAS(1, 2) 因为期望值是1，内存值也是1，操作成功，返回true；接下来 B 执行 CAS(1, 2) 肯定会失败了，因为内存值目前已经是 2 了，而期望值是 1 ，所以只得重新获取得到期望值 2，计算出新的值 3， 最后通过 CAS(2, 3) 才能成功。</p>
+<h2 id="3-2-JUC原子类"><a href="#3-2-JUC原子类" class="headerlink" title="3.2 JUC原子类"></a>3.2 JUC原子类</h2><p>并发执行时，诸如 ++ 或者 – 类的运算不具备原子性，大家可能会用 synchronized 方法做同步，但效率肯定会影响的。JDK 为这些类型不安全的操作提供了一些原子类，与 synchronized 相比效率会更高。</p>
+<h3 id="3-2-1-JUC中的Atomic-原子操作包"><a href="#3-2-1-JUC中的Atomic-原子操作包" class="headerlink" title="3.2.1 JUC中的Atomic 原子操作包"></a>3.2.1 JUC中的Atomic 原子操作包</h3><p>只需要知道有： </p>
+<ul>
+<li><p>基本原子类：AtomicInteger、AtomicLong、AtomicBoolean</p>
+</li>
+<li><p>数组原子类：AtomicIntegerArray、AtomicLongArray、AtomicReferenceArray</p>
+</li>
+<li><p>引用原子类：AtomicReference、AtomicMarkableReference、AtomicStampedReference</p>
+</li>
+</ul>
+<p>等等一些常见的即可。</p>
+<h2 id="3-4-ABA问题"><a href="#3-4-ABA问题" class="headerlink" title="3.4 ABA问题"></a>3.4 ABA问题</h2><p>什么是 ABA 问题，举个例子：比如线程 A 从内存位置 M 取出 V1，另一个线程 B 也取出 V1 ，假设 B 进行了一些操作后将 M 位置的数据 V1 变成了 V2，然后又在一些操作之后将 V2 变成了 V1，然后线程 A 通过 CAS 操作时发现条件满足，CAS 操作成功。</p>
+<p>但是这个过程是有问题的，A 操作的时候 V1 已经不是以前的 V1 了，这就是 ABA 问题。</p>
+<h3 id="3-4-2-ABA问题的解决方案"><a href="#3-4-2-ABA问题的解决方案" class="headerlink" title="3.4.2 ABA问题的解决方案"></a>3.4.2 ABA问题的解决方案</h3><p>很多乐观锁的实现版本是： <strong>使用版本号(Version)方式来解决ABA问题。</strong> 每次在执行数据的修改操作时<strong>都会带上一个版本号</strong>，版本号和数据的版本号一致就可以执行修改操作，否则执行失败。因为操作的版本号只会增加，不会减少。</p>
+<p>当然，参考乐观锁的版本号实现， JDK 提供了一个 AtomicStampedReference 类来解决 ABA 问题，AtomicStampedReference 在 CAS 的基础上增加了一个 Stamp（印戳或标记）来察觉数据是否发生了变化。</p>
+<p>当然，还可以使用 AtomicMarkableReference 解决。它是 AtomicStampedReference 的简化版，不关心修改过几次，只关心是否修改过。</p>
+<h2 id="3-5-提升高并发场景下-CAS-操作的性能"><a href="#3-5-提升高并发场景下-CAS-操作的性能" class="headerlink" title="3.5 提升高并发场景下 CAS 操作的性能"></a>3.5 提升高并发场景下 CAS 操作的性能</h2><p>在竞争激烈的场景下，会导致大量的 CAS 自旋，比如大量线程同时并发修改一个 AtomicInteger 是，很多线程可能不停地自旋， 这浪费了大量的 CPU。</p>
+<h3 id="3-5-1-以空间换时间：LongAdder"><a href="#3-5-1-以空间换时间：LongAdder" class="headerlink" title="3.5.1 以空间换时间：LongAdder"></a>3.5.1 以空间换时间：LongAdder</h3><p>AtomicLong 使用内部变量 value 保存着实际的 long 值，所有操作都是针对该 value 的，也就是说，当高并发的情况下，value 变量其实是一个热点，N 个线程竞争这一个热点，重试的线程越多，意味着 CAS 失败的概率越高。</p>
+<p>LongAdder 的核心思想是热点分离，与 ConcurrentHashMap 的设计思想类似：将 value 值分离成一个数组，当多线程访问时，通过 Hash 算法将线程映射到数组的一个元素进行操作；而获取最终value 结果时，则将数组的元素求和。</p>
+<p>具体一点：LongAdder 将 value 值分散到一个数组中，不同的线程会命中到数组的不同槽中，各个线程只对自己槽中的那个值进行 CAS 操作，这样热点就被分散了，这样，即使线程数再多也不担心，各个线程分配到多个元素更新。<strong>如果要获取完整的 LongAdder 存储的值，只要将各个槽中的变量值累加即可</strong></p>
+<blockquote>
+<p>在 CAS 竞争非常激烈的场景， LongAdder 的性能可达到 AtomicLong 的 8 倍。</p>
+</blockquote>
+<h2 id="3-6-CAS在JDK中的广泛应用"><a href="#3-6-CAS在JDK中的广泛应用" class="headerlink" title="3.6 CAS在JDK中的广泛应用"></a>3.6 CAS在JDK中的广泛应用</h2><h3 id="3-6-1-CAS操作的弊端和规避措施"><a href="#3-6-1-CAS操作的弊端和规避措施" class="headerlink" title="3.6.1 CAS操作的弊端和规避措施"></a>3.6.1 CAS操作的弊端和规避措施</h3><p>CAS 操作弊端主要有下面 3 点：</p>
+<ul>
+<li><p>ABA问题，<strong>解决思路</strong>： 添加版本号、使用 AtomicStampedReference、AtomicMarkableReference，其中前者比较常用</p>
+</li>
+<li><p>只能保证一个共享变量的原子操作。<strong>解决思路</strong>：将多个共享变量合并成一个共享变量来操作</p>
+</li>
+<li><p>开销问题。<strong>解决思路</strong>：分散操作热点(如 LongAdder)、使用队列削峰(将 发生 CAS 争用的线程加入一个队列中排队，降低 CAS 争用的激烈程度，JUC 中非常重要的基础类 AQS 就是这么做的！)</p>
+</li>
+</ul>
+<h3 id="3-6-2-CAS-在JDK中的应用"><a href="#3-6-2-CAS-在JDK中的应用" class="headerlink" title="3.6.2 CAS 在JDK中的应用"></a>3.6.2 CAS 在JDK中的应用</h3><p>CAS 在 在java.util.concurrent.atomic包中的原子类、Java AQS 以及 显式锁、ConcurrentHashMap 等重要并发容器中都有非常广泛的应用</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E5%8D%B72/" rel="tag"># Java高并发核心编程(卷2)</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC2%E7%AB%A0/" rel="next" title="第1章：Java内置锁的核心原理">
+                  <i class="fa fa-chevron-left"></i> 第1章：Java内置锁的核心原理
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/" rel="prev" title="第4章：可见性与有序性的原理">
+                  第4章：可见性与有序性的原理 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-%E4%BB%80%E4%B9%88%E6%98%AF-CAS"><span class="nav-number">1.</span> <span class="nav-text">3.1 什么是 CAS</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-1-Unsafe-%E7%B1%BB%E4%B8%AD%E7%9A%84-CAS-%E6%96%B9%E6%B3%95"><span class="nav-number">1.1.</span> <span class="nav-text">3.1.1 Unsafe 类中的 CAS 方法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96-Unsafe-%E5%AE%9E%E4%BE%8B"><span class="nav-number">1.1.0.1.</span> <span class="nav-text">获取 Unsafe 实例</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Unsafe%E6%8F%90%E4%BE%9B%E7%9A%84-CAS-%E6%96%B9%E6%B3%95"><span class="nav-number">1.1.0.2.</span> <span class="nav-text">Unsafe提供的 CAS 方法</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-2-%E4%BD%BF%E7%94%A8-CAS-%E8%BF%9B%E8%A1%8C%E6%97%A0%E9%94%81%E7%BC%96%E7%A8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">3.1.2 使用 CAS 进行无锁编程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-JUC%E5%8E%9F%E5%AD%90%E7%B1%BB"><span class="nav-number">2.</span> <span class="nav-text">3.2 JUC原子类</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-1-JUC%E4%B8%AD%E7%9A%84Atomic-%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C%E5%8C%85"><span class="nav-number">2.1.</span> <span class="nav-text">3.2.1 JUC中的Atomic 原子操作包</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-4-ABA%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">3.4 ABA问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-2-ABA%E9%97%AE%E9%A2%98%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">3.1.</span> <span class="nav-text">3.4.2 ABA问题的解决方案</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-5-%E6%8F%90%E5%8D%87%E9%AB%98%E5%B9%B6%E5%8F%91%E5%9C%BA%E6%99%AF%E4%B8%8B-CAS-%E6%93%8D%E4%BD%9C%E7%9A%84%E6%80%A7%E8%83%BD"><span class="nav-number">4.</span> <span class="nav-text">3.5 提升高并发场景下 CAS 操作的性能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-1-%E4%BB%A5%E7%A9%BA%E9%97%B4%E6%8D%A2%E6%97%B6%E9%97%B4%EF%BC%9ALongAdder"><span class="nav-number">4.1.</span> <span class="nav-text">3.5.1 以空间换时间：LongAdder</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-6-CAS%E5%9C%A8JDK%E4%B8%AD%E7%9A%84%E5%B9%BF%E6%B3%9B%E5%BA%94%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">3.6 CAS在JDK中的广泛应用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-6-1-CAS%E6%93%8D%E4%BD%9C%E7%9A%84%E5%BC%8A%E7%AB%AF%E5%92%8C%E8%A7%84%E9%81%BF%E6%8E%AA%E6%96%BD"><span class="nav-number">5.1.</span> <span class="nav-text">3.6.1 CAS操作的弊端和规避措施</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-6-2-CAS-%E5%9C%A8JDK%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8"><span class="nav-number">5.2.</span> <span class="nav-text">3.6.2 CAS 在JDK中的应用</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">137</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共291k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'ca92734fdcb890282f7915485c74f96b',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

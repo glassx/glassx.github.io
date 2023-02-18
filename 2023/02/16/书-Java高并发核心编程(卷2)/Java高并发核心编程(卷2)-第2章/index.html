@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="2.8 偏向锁、轻量级锁与重量级锁的对比总结一下，synchronized 的执行过程大致如下：  线程抢锁时，JVM 首先检测内置锁对象 Mark Word 的biased_lock(偏向锁标识)是否为1，lock (锁标志位)是否为01，如果都满足，说明内置锁对象为可偏向状态 如果内置锁对象为可偏向状态，JVM 检查 Mark Word 中线程 ID 是否为当前抢锁线程的 ID，如果是，标识抢">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第1章：Java内置锁的核心原理">
+<meta property="og:url" content="https://glassx.github.io/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC2%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="2.8 偏向锁、轻量级锁与重量级锁的对比总结一下，synchronized 的执行过程大致如下：  线程抢锁时，JVM 首先检测内置锁对象 Mark Word 的biased_lock(偏向锁标识)是否为1，lock (锁标志位)是否为01，如果都满足，说明内置锁对象为可偏向状态 如果内置锁对象为可偏向状态，JVM 检查 Mark Word 中线程 ID 是否为当前抢锁线程的 ID，如果是，标识抢">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-02-16T02:10:00.000Z">
+<meta property="article:modified_time" content="2023-02-16T04:42:49.617Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Java高并发核心编程(卷2)">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC2%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第1章：Java内置锁的核心原理 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">31</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">9</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">137</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC2%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第1章：Java内置锁的核心原理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-02-16 10:10:00 / 修改时间：12:42:49" itemprop="dateCreated datePublished" datetime="2023-02-16T10:10:00+08:00">2023-02-16</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="2-8-偏向锁、轻量级锁与重量级锁的对比"><a href="#2-8-偏向锁、轻量级锁与重量级锁的对比" class="headerlink" title="2.8 偏向锁、轻量级锁与重量级锁的对比"></a>2.8 偏向锁、轻量级锁与重量级锁的对比</h2><p>总结一下，synchronized 的执行过程大致如下：</p>
+<ol>
+<li>线程抢锁时，JVM 首先检测内置锁对象 Mark Word 的biased_lock(偏向锁标识)是否为1，lock (锁标志位)是否为01，如果都满足，说明内置锁对象为可偏向状态</li>
+<li>如果内置锁对象为可偏向状态，JVM 检查 Mark Word 中线程 ID 是否为当前抢锁线程的 ID，如果是，标识抢锁线程处于偏向所状态，快速获得锁，开始执行临界区代码</li>
+<li>如果Mark Word 中的线程 ID 不是当前抢锁线程，就通过 CAS 竞争锁。如果竞争成功，就将 Mark Word 中的线程 ID 设置为抢锁线程的 ID ，偏向锁标志设为 1 ，锁标志位设为 01,此时内置锁对象处于偏向锁状态，然后开始执行临界区代码</li>
+<li>如果 CAS 竞争失败，说明发生了竞争，撤销偏向锁，进而升级为轻量级锁</li>
+<li>JVM 使用 CAS 将锁对象的 Mark Word 替换为抢锁线程的锁记录指针，如果成功，抢锁线程就获得锁；如果替换失败，就表示其他线程在竞争锁。那么 JVM 尝试使用 CAS 自旋替换抢锁线程的锁记录指针，如果自旋成功（抢锁成功），那么锁对象依旧处于轻量级锁状态。</li>
+<li>如果JVM的CAS 替换锁记录指针自旋失败，轻量级锁就膨胀为重量级锁，后面等待锁的线程也要进入阻塞状态</li>
+</ol>
+<p>3种锁的优缺点对比和适用场景如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th>锁</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>偏向锁</td>
+<td>加解锁不需要额外消耗，和执行非同步方法仅存在纳秒级差距</td>
+<td>如果线程间存在锁竞争，会带来额外的撤销锁操作</td>
+<td>适用于只有一个线程访问的临界区场景</td>
+</tr>
+<tr>
+<td>轻量级锁</td>
+<td>竞争的线程不会阻塞，提高了程序的响应速度</td>
+<td>抢不到锁的竞争线程会CAS自旋，消耗CPU</td>
+<td>锁占用时间短，吞吐量低</td>
+</tr>
+<tr>
+<td>重量级锁</td>
+<td>线程竞争无需自旋，不消耗CPU</td>
+<td>线程阻塞，响应时间慢</td>
+<td>锁占用时间长，吞吐量高</td>
+</tr>
+</tbody></table>
+<h2 id="2-9-线程间通信"><a href="#2-9-线程间通信" class="headerlink" title="2.9 线程间通信"></a>2.9 线程间通信</h2><p>多个线程共同操作共享的资源时，线程间通过某种方法互相告知自己的状态，以避免无效的资源争夺。<strong>线程间通信的方式可以有很多种：等待-通知、共享内存、管道流。</strong></p>
+<h3 id="2-9-2-低效的线程轮询"><a href="#2-9-2-低效的线程轮询" class="headerlink" title="2.9.2 低效的线程轮询"></a>2.9.2 低效的线程轮询</h3><p>轮询版本的生产者-消费者模型中，消费者每一轮消费，无论数据区是否为空，都需要进行数据区的询问和判断：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> IGoods <span class="title">get</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">    IGoods goods = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (amount &lt;= <span class="number">0</span>) {</span><br><span class="line">        Print.tcfo(<span class="string">"队列已经空了！"</span>);</span><br><span class="line">        <span class="comment">//数据区为空，直接返回</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    }</span><br><span class="line">    ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>当数据区为空(amount &lt;= 0)时，消费者无法取出数据，但是仍然做无用的询问工作，浪费了CPU的时间片。同理，对于生产者也会存在这样的问题：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">(T element)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">    <span class="keyword">if</span> (amount.get() &gt; MAX_AMOUNT) {</span><br><span class="line">        Print.tcfo(<span class="string">"队列已经满了！"</span>);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">    ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>当数据区满时，生产者无法加入数据，这时执行add方法也浪费CPU的时间片。<strong>使用“等待-通知”方式进行生产者与消费者之间的线程通信可以避免这种浪费。</strong></p>
+<p>具体方法是：<strong>当数据区满时，给让生产者等待，当可以添加数据时，给生产者发通知，让生产者唤醒；消费者同理。</strong>具体操作为：消费者取出一个数据后，由消费者去唤醒等待的生产者；生产者加入一个数据后，由生产者唤醒等待的消费者。</p>
+<h3 id="2-9-3-wait-、notify-方法的原理"><a href="#2-9-3-wait-、notify-方法的原理" class="headerlink" title="2.9.3 wait 、notify 方法的原理"></a>2.9.3 wait 、notify 方法的原理</h3><h5 id="wait-方法"><a href="#wait-方法" class="headerlink" title="wait 方法"></a>wait 方法</h5><p>对象的 wait 方法作用就是<strong>让当前线程阻塞并等待被唤醒，wait 方法与对象监视器密切相关，使用时一定要放在同步块中：</strong></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">synchronized</span>(locko) {</span><br><span class="line">    ...</span><br><span class="line">    locko.wait();</span><br><span class="line">    ....</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其原理大致如下：</p>
+<ul>
+<li><p>线程调用了 locko 的wait 方法后，JVM 会将当前线程假如 locko 监视器的 WaitSet(等待集) 中，等待被其他线程唤醒</p>
+</li>
+<li><p>当前线程会释放 locko 对象监视器 的 Owner 权利，让其他线程可以抢夺 locko 对象的监视器</p>
+</li>
+<li><p>让当前线程等待，其状态变为 WAITING</p>
+</li>
+</ul>
+<h5 id="notify-方法"><a href="#notify-方法" class="headerlink" title="notify 方法"></a>notify 方法</h5><p>notify 方法也需要放在同步块中执行，它有2个版本：</p>
+<ul>
+<li><p>notify ： 唤醒 locko 监视器等待集中的第一条等待线程，被唤醒的线程进入 EntryList ，状态从 WAITING 变为 BLOCKED</p>
+</li>
+<li><p>notifyAll： 唤醒 locko 监视器等待集中全部等待线程，所有线程进入 EntryList ，状态从 WAITING 变为 BLOCKED</p>
+</li>
+</ul>
+<p>notify 核心原理如下：</p>
+<ul>
+<li><p>当线程调用了 locko 的 notify 方法后，JVM 会唤醒 locko 监视器等待集中的第一条等待线程（如果是 notifyAll 则是所有线程），被唤醒的线程进入 EntryList ，状态从 WAITING 变为 BLOCKED，<strong>具备了排队抢夺监视器 Owner权利的资格</strong></p>
+</li>
+<li><p>EntryList 中的线程抢夺到监视器的 Owner 权利后，线程的状态从 BLOCKED 变成 RUNNABLE，具备重新执行的资格</p>
+</li>
+</ul>
+<h3 id="2-9-5-生产者-消费者之间的线程间通信"><a href="#2-9-5-生产者-消费者之间的线程间通信" class="headerlink" title="2.9.5 生产者-消费者之间的线程间通信"></a>2.9.5 生产者-消费者之间的线程间通信</h3><p>此实现版本大致需要定义以下3个同步对象：</p>
+<ul>
+<li><p>LOCK_OBJECT：用于临界区同步，临界区资源为数据缓冲区的 dataList 变量和 amount 变量</p>
+</li>
+<li><p>NOT_FULL：用于数据缓冲区的未满条件等待和通知，生产者在添加元素时需要判定是否已满，如果已满，则进入 NOT_FULL 的同步去等待，只要消费者耗费一个元素，就会通过 NOT_FULL 发送通知。</p>
+</li>
+<li><p>NOT_EMPTY：同理，这是用于数据缓冲区的非空条件的等待和通知。消费者在消费前需要判断数据区是否空，如果是，消费者就进入 NOT_EMPTY 的同步区等待被通知，只要生产者添加一个元素，生产者就会通过 NOT_EMPTY 发送通知</p>
+</li>
+</ul>
+<p>代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CommunicatePetStore</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> MAX_AMOUNT = <span class="number">10</span>; <span class="comment">//数据缓冲区最大长度</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//数据缓冲区，类定义</span></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">DataBuffer</span>&lt;<span class="title">T</span>&gt; </span>{</span><br><span class="line">        <span class="comment">//保存数据</span></span><br><span class="line">        <span class="keyword">private</span> List&lt;T&gt; dataList = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">        <span class="comment">//数据缓冲区长度</span></span><br><span class="line">        <span class="keyword">private</span> Integer amount = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Object LOCK_OBJECT = <span class="keyword">new</span> Object();</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Object NOT_FULL = <span class="keyword">new</span> Object();</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Object NOT_EMPTY = <span class="keyword">new</span> Object();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 向数据区增加一个元素</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">(T element)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">            <span class="keyword">while</span> (amount &gt; MAX_AMOUNT) {</span><br><span class="line">                <span class="keyword">synchronized</span> (NOT_FULL) {</span><br><span class="line">                    Print.tcfo(<span class="string">"队列已经满了！"</span>);</span><br><span class="line">                    <span class="comment">//等待未满通知</span></span><br><span class="line">                    NOT_FULL.wait();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">synchronized</span> (LOCK_OBJECT) {</span><br><span class="line">                dataList.add(element);</span><br><span class="line">                amount++;</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">synchronized</span> (NOT_EMPTY) {</span><br><span class="line">                <span class="comment">//发送未空通知</span></span><br><span class="line">                NOT_EMPTY.notify();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * 从数据区取出一个商品</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> T <span class="title">fetch</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">            <span class="keyword">while</span> (amount &lt;= <span class="number">0</span>) {</span><br><span class="line">                <span class="keyword">synchronized</span> (NOT_EMPTY) {</span><br><span class="line">                    Print.tcfo(<span class="string">"队列已经空了！"</span>);</span><br><span class="line">                    <span class="comment">//等待未空通知</span></span><br><span class="line">                    NOT_EMPTY.wait();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            T element = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">synchronized</span> (LOCK_OBJECT) {</span><br><span class="line">                element = dataList.remove(<span class="number">0</span>);</span><br><span class="line">                amount--;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            <span class="keyword">synchronized</span> (NOT_FULL) {</span><br><span class="line">                <span class="comment">//发送未满通知</span></span><br><span class="line">                NOT_FULL.notify();</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">return</span> element;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span></span></span><br><span class="line"><span class="function">            InterruptedException </span>{</span><br><span class="line">        Print.cfo(<span class="string">"当前进程的ID是"</span> + JvmUtil.getProcessID());</span><br><span class="line">        System.setErr(System.out);</span><br><span class="line">        <span class="comment">//共享数据区，实例对象</span></span><br><span class="line">        DataBuffer&lt;IGoods&gt; dataBuffer = <span class="keyword">new</span> DataBuffer&lt;&gt;();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//生产者执行的动作</span></span><br><span class="line">        Callable&lt;IGoods&gt; produceAction = () -&gt; {</span><br><span class="line">            <span class="comment">//首先生成一个随机的商品</span></span><br><span class="line">            IGoods goods = Goods.produceOne();</span><br><span class="line">            <span class="comment">//将商品加上共享数据区</span></span><br><span class="line">            dataBuffer.add(goods);</span><br><span class="line">            <span class="keyword">return</span> goods;</span><br><span class="line">        };</span><br><span class="line">        <span class="comment">//消费者执行的动作</span></span><br><span class="line">        Callable&lt;IGoods&gt; consumerAction = () -&gt; {</span><br><span class="line">            <span class="comment">// 从PetStore获取商品</span></span><br><span class="line">            IGoods goods = <span class="keyword">null</span>;</span><br><span class="line">            goods = dataBuffer.fetch();</span><br><span class="line">            <span class="keyword">return</span> goods;</span><br><span class="line">        };</span><br><span class="line">        <span class="comment">// 同时并发执行的线程数</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> THREAD_TOTAL = <span class="number">20</span>;</span><br><span class="line">        <span class="comment">//线程池，用于多线程模拟测试</span></span><br><span class="line">        ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_TOTAL);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//假定共11个线程，其中有10个消费者，但是只有1个生产者</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> CONSUMER_TOTAL = <span class="number">11</span>;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> PRODUCE_TOTAL = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; PRODUCE_TOTAL; i++) {</span><br><span class="line">            <span class="comment">//生产者线程每生产一个商品，间隔50毫秒</span></span><br><span class="line">            threadPool.submit(<span class="keyword">new</span> Producer(produceAction, <span class="number">50</span>));</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; CONSUMER_TOTAL; i++) {</span><br><span class="line">            <span class="comment">//消费者线程每消费一个商品，间隔100毫秒</span></span><br><span class="line">            threadPool.submit(<span class="keyword">new</span> Consumer(consumerAction, <span class="number">100</span>));</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h4 id=""><a href="#" class="headerlink" title=""></a></h4><h3 id="2-9-6-需要在synchronized-同步块的内部使用-wait-和notify"><a href="#2-9-6-需要在synchronized-同步块的内部使用-wait-和notify" class="headerlink" title="2.9.6 需要在synchronized 同步块的内部使用 wait 和notify"></a>2.9.6 需要在synchronized 同步块的内部使用 wait 和notify</h3><p>调用 wait 和 notify 方法时，<strong>“当前线程”必须拥有该对象的同步锁，也即wait 和notiry 方法必须在同步块中使用，否则JVM 就会抛出 IllegalMonitorStateException 异常。</strong></p>
+<p>这是为什么呢？还得从这 2 个方法的原理说起：</p>
+<ul>
+<li><p>调用 wait ：JVM 会释放当前线程的对象监视器的 Owner 资格，还会将当前线程移入监视器的 WaitSet 队列，这些操作都是和对象监视器锁相关的，所以，当前线程执行 wait 方法前，必须通过 synchronized 方法称为对象锁的 Owner，要在同步块内调用</p>
+</li>
+<li><p>同理， 调用 notify 时，JVM 从对象锁的监视器 WaitSet 队列移动线程到其 EntryList 队列，这些操作都与对象锁的监视器有关，所以，也必须先成为对象锁监视器的 Owner，然后在同步块内调用</p>
+</li>
+</ul>
+<h3 id="2-9-7-调用wait、notify方法进行线程间通信的要点（自己加的章节）"><a href="#2-9-7-调用wait、notify方法进行线程间通信的要点（自己加的章节）" class="headerlink" title="2.9.7 调用wait、notify方法进行线程间通信的要点（自己加的章节）"></a>2.9.7 调用wait、notify方法进行线程间通信的要点（自己加的章节）</h3><p>有了以上的知识储备，来说下wait 和 notify 方法进行线程间通信的要点：</p>
+<ul>
+<li><p>调用某个同步对象 locko 的 wait 和 notify 类型方法前，必须要获得这个锁对象的监视器锁，这2个类型的方法必须放在同步块中执行，否则报错</p>
+</li>
+<li><p>调用<strong>wait方法是使用while进行条件判断，如果是在某种条件下进行等待，对条件的判断就不能使用if语句做一次性判断，而是使用while 循环进行反复判断</strong>，只有这样才能在线程被唤醒后继续检查wait 条件，并在条件没有满足的情况下继续等待。</p>
+</li>
+</ul>
+<p>正确的条件判断代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//消费者获取元素</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> T <span class="title">fetch</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">    <span class="keyword">while</span> (amount &lt;= <span class="number">0</span>) {</span><br><span class="line">        <span class="keyword">synchronized</span> (NOT_EMPTY) {</span><br><span class="line">            <span class="comment">//队列空了</span></span><br><span class="line">            NOT_EMPTY.wait();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>错误地使用 if 条件判断：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//消费者获取元素</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> T <span class="title">fetch</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">    <span class="keyword">if</span> (amount &lt;= <span class="number">0</span>) {</span><br><span class="line">        <span class="keyword">synchronized</span> (NOT_EMPTY) {</span><br><span class="line">            <span class="comment">//队列空了</span></span><br><span class="line">            NOT_EMPTY.wait();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>至于为什么要这样，从之前说的原理我们知道，wait 方法会释放锁。我们考虑这么一种场景：</p>
+<ul>
+<li><p>假如有 2 个消费者 consumerOne 和 consumerTwo </p>
+</li>
+<li><p>consumerOne 在判定是空的时候，wait 了，这时候会释放锁；由于释放了锁，consumerTwo 自然就能获取到这个锁，然后发现也是空的，自然也 wait 了</p>
+</li>
+<li><p>也就是说 consumerOne 和 consumerTwo 都在wait 等待了，这是问题关键</p>
+</li>
+<li><p>此时，生产者放入一个元素，完了调用 notifyAll ，consumerOne 和 consumerTwo 都被唤醒了，他们会竞争锁</p>
+</li>
+<li><p>假如 consumerOne 拿到锁了，consumerTwo 还在锁池中继续阻塞，consumerOne 执行wait 后面的代码消费了，接着又会变为空</p>
+</li>
+<li><p>consumerOne 执行完成后，consumerTwo 拿到锁也接着执行 wait 后面的代码，由于被 consumerOne 消费变为空了之后，consumerTwo 后续的执行以不空作为条件的执行会出现问题</p>
+</li>
+</ul>
+<p>如果不太明白，还可以参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_37430539/article/details/100005522">为什么生产者消费者中模式中要用while作临界判断？_xuwen_chen的博客-CSDN博客</a></p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E5%8D%B72/" rel="tag"># Java高并发核心编程(卷2)</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/02/14/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC1%E7%AB%A0/" rel="next" title="第1章：多线程原理与实战">
+                  <i class="fa fa-chevron-left"></i> 第1章：多线程原理与实战
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC3%E7%AB%A0/" rel="prev" title="第1章：CAS原理与JUC原子类">
+                  第1章：CAS原理与JUC原子类 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-8-%E5%81%8F%E5%90%91%E9%94%81%E3%80%81%E8%BD%BB%E9%87%8F%E7%BA%A7%E9%94%81%E4%B8%8E%E9%87%8D%E9%87%8F%E7%BA%A7%E9%94%81%E7%9A%84%E5%AF%B9%E6%AF%94"><span class="nav-number">1.</span> <span class="nav-text">2.8 偏向锁、轻量级锁与重量级锁的对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-9-%E7%BA%BF%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1"><span class="nav-number">2.</span> <span class="nav-text">2.9 线程间通信</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-9-2-%E4%BD%8E%E6%95%88%E7%9A%84%E7%BA%BF%E7%A8%8B%E8%BD%AE%E8%AF%A2"><span class="nav-number">2.1.</span> <span class="nav-text">2.9.2 低效的线程轮询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-9-3-wait-%E3%80%81notify-%E6%96%B9%E6%B3%95%E7%9A%84%E5%8E%9F%E7%90%86"><span class="nav-number">2.2.</span> <span class="nav-text">2.9.3 wait 、notify 方法的原理</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#wait-%E6%96%B9%E6%B3%95"><span class="nav-number">2.2.0.1.</span> <span class="nav-text">wait 方法</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#notify-%E6%96%B9%E6%B3%95"><span class="nav-number">2.2.0.2.</span> <span class="nav-text">notify 方法</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-9-5-%E7%94%9F%E4%BA%A7%E8%80%85-%E6%B6%88%E8%B4%B9%E8%80%85%E4%B9%8B%E9%97%B4%E7%9A%84%E7%BA%BF%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1"><span class="nav-number">2.3.</span> <span class="nav-text">2.9.5 生产者-消费者之间的线程间通信</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-number">2.3.1.</span> <span class="nav-text"></span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-9-6-%E9%9C%80%E8%A6%81%E5%9C%A8synchronized-%E5%90%8C%E6%AD%A5%E5%9D%97%E7%9A%84%E5%86%85%E9%83%A8%E4%BD%BF%E7%94%A8-wait-%E5%92%8Cnotify"><span class="nav-number">2.4.</span> <span class="nav-text">2.9.6 需要在synchronized 同步块的内部使用 wait 和notify</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-9-7-%E8%B0%83%E7%94%A8wait%E3%80%81notify%E6%96%B9%E6%B3%95%E8%BF%9B%E8%A1%8C%E7%BA%BF%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%E7%9A%84%E8%A6%81%E7%82%B9%EF%BC%88%E8%87%AA%E5%B7%B1%E5%8A%A0%E7%9A%84%E7%AB%A0%E8%8A%82%EF%BC%89"><span class="nav-number">2.5.</span> <span class="nav-text">2.9.7 调用wait、notify方法进行线程间通信的要点（自己加的章节）</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">137</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共291k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '20129580fead1f13fc6611d6273438db',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

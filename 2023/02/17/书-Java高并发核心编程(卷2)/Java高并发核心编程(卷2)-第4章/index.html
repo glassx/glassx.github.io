@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="4.1 CPU物理缓存结构L1缓存离 CPU 最近也最快，一般就 32k&#x2F;64k水平；L2 缓存速度次之，容量一般比L1大；L3级缓存最大，比前面二者都大，速度也最慢，大小可能 12M 的水平。 4.2 并发编程的三大问题三大问题分别是： 原子性、可见性、有序性 问题。必须要保证这 3 个，只要有一个没保证，在多线程情况下就可能不正确。 后续的略。 4.3 硬件层的MESI协议原理为了缓解内存速度">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第4章：可见性与有序性的原理">
+<meta property="og:url" content="https://glassx.github.io/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="4.1 CPU物理缓存结构L1缓存离 CPU 最近也最快，一般就 32k&#x2F;64k水平；L2 缓存速度次之，容量一般比L1大；L3级缓存最大，比前面二者都大，速度也最慢，大小可能 12M 的水平。 4.2 并发编程的三大问题三大问题分别是： 原子性、可见性、有序性 问题。必须要保证这 3 个，只要有一个没保证，在多线程情况下就可能不正确。 后续的略。 4.3 硬件层的MESI协议原理为了缓解内存速度">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-02-17T06:20:00.000Z">
+<meta property="article:modified_time" content="2023-02-18T07:53:19.292Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Java高并发核心编程(卷2)">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第4章：可见性与有序性的原理 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">31</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">9</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">137</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第4章：可见性与有序性的原理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-17 14:20:00" itemprop="dateCreated datePublished" datetime="2023-02-17T14:20:00+08:00">2023-02-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-18 15:53:19" itemprop="dateModified" datetime="2023-02-18T15:53:19+08:00">2023-02-18</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="4-1-CPU物理缓存结构"><a href="#4-1-CPU物理缓存结构" class="headerlink" title="4.1 CPU物理缓存结构"></a>4.1 CPU物理缓存结构</h2><p>L1缓存离 CPU 最近也最快，一般就 32k/64k水平；L2 缓存速度次之，容量一般比L1大；L3级缓存最大，比前面二者都大，速度也最慢，大小可能 12M 的水平。</p>
+<h2 id="4-2-并发编程的三大问题"><a href="#4-2-并发编程的三大问题" class="headerlink" title="4.2 并发编程的三大问题"></a>4.2 并发编程的三大问题</h2><p>三大问题分别是： 原子性、可见性、有序性 问题。必须要保证这 3 个，只要有一个没保证，在多线程情况下就可能不正确。</p>
+<p>后续的略。</p>
+<h2 id="4-3-硬件层的MESI协议原理"><a href="#4-3-硬件层的MESI协议原理" class="headerlink" title="4.3 硬件层的MESI协议原理"></a>4.3 硬件层的MESI协议原理</h2><p>为了缓解内存速度和CPU速度差问题，现在计算机都会为CPU添加高速缓存，每个CPU内核都有自己的一级、二级高速缓存，同一个CPU多个内核之间共享一个三级高速缓存。</p>
+<h3 id="4-3-1-总线锁和缓存锁"><a href="#4-3-1-总线锁和缓存锁" class="headerlink" title="4.3.1 总线锁和缓存锁"></a>4.3.1 总线锁和缓存锁</h3><p>CPU的处理流程为：现将计算需要用到的数据缓存到CPU的高速缓存中，CPU计算时，直接从高速缓存获取数据并在计算完成后写会高速缓存，整个运算完成后再把高速缓存的数据同步回主存。由于每个线程可能运行在不同的CPU内核中，因此<strong>同一份数据可能被缓存到多个CPU内核中，就会发生内存可见性问题</strong>。</p>
+<p>后续的略。</p>
+<h3 id="4-4-1-重排序"><a href="#4-4-1-重排序" class="headerlink" title="4.4.1 重排序"></a>4.4.1 重排序</h3><p><strong>编译器</strong>为什么要重排序？其目的为： <strong>与其等待阻塞指令（如等待缓存刷入），不如先去执行其他指令。</strong>另外，CPU层面也有重排序。</p>
+<h2 id="4-5-JMM-详解"><a href="#4-5-JMM-详解" class="headerlink" title="4.5 JMM 详解"></a>4.5 JMM 详解</h2><p>JMM (Java Memory Model ，Java 内存模型) 并不像JVM 内存结构一样是真实存在的运行实体，更多体现为一种规范和规则。</p>
+<p>JMM 定义了一组规则或规范，该规范定义了<strong>一个线程对共享变量写入时，如何确保对另一个线程是可见的</strong>，实际上 JMM 提供了合理的禁用缓存以及禁止重排序的方法，所以其核心价值在于<strong>解决可见性和有序性</strong>。它的另一大价值在于：<strong>屏蔽各大硬件和操作系统差异，保证 Java 程序在各大平台堆内存访问是一致的。</strong></p>
+<p>JMM 规定所有的变量都存储在主存（类似于物理内存，但是有区别）中，每个 Java 线程都有自己的工作内存（类似于CPU高速缓存，但有区别）。</p>
+<p>JMM 提供了一套自己的方案解决可见性和有序性问题，包括 volatile、synchronized、final 等。</p>
+<h2 id="4-7-volatile-不具备原子性"><a href="#4-7-volatile-不具备原子性" class="headerlink" title="4.7 volatile 不具备原子性"></a>4.7 volatile 不具备原子性</h2><p>对于关键字 volatile 修饰的内存可见变量而言，具有2个重要的语义：</p>
+<ul>
+<li><p>使用 volatile 修饰的变量在变量的值发生改变时，会立刻同步到主存，并使其他线程的变量副本失效</p>
+</li>
+<li><p>禁止指令重排序</p>
+</li>
+</ul>
+<p>使用++操作说明volatile不具备重排序功能：</p>
+<ol>
+<li><p>A、B线程分别运行在Core1 和 Core2 核上，假设此时共享value 的值为 0，现在线程 A、B 都读取value值到自己的工作内存上</p>
+</li>
+<li><p>线程 A 将 value 的值变为 1，完成了 assign、store 操作，假设在执行 write 指令前 A 的时间片用完，线程 A 被空闲但是 write 操作还没达到主存，但是呢， store 操作触发了写的信号，导致了 B 缓存过期</p>
+</li>
+<li><p>B重新从主存读到 value，可想而知这时候还是 0</p>
+</li>
+<li><p>线程 B 执行完所有操作，将 value 值变成 1 写入主存</p>
+</li>
+<li><p>线程 A 重新拿到时间片，将过期了的 1 写入主存</p>
+</li>
+</ol>
+<p>所以，<strong>对于复合操作，volatile无法保障原子性，如果要保证复合操作的原子性，就需要用到锁</strong>。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E5%8D%B72/" rel="tag"># Java高并发核心编程(卷2)</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC3%E7%AB%A0/" rel="next" title="第1章：CAS原理与JUC原子类">
+                  <i class="fa fa-chevron-left"></i> 第1章：CAS原理与JUC原子类
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/02/18/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC5%E7%AB%A0/" rel="prev" title="第5章：JUC显式锁的原理与实战">
+                  第5章：JUC显式锁的原理与实战 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1-CPU%E7%89%A9%E7%90%86%E7%BC%93%E5%AD%98%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">4.1 CPU物理缓存结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E7%9A%84%E4%B8%89%E5%A4%A7%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">4.2 并发编程的三大问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-3-%E7%A1%AC%E4%BB%B6%E5%B1%82%E7%9A%84MESI%E5%8D%8F%E8%AE%AE%E5%8E%9F%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">4.3 硬件层的MESI协议原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-1-%E6%80%BB%E7%BA%BF%E9%94%81%E5%92%8C%E7%BC%93%E5%AD%98%E9%94%81"><span class="nav-number">3.1.</span> <span class="nav-text">4.3.1 总线锁和缓存锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-1-%E9%87%8D%E6%8E%92%E5%BA%8F"><span class="nav-number">3.2.</span> <span class="nav-text">4.4.1 重排序</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-5-JMM-%E8%AF%A6%E8%A7%A3"><span class="nav-number">4.</span> <span class="nav-text">4.5 JMM 详解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-7-volatile-%E4%B8%8D%E5%85%B7%E5%A4%87%E5%8E%9F%E5%AD%90%E6%80%A7"><span class="nav-number">5.</span> <span class="nav-text">4.7 volatile 不具备原子性</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">137</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共291k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '2be12eaa97cd462277cd4588e82ac7c1',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
