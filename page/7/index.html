@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">137</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">139</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,177 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/" class="post-title-link" itemprop="url">第3、4课-内存优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-05-27 21:43:00 / 修改时间：21:43:33" itemprop="dateCreated datePublished" datetime="2020-05-27T21:43:00+08:00">2020-05-27</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="内存优化-lt-上-gt"><a href="#内存优化-lt-上-gt" class="headerlink" title="内存优化<上>"></a>内存优化&lt;上&gt;</h2><h3 id="Android中Bitmap-内存分配的变化过程"><a href="#Android中Bitmap-内存分配的变化过程" class="headerlink" title="Android中Bitmap 内存分配的变化过程"></a>Android中Bitmap 内存分配的变化过程</h3><ol>
+<li>3.0以前，Bitmap 对象放在Java堆，像素数据存放在 Native内存中，如果不手动调用 recycle ，那么Native内存中的像素数据完全依赖于 finalize 函数，而这个函数是不可靠的         </li>
+<li>3.0~7.0,Bitmap 对象和像素数据统一放到 Java 堆，这样就算不 recycle 操作，像素数据也会随着一起回收，不过，这导致大量内存占用，引起大量GC。一起放在内存也有可能即使系统有大量内存没利用，但是却会导致oom了(比如给分配的最大堆只到 300M，但是用得差不多了，此时系统却还空闲有3G内存，却要引起oom了)       </li>
+<li>Android 8.0 中，NativeAllocationRegistry 可以满足Bitmap 对象存放在Java 堆，像素数据在 Native 中，还能实现一并回收对象和像素数据。(8.0还提供硬件位图(Hardware Bitmap)，减少内存占用并提升绘制效率)        </li>
+</ol>
+<h3 id="关于内存优化的两个误区"><a href="#关于内存优化的两个误区" class="headerlink" title="关于内存优化的两个误区"></a>关于内存优化的两个误区</h3><ul>
+<li>内存占用越小越好。不是这样的，更多的内存意味着更好的动画效果和更快的缓存命中，只需要做到系统内存充足时多用，系统内存紧张时少用(释放不是必须的内存)即可                </li>
+<li>Native 的内存不用管。其实，当系统内存不足的时候，就会开始依次清理 后台、桌面、服务、前台，一步步来，直到内存足够，最后直到重启手机                  </li>
+</ul>
+<h3 id="内存观测方法"><a href="#内存观测方法" class="headerlink" title="内存观测方法"></a>内存观测方法</h3><ol>
+<li>观察Log，查看GC 回收的原因            </li>
+<li>使用如下命令查看：         </li>
+</ol>
+<blockquote>
+<p>adb shell dumpsys meminfo &lt;package_name|pid&gt; [-d]</p>
+</blockquote>
+<h2 id="内存优化-lt-下-gt"><a href="#内存优化-lt-下-gt" class="headerlink" title="内存优化<下>"></a>内存优化&lt;下&gt;</h2><h3 id="内存优化探讨"><a href="#内存优化探讨" class="headerlink" title="内存优化探讨"></a>内存优化探讨</h3><p>Bigmap 优化、内存泄露优化、设备分级几个层次入手</p>
+<p>设备等级就是，在某些低性能的机器上，动画不要了，进程也不预先启动了。安装包大小也是有要求的，比如有很多app就有极速版这个概念，它们的apk很小，动画也不酷炫。apk大小跟内存的关系可以参考如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png" alt="安装包大小和内存关系"></p>
+<p>Bitmap 可以用第三方框架来做，比如Fresco，实在要自己管理，可以向后台要求指定宽度，bitmap的inbitMap内存复用，inSample降低采样</p>
+<p>内存泄露：使用LeakCanary自动化检测方案，只可以做到Activity和Fragment的泄漏检测，如何检测其他的内存泄露呢？如何监测疑似的内存泄漏呢？</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/01/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/05/01/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/" class="post-title-link" itemprop="url">Android开发技巧</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-05-01 09:38:00 / 修改时间：09:40:07" itemprop="dateCreated datePublished" datetime="2020-05-01T09:38:00+08:00">2020-05-01</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android%E6%8A%80%E5%B7%A7/" itemprop="url" rel="index">
+                    <span itemprop="name">Android技巧</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="查看运行的service"><a href="#查看运行的service" class="headerlink" title="查看运行的service"></a>查看运行的service</h2><p>如果要查看当前手机上运行有哪些service（不可以先 adb shell 再执行后面的，否则显示的进程就不对了，至少我的是这样的）：</p>
+<blockquote>
+<p>adb shell dumpsys activity services</p>
+</blockquote>
+<p>当然，肯定是可以加 grep 关键字过滤的：</p>
+<blockquote>
+<p>adb shell dumpsys activity services | grep MiniAppPreService</p>
+</blockquote>
+<p>同理，我们也可以通过 grep 过滤查看当前一组进程(下面示例是过滤出名字中包含 com.example.io 的)：</p>
+<blockquote>
+<p>adb shell ps | grep com.example.io</p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1832,199 +2003,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/02/27/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E8%8E%B7%E5%8F%96debug%E5%8C%85%E7%9A%84cookies%E7%9A%84db%E6%96%87%E4%BB%B6/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/02/27/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E8%8E%B7%E5%8F%96debug%E5%8C%85%E7%9A%84cookies%E7%9A%84db%E6%96%87%E4%BB%B6/" class="post-title-link" itemprop="url">Android获取debug包的cookies的db文件</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-02-27 08:00:00" itemprop="dateCreated datePublished" datetime="2020-02-27T08:00:00+08:00">2020-02-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-03-03 21:29:59" itemprop="dateModified" datetime="2020-03-03T21:29:59+08:00">2020-03-03</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%97%AE%E9%A2%98/" itemprop="url" rel="index">
-                    <span itemprop="name">问题</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>在项目中，用户登录后，需要为白名单中的 host 注入特定的cookies，在用户退出登录的时候，需要将注入的 cookies 清除(只清除app自己注入的cookies，h5 注入的cookies不要清除)。</p>
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>Android 的webview 并没有提供针对单个host 清除cookies的方法，只有全部清除，因此主要思路是将需要删除的cookies 设置为过期，再删除过期的即可，具体可以参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/turkeycock/article/details/53091103">Android清除单个域名的cookie</a></p>
-<p>当然，设置cookies过期有两种方法:</p>
-<blockquote>
-<p>Set-Cookie: id=a3fWa; Expires=Wed, 21 Oct 2015 07:28:00 GMT;</p>
-</blockquote>
-<p>使用Cookie的: Expires 属性. 它可以设置cookie的过期时间. 下面的代码表示id这条cookie的过期时间是2015年10月21日早上7点28分;</p>
-<blockquote>
-<p>Set-Cookie: id=a3fWa; Max-Age=86400</p>
-</blockquote>
-<p>使用Cookie的: Max-Age 属性. 它可以指定从现在开始Cookie存在的秒数. 秒数过完则cookie过期</p>
-<p>参考 <a target="_blank" rel="noopener" href="https://www.cnblogs.com/aisowe/p/11566073.html">aisowe</a></p>
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>但是在清理的时候，发现总是不能清除掉指定cookie，打印出来发现：同一个host，比如 baidu.com ，它的cookie里面有2个key是一样的，但是值不一样，清理的时候，指定host 为baidu.com ，但是只能清除一个，另一个怎么也清理不掉。</p>
-<p>这就很奇怪了，能想到的就是可能在多个不同的host下都注入了这个key，于是想办法要把它存储cookies的文件取出来看下。</p>
-<p>我们知道，cookies 文件存储在 /data/data/<package>/app_webview，文件名是Cookies ，但是这个路径是一个app内部空间，普通情况下是没办法将这个文件获取出来的，除非是在虚拟机或者root过后，安装特定的文件管理器。</package></p>
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>不过我们安装Debug 的包的情况下，可能会有解决办法。因为 PackageManager 会检查 AndroidManifest.xml 中 isDebuggable 是不是false，这个值在我们打包的时候会根据你是打release包还是debug包而是不同的值，debug情况下是 isDebuggable = true，release 情况下是 true。</p>
-<p>这样，我们将手机通过Android Studio 安装上debug包，进入shell：</p>
-<blockquote>
-<p>adb shell    </p>
-</blockquote>
-<p>进入app 空间：</p>
-<blockquote>
-<p>run-as <package>    </package></p>
-</blockquote>
-<p>这样就能进入到app的内部空间，当然，也可以参考<a target="_blank" rel="noopener" href="https://www.cnblogs.com/SZ2015/p/4750051.html">不root情况下读取data数据</a> ,此时我们再通过命令：</p>
-<blockquote>
-<p>cd app_webview/</p>
-</blockquote>
-<p>就能进到存放cookies的目录了，通过 ls 命令就能看到 Cookies 这个文件，这个文件是个数据库文件，可以使用sqlite3 打开。此时我们不能直接将其copy到我们电脑上，只能将其复制到我们的 sdcard 中：</p>
-<blockquote>
-<p>cp Cookies /sdcard</p>
-</blockquote>
-<p>此时，Cookies 文件已经被赋值到 sdcard，通过两次 exit 命令，就能退出 shell 模式，再通过 adb pull 命令，就能将其复制到电脑上了。</p>
-<h2 id="数据分析"><a href="#数据分析" class="headerlink" title="数据分析"></a>数据分析</h2><p>在命令行打开Cookies 文件：</p>
-<blockquote>
-<p>sqlite3 /desktop/Cookies<br>.dump cookies</p>
-</blockquote>
-<p>就能看到cookies的数据了，这时候才发现，原来两个host都注入了这个key的cookie，一个是  baidu.com  一个是 .baidu.com，而后者是h5页面自己注入的，接下来问题就很明了了，将需要清除的cookies 按照前面的方法添加过期时间就ok，再手动执行删除过期cookies的操作，任务就完成了。</p>
-<p>该篇文章旨在记录问题解决过程，详细过程这里略过。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/01/15/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC13%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/01/15/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC13%E7%AB%A0/" class="post-title-link" itemprop="url">第13章：热修复原理</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-01-15 22:17:00 / 修改时间：22:18:03" itemprop="dateCreated datePublished" datetime="2020-01-15T22:17:00+08:00">2020-01-15</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>热修复框架的核心技术主要有3类：代码修复、资源修复和动态链接库修复。</p>
-<h2 id="资源修复"><a href="#资源修复" class="headerlink" title="资源修复"></a>资源修复</h2><p>很多热修复的框架的资源修复参考了Instant Run的资源修复原理，因此我们首先了解下Instant Run 的原理。Instant Run 的资源修复核心逻辑在MonkeyPatcher 的monkeyPatchExistingResources 方法中，如下所示：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//com/android/tools/fd/runtime/MonkeyPatcher.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">monkeyPatchExistingResources</span><span class="params">(Context context,String externalResourceFile,Collection&lt;Activity&gt; activityes)</span></span>{</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">try</span>{</span><br><span class="line">    <span class="comment">//创建一个新的 AssetManager</span></span><br><span class="line">       AssetManager newAssetManager = (newAssetManager)newAssetManager.class.getConstructor(<span class="keyword">new</span> Class[<span class="number">0</span>]).newInstance(<span class="keyword">new</span> Object[<span class="number">0</span>]);<span class="comment">//1</span></span><br><span class="line">       </span><br><span class="line">       Method mAddAssetPath = AssetManager.class.getDeclareMethod(<span class="string">"addAssetPath"</span>,<span class="keyword">new</span> Class[] {String.class});<span class="comment">//2</span></span><br><span class="line">       </span><br><span class="line">       mAddAssetPath.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">       <span class="comment">//通过反射调用 addAssetPath 方法加载外部的资源( SD 卡)</span></span><br><span class="line">       <span class="keyword">if</span> (((Integer) mAddAssetPath.invoke(newAssetManager,<span class="keyword">new</span> Object[]{ externalResourceFile})).intValue () == <span class="number">0</span>) {<span class="comment">//3</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Could not create new AssetManager"</span>);</span><br><span class="line">            </span><br><span class="line">       <span class="keyword">if</span>{activities != <span class="keyword">null</span>){</span><br><span class="line">         <span class="keyword">for</span> (Activity activity : activities) {</span><br><span class="line">         Resources resources= activity.getResources() ;<span class="comment">//4</span></span><br><span class="line">         <span class="keyword">try</span> {</span><br><span class="line">          <span class="comment">//反射得到 Resources 的 AssetManager 类型的 mAssets 字段</span></span><br><span class="line">          Field mAssets = Resources.class.getDeclareField(<span class="string">"mAssets"</span>);<span class="comment">//5</span></span><br><span class="line">          mAssets.setAccessible(<span class="keyword">true</span> );</span><br><span class="line"></span><br><span class="line">          <span class="comment">//将 mAssets 字段的引用替换为新创建的 AssetManager</span></span><br><span class="line">          mAssets.set(resources,newAssetManager) ;<span class="comment">//6</span></span><br><span class="line">          </span><br><span class="line">          <span class="comment">//得到 Activity 的 Resources.Theme</span></span><br><span class="line">          Resources.Theme theme = activity.getTheme();</span><br><span class="line">          ...</span><br><span class="line">          <span class="comment">//反射得到 Resources.Theme 的 mAssets 字段</span></span><br><span class="line">          Field ma = Resources . Theme.class.getDeclaredField (” mAssets <span class="string">" ) ;</span></span><br><span class="line"><span class="string">          ma.setAccessible(true);</span></span><br><span class="line"><span class="string">          </span></span><br><span class="line"><span class="string">          //将 Resources.Theme 的 mAssets 字段替换为 newAssetManager</span></span><br><span class="line"><span class="string">          ma.set(theme,newAssetManager);//7</span></span><br><span class="line"><span class="string">         } catch (Throwable ignore) {</span></span><br><span class="line"><span class="string">         </span></span><br><span class="line"><span class="string">         }</span></span><br><span class="line"><span class="string">    }</span></span><br><span class="line"><span class="string">}</span></span><br><span class="line"><span class="string"></span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以看出，在注释1处创建了一个新的AssetManager，之后通过反射调用 addAssetPath 方法加载外部(SD卡)的资源。在注释4处遍历Activity 列表，得到每个Activity 的Resource ，在5处通过反射得到Resources 的AssetManager 类型的mAsset字段，并在注释6处改写mAssets字段的引用为新的 AssetManager。之后，将AssetManager 类型的mAssets 字段的引用全部替换为新创建的 AssetManager。所以，总共就是两个步骤：</p>
-<ul>
-<li>创建新的 AssetManager ,通过反射调用 addAssetPath 方法加载外部的资源,这样<br>新创建的 AssetManager 就含有了外部资源。     </li>
-<li>将 AssetManager 类型的 rnAssets 字段的引用全部替换为新创建的 AssetManager。</li>
-</ul>
-<h2 id="代码修复"><a href="#代码修复" class="headerlink" title="代码修复"></a>代码修复</h2><p>先写到这，后续有空再来。。。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -2075,7 +2053,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">137</span>
+          <span class="site-state-item-count">139</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2161,7 +2139,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共291k字</span>
+  <span class="post-count">博客全站共296.9k字</span>
 </div>
 
 
