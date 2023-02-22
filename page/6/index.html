@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">139</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">140</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,221 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/11/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/11/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/" class="post-title-link" itemprop="url">第2章：Android底层知识</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-11 22:00:00" itemprop="dateCreated datePublished" datetime="2021-03-11T22:00:00+08:00">2021-03-11</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 21:51:38" itemprop="dateModified" datetime="2021-03-29T21:51:38+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>接下来章节要介绍以下概念，掌握了这些底层知识，就算是迈进了Android插件化的大门了：</p>
+<ul>
+<li>Binder</li>
+<li>AIDL</li>
+<li>AMS</li>
+<li>四大组件工作原理</li>
+<li>PMS</li>
+<li>App安装过程</li>
+<li>ClassLoader以及双亲委托</li>
+</ul>
+<h2 id="Binder-原理"><a href="#Binder-原理" class="headerlink" title="Binder 原理"></a>Binder 原理</h2><p>对于Binder的原理，只需要了解以下过程即可：</p>
+<ol>
+<li>首先，Server 在 SM 中注册</li>
+<li>如果Client 需要调用Server 的 add 方法，就需要先获取Server 的对象，但是SM不会把真正的 Server 对象返回给 Client，而是把 Server 的一个代理对象(Proxy)返回给Client    </li>
+<li>Client 调用Proxy 的add方法，SM 会帮它去调用 Server 的add 方法，并把结果返回给 Client</li>
+</ol>
+<p>具体过程可以参考下图：</p>
+<p><img src="http://weishu1.dimensionalzone.com/2016binder-procedure.png" alt="Binder原理"></p>
+<h2 id="AIDL原理"><a href="#AIDL原理" class="headerlink" title="AIDL原理"></a>AIDL原理</h2><p>我们自定义一个aidl 文件时(比如 MyAidl.aidl，里面有个sum方法)，在sync 和 rebuild 之后，Android studio 会为我们自动生成 MyAidl.java 文件，类图如下图所示：</p>
+<p><img src="" alt="aidl类图"></p>
+<p>为什么要把3个类都放在一个文件里面呢？因为<strong>如果有多个aidl文件，那么就会有很多的Stub和Proxy类，这样就会重名，把它们放在各自的文件里面，就区分开了，实现了内聚</strong>。3个类的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看到，在Stub的asInterface 方法中会根据 IBinder 类型的obj 对象来判断是不是有跨进程，如果未跨进程，直接返回 obj 通过 queryLocalInterface 得到的iin；如果有跨进程，则新建 Stub.Proxy ，并返回。</p>
+<p>还有，Stub 的 onTransact 指的是接收Server 返回的数据，这里面会根据code 来做相应的操作，对Server的每个操作都会有唯一的code对应，因为底层并没支持类似 sum 这种method标识。</p>
+<p>此外，Parcel 类型的写和读也值得注意，它并不需要key-value的方式，而是直接将value写入(reply.writeString(),reply.wrteInt() 等方式)。可以理解为(这里与旭哥聊过，我自己没看过源码，不一定准确)：这些数据都是挨着排放，会存储每个值的偏移值(curr_position)以及大小(size)，取的时候，Parcel 并不知道里面存的是什么，只能靠自己正确知道类型<strong>按照存入的顺序</strong>取出来，比如 data.readInt()、data.redString()，通过偏移值(curr_position)以及大小(size)，就能正确读取值。这里可以参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/andy_android/article/details/7226225">csdn上的博客</a></p>
+<p>对于Proxy 而言，它的sum方法，只是通过 IBinder 类型的 mRemote 将参数和code(用来唯一标记一个操作，对应 onTransact 接收server 返回的数据时的code)发送给server (用_data发送数据，用_reply接收数据)，而并没有真正计算。</p>
+<p>经过以上的分析，完整的 AIDL 类图应该如下图所示：</p>
+<p><img src="" alt="完整的AIDL类图"></p>
+<h2 id="AMS"><a href="#AMS" class="headerlink" title="AMS"></a>AMS</h2><p>站在四大组件角度看，AMS就是Binder的Server，四大组件都归他管。</p>
+<p>这里引申两个问题：</p>
+<ul>
+<li>App 的安装过程，为什么不把apk解压到本地，这样读取图片就不用每次都从apk中读取了。    </li>
+<li>为什么Hook永远是在Binder 的Client端，也就是四大组件这边，而不是在 AMS 端。   </li>
+</ul>
+<p>对于第二个问题，拿Android的剪贴板来说，它也是个Binder服务，如果在AMS层面把剪贴板给Hook了，那会导致Android系统中所有的剪贴板功能被Hook了，所有App都会受到影响，这不就是病毒嘛。。。所以Android肯定不会允许。</p>
+<h2 id="Activity-工作原理"><a href="#Activity-工作原理" class="headerlink" title="Activity 工作原理"></a>Activity 工作原理</h2><h3 id="App怎么启动"><a href="#App怎么启动" class="headerlink" title="App怎么启动"></a>App怎么启动</h3><p>Launcher 是个App，与我们的各种应用App没什么不同。我们在开发一个App时，在AndroidManifest文件中需要定义默认启动Activity：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;activity android:name=<span class="string">".MainActivity"</span>&gt;</span><br><span class="line">    &lt;intent-filter&gt;</span><br><span class="line">        &lt;action android:name=<span class="string">"android.intent.action.MAIN"</span>/&gt;</span><br><span class="line">        &lt;category android:name=<span class="string">"android.intent.category.LAUNCHER"</span>/&gt;</span><br><span class="line">    &lt;/intent-filter&gt;</span><br><span class="line">&lt;/activity&gt;</span><br></pre></td></tr></tbody></table></figure>
+<p>这些信息在App安装或者 (Android系统启动)的时候，PackageManager-Service 会从apk 中读取封装到 Launcher 显示的桌面图标中。</p>
+<h3 id="启动App并非那么简单"><a href="#启动App并非那么简单" class="headerlink" title="启动App并非那么简单"></a>启动App并非那么简单</h3><p>上一节只是简单描述，Launcher 与 我们要启动的App(假设是斗鱼App)位于两个不同的进程，所以这一系列过程需要进程间通信Binder来完成的，AMS 也出场了，以启动斗鱼App为例，整体分为以下7个阶段(基于Android 6.0源码)：</p>
+<ol>
+<li>Launcher通知AMS，要启动斗鱼App，并指定启动的页面    </li>
+<li>AMS 通知 Launcher “我知道了，没你什么事了”，同时，把要启动的首页记下来    </li>
+<li>Launcher 页面进入 Pause 状态，然后通知AMS “我睡了，你找斗鱼App去”    </li>
+<li>AMS 检查斗鱼App是否启动，是，则直接唤起；否则，就启动一个新进程。AMS在新进程中创建一个 ActivityThread 对象，启动其中的main函数    </li>
+<li>斗鱼App启动后，通知 AMS “我启动好了”    </li>
+<li>AMS 翻出步骤 2 中保存的值，告诉斗鱼App，启动哪个页面。    </li>
+<li>斗鱼App启动首页，创建 Context 并与首页Activity关联，之后调用首页 Activity 的onCreate函数</li>
+</ol>
+<p>至此，App启动流程已经完成。</p>
+<p>以上步骤总体可以分为三个部分： 一、Launcher 通知AMS；二、AMS处理Launcher传过来的信息；三、Launcher休眠，通知AMS：“我真的已经睡了”；四、AMS启动新的进程；五：新进程启动，以ActivityThread 的main函数作为入口；六、AMS告诉新的App启动哪个Activity；7、App启动Activity。</p>
+<p>Launcher页面本身也是Activity，所以它startActivity 最终也会调用到 Activity 的startActivityForResult，在里面，最终使用 Instrumentation 的 execStartActivity 来实现功能：</p>
+<blockquote>
+<p>Instrumentation.ActivityResult ar = mInstrumentation.execStartActivity(this, mMainThread.getApplicationThread(), mToken, this, intent, requestCode, options)</p>
+</blockquote>
+<p>其中，</p>
+<ul>
+<li>mMainThread.getApplicationThread() 获取的是一个Binder 对象，这个对象类型为 ApplicationThread(是 MainThread的内部类),这个对象代表了 Launcher 所在的进程。    </li>
+<li>mToken 也是一个Binder对象，代表Launcher这个Activity ，通过 Instrumentation 传给 AMS 后，AMS 一查就能知道是谁向 AMS 发起了请求。    </li>
+</ul>
+<p>Launcher通知AMS 的流程如下图所示：</p>
+<p><img src="" alt="Launcher通知AMS"></p>
+<p>这里要注意一点，ActivityThread 是UI县城，它代表应用程序，我们平常认知 Application 是这个角色。其实Application 就是一个上下文而已，对开发者也许很重要，但是对Android系统中没那么重要。</p>
+<p>Instrumentation 的execStartActivity 方法执行时，其实就是将数据透传给 ActivityManagerNativ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Instrumentation</span></span>{</span><br><span class="line">    <span class="comment">//方法省略了参数</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> ActivityResult <span class="title">exeStartActivity</span><span class="params">(xxx,xxx,...)</span> </span>{</span><br><span class="line">        <span class="keyword">try</span>{</span><br><span class="line">            <span class="keyword">int</span> result = ActivityManagerNative.getDefault().startActivity(xx,xx,....);</span><br><span class="line">                              </span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>ActivityManagerNative(AMN) 这个类会反复用到。AMN通过getDefault从ServiceManager中取得一个名为 activity 的对象，然后把它包装成 ActivityManagerProxy(AMP) 对象, AMP 就是 AMS 的代理对象。AMN 和 AMP 都实现了 IActivityManager 接口，<strong>AMS 继承自 AMN</strong>，对照之前的 AIDL 的UML，就不难理解了，下图是 他们的类图：</p>
+<p><img src="" alt="AMN/AMP的类图"></p>
+<p>第二阶段就是 AMS 处理Launcher 传过来的信息，主要有如下步骤：</p>
+<ol>
+<li>Binder(即 AMN/AMP) 和 AMS 通信，比如这次因为是要启动斗鱼App首页，那么是发送 START_ACTIVITY 请求给 AMS。    </li>
+<li>AMS 收到后，就会检查斗鱼 App 中 AndroidManifest文件，是否存在这个目标Activity，如果不存在就抛出 Activity not found。   </li>
+<li>AMS 通知Launcher，“没你事了，洗洗睡”。</li>
+</ol>
+<p>我们想想第3步AMS 怎样给 Launcher 发送消息，之前我们说启动过程把 Launcher 以及它所在的进程传过来了，<strong>它在AMS 这边保存了一个 ActivityRecord 对象，这个对象里有个 ApplicationThreadProxy，这就是一个Binder代理，它的Binder 真身，就是 ApplicationThread</strong>。因此，答案就是：AMS通过ApplicationThreadProxy 发送消息，而App通过 ApplicationThread来接收这个消息。</p>
+<p>ApplicationThread(APT)在接收到AMS的消息后，会调用ActivityThread的sendMessage向Launcher主线程Handler(H对象)发送一个 ACTIVITY_PAUSE消息，即进入第三阶段：Launcher休眠，并且通知AMS：“我真的已经睡了”。</p>
+<p>这个pause的实现原理：<strong>在ActivityThread里面有一个 mActivities 集合，保存当前App(目前是Launcher)中所有的Activity，这时候把它们都找出来，让它们全部休眠</strong>。之后，就通知AMS “已经休眠”。</p>
+<p>这时候，应该到第四阶段： AMS应该给Zygote 进程发送消息创建新进程了，并且在创建进程后，马上创建 ActivityThread 对象，并且在其中创建主线程Looper、创建Application(注意，Application是在这里生成的)。</p>
+<p>具体过程是：ActivityThread <strong>在收到 BIND_APPLICATION消息后，根据传过来的 ApplicationInfo 创建一个对应的 LoadedApk</strong> 对象(标志当前的APK信息)，接着反射创建Application。在App创建好之后，就通知 AMS “我启动好了”，同时把自己的 ActivityThread 对象发送给AMS，AMS 就登记这个App信息，AMS 以后也能通过这个 ActivityThread (我的理解是ActivityThread中的ApplicationThread的代理对象)对象向这个 APP 发送消息。</p>
+<p>接下来就是AMS告诉App要启动哪个Activity，App通过 H 类启动这个新的 Activity。</p>
+<h2 id="App内部页面跳转"><a href="#App内部页面跳转" class="headerlink" title="App内部页面跳转"></a>App内部页面跳转</h2><p>有了前面的页面跳转，内部跳转就更容易了，流程大同小异，这里不多说</p>
+<h2 id="Context家族史"><a href="#Context家族史" class="headerlink" title="Context家族史"></a>Context家族史</h2><p>可以用一张图来展示 Context 家族的关系：</p>
+<p><img src="" alt="Context家族"></p>
+<h2 id="两种启动Activity方式的差别-这是我自己加的"><a href="#两种启动Activity方式的差别-这是我自己加的" class="headerlink" title="两种启动Activity方式的差别(这是我自己加的)"></a>两种启动Activity方式的差别(这是我自己加的)</h2><p>通过Activity可以直接 startActivity 来启动新的Activity，也可以在Activity 中 getApplicationContext 来获取 Context 上下文通过 ContextImpl 来最终启动Activity，这二者的区别是什么呢？首先看下下图：</p>
+<p><img src="" alt="两种启动Activity方式"></p>
+<p>Context的 startActivity ，其实也是通过 ContextImpl 拿 mMainThread对象，从 mMainThread 中获取 Instrumentation，让它来执行 execStartActivity，和 Activity 自己的方法实现是一样一样的(其实这里在书上说得并不详细，至少没说为什么 ApplicationContext 在startActivity 时 为什么要 NEW_TASK 标记)。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Context 的 startActivity</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startActivity</span><span class="params">(Intent intent, Bundle options)</span> </span>{</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">if</span> ((intent.getFlags()&amp;Intent.FLAG_ACTIVITY_NEW_TASK) == <span class="number">0</span>) {</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> AndroidRuntimeException(</span><br><span class="line">                    <span class="string">"Calling startActivity() from outside of an Activity "</span></span><br><span class="line">                    + <span class="string">" context requires the FLAG_ACTIVITY_NEW_TASK flag."</span></span><br><span class="line">                    + <span class="string">" Is this really what you want?"</span>);</span><br><span class="line">        }</span><br><span class="line">        mMainThread.getInstrumentation().execStartActivity(</span><br><span class="line">                getOuterContext(), mMainThread.getApplicationThread(), <span class="keyword">null</span>,</span><br><span class="line">                (Activity) <span class="keyword">null</span>, intent, -<span class="number">1</span>, options);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//Activity 的 startActivity</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startActivityForResult</span><span class="params">(<span class="meta">@RequiresPermission</span> Intent intent, <span class="keyword">int</span> requestCode,<span class="meta">@Nullable</span> Bundle options)</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (mParent == <span class="keyword">null</span>) {</span><br><span class="line">            ...</span><br><span class="line">            Instrumentation.ActivityResult ar =</span><br><span class="line">                mInstrumentation.execStartActivity(</span><br><span class="line">                    <span class="keyword">this</span>, mMainThread.getApplicationThread(), mToken, <span class="keyword">this</span>,</span><br><span class="line">                    intent, requestCode, options);</span><br><span class="line">            ...</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            <span class="keyword">if</span> (options != <span class="keyword">null</span>) {</span><br><span class="line">                mParent.startActivityFromChild(<span class="keyword">this</span>, intent, requestCode, options);</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                <span class="comment">// Note we want to go through this method for compatibility with</span></span><br><span class="line">                <span class="comment">// existing applications that may have overridden it.</span></span><br><span class="line">                mParent.startActivityFromChild(<span class="keyword">this</span>, intent, requestCode);</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>主要是Context 的startActivity 时，要求一定要有 FLAG_ACTIVITY_NEW_TASK，否则就不能执行下去。还有，Activity 的startActivityForResult 中执行的 mParent.startActivityFromChild()，最终也是通过 <strong>mInstrumentation.execStartActivity</strong>实现的，因此我们可以说<strong>Activity 的startActivity 最终也是通过 Instrumentation 的 execStartActivity 实现</strong>。</p>
+<h2 id="Service-工作原理"><a href="#Service-工作原理" class="headerlink" title="Service 工作原理"></a>Service 工作原理</h2><p>Service 有两套流程，一套是启动流程，另一套是绑定流程：</p>
+<p><img src="" alt="Service两套流程"></p>
+<h3 id="在新进程启动-service"><a href="#在新进程启动-service" class="headerlink" title="在新进程启动 service"></a>在新进程启动 service</h3><p>在新进程启动Service主要分为 5 个阶段：</p>
+<ol>
+<li>App向 AMS 发送一个启动Service 的消息</li>
+<li>AMS例行检查(是否在AndroidManifest中声明)，查看目标Service 是否存在，如果存在就不管；如果不存在，则把Service信息保存下来，之后创建新进程    </li>
+<li>新进程启动后，通知AMS “我可以了”</li>
+<li>AMS 把保存的Service信息发给新进程    </li>
+<li>新进程启动Service    </li>
+</ol>
+<p>当然，这个启动新进程，还是会启动 ActivityThread ，并且新进程启动Service 也是向 ActivityThread 的 H 类发送 START_SERVICE 来启动。</p>
+<p>不管是前面的Activity ，还是后面的Service，创建对象时，都是通过 packageInfo(它是一个LoadedApk对象)去获取 ClassLoader，之后再通过反射创建出来 Activity 或者 Service 对象，四大组件的逻辑都是如此。<strong>所以，我们如果要做插件化，可以在这里做文章，换成插件的classLoder，加载插件中的四大组件</strong>。</p>
+<h2 id="BroadCast-原理"><a href="#BroadCast-原理" class="headerlink" title="BroadCast 原理"></a>BroadCast 原理</h2><h3 id="注册过程"><a href="#注册过程" class="headerlink" title="注册过程"></a>注册过程</h3><p>用Activity或者Context去注册，其实都是使用Context的registerReceiver方法，然后通过 AMN/AMP 把一个Receiver 传给AMS，在注册过程中，会使用 PMS 获取包信息，业绩 LoadedApk 对象。这个LoadedApk 对象的 getReceiverDispatcher 方法将传过来的 Receiver 封装成一个实现了 IIntentReceiver 接口的Binder 对象。我们实际上就是<strong>将这个 Binder 对象和 IntentFilter 对象传递给了 AMS。不过，这时发送广播是不知道发给谁的，</strong>所以Activity所在的进程还要把自身的对象也发送给AMS。</p>
+<p>这里都是动态注册广播，那静态广播呢？它是在App安装的时候注册。动态Receiver 与静态Receiver 分别存在AMS中不同的变量中，在发送广播时，会把两种 Receiver 合并到一起，其中动态的排在静态的前面，然后依次发送，因此，动态Receiver 永远先于静态Receiver收到消息。</p>
+<h3 id="发送过程"><a href="#发送过程" class="headerlink" title="发送过程"></a>发送过程</h3><p>发送时，通过 AMN/AMP 发送广播给 AMS，广播中也带着 IntentFilter 对象。AMS 收到广播后，根据Filter 找到对应的Receiver，<strong>向广播接收者所在的进程发送广播</strong>。Receiver 所在进程收到广播后，并不会直接发给Receiver，而是将广播封装成一个消息，(通过H类)发送到主线程的消息队列，当这个消息被处理时，才会把消息中的广播发送给 Receiver。</p>
+<h2 id="广播种类"><a href="#广播种类" class="headerlink" title="广播种类"></a>广播种类</h2><p>无序广播、有序广播、粘性广播。这个粘性广播，用一个例子来了解：当电量小于 20%时，就会提示用户，而获取电池电量信息就是通过广播来实现的，一般的广播发完就完了，我们需要这样一种广播，发出后还能一直存在，<strong>未来的注册者也能收到这个广播，这种广播就是粘性广播</strong>。</p>
+<h2 id="ContentProvider-工作原理"><a href="#ContentProvider-工作原理" class="headerlink" title="ContentProvider 工作原理"></a>ContentProvider 工作原理</h2><p>ContentProvider 的本质是把数据存储在SQLite 数据库中，但是封装成了统一的访问方式，比如对于数据集合而言，必须提供增删改查功能。我们在SQLite 上封装了一层，就成了 ContentProvider。</p>
+<h3 id="匿名共享内存-ASM"><a href="#匿名共享内存-ASM" class="headerlink" title="匿名共享内存(ASM)"></a>匿名共享内存(ASM)</h3><p>ContentProvider 读取数据使用了 ASM，并且，<strong>ASM实质上也是个Binder通信</strong>，下图为 ASM 类的交互关系图：</p>
+<p><img src="" alt="ASM的类交互关系"></p>
+<p>图中的 CursorWindow 就是匿名共享内存，这个流程简单来说分为3个步骤：</p>
+<ol>
+<li>Client内部有一个 CursorWindow 对象，发送请求时，把这个CursorWindow 类型对象传过去，这个对象暂时为空     </li>
+<li>Server 收到请求，搜集数据，填充到这个CursorWindow 对象中    </li>
+<li>Client 读取内部这个CursorWindow 对象，获取数据。</li>
+</ol>
+<p>举个例子就是： 你定牛奶，在家门口放个空箱子，送奶人每天早上往这个箱子放牛奶，你睡醒了去箱子里取牛奶，<strong>这个奶箱就是匿名共享内存</strong>。</p>
+<h3 id="ContentProvider-与-AMS-的通信"><a href="#ContentProvider-与-AMS-的通信" class="headerlink" title="ContentProvider 与 AMS 的通信"></a>ContentProvider 与 AMS 的通信</h3><ol>
+<li>App2发送消息给AMS，想要访问 App1 中的 ContentProvider     </li>
+<li>AMS 检查发现，App1的ContentProvider没有启动过(也即App1没启动，因为我们知道App启动时，在 Application的onCreate 之前就会启动ContentProvider，这也是 LeakCanary 新版免install的原理)，为此新开一个进程启动App1     </li>
+<li>AMS获取App1启动的ContentProvider ，并把 ContentProvider 的代理对象返回给 App2     </li>
+<li>App2 拿到 ContentProvider 的代理对象，也就是 IContentProvider，就调用它的增删改查方法。        </li>
+<li>接下来就是使用 ASM(匿名共享内存)  传输数据，也就是上面提到的 CursorWindow 类，取得数据或者操作结果即可    </li>
+</ol>
+<h2 id="PMS-及-App-安装过程"><a href="#PMS-及-App-安装过程" class="headerlink" title="PMS 及 App 安装过程"></a>PMS 及 App 安装过程</h2><h3 id="PMS简介"><a href="#PMS简介" class="headerlink" title="PMS简介"></a>PMS简介</h3><p>在前面我们介绍过，AMS会使用 PackageManagerService(简称PMS)加载包的信息，之后AMS会将这个信息封装在 LoadedApk 这个类对象中，然后我们就可以从中取出在AndroidManifest 中声明的四大组件信息了。</p>
+<p>在安装App的过程中，会把 apk <strong>复制到 data/app 目录</strong>下。apk是一个zip压缩包，在文件头会记录压缩包的大小，所以就算在后续文件尾追加一部电影，都不会对解压造成任何影响。Android的多渠道打包其中的一种思路就是这样，在 apk 尾巴上追加几个字节，来标记apk的渠道，apk启动时，从apk尾巴上读取这个渠道值。不过，后来google发现了这个漏洞，在新版本系统中，<strong>系统安装apk时，会检查apk实际大小，二者不相等就会报错安装失败</strong>。</p>
+<p>这里回答前面提出的问题：为什么App安装不把它解压？其实，每次从apk读取资源，并不是先解压再找资源，而是解析apk中的resources.arsc文件，这个文件存储着资源的所有信息，包括资源在apk中的地址、大小等，按图索骥，可以很快拿到资源文件，这是一种很高效的算法。不解压的好处自然是<strong>节省空间</strong>。</p>
+<h3 id="App安装流程"><a href="#App安装流程" class="headerlink" title="App安装流程"></a>App安装流程</h3><p>Android 系统使用PMS解析apk的AndroidManifest 文件，包括：</p>
+<ul>
+<li>四大组件信息    </li>
+<li>分配用户id和用户组id，用户ID是唯一的，用户组id指的是各种权限，每个权限都在一个用户组中     </li>
+<li>Launcher 生成一个icon，icon中保存着默认启动Activity的信息    </li>
+<li>App 安装的最后，会把上面的信息记录在一个 xml文件中，以备下次安装使用      </li>
+</ul>
+<p><strong>Android手机系统每次启动时，都会使用PMS，把Android系统中所有的apk都安装一遍</strong>，共4个步骤：</p>
+<p><img src="" alt="App安装流程"></p>
+<p>关于第1步，因为app安装过后，都会xml保存安装信息，所以Android系统再次启动后，就可以直接读取之前保存的xml 了。第2步就是从所有目录安装apk。</p>
+<h3 id="PakageParser"><a href="#PakageParser" class="headerlink" title="PakageParser"></a>PakageParser</h3><p>PMS是系统进程，我们是不能Hook的。PMS中有个类：PackageParser ，它是专门用来解析 AndroidManifest 文件的，以获取四大组件信息以及用户权限。它有一个parsePackage 方法，接收一个apkFile 文件参数，这个参数既可以是 当前apk文件，也可以是 外部apk文件，<strong>我们可以使用这个方法来读取插件apk的信息</strong>，虽然PackageParser 类不对外开放，但是我们可以反射来获取这个类。</p>
+<h3 id="ActivityThread-与-PackageManager"><a href="#ActivityThread-与-PackageManager" class="headerlink" title="ActivityThread 与 PackageManager"></a>ActivityThread 与 PackageManager</h3><p>对于App开发人员，可以通过 Context.getPackageManager() 来获取当前的 Apk 信息，但其实它在ContextImpl中的真正实现是通过 ActivityThread.getPackageManager() 来实现的。所以，我们一般可以通过反射 ActivityThread 来获取Apk 信息，注意，<strong>这里一般是获取宿主Apk 的包信息，而不是插件Apk包信息</strong>。</p>
+<h2 id="ClassLoader-家族史"><a href="#ClassLoader-家族史" class="headerlink" title="ClassLoader 家族史"></a>ClassLoader 家族史</h2><p>Android 插件化能加载外部下载的 Apk，就在于 ClassLoader。其中最重要的是 PathClassLoader 和 DexClassLoader，及其父类 BaseDexClassLoader。 PathClassLoader 和 DexClassLoader这两个类都很简单，粗看没啥区别，仔细看，构造函数第2个参数 optimizedDirectory 的值不一样，PathClassLoader 把这个参数设置为null，DexClassLoader 把它设置为一个非空的值。其实，<strong>这个值是用来缓存我们需要加载的dex文件的，并创建一个DexFile对象，如果为null，那么就会直接使用dex文件原有的路径来创建DexFile对象</strong>。由于DexClassLoader 可以指定自己的 optimizedDirectory，所以它可以用来加载外部的dex；而PathDexClassLoader 没有这个参数，只能加载内部的dex(存在于系统中的已经安装过的apk里面)。</p>
+<h2 id="MultiDex"><a href="#MultiDex" class="headerlink" title="MultiDex"></a>MultiDex</h2><p>方法数超过65536 时，会有著名的 “65536”问题，一般来说我们使用 MultiDexApplication就能解决。Google还推出了 MultiDex 工具，它就是把原先的一个dex文件，拆分成多个dex文件，每个dex的方法数量不超过 65536。<strong>其中 classes.dex 称为主dex ，由App 使用PathClassLoader 加载，而 classes2.dex 等 dex 会在App 启动之后使用 DexClassLoader 进行加载。</strong></p>
+<p>在Android 5.0之后，虽然能够在dex中容纳比65536更多的方法数，但是dex的体积变大了，<strong>为了加快速度，我们还是可对dex进行拆分，classes.dex只保留App启动所需的类以及首页的代码，从而确保App花最少的时间启动并进入首页</strong>，而把其他的模块代码转移到其他dex中，这个技术称为手动分包，在后续会介绍。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1087,89 +1302,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/" class="post-title-link" itemprop="url">第5、6课-卡顿优化</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-05-27 21:50:00" itemprop="dateCreated datePublished" datetime="2020-05-27T21:50:00+08:00">2020-05-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 16:58:02" itemprop="dateModified" datetime="2021-05-05T16:58:02+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化<上>"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
-<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1220,7 +1352,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">139</span>
+          <span class="site-state-item-count">140</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1306,7 +1438,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共296.9k字</span>
+  <span class="post-count">博客全站共301.6k字</span>
 </div>
 
 

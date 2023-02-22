@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">139</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">140</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,167 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/04/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC4%E7%AB%A0-%E8%B5%84%E6%BA%90%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/04/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC4%E7%AB%A0-%E8%B5%84%E6%BA%90%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/" class="post-title-link" itemprop="url">第4章-资源热修复技术</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-04 17:00:00" itemprop="dateCreated datePublished" datetime="2023-02-04T17:00:00+08:00">2023-02-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-05 21:43:28" itemprop="dateModified" datetime="2023-02-05T21:43:28+08:00">2023-02-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="普遍的实现方式"><a href="#普遍的实现方式" class="headerlink" title="普遍的实现方式"></a>普遍的实现方式</h2><p>目前市面上很多资源热修复都参考了 Instant Run 的实现，首先看下 Instant Run 是怎么做到资源热修复的：</p>
+<ol>
+<li><p>创建一个新的 AssetManager (AssetManager.class.getConstructor().newInstance())，并通过反射调用 addAssetPath 添加 sdcard 上的新资源包</p>
+</li>
+<li><p>反射所有 Activity 中 AssetManager 的引用处，全部换成刚才新建的 newAssetManager</p>
+</li>
+<li><p>得到 Resource 的弱引用集合，把它们的 AssetManager 成员替换成 newAssetManager</p>
+</li>
+</ol>
+<p>总体来说就是2步：构造一个新的 AssetManager ，并通过反射调用 addAssetPath ，这样就得到一个含有所有新资源的 AssetManager；找到所有引用到原有 AssetManager 的地方，通过反射把引用处替换成 newAssetManager 。</p>
+<h3 id="资源文件的格式"><a href="#资源文件的格式" class="headerlink" title="资源文件的格式"></a>资源文件的格式</h3><p>我们随便找个带资源的APK，用 AAPT 解析以下，可以看到内容大概是这样的：</p>
+<blockquote>
+<p>aapt d resources App-debug.apk</p>
+<p>…</p>
+<p>spec resource 0x7f040019 com.taobao.demo:layout/activity_main:flags=0x00000000</p>
+</blockquote>
+<p>这就表示，activity_main.xml 这个资源编号是 0x7f040019， 其中packageid 是 0x7f ， 资源类型id 是 0x04 ，在Type String Pool 中对应的正是 layout 类型，而 0x04 类型的 第 0x0019 个资源就是 activity_main 这个资源。</p>
+<h3 id="运行时资源的解析"><a href="#运行时资源的解析" class="headerlink" title="运行时资源的解析"></a>运行时资源的解析</h3><p>默认由 Android SDK 编出来的 APK 是由 AAPT 工具打包的，其资源包的 package id 就是 0x7f 。<strong>在走到 App第一行代码之前，系统就已经帮我们构建好一个已经添加了安装包资源的 AssetManager 了，即包含了 package id 为0x01 的 framework-res.jar 中资源和 package id 为 0x7f 的 App 安装包资源</strong>。</p>
+<p>如果补丁包中资源的 package id 也是 0x7f ，就会使得同一个 package id 的包被加载2次，怎么解决呢？</p>
+<blockquote>
+<p>在Android L 之后这是没问题的，因为它会默默把后来的包添加到之前的包的同一个 PackageGroup 下面，仍旧会加入到该类型的 TypeList 中，只是会打出一个 warning log。但是，使用时获取某个 Type 资源时，会从前往后遍历，也就是说先得到原有安装包里的资源，补丁包中的资源永远无法生效了。<strong>所以，在Android L 以上的版本，在原有的 AssetManager 上加入补丁包，是没有任何作用的。</strong></p>
+<p>而在 Android 4.4 以下版本，addAssetPath 只是把补丁包的路径添加到了 mAssetPath 中，这时候早已经错过真正解析资源包时间了。</p>
+</blockquote>
+<p><strong>以上解释了为什么像 Instant Run 这种方案，一定需要一个全新的 AssetManager ，然后再加入完整的新资源包，替换原有的 AssetManager。</strong></p>
+<h4 id="另辟蹊径的资源修复方案"><a href="#另辟蹊径的资源修复方案" class="headerlink" title="另辟蹊径的资源修复方案"></a>另辟蹊径的资源修复方案</h4><p>一个好的资源修复方案，首先补丁包要足够小，直接下发完整的补丁包肯定是不行的。目前主要有以下方案：</p>
+<ul>
+<li><p>对资源包做差量处理，在运行时合成完整包，虽然减少了包体积，但是运行时的合成操作耗费了运行事件和内存。</p>
+</li>
+<li><p>自己修改 AAPT ，在打补丁包时对资源重新编号，这样会涉及修改 Android SDK 工具包，不利于集成，也无法很好地对将来的 AAPT 升级。</p>
+</li>
+</ul>
+<p>我们的方案：构造一个package id 为 id 0x66 的资源包，它只包含改变了的资源项，直接在原有 AssetManager 中 addAssetPath 这个包即可。补丁包的资源，只包含原有包没有而新报里面有的<strong>新增资源</strong>，以及<strong>发生了改变的资源</strong>。对于增加、减少、修改这3种情况，我们要如何处理呢？</p>
+<ul>
+<li><p>新增资源直接假如补丁包</p>
+</li>
+<li><p>减少资源，只要不使用这个资源就好了</p>
+</li>
+<li><p>修改资源，比如替换了一张图片，那么将其视为新增资源，在打入补丁包的时候，代码引用处也做相应修改，把原来使用的旧资源id的地方变为新的 id</p>
+</li>
+</ul>
+<p>一张图说明下这些情况(绿线表示新增资源，红线表示发生修改的资源，黑线表示内容没有变化，但是id发生了变化的，x表示删除了的资源)：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-%E8%B5%84%E6%BA%90%E8%A1%A5%E4%B8%81%E5%8C%85%E6%9E%84%E5%BB%BA.png" alt="资源补丁包构建"></p>
+<h4 id="新增的资源及其导致的id偏移"><a href="#新增的资源及其导致的id偏移" class="headerlink" title="新增的资源及其导致的id偏移"></a>新增的资源及其导致的id偏移</h4><p><strong>新资源插入的位置是随机的，这与每次 AAPT 打包时解析 XML 的顺序有关。</strong></p>
+<p>所以，新增的资源导致它们所属的 type 中跟在它们之后的资源 id 发生了位移，<strong>发生位移的资源不会加入补丁包中，但是在补丁包的代码中会调整 id 的引用处，</strong>如下所示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(R.drawable.holo)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>R.drawable.holo 是一个int 值，它的值是 AAPT 指定的，可以用反编译工具可以看到它的真实值：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(<span class="number">0x7f020002</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>打出一个新包时，对于开发者而言，holo 的图片内容没变，代码引用处也没变，但是在新包里面，同样这句话，由于新资源插入导致 id 改变，所以引用实际变成了：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(<span class="number">0x7f020003</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但这种情况不属于资源改变，更不属于代码改变，所以，我们在对比新旧代码之前，会把新包里面的这行代码修正为原来的id：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(<span class="number">0x7f020002</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="内容发生改变的资源"><a href="#内容发生改变的资源" class="headerlink" title="内容发生改变的资源"></a>内容发生改变的资源</h4><p>内容发生改变，比如 activity_main.xml 文件内容改变了，也可能我们修改了string 类型的值，他们都会加入到补丁包中，并重新编号，相应代码也会改变：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setContentView(R.layout.activity_main)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>实际上就是：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setContentView(<span class="number">0x7f030000</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在生成新旧代码对比之前，我们会把新包里面的这行代码改为：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setContentView(<span class="number">0x66020000</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>这样，新旧代码对比时，会检测到这行代码发生了改变，于是相应的代码修复会在运行时发生，这样就得到了正确的新内容资源。</strong></p>
+<h4 id="删除了的资源"><a href="#删除了的资源" class="headerlink" title="删除了的资源"></a>删除了的资源</h4><p>不影响补丁包，就不多言</p>
+<h4 id="对于type的影响"><a href="#对于type的影响" class="headerlink" title="对于type的影响"></a>对于type的影响</h4><p>上面说的所谓简单，值得是运行时应用补丁变得简单了。真正复杂的地方在于构造补丁。</p>
+<h3 id="更优雅地替换-AssetManager"><a href="#更优雅地替换-AssetManager" class="headerlink" title="更优雅地替换 AssetManager"></a>更优雅地替换 AssetManager</h3><p>分2种情况：</p>
+<ul>
+<li><p>对于 Android L 以后的版本，直接在原有 AssetManager 上应用补丁就行了，并且由于是应用原来的 AssetManager ，与 Instant Run 方案比，省略了大量的反射和替换操作，提升了加载补丁的效率</p>
+</li>
+<li><p>之前提过，在Android KK 和以下版本，addAssetPath 是不会加载资源的。<strong>我们对原有的 AssetManager 先进行析构，再重构的时候将补丁包资源也加入，用的还是原来的 AssetManager，同样避免了反射和替换操作</strong>（Instant Run  方案还是必须重新构造一个新的 AssetManager 并加入补丁包，再替换原来的）</p>
+</li>
+</ul>
+<h3 id="意料之外的资源问题"><a href="#意料之外的资源问题" class="headerlink" title="意料之外的资源问题"></a>意料之外的资源问题</h3><p>在加载完补丁之后，如果做了 new WebView() 操作，就会发现找不到新资源的问题，这是因为 WebView 初始化时可能会构造新的 ResourceImpl ，替换掉了原先的 ResourceImpl ，从而把补丁资源给一起丢掉了。其他的就不展开。</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>对比市面上的方案，我们的方案优势：</p>
+<ul>
+<li><p>不侵入打包，直接对比新旧资源即可产生补丁资源（对比修改 AAPT）</p>
+</li>
+<li><p>不必下发完整包，补丁中只有变动的资源（对比 Instant Run、Amigo等方式）</p>
+</li>
+<li><p>不需要在运行时合成完整包，不占用运行时的计算和内存资源（对比Tinker）</p>
+</li>
+</ul>
+<p>唯一需要注意的是，<strong>因为对新资源的引用是在新代码中，所有资源修复需要代码修复的支持的</strong></p>
+<p>可能的问题：查找旧 id 的时候，是直接对 int 值替换，所以会找到 0x7f?????? ，如果开发者也使用了 0x7f?????? 这样的数字，就会导致数字会被错误地转换。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1300,143 +1461,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/27/%E9%9D%A2-%E7%9F%A5%E8%AF%86/EventBus%E5%8E%9F%E7%90%86/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/27/%E9%9D%A2-%E7%9F%A5%E8%AF%86/EventBus%E5%8E%9F%E7%90%86/" class="post-title-link" itemprop="url">系统源码理解-EventBus原理</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-09-27 11:13:00" itemprop="dateCreated datePublished" datetime="2021-09-27T11:13:00+08:00">2021-09-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-09-28 16:36:15" itemprop="dateModified" datetime="2021-09-28T16:36:15+08:00">2021-09-28</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><blockquote>
-<p>注： 本文的EventBus版本为 3.0</p>
-</blockquote>
-<h2 id="Subscrib-注解"><a href="#Subscrib-注解" class="headerlink" title="Subscrib 注解"></a>Subscrib 注解</h2><p>自 3.0 以来，EventBus 使用 @Subscrib 注解来标记订阅事件的方法，方法命名随意。并不用像以前那样指定方法的命名：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Subscribe</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testEventBus</span><span class="params">(Object obj)</span></span>{ }</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这个注解的定义很有个性，可以看下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span> <span class="comment">// 注解不仅被保存到class文件中，jvm加载class文件之后，仍然存在</span></span><br><span class="line"><span class="meta">@Target({ElementType.METHOD})</span>  <span class="comment">// 作用在方法上</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Subscribe {</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 指定事件订阅方法所在的线程模式，也就是决定订阅方法是在哪个线程，默认是POSTING模式</span></span><br><span class="line">    <span class="function">ThreadMode <span class="title">threadMode</span><span class="params">()</span> <span class="keyword">default</span> ThreadMode.POSTING</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 是否支持粘性事件</span></span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">sticky</span><span class="params">()</span> <span class="keyword">default</span> <span class="keyword">false</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 优先级，如果指定了优先级，则若干方法接收同一事件时，优先级高的方法会先接收到。</span></span><br><span class="line">    <span class="function"><span class="keyword">int</span> <span class="title">priority</span><span class="params">()</span> <span class="keyword">default</span> 0</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其中有几种线程模式，有以下几种：</p>
-<ul>
-<li><p><strong>ThreadMode.MAIN：</strong>如在主线程（UI线程）发送事件，则直接在主线程处理事件；如果在子线程发送事件，则先将事件入队列，然后通过 Handler 切换到主线程，依次处理事件。</p>
-</li>
-<li><p><strong>ThreadMode.ASYNC：</strong>与ThreadMode.MAIN_ORDERED相反，无论在哪个线程发送事件，都将事件加入到队列中，然后通过线程池执行事件</p>
-</li>
-<li><p><strong>ThreadMode.POSTING：</strong>默认的线程模式，在哪个线程发送事件就在对应线程处理事件，避免了线程切换，效率高。</p>
-</li>
-<li><p><strong>ThreadMode.MAIN_ORDERED：</strong>无论在哪个线程发送事件，都将事件加入到队列中，然后通过Handler切换到主线程，依次处理事件。</p>
-</li>
-<li><p><strong>ThreadMode.BACKGROUND：</strong>与ThreadMode.MAIN相反，如果在子线程发送事件，则直接在子线程处理事件；如果在主线程上发送事件，则先将事件入队列，然后通过线程池处理事件。</p>
-</li>
-</ul>
-<h2 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h2><p>注册过程很简单：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().register(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//注册源码</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">register</span><span class="params">(Object subscriber)</span> </span>{</span><br><span class="line">     Class&lt;?&gt; subscriberClass = subscriber.getClass(); <span class="comment">// 获取传入的要注册类的字节码文件</span></span><br><span class="line">     List&lt;SubscriberMethod&gt; subscriberMethods = </span><br><span class="line">     subscriberMethodFinder.findSubscriberMethods(subscriberClass); </span><br><span class="line">     </span><br><span class="line">     <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line"></span><br><span class="line">         <span class="comment">// 遍历订阅方法封装类的集合</span></span><br><span class="line">         <span class="keyword">for</span> (SubscriberMethod subscriberMethod : subscriberMethods) {</span><br><span class="line">              subscribe(subscriber, subscriberMethod); </span><br><span class="line">         }</span><br><span class="line">     }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>根据源码可以直到，这个方法就做了两件事情：</p>
-<ul>
-<li>根据传入的参数object ，获取其 Class ，然后通过这个 Class 获取所有的方法（当然，首先看有没有缓存），查看经过 @Subscrib 修饰的方法，即这个类中所有的订阅方法（会做封装），生成一个list</li>
-<li>遍历上述生成的 list ，给 2 个 Map 填充数据：<strong>subscriptionsByEventType</strong>以 event （订阅方法的参数）的类型（Class）为key，value 为订阅方法list（CopyOnWriteArrayList）；<strong>typesBySubscriber</strong> 以register时传入的对象为key ，value 为 这个对象所有订阅方法所订阅的事件。</li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//EventBus中变量的声明</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//可以根据event（订阅方法中的参数）类型 获取所有订阅方法</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Class&lt;?&gt;, CopyOnWriteArrayList&lt;Subscription&gt;&gt; subscriptionsByEventType;</span><br><span class="line"><span class="comment">//根据注册对象，获取这个对象上所有的订阅方法</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Object, List&lt;Class&lt;?&gt;&gt;&gt; typesBySubscriber;</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h2 id="反注册"><a href="#反注册" class="headerlink" title="反注册"></a>反注册</h2><p>反注册也很简单：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().unregister(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unregister</span><span class="params">(Object subscriber)</span> </span>{</span><br><span class="line"></span><br><span class="line">    List&lt;Class&lt;?&gt;&gt; subscribedTypes = typesBySubscriber.get(subscriber);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 如果集合不为null    </span></span><br><span class="line">    <span class="keyword">if</span> (subscribedTypes != <span class="keyword">null</span>) {</span><br><span class="line">            </span><br><span class="line">         <span class="comment">// 遍历集合，获取订阅事件的类型</span></span><br><span class="line">         <span class="keyword">for</span> (Class&lt;?&gt; eventType : subscribedTypes) {</span><br><span class="line"></span><br><span class="line">              unsubscribeByEventType(subscriber, eventType);</span><br><span class="line">         }</span><br><span class="line">         typesBySubscriber.remove(subscriber);</span><br><span class="line">     } <span class="keyword">else</span> {</span><br><span class="line">          logger.log(Level.WARNING, <span class="string">"Subscriber to unregister was not registered before: "</span> + subscriber.getClass());</span><br><span class="line">     }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>刚才在注册时候，说了其中一个 map 为 typesBySubscriber，它以注册对象为 key ，value 为这个对象中所有注册方法所注册的event 类型的列表。所以在反注册的时候，</p>
-<ol>
-<li>首先通过传入的对象，获取 注册的 event 的列表 </li>
-<li>遍历这个列表，获取 event 的类型，然后通过这个类型在 subscriptionsByEventType 查找（经过封装的）订阅方法，根据封装在里面的 注册对象 是否是当前 unregister 传入的对象来判断，如果是当前传入的对象，就移除这个经过封装的订阅方法   </li>
-</ol>
-<h2 id="post-发布事件"><a href="#post-发布事件" class="headerlink" title="post 发布事件"></a>post 发布事件</h2><p>post的使用也很简单：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().post(<span class="keyword">new</span> Object());</span><br></pre></td></tr></tbody></table></figure>
-
-<p>注册的时候，说了有一个map 为 subscriptionsByEventType ，以 event 的类型为key ，存储了所有订阅了这中 event 的（经过封装的）方法。post 的时候，根据post发送的事件类型（post方法的参数的 Class ）从 subscriptionsByEventType 这个集合中获取到所有的订阅方法。之后依次通过反射调用这些方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">invokeSubscriber</span><span class="params">(Subscription subscription, Object event)</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        subscription.subscriberMethod.method.invoke(subscription.subscriber, event);</span><br><span class="line">    } <span class="keyword">catch</span> (InvocationTargetException e) {</span><br><span class="line">        handleSubscriberException(subscription, event, e.getCause());</span><br><span class="line">    } <span class="keyword">catch</span> (IllegalAccessException e) {</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unexpected exception"</span>, e);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>其中， subscription.subscriberMethod.method 是 Method 类型的，用过反射的话，就知道它可以直接 invoke ，它的定义是这样的：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">native</span> Object <span class="title">invoke</span><span class="params">(Object obj, Object... args)</span></span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>第一个参数 obj 指的是用 obj 这个实例来调用这个方法（因为一个类可能会有多个实例，非静态方法需要指定一个实例来调用这个方法），后面的 args 就是方法需要传入的参数。</p>
-<p>所以，在 invoke 的时候，subscription.subscriber 我们应该很容易知道是 register 时传入的那个 Object ！由此，我们一个消息就形成了闭环。</p>
-<h3 id="最后问题，支持跨进程吗？"><a href="#最后问题，支持跨进程吗？" class="headerlink" title="最后问题，支持跨进程吗？"></a>最后问题，支持跨进程吗？</h3><p>不支持跨进程，因为单例。经过上述分析，我们知道 EventBus 的注册、反注册、post 都是通过：EventBus.getDefault() 实现，我们看下它的代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EventBus</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> EventBus defaultInstance;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** Convenience singleton for apps using a process-wide EventBus instance. */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> EventBus <span class="title">getDefault</span><span class="params">()</span> </span>{</span><br><span class="line">        EventBus instance = defaultInstance;</span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">synchronized</span> (EventBus.class) {</span><br><span class="line">                instance = EventBus.defaultInstance;</span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="keyword">null</span>) {</span><br><span class="line">                    instance = EventBus.defaultInstance = <span class="keyword">new</span> EventBus();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p> 所以我们都是基于一个 <strong>static 类型的 defaultInstance</strong>去做一系列操作，由于跨进程后，静态会失效，所以，<strong>EventBus 并不能跨进程</strong>。</p>
-<p>以上参考自掘金<a target="_blank" rel="noopener" href="https://juejin.cn/post/6844903969517469709#heading-7">刘洋巴金的博客</a>，如果链接变得不可访问，可以参看这篇文章的<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/a2f14b0cb217">Copy</a></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1487,7 +1511,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">139</span>
+          <span class="site-state-item-count">140</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1573,7 +1597,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共296.9k字</span>
+  <span class="post-count">博客全站共301.6k字</span>
 </div>
 
 
