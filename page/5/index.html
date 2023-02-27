@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">140</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">142</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,250 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC22%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC22%E7%AB%A0/" class="post-title-link" itemprop="url">第22章：插件化技术总结</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-04-06 21:52:00" itemprop="dateCreated datePublished" datetime="2021-04-06T21:52:00+08:00">2021-04-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-06-08 10:13:41" itemprop="dateModified" datetime="2022-06-08T10:13:41+08:00">2022-06-08</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>这章是重新梳理插件化技术的整体思路</p>
+<h2 id="插件的工程化"><a href="#插件的工程化" class="headerlink" title="插件的工程化"></a>插件的工程化</h2><p>插件化技术分为宿主App 和 插件Plugin1这两个 apk，有时候还有 MyPluginLibrary ，宿主和插件都要引用它。</p>
+<h2 id="加载插件中的类"><a href="#加载插件中的类" class="headerlink" title="加载插件中的类"></a>加载插件中的类</h2><p>宿主App 想要使用 Plugin1 中的类，还使用 宿主App 中的 ClassLoder 是不行的，由此缠身很多种解决方案：</p>
+<ul>
+<li>最直接的就是，在反射插件中的类时，使用 Plugin1.apk 对应的 ClassLoader (参考第6章)    </li>
+<li>无论是宿主还是插件，他们各自的 ClassLoader 都对应一个 dex 数组，把这些插件的dex数组都合并到宿主的 dex 数组中，那么，宿主App就可以加载任何类(参考9.3节)。     </li>
+<li>自定义一个ClassLoader，取代原先宿主的ClassLoader 。同时在自定义的 ClassLoader 中放一个集合，承载所有插件的 ClassLoader 。那么自定义的 ClassLoader 在加载任何一个类的时候，无论是插件还是宿主的类，都会现在宿主中找，如果没有，再遍历 ClassLoader 集合，看哪个 ClassLoader 能加载这个类(参考9.36节)。    </li>
+</ul>
+<h2 id="哪些地方可以Hook"><a href="#哪些地方可以Hook" class="headerlink" title="哪些地方可以Hook"></a>哪些地方可以Hook</h2><p>关于Hook 的技术可以参考第4章，Hook可以分为三类：</p>
+<ul>
+<li>在 App 中使用的类，可以Hook。Android 系统源码中被标记为hide的方法和类，<strong>我们可以通过反射使用它们，但是不能Hook</strong>。还有一些类，比如 Instrumentation 和 Callback ，在App中也能用，因此可以Hook替换。             </li>
+<li>实现了接口的类，可以Hook。虽然大部分类和方法都标记为hide，但是<strong>只要合格类实现了一个接口，我们就可以借助 Proxy.newProxyInstance 方法去截获它的方法</strong>，比较典型的是 IActivityManager 接口，以及实现这个接口的 AMN 。    </li>
+<li>集合。 没办法Hook一个标记为hide 的类，但是如果Android源码中某个类<strong>拥有集合变量的时候，我们可以反射构造出一个对象，然后还是通过反射添加到这个集合中</strong>。典型的是，穿件一个 LoadedApk ，把它事先放在 mPackages 缓存中，这样就能直接命中缓存(参考9.2节)。</li>
+</ul>
+<h2 id="Activity-的插件化解决方案"><a href="#Activity-的插件化解决方案" class="headerlink" title="Activity 的插件化解决方案"></a>Activity 的插件化解决方案</h2><p>从大方向来讲，分为动态替换和静态代理两种：</p>
+<ul>
+<li>动态替换：这是“占位”思想。宿主App中声明一个用于占位的 StubActivity ，启动插件中的ActivityA，但是告诉AMS启动的是 StubActivity ，欺骗成功之后，在即将启动Activity时，再把 StubActivity 换回 ActivityA(参考第9章)。      </li>
+<li>静态代理。这是一种牵线木偶的思想，在宿主App中设计一个 ProxyActivity ，由他来决定启动插件中的哪个 Activity。<strong>插件中的Activity都是没有生命的，得在ProxyActivity 生命周期中，调用插件Activity 的生命周期函数</strong>(参考9.5节)。</li>
+</ul>
+<p>此外，还需要解决 LaunchMode 问题，解决方案参考 9.5 节。</p>
+<h2 id="资源的解决方案"><a href="#资源的解决方案" class="headerlink" title="资源的解决方案"></a>资源的解决方案</h2><p>资源主要为Activity 服务。主要有两种解决方案：</p>
+<ul>
+<li>进入Plugin1 ，则加载Plugin1的资源，反射调用 AssetManager 的 addAssetPath 方法，参数是 Plugin1.apk 的路径。每次进入或者离开插件，都要切换资源。这是一件很繁琐的事情(参考第7章)。      </li>
+<li>事先把 宿主App的资源以及所有插件的资源都通过 AssetManager 的 addAssetPath 方法添加到一个全局变量中。这样，在插件 Activity 的基类中，重写 Activity 的 getResource 方法，从这个全局变量中提取资源。</li>
+</ul>
+<p>针对方案2，由于资源合并到一起，就可能发生资源id冲突，由此产生多种解决方案：</p>
+<ol>
+<li>修改aapt，更改id的前缀(参考15.2节)    </li>
+<li>修改resources.arsc，在 aapt 执行完成后，修改生成的文件(参考21章)    </li>
+<li>通过 public.xml 固定 plugin1 中所有的资源。这种方案不现实，针对固定一个资源的id还是很好的解决方案。</li>
+</ol>
+<h2 id="Fragment是哪个门派"><a href="#Fragment是哪个门派" class="headerlink" title="Fragment是哪个门派"></a>Fragment是哪个门派</h2><p>Fragment 与Activity 的最大区别，就是后者的一举一动需要和 AMS 交互，而Fragment不用。这种方案整个应用只有一个Activity ，Fragment 可以在 宿主App 中或者 插件中，只要使用合适的 ClassLoader 加载插件中的类，使用合适的 AssetManager 加载插件中的资源，就是一个完美的解决方案。可以参考 16 章。</p>
+<h2 id="Service、ContentProvider-和-BroadcastReceiver-插件化通用方案"><a href="#Service、ContentProvider-和-BroadcastReceiver-插件化通用方案" class="headerlink" title="Service、ContentProvider 和 BroadcastReceiver 插件化通用方案"></a>Service、ContentProvider 和 BroadcastReceiver 插件化通用方案</h2><p>因为这三者的数量并不多，插件化中也不会动态新增一个组件，所以最简单的方案是：在 宿主App 的 AndroidManifest 文件中事先声明这些组件。缺点是不能动态新增一个组件。参考 8.1节。</p>
+<h2 id="特定于Service-的插件化解决方案"><a href="#特定于Service-的插件化解决方案" class="headerlink" title="特定于Service 的插件化解决方案"></a>特定于Service 的插件化解决方案</h2><p>如果不事先在宿主App中声明插件的Service，那么Service 也有自己的解决方案：</p>
+<ul>
+<li>动态代理。也是欺上瞒下的思路。Service 不同于 Activity ，一个StubActivity 可以对应多个插件Activity，但是StubService 和插件Service 只能一一对应，所以应该在 宿主App 中声明多个 StubService。参考第10章。</li>
+<li>静态代理，牵线木偶思想。创建一个ProxyService，由 ProxyService 来启动插件中的Service，缺点是插件中有几个Service，宿主App 中就要有相同数量的 ProxyService。，参见 14.1和 14.2.</li>
+<li>结合前两种，能否在 宿主App中只声明一个Stubservice。参考 14.4</li>
+</ul>
+<h2 id="特定于BroadcastReceiver-的插件化解决方案"><a href="#特定于BroadcastReceiver-的插件化解决方案" class="headerlink" title="特定于BroadcastReceiver 的插件化解决方案"></a>特定于BroadcastReceiver 的插件化解决方案</h2><p>它的插件化解决方案是把静态的Receiver 转换为动态的Receiver。</p>
+<h2 id="特定于ContentProvider-的插件化解决方案"><a href="#特定于ContentProvider-的插件化解决方案" class="headerlink" title="特定于ContentProvider 的插件化解决方案"></a>特定于ContentProvider 的插件化解决方案</h2><p>占位思想。宿主App 中由 StubContentProvider 来欺骗 AMS，而实际执行的是 插件中的 ContentProvider 。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/" class="post-title-link" itemprop="url">第15章：再谈资源</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-04-06 21:29:00 / 修改时间：22:05:51" itemprop="dateCreated datePublished" datetime="2021-04-06T21:29:00+08:00">2021-04-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Android-App-打包流程"><a href="#Android-App-打包流程" class="headerlink" title="Android App 打包流程"></a>Android App 打包流程</h2><p>早期Android打包都是基于Ant来做，为此我们需要熟悉Android App 打包的每一个过程。随着Gradle的问世，打包简化为几行配置代码。一套完整的Android App 打包流程如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC15%E7%AB%A0/Android%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.png" alt="Android打包流程图"></p>
+<p>介绍下各部分的作用：</p>
+<ul>
+<li>aapt： 为res目录下的资源生成 R.java 文件，<strong>同时为AndroidManifest生成Manifest.java文件</strong>     </li>
+<li>aidl： 把项目中自定义的aidl文件生成相应的java代码文件    </li>
+<li>javac： 把项目中所有的Java 代码编译成 class 文件。包括3部分： 自己写的代码；aapt生成的代码；aidl生成的Java文件    </li>
+<li>proguard： 混淆的同时生成proguardMapping.txt，这个步骤是可选的    </li>
+<li>dex： 把所有的class文件(包括第三方库的class 文件)转换为dex文件      </li>
+<li>aapt： 这里还是使用aapt，这里是它的另一个功能：打包。即将res目录下的资源、assets下的文件，打包成一个 .ap_ 文件     </li>
+<li>apkbuilder：将所有的dex、ap_文件、AndroidManifest.xml 打包为.apk文件，此时未签名       </li>
+<li>jarsigner： 签名    </li>
+<li>zipalign： 对齐，以便运行时节省内存           </li>
+</ul>
+<h2 id="资源冲突解决方案一：修改AAPT"><a href="#资源冲突解决方案一：修改AAPT" class="headerlink" title="资源冲突解决方案一：修改AAPT"></a>资源冲突解决方案一：修改AAPT</h2><p>插件中的资源id可能会和宿主资源id是同一个值，为了解决资源id冲突，有3中解决方案：</p>
+<ul>
+<li>修改打包流程中的aapt命令，为插件资源id指定 0x71 之类的前缀，就可以避免冲突     </li>
+<li>仍然是将插件资源的id前缀改为 0x71，但是在Android打包生成 resources.arsc 文件后，对这个文件进行修改(具体可见21.2节)       </li>
+<li>进入到哪个插件，就为这个插件生成新的 AssetManager 和 Resources 对象，使用这两个新对象加载资源，就只能是插件中的资源，永远不会和宿主中冲突(详见 7.2)</li>
+</ul>
+<h3 id="修改并生成新的aapt命令"><a href="#修改并生成新的aapt命令" class="headerlink" title="修改并生成新的aapt命令"></a>修改并生成新的aapt命令</h3><p>R文件中有十六进制整数变量，内容如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这些十六进制的变量，由三部分组成： packageId(apk包id，默认 0x7f) + typeId(资源类型，如attr=0x01，drawable=0x02，还有layout、string等) + entryId(typeId下的资源编码，从0开始递增)。以 0x7f0b006d 为例，packageId 为 0x7f，typeId为 0b，entryId 为 006d。</p>
+<p>插件中为防止资源冲突，会为每个插件设置不同的packageId，比如游戏大厅中，斗地主插件可能是 0x71开头，斗牛可能是 0x72。为asset 生成 R 文件 是通过 aapt 完成的，为了实现上述目的，我们要修改 aapt 源码，定位到 Android SDK，找到 aapt 目录，里面有一堆 C 代码， 命令行工具就是用这些代码编译成的，可以在这个目录直接搜索 0x7f，在 ResourcesTable.cpp 中可以找到如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 ResourcesTable 的构造函数中，有一个 Bundle 类型的参数，其次，判断 mPackageType 如果是 App，则都是 0x7f，此外 0x01 和 0x00 都被系统占用了，所以我们不要将这两个值设置为插件的 id前缀(事实上，有些手机厂商会占用其他的一些值，为了保险，我们一般只使用 0x71~0xff 作为插件的前缀)。修改 AAPT 的代码，基本思路如下：</p>
+<ol>
+<li>在 aapt 的命令行参数中传递打包时的前缀   </li>
+<li>把这个值设置给 Bundle 实体的 mApkModule 字段，作为 ResourcesTable 的构造函数参数传入        </li>
+<li>在 ResourcesTable 构造函数读取 mApkModule 值，也就是前缀值，设置给 packageId    </li>
+</ol>
+<p>实现代码： 略</p>
+<h3 id="在插件化项目中使用新的aapt命令"><a href="#在插件化项目中使用新的aapt命令" class="headerlink" title="在插件化项目中使用新的aapt命令"></a>在插件化项目中使用新的aapt命令</h3><p>现在，可以用我们修改的aapt文件替换sdk下的aapt 命令，但是如果这么做，每当Android系统更新，我们都要替换一次aapt命令。一种可行的做法是，我们把这个新的 aapt 工具命名为 aapt_mac ，放到项目的根目录下：</p>
+<p><img src="" alt="自定义的aapt放置"></p>
+<p>之后，修改项目中 gradle 文件：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述脚本通过反射，<strong>把aapt的路径临时修改为指向当前App根目录下的aapt_mac</strong>。此外，我们将App的资源前缀设置为 0x71 ，这样在打包后，R文件中的资源就以 0x71 作为前缀了。</p>
+<h2 id="public-xml-固定资源id值"><a href="#public-xml-固定资源id值" class="headerlink" title="public.xml 固定资源id值"></a>public.xml 固定资源id值</h2><p>如下场景：多个插件都需要<strong>同一个</strong>自定义控件，于是我们把这个自定义控件卸载宿主 App，插件调用宿主的Java 代码，使用宿主的资源(有控件肯定有资源)。考虑到App在每次打包后，随着资源的增减，同一个资源id的值可能会发生变化。为避免这种情况，我们可以<strong>把公用的资源id值固定写死</strong>，如下public.xml文件所示（注意，type和id后面的空格不可省略）：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="string1" id="0x7f050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>之后，把public.xml放到 res/values 目录下，R.string.string1 这个资源就会固定成 0x7f050024。当然，还可以指定资源值的一个区间,将上述代码中间那行改成如下代码即可：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">public-padding</span> <span class="attr">name</span>=<span class="string">"my_"</span> <span class="attr">end</span>=<span class="string">"0x7f02000f"</span> <span class="attr">start</span>=<span class="string">"0x7f020001"</span> <span class="attr">type</span>=<span class="string">"drawable"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是从gradle 1.3开始，就忽略 public.xml了，因此需要我们自己使用gradle 脚本来实现，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>之后，打包宿主 ActivityHost1 ，使用Jadx-GUI 查看资源id，可以看到 R.string.string1 的值永远是 2131034148(也即十六进制0x7f050024)。</p>
+<h2 id="插件使用宿主的资源"><a href="#插件使用宿主的资源" class="headerlink" title="插件使用宿主的资源"></a>插件使用宿主的资源</h2><p>宿主资源值固定了，但是插件怎么访问宿主中的资源呢？如果插件内部能保持一个对宿主项目的引用，那就可以随便访问宿主的任何资源了。<strong>我们需要编写gradle脚本，把宿主打包成 jar 包。之后设置插件的gradle文件，通过provided来引用这个jar包</strong>。之前介绍过，provided方式引用只在编码时候有用，正式打包的时候不会被引用进去。代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章给出插件化中资源id冲突的解决方案：</p>
+<ul>
+<li>把宿主和插件的资源都合并到一起，通过AssetManager的addAssetPath 来实现。只不过，<strong>这种方案会产生资源id冲突的问题</strong>      </li>
+<li>如果不事先合并资源，那就为每个插件创建一个 AssetManager，每个 AssetManager 都是通过反射调用 addAssetPath 方法，把插件资源加进去。当宿主进入一个插件时，就把 AssetManager 切换为 插件的AssetManager ；反之，当从插件回到宿主的时候，再把 AssetManager 切换回宿主的 AssetManager(详见第5章的loadResource方法)。</li>
+</ul>
+<p>第一种方案，主要缺陷是资源冲突，并且资源id的前缀是有限的，也就256个值，如果超过256个插件，就要使用方案2了。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1074,244 +1318,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：代理模式</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-03-21 22:33:00 / 修改时间：22:34:20" itemprop="dateCreated datePublished" datetime="2021-03-21T22:33:00+08:00">2021-03-21</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>插件化用到代理模式，所以要掌握代理模式。随着泛型引进，代理模式分为动态代理和静态代理，在插件化中分别表现为对 Instrumentation 和 对 AMN 进行Hook。</p>
-<p>代理模式的UML图如下：</p>
-<p><img src="" alt="代理模式类图"></p>
-<p>其中RealSubject 和 Proxy 都是Subject 的子类，在Proxy内部有一个RealSubject类型的成员变量，Proxy 的Reqeust 方法会调用 RealSubject 的Request方法，代码如下；</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Subject</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">void</span> <span class="title">Request</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RealSubject</span> : <span class="title">Subject</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> override <span class="keyword">void</span> <span class="title">Request</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="comment">//完成一些任务</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Proxy</span> : <span class="title">Subject</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> RealSubject realSubject;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> override <span class="keyword">void</span> <span class="title">Request</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="comment">//关键是这句话</span></span><br><span class="line">        realSubject.Request();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>简单的UML图和这短短的代码，就是代理的精髓，在介绍代理模式的使用场景时，就知道它的威力了。</p>
-<h2 id="远程代理（AIDL）"><a href="#远程代理（AIDL）" class="headerlink" title="远程代理（AIDL）"></a>远程代理（AIDL）</h2><p>在Android系统中，远程代理的设计实现就是AIDL。以之前的例子来说，add 方法把a和b两个整数写入data中，通过mRemote的transact方法，把data和reply发送到AIDL的另一端，replay是回调函数，会把计算结果传递回来，UML图如下所示：</p>
-<p><img src="" alt="AIDL的UML图"></p>
-<h3 id="给生活加点料-记日记"><a href="#给生活加点料-记日记" class="headerlink" title="给生活加点料(记日记)"></a>给生活加点料(记日记)</h3><p>Class1有个doSomething方法，我们想在这个方法之前记录一行日志，一般的做法是，直接在在doSomething 方法的最前端写一行代码用于记录日志，在学习了代理模式后，我们可以设计一个Class1Proxy，代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Class1Proxy</span> <span class="keyword">implements</span> <span class="title">Class1Interface</span> </span>{</span><br><span class="line"></span><br><span class="line">    Class <span class="number">1</span> clazz = <span class="keyword">new</span> Class1();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span> </span>{</span><br><span class="line">        println(<span class="string">"begin log"</span>);</span><br><span class="line">        clazz.doSomething();</span><br><span class="line">        println(<span class="string">"End log"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//接下来使用ClassProxy 而不是使用 Class1：</span></span><br><span class="line"></span><br><span class="line">Class1Proxy proxy = <span class="keyword">new</span> Class1Proxy();</span><br><span class="line">proxy.doSomething();</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="静态代理和动态代理"><a href="#静态代理和动态代理" class="headerlink" title="静态代理和动态代理"></a>静态代理和动态代理</h2><p>前面讲的是“静态代理”，但是其实这样是有问题的，每个类都要有个对应的Proxy类，Proxy类的数量会很多，<strong>但其实它们的逻辑大同小异</strong>。接下来介绍“动态代理”，基于 Proxy 类的 newProxyInstance 方法，它的声明如下：</p>
-<blockquote>
-<p>static Object newProxyInstance(ClassLoder loader, Class&lt;?&gt;[] interfaces, InvocationHandler h)</p>
-</blockquote>
-<p>其中，interfaces 设置为目标对象Class1 所实现的接口类型，对应上面的例子是 Class1Interface，我们通过h对象，可以实现把目标对象 class1 注入，我们看下在实际应用中自己实现的这个h：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">InvocationHandlerTest</span> <span class="keyword">implements</span> <span class="title">InvocationHandler</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> Object target;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">InvocationHandlerTest</span><span class="params">(Object target)</span> </span>{</span><br><span class="line">        <span class="keyword">this</span>.target = target;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Overrid</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object o, Method method,Object[] objects)</span> <span class="keyword">throws</span> Throwable </span>{</span><br><span class="line">        println(<span class="string">"start log"</span>);</span><br><span class="line">        Object obj = method.invoke(target,objects);</span><br><span class="line">        println(<span class="string">"end log"</span>);</span><br><span class="line">        retun obj;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>注意 method.invoke(target,objects)，其中target 就是 class1 对象，接下来调用就是如下方式：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Class1Interface proxy = <span class="keyword">new</span> Class1();</span><br><span class="line">Class1Interface class1Proxy = (Class1Interface)Proxy.newProxyInstance(class1.getclass.getClassLoder(),class1.getclass.getInterfaces(),<span class="keyword">new</span> InvocationHandlerTest(class1));</span><br></pre></td></tr></tbody></table></figure>
-
-<p>所以，invoke方法实际上就是在执行 class1 的doSomething 方法。</p>
-<h2 id="对AMN的Hook"><a href="#对AMN的Hook" class="headerlink" title="对AMN的Hook"></a>对AMN的Hook</h2><p>后续有时间补上</p>
-<h2 id="对PMS的Hook"><a href="#对PMS的Hook" class="headerlink" title="对PMS的Hook"></a>对PMS的Hook</h2><p>PMS 是系统服务，是没办法Hook的，这个标题只是为了容易理解。我们只能修改它在Android App 进程中的代理对象，它是PackageManager 类型的在很多类中都有这个代理的对象，比如，在ActivityThread 中，有一个字段 sPackageManager ，以及 ApplicationPackageManager 的 mPM字段，我们可以尝试Hook这些字段。</p>
-<p>代码：略，后续补上。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/13/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/13/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/%E9%A1%B9%E7%9B%AE-%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%AE%9E%E7%8E%B0/" class="post-title-link" itemprop="url">小程序实现</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-03-13 19:43:00 / 修改时间：19:44:40" itemprop="dateCreated datePublished" datetime="2021-03-13T19:43:00+08:00">2021-03-13</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="整体逻辑"><a href="#整体逻辑" class="headerlink" title="整体逻辑"></a>整体逻辑</h2><ol>
-<li>通过提供的接口调用方法，打算启动 </li>
-<li>判断AppId是否为空，空则return；否则继续进入    </li>
-<li>启动跨进程的Service(如果之前没有启动的话)    </li>
-<li>根据AppId获取小程序配置(可能会在内存中有缓存，通过map存储起来，key为appId，value为配置的Bean)，如果有缓存，则先直接使用缓存进入下一步，同时网络拉取配置供下次启动使用           </li>
-<li>根据配置判断<strong>小程序url是否合法、是否需要登录态</strong>，需要强制登录，则判断当前登录态(通过startActivityForResult 登录，在 onActivityResult 中跨进程更新登录态信息)；否则拉取js信息。</li>
-<li>正式进入小程序打开小程序     </li>
-</ol>
-<h2 id="细节问题"><a href="#细节问题" class="headerlink" title="细节问题"></a>细节问题</h2><ul>
-<li><p>整个小程序体系包含：小程序 Loading 页的 Activity 以及 正式的小程序展示页面的 Activity</p>
-</li>
-<li><p>对于单个小程序，会由 mainFragment 和 newFragment 来展示，其中 mainFragment 用于展示小程序主页面，打开新的子页面使用 newFragment 来承载</p>
-</li>
-<li><p>跨进程用的服务 AIDLService 在主进程中</p>
-</li>
-<li><p>小程序 Loading 页与小程序 Activity 在 :miniapp 进程中</p>
-</li>
-<li><p>为了加快用户进入App就进入小程序这种应用场景，我们创建了一个空的 MiniAppPreService （这是一个 IntentService） ，并且这个 Service 在 :miniapp 进程中，在闪屏页就启动这个 Service。</p>
-</li>
-<li><p>当小程序需要用户信息时，会有授权流程</p>
-</li>
-<li><p>判断是否还是当前用户(比如需要涉及到支付的时候，需要做这一步)</p>
-</li>
-<li><p>提供外部浏览器打开某个链接方式</p>
-</li>
-<li><p>提供打开本地页面的接口</p>
-</li>
-<li><p>提供向本地向小程序反馈结果的方法</p>
-</li>
-</ul>
-<h2 id="可能的问题"><a href="#可能的问题" class="headerlink" title="可能的问题"></a>可能的问题</h2><h3 id="1、为什么要跨进程？多进程带来的问题？"><a href="#1、为什么要跨进程？多进程带来的问题？" class="headerlink" title="1、为什么要跨进程？多进程带来的问题？"></a>1、为什么要跨进程？多进程带来的问题？</h3><p>数据安全(获取用户信息必须得通过接口提供)、小程序崩溃不影响主程序、降低主程序的内存占用</p>
-<p>多进程的问题：</p>
-<ul>
-<li>谨慎使用多进程，新进程会带有一些公共资源，是会消耗内存的     </li>
-<li>Application 会执行多次     </li>
-<li>SharedPreference 不可靠    </li>
-<li>静态成员失效</li>
-<li>断点调试问题，在实际开发中，调试的时候先去除多进程</li>
-</ul>
-<h3 id="2、为什么要降低主程序内存占用，或者说内存占用过大会怎么样？"><a href="#2、为什么要降低主程序内存占用，或者说内存占用过大会怎么样？" class="headerlink" title="2、为什么要降低主程序内存占用，或者说内存占用过大会怎么样？"></a>2、为什么要降低主程序内存占用，或者说内存占用过大会怎么样？</h3><p>内存占用过大容易引起gc</p>
-<h3 id="3、为什么要用-mainFragment-和-newFragment-来承载小程序？"><a href="#3、为什么要用-mainFragment-和-newFragment-来承载小程序？" class="headerlink" title="3、为什么要用 mainFragment 和 newFragment 来承载小程序？"></a>3、为什么要用 mainFragment 和 newFragment 来承载小程序？</h3><p>方便小程序内部页面跳转，以及小程序内部回退。</p>
-<p>自己覆写了 onBackPressed 重写按返回键的行为，按返回键会移除新打开的页面</p>
-<h3 id="4、怎样启动newFragment？"><a href="#4、怎样启动newFragment？" class="headerlink" title="4、怎样启动newFragment？"></a>4、怎样启动newFragment？</h3><p>创建新的 newFragment 对象，将 url 穿进去。之后，通过 FragmentTransaction 的 add 方法，将 newFragment 添加进去，在移除的时候，使用 FragmentTransaction 的 remove 方法移除。</p>
-<h3 id="5、fragment的-commit-和-commitAllowLoss-的理解？"><a href="#5、fragment的-commit-和-commitAllowLoss-的理解？" class="headerlink" title="5、fragment的 commit 和 commitAllowLoss 的理解？"></a>5、fragment的 commit 和 commitAllowLoss 的理解？</h3><h3 id="6、AIDLService里面做了什么？"><a href="#6、AIDLService里面做了什么？" class="headerlink" title="6、AIDLService里面做了什么？"></a>6、AIDLService里面做了什么？</h3><p>创建Binder 对象，用以从主进程获取数据：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">AIDLService</span> : <span class="title">Service</span>() </span>{</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> val binder: Binder = object : IUserInfoAidlInterface.Stub() {</span><br><span class="line"></span><br><span class="line">        <span class="function">override fun <span class="title">getAidlUserInfo</span><span class="params">()</span>: AidlUserInfo </span>{</span><br><span class="line">            val info = AidlUserInfo()</span><br><span class="line">            info.ck = UserInfoInstance.getInstance().ck</span><br><span class="line">            info.userName = UserInfoInstance.getInstance().username</span><br><span class="line">            info.latitude = CommonUtil.getLatitude()</span><br><span class="line">            info.longitude = CommonUtil.getLongitude()</span><br><span class="line">            info.encryptNetTime = TimerUtil.encryptNetTime</span><br><span class="line">            <span class="keyword">return</span> info</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function">override fun <span class="title">onBind</span><span class="params">(intent: Intent?)</span>: IBinder? </span>{</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> binder</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-<h3 id="7、js-用来干什么"><a href="#7、js-用来干什么" class="headerlink" title="7、js 用来干什么"></a>7、js 用来干什么</h3><p>为小程序提供调用 Native 方法的接口，比如调用获取用户信息，比如调用打开 App 中的页面</p>
-<h3 id="8、aidl-怎么使用，支持哪些数据格式"><a href="#8、aidl-怎么使用，支持哪些数据格式" class="headerlink" title="8、aidl 怎么使用，支持哪些数据格式"></a>8、aidl 怎么使用，支持哪些数据格式</h3><p>自己编写 aidl 文件即可，Android Studio 会自动生成 Java 文件，关于这块的知识可以参考<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2021/03/11/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC2%E7%AB%A0/#more">以前的博客</a> ，aidl 文件类似下面的格式：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">文件：IUserInfoAidlInterface.aidl</span><br><span class="line"></span><br><span class="line"><span class="comment">//一定要记得手动加这个import</span></span><br><span class="line"><span class="keyword">import</span> com.xxx.userinfoprovider.model.AidlUserInfo;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">IUserInfoAidlInterface</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="function">AidlUserInfo <span class="title">getAidlUserInfo</span><span class="params">()</span></span>;</span><br><span class="line">   </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>支持基本的类型，int、long、boolean、float、double、String， 我们项目中需要支持对象，所以我们还需要再定义个 aidl 文件（这个Bean就这一行代码）：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">文件：AidlUserInfo.aidl</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">parcelable AidlUserInfo;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>所以我们写 AIDL，如果需要传输 bean 的话，需要写 n+1 个 aidl 文件，这个 n 就是需要传输的 Bean 的个数。</p>
-<h3 id="9、怎么为小程序-Activity-设置进程"><a href="#9、怎么为小程序-Activity-设置进程" class="headerlink" title="9、怎么为小程序 Activity 设置进程"></a>9、怎么为小程序 Activity 设置进程</h3><p>在 AndroidManifest.xml 中设置  android:process=”:miniapp”</p>
-<h3 id="10、MiniAppPreService-中做了什么？为什么是-IntentService-？-IntentService-的作用-？"><a href="#10、MiniAppPreService-中做了什么？为什么是-IntentService-？-IntentService-的作用-？" class="headerlink" title="10、MiniAppPreService 中做了什么？为什么是 IntentService ？  IntentService 的作用 ？"></a>10、MiniAppPreService 中做了什么？为什么是 IntentService ？  IntentService 的作用 ？</h3><p>里面啥也没做，使用它主要是因为 IntentService 在没有任务的时候自己会结束，不需要手工干预。</p>
-<h3 id="11、授权流程怎样的"><a href="#11、授权流程怎样的" class="headerlink" title="11、授权流程怎样的"></a>11、授权流程怎样的</h3><ol>
-<li>与主进程同步数据</li>
-<li>检查是否登录了，未登录先登录</li>
-<li>与后台请求以前是否有授权过，如果授权过，直接将数据返回(json 形式，通过 webview.loadUrl(“javascript:” ) 形式返回)</li>
-<li>未授权过，弹窗，让用户选择是否授权</li>
-</ol>
-<h3 id="12、如何检测是否还是当前用户？"><a href="#12、如何检测是否还是当前用户？" class="headerlink" title="12、如何检测是否还是当前用户？"></a>12、如何检测是否还是当前用户？</h3><p>因为在小程序里面支付的时候需要，所以支付之前需要检测是否是当前用户</p>
-<p>检测方式： 将小程序自己持有的信息以参数形式传过来，之后传给后台，让后台判断</p>
-<h3 id="13、如何反馈信息给小程序？"><a href="#13、如何反馈信息给小程序？" class="headerlink" title="13、如何反馈信息给小程序？"></a>13、如何反馈信息给小程序？</h3><p>通过使用 webview.loadUrl ，url 为  javascript: 开头的信息：</p>
-<blockquote>
-<p>webview.loadUrl(“javascript:” )</p>
-</blockquote>
-<h3 id="14、不是会内存裁剪？提前启动-Service-会有作用吗？"><a href="#14、不是会内存裁剪？提前启动-Service-会有作用吗？" class="headerlink" title="14、不是会内存裁剪？提前启动 Service 会有作用吗？"></a>14、不是会内存裁剪？提前启动 Service 会有作用吗？</h3></body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/4/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span><a class="page-number" href="/page/6/">6</a><span class="space">&hellip;</span><a class="page-number" href="/page/14/">14</a><a class="extend next" rel="next" href="/page/6/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/4/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span><a class="page-number" href="/page/6/">6</a><span class="space">&hellip;</span><a class="page-number" href="/page/15/">15</a><a class="extend next" rel="next" href="/page/6/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1357,7 +1368,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">140</span>
+          <span class="site-state-item-count">142</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1443,7 +1454,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共303.1k字</span>
+  <span class="post-count">博客全站共304.1k字</span>
 </div>
 
 

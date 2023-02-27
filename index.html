@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">140</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">142</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,260 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/27/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC3%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/27/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章：Kotlin协程的基础设施</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-02-27 14:25:00 / 修改时间：21:05:25" itemprop="dateCreated datePublished" datetime="2023-02-27T14:25:00+08:00">2023-02-27</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="3-1-协程的构造"><a href="#3-1-协程的构造" class="headerlink" title="3.1 协程的构造"></a>3.1 协程的构造</h2><h3 id="3-1-1-协程的创建"><a href="#3-1-1-协程的创建" class="headerlink" title="3.1.1 协程的创建"></a>3.1.1 协程的创建</h3><p>Kotlin 提供了一个 createCoroutine 函数用来创建协程：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).createCoroutine(</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其中 suspend() -&gt; T 是 createCoroutin 函数的 Receiver，对 Kotlin 函数不了解的话，这个还是有点费解的。我们依次剖析 createCoroutine 的参数和返回值：</p>
+<ul>
+<li><p>Receiver 是一个被 suspend 修饰的挂起函数，这也是协程协程的执行体（协程体）</p>
+</li>
+<li><p>参数是 completion（是 Continuation 类型）会在协程体执行完后调用，实际上就是<strong>协程完成的回调</strong></p>
+</li>
+<li><p>返回值也是一个 Continuation 对象，由于现在协程仅仅被创建出来，因此需要通过这个值在之后触发协程的启动</p>
+</li>
+</ul>
+<p>以一个例子来说明 createCoroutine 的用法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> continuation = <span class="keyword">suspend</span> {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    <span class="number">5</span></span><br><span class="line">}.createCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> context = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">        println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>目前协程被创建出来了，但是它还未启动。</p>
+<h3 id="3-1-2-协程的启动"><a href="#3-1-2-协程的启动" class="headerlink" title="3.1.2 协程的启动"></a>3.1.2 协程的启动</h3><p>在上述的例子中，我们已经创建了协程，之后只需要调用 continuation.resume(Unit) 之后，协程就会立即开始。为什么这样就可以触发协程体执行呢？</p>
+<p>其实，我们创建协程得到的 continuation 是 SafeContinuation 的实例，不过这也是个“马甲”，它有个 delegate 属性，里面将 suspend() -&gt; T  封装成了一个 Continuation 对象</p>
+<p><strong>也就是说，我们创建协程得到的 continuation 其实就是套了几层“马甲”的协程体，故调用这个 continuation.resume() 可以触发协程体的执行</strong></p>
+<p>一般来讲，我们创建协程之后就会启动它，所以标准库还提供了另一个一步到位的API——startCoroutin ：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).startCoroutine(completion: Continuation&lt;T&gt;)</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>我们知道，作为参数传入的 completion 就如同回调一样，**协程体的返回值会作为 resumeWith 的参数传入，例如，下面的例子：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    <span class="keyword">suspend</span> {</span><br><span class="line">        println(<span class="string">"我跑在协程里"</span>)</span><br><span class="line">        <span class="number">3</span></span><br><span class="line">    }.startCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">        <span class="keyword">override</span> <span class="keyword">val</span> context: CoroutineContext</span><br><span class="line">            <span class="keyword">get</span>() = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">            println(<span class="string">"协程执行完成，result = <span class="variable">$result</span>"</span>)</span><br><span class="line">        }</span><br><span class="line">    })</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>如果协程体执行正常，则 result 为 Success 结果；否则返回 Failure 结果。上述代码结果如下：</p>
+<blockquote>
+<p>我跑在协程里<br>//协程执行完成，result = Failure(java.lang.IllegalStateException: 抛出异常)<br>协程执行完成，result = Success(3)</p>
+</blockquote>
+<h3 id="3-1-3-协程体的-Receiver"><a href="#3-1-3-协程体的-Receiver" class="headerlink" title="3.1.3 协程体的 Receiver"></a>3.1.3 协程体的 Receiver</h3><p>与协程创建和启动相关的 API 还有一组：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="params">(<span class="keyword">suspend</span> R.()</span></span> -&gt; T).create(</span><br><span class="line">    receiver: R,</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment">// start 方法略</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述的 R 可以为协程体提供一个作用域，在协程体内我们可以直接使用，如下代码所示：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//先把上述方法封装下，如果不封装怎么调用？</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="title">launchCoroutine</span><span class="params">(receiver: <span class="type">R</span>, block: <span class="type">suspend</span> <span class="type">R</span>.() -&gt; <span class="type">T</span>)</span></span> {</span><br><span class="line">    block.startCoroutine(receiver, <span class="keyword">object</span> : Continuation&lt;T&gt; {</span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt;)</span></span> {</span><br><span class="line">            println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="keyword">override</span> <span class="keyword">val</span> context = EmptyCoroutineContext</span><br><span class="line">    })</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//创建额外的域</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProducerScope</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">    <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">produce</span><span class="params">(value: <span class="type">T</span>)</span></span> {</span><br><span class="line">        println(<span class="string">"我在额外的 Receiver 中了: <span class="variable">$value</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    launchCoroutine(ProducerScope&lt;<span class="built_in">Int</span>&gt;()) {</span><br><span class="line">        println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">        produce (<span class="number">1024</span>)</span><br><span class="line">        <span class="comment">//delay (1000)  //我自己测试的时候，如果放开这个注释，就不会打到 2048，coroutine end 也不会执行到</span></span><br><span class="line">        produce (<span class="number">2048</span>)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<blockquote>
+<p>这里要注意的一点是，如果额外的域 ProducerScope 添加了 @RestrictsSuspension 注解，则无法使用外部的函数，因此例子中的 delay 也不会调用</p>
+</blockquote>
+<h3 id="3-1-4-可挂起的-main-函数"><a href="#3-1-4-可挂起的-main-函数" class="headerlink" title="3.1.4 可挂起的 main 函数"></a>3.1.4 可挂起的 main 函数</h3><p>前面我们一直这样写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    ....</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这样就能在程序入口就获得一个协程了，这到底是怎么实现的呢？首先，我们能确认2点：</p>
+<ul>
+<li><p>JVM 压根就不知道什么挂起函数，kotlin协程</p>
+</li>
+<li><p>JVM 肯定有一个 main 函数的</p>
+</li>
+</ul>
+<p>为了搞清楚原理，我们可以对 Kotlin 反编译成 Java 代码（IDEA的 Kotlin byteCode 功能）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] var0)</span> </span>{</span><br><span class="line">   RunSuspendKt.runSuspend(<span class="keyword">new</span> KotlinMainKt$$$main(var0));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>可以看到，其实它是有真正的 main 函数的，里面的协程封装逻辑都被扔到 RunSuspendKt里面了</p>
+<h3 id="3-2-1-挂起函数"><a href="#3-2-1-挂起函数" class="headerlink" title="3.2.1 挂起函数"></a>3.2.1 挂起函数</h3><p>整个 kotlin 语境下有 2种函数： 普通函数和挂起函数，<strong>其中：挂起函数能调用任何函数，但是普通函数不能调用挂起函数。</strong></p>
+<p>所谓的协程挂起其实就是程序执行流程发生异步调用时，当前调用流程进入等待状态。注意：<strong>挂起函数不一定真的会挂起，只是提供了挂起的条件</strong>，那额什么情况才会真正挂起呢？</p>
+<h3 id="3-2-2-挂起点"><a href="#3-2-2-挂起点" class="headerlink" title="3.2.2 挂起点"></a>3.2.2 挂起点</h3><p>回想下协程的创建过程，我们的协程体本身就是一个 Continuation 实例，正因如此，挂起函数才能在协程体内运行。<strong>在协程体内部，挂起函数的调用处称为挂起点，挂起点如果出现异步调用，当前协程就会被挂起，直到对应的 Continuation.resume 函数被调用才会恢复执行。</strong></p>
+<p><strong>异步调用如何发生，取决于 resume 函数与对应的挂起函数的调用是否在相同的调用栈上</strong></p>
+<h3 id="3-2-3-CPS-变换"><a href="#3-2-3-CPS-变换" class="headerlink" title="3.2.3 CPS 变换"></a>3.2.3 CPS 变换</h3><p>我们知道，挂起函数如果需要挂起，则需要通过 suspendCoroutine 来获取 Continuation 实例，我们已经知道它是协程体封装成的 Continuation，但是这个实例是怎么传入的呢？先看下面的suspend 函数：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">notSuspend</span><span class="params">()</span></span> = suspendCoroutine&lt;<span class="built_in">Int</span>&gt; { continuation -&gt;</span><br><span class="line">    continuation.resume(<span class="number">100</span>)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>看起来这个方法没有接收任何参数，kotlin 中看不出来我们就用 Java 直接调用它：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    Object result = KotlinMainKt.notSuspend(<span class="keyword">new</span> Continuation&lt;Integer&gt;() {</span><br><span class="line">        <span class="meta">@NotNull</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> CoroutineContext <span class="title">getContext</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">resumeWith</span><span class="params">(<span class="meta">@NotNull</span> Object o)</span> </span>{</span><br><span class="line"></span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>我们发现用Java 调用的时候，需要传入一个 Continuation<integer> ，也就是说kotlin 中的 suspend() -&gt; Int 类型 在Java 看来实际上是 Continuation<integer> -&gt; Object 类型 ！</integer></integer></p>
+<p>这与我们平时写的异步回调相似，传入callback 等待结果回调。但是为什么会有返回值 Object？这里的 Object 会有 2 种情况：</p>
+<ul>
+<li><p>挂起函数同步返回时：作为参数传入的 Continuation 的 resumeWith 不会被调用，函数实际地返回值 Object 就是挂起函数的返回值</p>
+</li>
+<li><p>挂起函数挂起，执行异步逻辑。此时函数返回值 Object 是一个挂起标志，通过这个标志外部协程就可以知道该函数需要挂起等到异步逻辑执行。</p>
+</li>
+</ul>
+<p>挂起标志是一个常量，定义在 Intrinsics.kt 当中：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">val</span> COROUTINE_SUSPENDED: Any <span class="keyword">get</span>() = CoroutineSingletons.COROUTINE_SUSPENDED</span><br><span class="line"></span><br><span class="line"><span class="keyword">internal</span> <span class="keyword">enum</span> <span class="class"><span class="keyword">class</span> <span class="title">CoroutineSingletons</span> </span>{ </span><br><span class="line">    COROUTINE_SUSPENDED, </span><br><span class="line">    UNDECIDED, </span><br><span class="line">    RESUMED </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>现在大家知道了原来挂起函数就是普通函数<strong>参数</strong>中多了一个 Continuation 实例，这也难怪<strong>普通函数不能调用挂起函数，但是挂起函数可以调用普通函数的原因</strong>。</p>
+<p>还可以仔细想想，为什么Kotlin 语法要求挂起函数一定要运行在协程体内或者挂起函数中呢？答案是：协程体或者挂起函数中都隐含了 Continuation 实例 </p>
+<h2 id="3-3-协程的上下文"><a href="#3-3-协程的上下文" class="headerlink" title="3.3 协程的上下文"></a>3.3 协程的上下文</h2></body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC2%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC2%E7%AB%A0/" class="post-title-link" itemprop="url">第2章：协程基本概念</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-26 10:05:00" itemprop="dateCreated datePublished" datetime="2023-02-26T10:05:00+08:00">2023-02-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-27 21:05:41" itemprop="dateModified" datetime="2023-02-27T21:05:41+08:00">2023-02-27</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="2-2-协程的分类"><a href="#2-2-协程的分类" class="headerlink" title="2.2 协程的分类"></a>2.2 协程的分类</h2><p>可以按照按照调用栈（函数调用栈，用来保存函数调用时的状态信息的数据结构）来分，因为<strong>协程需要挂起和恢复</strong>，因此对于挂起点的状态保存就极其关键。</p>
+<h3 id="2-2-1-按照调用栈分类"><a href="#2-2-1-按照调用栈分类" class="headerlink" title="2.2.1 按照调用栈分类"></a>2.2.1 按照调用栈分类</h3><p>根据是否开辟相应的调用栈来分的话可以分为 2 类：</p>
+<ul>
+<li><p>有栈协程，需要额外的栈空间，但是灵活，可以在任意函数调用层级的任意位置挂起</p>
+</li>
+<li><p>无栈协程， 节省内存，咱 Kotlin 协程一般认为就归为这一类，<strong>依靠对协程体本身编译生成的状态机的状态流转来实现控制流</strong></p>
+</li>
+</ul>
+<blockquote>
+<p>不过，Kotlin 协程可以在<strong>挂起函数范围</strong>内任意调用层次挂起，换句话说，我们启动一个 Kotlin 协程，可以在其中任意嵌套 suspend 函数 ！</p>
+</blockquote>
+<h3 id="2-2-2-按调度方式分类"><a href="#2-2-2-按调度方式分类" class="headerlink" title="2.2.2 按调度方式分类"></a>2.2.2 按调度方式分类</h3><ul>
+<li><p>对称协程： 任何一个协程都是相互独立且平等的，调度权可以在任意协程之间转移</p>
+</li>
+<li><p>非对称协程：协程出让调度权的目标只能是它的调用者，即<strong>协程之间存在调用和非调用关系</strong></p>
+</li>
+</ul>
+<blockquote>
+<p>可以看出来，对称协程和线程已经非常接近了</p>
+</blockquote>
+<h2 id="2-3-协程的实现举例"><a href="#2-3-协程的实现举例" class="headerlink" title="2.3 协程的实现举例"></a>2.3 协程的实现举例</h2><p>列举了各种语言协程的实现，这里先略过。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -513,6 +767,131 @@
 
 <p>从源码可以看出，使用 CAS 自旋完成桶的设置时，使用 synchronized 内置锁保证桶内并发操作的线程安全。尽管对同一个 Map 操作的线程争夺会非常激烈，但是在同一个桶内的线程争夺通常不会很激烈，所以使用 CAS 自旋、synchronized 的偏向锁或轻量级锁 不会降低 ConcurrentHashMap 的性能。为什么不用显式锁 ReentrantLock 呢？因为如果为每个桶都创建一个 ReentrantLock 实例，就会带来大量的内存消耗，而前面那些方法带来的内存消耗微乎其微。</p>
 <p>get方法也没有加锁操作，与 JDK1.7差不多，就不赘述了。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/25/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC1%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/25/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章：异步程序设计介绍</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-25 15:46:00" itemprop="dateCreated datePublished" datetime="2023-02-25T15:46:00+08:00">2023-02-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-27 21:03:50" itemprop="dateModified" datetime="2023-02-27T21:03:50+08:00">2023-02-27</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="1-2-异步程序设计的关键问题"><a href="#1-2-异步程序设计的关键问题" class="headerlink" title="1.2 异步程序设计的关键问题"></a>1.2 异步程序设计的关键问题</h2><h3 id="1-2-1-结果传递"><a href="#1-2-1-结果传递" class="headerlink" title="1.2.1 结果传递"></a>1.2.1 结果传递</h3><p>不同于同步调用，异步调用是立即返回的，因此被调用方的逻辑通常存在2种情形：</p>
+<ul>
+<li><p>结果尚未就绪：进入任务执行的状态，等结果就绪后通过回调传递给调用方</p>
+</li>
+<li><p>结果已经就绪，可以立即提供结果</p>
+</li>
+</ul>
+<p>用图片获取作为例子，上述2种情况代码示意如下所示（<strong>这是我个人觉得理解Kotlin协程实现最巧妙的例子了，其实后面的本质就是这个</strong>）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 方法实现</span></span><br><span class="line"><span class="function">fun <span class="title">asyncBitmap</span><span class="params">(url: String, callback: (Bitmap)</span> -&gt; Unit): Bitmap </span>{</span><br><span class="line">          val bitmap = asyncBitmap(url) {</span><br><span class="line">        show(it) <span class="comment">//...② 异步请求</span></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (bitmap != <span class="keyword">null</span>) {</span><br><span class="line">        show(bitmap) <span class="comment">//... ① 直接返回了</span></span><br><span class="line">    }  <span class="keyword">return</span> when (val bitmap = Cache.get(url)) {</span><br><span class="line">        <span class="keyword">null</span> -&gt; {</span><br><span class="line">            thread {</span><br><span class="line">                download(url)</span><br><span class="line">                    .also { Cache.put(url, it) }</span><br><span class="line">                    .also(callback)</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="keyword">else</span> -&gt; bitmap</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用方法，如果有同步返回，就使用同步返回，否则依赖异步回调</span></span><br><span class="line"><span class="meta">@JvmStatic</span></span><br><span class="line"><span class="function">fun <span class="title">main</span><span class="params">(args: Array&lt;String&gt;)</span> </span>{</span><br><span class="line">    val bitmap = asyncBitmap(url) {</span><br><span class="line">        show(it) <span class="comment">//...② 异步请求</span></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (bitmap != <span class="keyword">null</span>) {</span><br><span class="line">        show(bitmap) <span class="comment">//... ① 直接返回了</span></span><br><span class="line">    }</span><br><span class="line">} </span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Kotlin 协程的挂起函数 (suspend function) 本质上就是采取了这个异步返回值的设计思路</p>
+</blockquote>
+<h3 id="1-2-2-异常处理"><a href="#1-2-2-异常处理" class="headerlink" title="1.2.2 异常处理"></a>1.2.2 异常处理</h3><p>我们希望异步的任务在 suspend 的时候执行，执行完成后 resume 回来，之后再同步判断是否发生了异常。这样逻辑就会简单很多。<strong>异步逻辑同步化也是 Kotlin 协程要解决的问题。</strong></p>
+<h3 id="1-2-4-复杂分支"><a href="#1-2-4-复杂分支" class="headerlink" title="1.2.4 复杂分支"></a>1.2.4 复杂分支</h3><p>为同步操作添加分支甚至循环操作是很容易的，比如获取图片是同步的情况下，获取多个图片：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">val bitmap = urls.map { syncBitmap(it) }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在上述情况下我们甚至还能方便地通过一个 try-catch 捕捉所有异常。而当获取图片的操作是异步的情况时，就变得复杂，还需要用到一些同步工具来辅助：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">val countDownLatch = CountDownLatch(urls.size)</span><br><span class="line"></span><br><span class="line">val map = urls.map { it to EMPTY_BITMAP }</span><br><span class="line">    .toMap(ConcurrentHashMap&lt;String, Bitmap&gt;())</span><br><span class="line"></span><br><span class="line">urls.map { url -&gt;</span><br><span class="line">    asyncBitmap(url, onSuccess = {</span><br><span class="line">        map[url] = it</span><br><span class="line">        countDownLatch.countDown() <span class="comment">//...②</span></span><br><span class="line">    }, onError = {</span><br><span class="line">        showError(it)</span><br><span class="line">        countDownLatch.countDown()<span class="comment">//...③</span></span><br><span class="line">    })</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">countDownLatch.await() <span class="comment">//...①</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//获取所有的图片 bitmap</span></span><br><span class="line">val bitmaps = map.values</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里还需要借助 <strong>CountDownLatch 门闩</strong> 来实现，因此在 ① 处会阻塞当前线程，直到所有回调的 ② 或 ③ 位置执行之后，才会执行获取所有图片的操作：val bitmaps = map.values ，总之，这个过程还是挺复杂的。</p>
+<blockquote>
+<p>EMPTY_BITMAP 是一个空的 Bitmap 对象，为什么要这么做呢？<strong>因为 ConcurrentHashMap 不允许 value 为空！</strong></p>
+</blockquote>
+<h2 id="1-3-常见异步程序设计思路"><a href="#1-3-常见异步程序设计思路" class="headerlink" title="1.3 常见异步程序设计思路"></a>1.3 常见异步程序设计思路</h2><h3 id="1-3-1-Future"><a href="#1-3-1-Future" class="headerlink" title="1.3.1 Future"></a>1.3.1 Future</h3><p>但是 Future.get() 方法会造成当前调用阻塞。</p>
+<h3 id="1-3-2-CompletableFuture"><a href="#1-3-2-CompletableFuture" class="headerlink" title="1.3.2 CompletableFuture"></a>1.3.2 CompletableFuture</h3><p>它的 get() 方法无需阻塞，异步调用不阻塞主流程调用但是结果脱离了主调用流程（需要回调获取）</p>
+<h3 id="1-3-3-JavaScript-的-Promise——async-await"><a href="#1-3-3-JavaScript-的-Promise——async-await" class="headerlink" title="1.3.3 JavaScript 的 Promise——async/await"></a>1.3.3 JavaScript 的 Promise——async/await</h3><p>比较完好地实现了需求，他们 async/await 的语义稍微不同。</p>
+<h3 id="1-3-5-Kotlin协程"><a href="#1-3-5-Kotlin协程" class="headerlink" title="1.3.5 Kotlin协程"></a>1.3.5 Kotlin协程</h3><p>Kotlin 协程是为异步程序设计而生的。</p>
+<blockquote>
+<p>有人称协程只是“一个线程框架”，认为协程就是用来切换线程的，显然有点“一叶障目不见泰山”了</p>
+</blockquote>
+<p>Kotlin 协程用一个 suspend 关键字，包含了<strong>异步调用</strong> 和 <strong>回调</strong> 两层含义。我们知道，所有异步回调对于当前调用流程只是一个<strong>挂起点</strong>。在这个挂起点可以做的事情非常多：既可以做异步回调，还可以添加调度器来处理线程切换，还可以作为协程取消响应的位置。</p>
+<p>看一个 Kotlin 处理异步调用的例子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">suspend fun <span class="title">bitmapSuspendable</span><span class="params">(url: String)</span>: Bitmap </span>=</span><br><span class="line">    suspendCoroutine&lt;Bitmap&gt; { continuation -&gt;</span><br><span class="line">        thread {</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                continuation.resume(download(url))</span><br><span class="line">            } <span class="keyword">catch</span> (e: Exception) {</span><br><span class="line">                continuation.resumeWithException(e)</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>suspend 修饰函数，意味着支持同步化的异步调用。上述代码中，</p>
+<ul>
+<li><p>continuation.resume(download(url)) 将正常的结果返回</p>
+</li>
+<li><p>continuation.resumeWithException(e) 则是将异常返回，在调用 bitmapSuspendable() 方法时，如果产生异常会把这个异常抛出</p>
+</li>
+</ul>
+<p>效果如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">suspend fun <span class="title">main</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        val bitmap = bitmapSuspendable(<span class="string">"xxxx"</span>)</span><br><span class="line">        <span class="comment">//todo 正常图片处理</span></span><br><span class="line">    } <span class="keyword">catch</span> (e: Exception) {</span><br><span class="line">        <span class="comment">//todo 异常处理</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<blockquote>
+<p>从 1.3.0 开始，开始支持 suspend fun main 作为函数入口了</p>
+</blockquote>
 </body></html>
       
     </div>
@@ -1308,517 +1687,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/14/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC1%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/14/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章：多线程原理与实战</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2023-02-14 15:10:00 / 修改时间：21:52:21" itemprop="dateCreated datePublished" datetime="2023-02-14T15:10:00+08:00">2023-02-14</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="进程和线程"><a href="#进程和线程" class="headerlink" title="进程和线程"></a>进程和线程</h2><p>进程是操作系统资源分配的最小单位，线程是 CPU 调度的最小单位。</p>
-<p>一个标准的线程主要由<strong>3部分构成：线程描述信息(线程ID、线程名称、线程状态、线程优先级、其他)、程序计数器 和 栈内存。</strong>其中，程序计数器它记录着线程下一条指令的代码段内存地址；每个线程在创建的时候默认被分配 1M 大小的栈内存大小，<strong>和堆内存不同，栈内存不受垃圾回收器管理</strong>。</p>
-<p>当线程执行流程进入方法时，JVM 就会为方法分配一个对应的栈帧压入栈内存；当线程流程跳出方法时，JVM 就从栈内存弹出该方法的栈帧，此时方法帧的局部变量的内存空间就会被回收。</p>
-<h2 id="创建线程的4种方法"><a href="#创建线程的4种方法" class="headerlink" title="创建线程的4种方法"></a>创建线程的4种方法</h2><p>Thread 类中有个属性， private boolean deamon = false; 该属性保存 Thread 线程实例的守护状态，默认为false ，表示普通用户线程，而不是<strong>守护线程。</strong> 守护线程是在进程运行提供某种后台服务的线程，比如GC 线程。</p>
-<ul>
-<li><p>继承Thead 类创建线程类（Thread 本身就实现了 Runnable ）</p>
-</li>
-<li><p>实现 Runnable 接口创建线程目标类(传入 Thread 中时，Thread将其以 target 字段保存)</p>
-</li>
-<li><p>使用 Callable 和 FutureTask 创建线程</p>
-</li>
-<li><p>通过线程池创建</p>
-</li>
-</ul>
-<p>前面2种创建方法有一个共同的缺陷：不能获取异步执行的结果。在此基础上，才有了使用 Callable 和 FutureTask 创建线程的方法。</p>
-<h4 id="Callable-接口"><a href="#Callable-接口" class="headerlink" title="Callable 接口"></a>Callable 接口</h4><p>Callable 是个泛型接口，它的源码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Callable</span>&lt;<span class="title">V</span>&gt; </span>{</span><br><span class="line">    <span class="function">V <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>Callable 接口类似与 Runnable ，不同的是 Runnable 的run 方法没有返回值，也没有接收异常的异常声明，因此，感觉 Callable 更强大一些，只是 Callable 暂时还没能和 Thread 产生关系。不过，一个在 Callable 接口与 Thread 线程之间搭桥的重要接口 RunnableFuture 接口就要登场了。 </p>
-<h4 id="RunnableFuture-接口"><a href="#RunnableFuture-接口" class="headerlink" title="RunnableFuture 接口"></a>RunnableFuture 接口</h4><p>RunnableFuture 接口与 Runnable 接口、Thread 类紧密相关，源码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">RunnableFuture</span>&lt;<span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">Runnable</span>, <span class="title">Future</span>&lt;<span class="title">V</span>&gt; </span>{</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以看出，它继承了 Runnable 接口，从而可以作为 Thread 的 target ，同时还继承了 Future 接口，保证了可以获取未来的异步执行结果。</p>
-<h4 id="Future-接口"><a href="#Future-接口" class="headerlink" title="Future 接口"></a>Future 接口</h4><p>Future 接口至少提供了三大功能：</p>
-<ul>
-<li><p>能够取消异步执行中的任务</p>
-</li>
-<li><p>判断异步任务是否执行完成</p>
-</li>
-<li><p>获取有任务完成后的执行结果</p>
-</li>
-</ul>
-<p>它的源码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Future</span>&lt;<span class="title">V</span>&gt; </span>{</span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">isCancelled</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">isDone</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function">V <span class="title">get</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function">V <span class="title">get</span><span class="params">(<span class="keyword">long</span> timeout, TimeUnit unit)</span> <span class="keyword">throws</span> InterruptedException</span></span><br><span class="line"><span class="function">}</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>虽然它提供了这么多功能，但它终归只是个接口，通过它没法直接完成对异步任务的操作，为此，JDK 提供了一个默认实现类： FutureTask 。</p>
-<h4 id="FutureTask-类"><a href="#FutureTask-类" class="headerlink" title="FutureTask 类"></a>FutureTask 类</h4><p>FutureTask类实现了RunnableFuture接口，相当于既实现了 Runnable 接口，又实现了 Future 接口。所以FutureTask既能作为一个 Runnable 类型的 target 被Thread执行，又能作为Future异步任务来获取Callable的计算结果。</p>
-<h4 id="使用Callable和FutureTask创建线程的步骤"><a href="#使用Callable和FutureTask创建线程的步骤" class="headerlink" title="使用Callable和FutureTask创建线程的步骤"></a>使用Callable和FutureTask创建线程的步骤</h4><figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span> <span class="keyword">throws</span> InterruptedException, ExecutionException </span>{</span><br><span class="line">    FutureTask&lt;Long&gt; futureTask = <span class="keyword">new</span> FutureTask&lt;Long&gt;(<span class="keyword">new</span> Callable&lt;Long&gt;() {</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Long <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">            <span class="keyword">long</span> startTime = System.currentTimeMillis();</span><br><span class="line">            Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">            <span class="keyword">return</span> System.currentTimeMillis() - startTime;</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">    Thread thread = <span class="keyword">new</span> Thread(futureTask, <span class="string">"returnableThread"</span>);</span><br><span class="line">    thread.start();</span><br><span class="line"></span><br><span class="line">    System.out.println(thread.getName() + <span class="string">"线程占用时间："</span> + futureTask.get());</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>returnableThread线程首先执行 thread.run() 方法，然后在其中执行其target（futureTask任务）的run()方法；接着在futureTask.run()方法中会执行 callable 成员的 call()方法。Callable的call()方法执行完成后，会将结果保存在FutureTask内部的outcome实例属性中。这里有两种情况：</p>
-<ul>
-<li><p>futureTask的结果outcome不为空，callable.call()执行完成，futureTast.get会直接取回outcome结果返回给结果获取线程。</p>
-</li>
-<li><p>futureTask的结果outcome为空，callable.call()还没有执行完。则结果获取线程会被<strong>阻塞</strong>住直到callable.call()执行完成。当执行完后，最终结果会保存到outcome中，futureTask会唤醒结果获取线程。</p>
-</li>
-</ul>
-<h2 id="1-4-线程的核心原理"><a href="#1-4-线程的核心原理" class="headerlink" title="1.4 线程的核心原理"></a>1.4 线程的核心原理</h2><h3 id="1-4-1-线程的调度与时间片"><a href="#1-4-1-线程的调度与时间片" class="headerlink" title="1.4.1 线程的调度与时间片"></a>1.4.1 线程的调度与时间片</h3><p>在不同的操作系统、不同的CPU上，线程的 CPU 时间片长度都不同，windows xp 的时间片长度为 20 毫秒，线程调度模型主要分为 2 种：</p>
-<ul>
-<li><p>分时调度。系统平均分配 CPU 的时间片，人人平等</p>
-</li>
-<li><p>抢占式调度。按照线程的优先级分配时间片，如果大家优先级都相同，就随机选择一个，目前大部分操作系统选择的是这种调度方式</p>
-</li>
-</ul>
-<h3 id="1-4-2-线程优先级"><a href="#1-4-2-线程优先级" class="headerlink" title="1.4.2 线程优先级"></a>1.4.2 线程优先级</h3><p>对于优先级，有以下结论：</p>
-<ul>
-<li><p>整体而言，高优先级的线程获得的执行机会更多</p>
-</li>
-<li><p>执行机会的获取具有随机性，优先级高的不一定获得机会多（文中的例子10级的优先级比9级的优先级获得的机会还少，个人认为可能的一个因素是：Java的线程映射到系统线程时，10级与 9 级并没有区分）</p>
-</li>
-</ul>
-<h3 id="1-4-3-线程的生命周期"><a href="#1-4-3-线程的生命周期" class="headerlink" title="1.4.3 线程的生命周期"></a>1.4.3 线程的生命周期</h3><p>Java 的线程有6种状态：</p>
-<ul>
-<li><p>NEW： 新建，创建成功，但是没有调用 start() 方法</p>
-</li>
-<li><p>RUNNABLE：可执行，包含操作系统的就绪、运行2种状态</p>
-</li>
-<li><p>BLOCKED：阻塞</p>
-</li>
-<li><p>WAITTING：等待</p>
-</li>
-<li><p>TIMED_WAITTING：限时等待，包括Thread.sleep(n)、Object.wait(n)、Thread.join(n)、LockSupport.parkNanos(n)、LockSupport.parkUntil(n) 等</p>
-</li>
-<li><p>TERMINATED：终止。线程的 run 方法执行完毕（或者执行run方法被异常终止）</p>
-</li>
-</ul>
-<h3 id="1-4-5-使用-Jstack-工具查看线程状态"><a href="#1-4-5-使用-Jstack-工具查看线程状态" class="headerlink" title="1.4.5 使用 Jstack 工具查看线程状态"></a>1.4.5 使用 Jstack 工具查看线程状态</h3><p>Jstack 是Java 虚拟机自带的 <strong>堆栈跟踪工具</strong>，用于生成或者导出（Dump）JVM 运行实例当前时刻的线程快照。命令的语法格式如下：</p>
-<blockquote>
-<p>jstack <pid>   //pid表示 Java 进程的 id，可以用 jps 命令查看</pid></p>
-</blockquote>
-<h2 id="1-5-线程的基本操作"><a href="#1-5-线程的基本操作" class="headerlink" title="1.5 线程的基本操作"></a>1.5 线程的基本操作</h2><h3 id="1-5-2-线程的sleep-操作"><a href="#1-5-2-线程的sleep-操作" class="headerlink" title="1.5.2 线程的sleep 操作"></a>1.5.2 线程的sleep 操作</h3><p>sleep 的作用是让线程休眠，让 CPU 执行其他的任务，从状态来讲就是<strong>从执行状态变成限时阻塞状态</strong>。当睡眠时间满后，线程不一定立即得到执行，因为此时CPU可能正在执行其他任务，所以还需要等待分配时间片。</p>
-<h3 id="1-5-3-线程的-interrupt-操作"><a href="#1-5-3-线程的-interrupt-操作" class="headerlink" title="1.5.3 线程的 interrupt 操作"></a>1.5.3 线程的 interrupt 操作</h3><p>Java 语言提供了 stop()  方法终止正在运行的方法，但后来不建议使用了，因为这像突然关闭计算机电源一样，无法知道这个线程在处于什么状态，它可能持有某把锁，强行停止可能会导致锁无法释放；或者可能正在操作数据库，强行停止导致数据不一致。</p>
-<p>一个线程什么时候可以退出只有线程自己直到，所以，<strong>这里介绍的 interrupt 方法本质不是用来中断一个线程，而是将线程设置为中断状态。</strong>当我们调用线程的 interrupt 方法时，它有2个作用：</p>
-<ul>
-<li><p>如果此线程处于阻塞状态，就会立马退出阻塞，并抛出 InterruptedException 异常，线程可以通过捕获 InterruptedException 异常来做一定处理，从而提早终结被阻塞状态。</p>
-</li>
-<li><p>如果线程正在运行，就不受任何影响，仅仅只是中断标记被置为 true 了。</p>
-</li>
-</ul>
-<blockquote>
-<p>如果 interrupt()方法先被调用，然后线程开始调用阻塞方</p>
-<p>法进入阻塞状态，InterruptedException异常依旧会抛出；如果线程</p>
-<p>捕获InterruptedException异常后，继续调用阻塞方法，将不再触发</p>
-<p>InterruptedException异常。</p>
-</blockquote>
-<h3 id="1-5-4-线程的join操作"><a href="#1-5-4-线程的join操作" class="headerlink" title="1.5.4 线程的join操作"></a>1.5.4 线程的join操作</h3><p>也就是线程的合并操作，可以用一个例子来说明： 假设线程 A 和 B，现在 A 执行过程中对 B 的执行有依赖：A 需要将 B 的执行流程合并到自己执行的流程中，这就是线程合并，伪代码大概如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ThreadA</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        Thread threadb = <span class="keyword">new</span> Thread(<span class="string">"thread-b"</span>);</span><br><span class="line">        threadb.join();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码中，执行 threadb.join() 这行代码的当前线程为合并线程（线程 A）会进入 TIMED_WAITING 等待状态，让出 CPU。所以上述过程应该是<strong>等 B线程执行完成之后，A 线程再继续执行</strong></p>
-<h3 id="1-5-5-线程的-yield-操作"><a href="#1-5-5-线程的-yield-操作" class="headerlink" title="1.5.5 线程的 yield 操作"></a>1.5.5 线程的 yield 操作</h3><p>线程的 yield（让步）操作的作用是让目前正在执行的线程放弃当前的执行，让出 CPU执行权限，之后变为 RUNNABLE 状态，从操作系统层面来讲就是进入了就绪状态（而不是阻塞）。在线程 yield 时，线程放弃和重占 CPU 的时间是不确定的，可能刚放弃了 CPU ，马上又获得了 CPU 的执行权限，接着开始执行了。</p>
-<h3 id="1-5-6-线程的daemon操作"><a href="#1-5-6-线程的daemon操作" class="headerlink" title="1.5.6 线程的daemon操作"></a>1.5.6 线程的daemon操作</h3><p>守护线程也称为后台线程，专门指在程序进程运行过程中，在后台提供某种通用服务的线程。比如，每启动一个JVM进程，都会在后台运行一系列的 GC 线程，这些 GC 线程就是守护线程。</p>
-<p>只要 JVM 中尚存任何一个用户线程没有结束，守护线程就能执行自己的工作，只有当最后一个用户线程结束，守护线程随同 JVM 一同结束工作。</p>
-<h4 id="守护线程的要点"><a href="#守护线程的要点" class="headerlink" title="守护线程的要点"></a>守护线程的要点</h4><p>使用守护线程时，有几点需要特别注意：</p>
-<ul>
-<li><p>线程必须在start() 方法调用前设置其为守护线程(即调用setDaemon(true)方法) ，否则会抛出 InterruptedException异常</p>
-</li>
-<li><p>在守护线程中创建的线程，新的线程都是守护线程。如果要创建用户线程，需要显式调用 setDaemon(false)</p>
-</li>
-</ul>
-<h2 id="1-6-线程池原理与实战"><a href="#1-6-线程池原理与实战" class="headerlink" title="1.6 线程池原理与实战"></a>1.6 线程池原理与实战</h2><p>Java 线程的创建非常昂贵，需要 JVM 和 OS 配合完成大量工作：</p>
-<ul>
-<li>为线程堆栈分配大量内存快，包括至少 1M 的栈内存</li>
-<li>需要进行系统调用，以便在OS中创建和注册本地线程</li>
-</ul>
-<p>而线程池的出现主要解决了以下问题：</p>
-<ul>
-<li><p>提升性能：最大限度地复用已经创建的线程，避免创建和销毁，提升性能</p>
-</li>
-<li><p>线程管理：线程池可以保持对线程的统计信息，例如完成任务数量、空闲时间等，能对异步任务进行高效调度（<strong>我个人觉得还有可能根据cpu的核心数之类的确定线程数量</strong>）。</p>
-</li>
-</ul>
-<h3 id="1-6-1-JUC-的线程池架构"><a href="#1-6-1-JUC-的线程池架构" class="headerlink" title="1.6.1 JUC 的线程池架构"></a>1.6.1 JUC 的线程池架构</h3><p>JUC 是 java.util.concrrent 工具包的简称，是用于完成高并发、处理多线程的一个工具包。其中的线程池类与接口的架构图大致如下：</p>
-<p><img src="/assets/Book-Notes/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E5%8D%B72/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E5%8D%B72-%E7%AC%AC1%E7%AB%A0-JUC%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%9E%B6%E6%9E%84%E5%9B%BE.jpg" alt="线程池类与接口的架构图"></p>
-<h3 id="1-6-2-Executors-的4种快捷创建线程池的方法"><a href="#1-6-2-Executors-的4种快捷创建线程池的方法" class="headerlink" title="1.6.2 Executors 的4种快捷创建线程池的方法"></a>1.6.2 Executors 的4种快捷创建线程池的方法</h3><p>Java 通过 Excutors 工厂类提供了4种快捷创建线程池的方法，如下表所示：</p>
-<table>
-<thead>
-<tr>
-<th>方法名</th>
-<th>功能简介</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>newSingleThreadExcutor</td>
-<td>创建只有一个线程的线程池</td>
-</tr>
-<tr>
-<td>newFixedThreadPool</td>
-<td>创建固定大小的线程池</td>
-</tr>
-<tr>
-<td>newCachedThreadPool</td>
-<td>创建一个不限制线程数量的线程池，任何提交的任务都立即执行，但是空闲线程会得到及时回收</td>
-</tr>
-<tr>
-<td>newScheduledThreadPool</td>
-<td>创建一个可定期或者延时执行的任务的线程池</td>
-</tr>
-</tbody></table>
-<p>总的来说，newSingleThreadExcutor 线程池有以下特点：</p>
-<ul>
-<li><p>线程池中的任务是按照提交的顺序执行的</p>
-</li>
-<li><p>池中的唯一线程的存活时间是无限的</p>
-</li>
-<li><p>当池中唯一线程繁忙时，<strong>新提交的任务会进入内部的阻塞队列，这个队列是无界队列</strong></p>
-</li>
-</ul>
-<p>线程池使用完后，要调用 shutDown 来关闭线程池，此时线程池将变为 SHUTDOWN 状态，将拒绝新任务，添加新任务会抛出 RejectedExecutionException 异常，此时，线程池不会立刻退出，直到线程池中的任务都执行完成。还有另一个方法 shutdownNow ，执行之后线程状态会立刻变成 STOP ，并且不再处理了还在阻塞队列中等待的任务，会返回哪些未执行的任务。</p>
-<p>newFixedThreadPool用于创建一个“固定数量的线程池”，它的特点如下：</p>
-<ul>
-<li>提交任务时，如果显成熟没有达到固定数量，线程池内就会创建一个新线程，直到达到固定数量</li>
-<li>提交新任务时，如果所有的线程都在繁忙，则新任务会进入阻塞队列，该队列是<strong>无界的阻塞队列</strong></li>
-</ul>
-<p>“固定数量的线程池”适合场景： 需要任务长期执行的场景，比如处理CPU密集型任务。线程数能够比较稳定地维持在某个数量，避免频繁回收和创建线程。</p>
-<p>newCachedThreadPool 创建“可缓存线程池”，如果线程池内某些线程成为空闲线程，“可缓存线程池”能灵活回收这些线程。它的特点大致如下：</p>
-<ul>
-<li>接收新任务时，如果池内所有线程繁忙，则添加新线程来处理</li>
-<li>对线程池大小没有限制，完全依赖于JVM能够创建的最大线程大小</li>
-<li>如果线程空闲（60s不执行任务），就会回收</li>
-</ul>
-<p>它的适合场景：需要快速处理突发性强，耗时短的任务场景，如 Netty 的 NIO 处理场景、REST API 接口瞬时削峰场景。</p>
-<p>newScheduledThreadPool 创建“可调度线程池”，它提供一个“延时”和“周期性”任务调度功能的ScheduledExecutorService类型的线程池。使用方法如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(<span class="number">2</span>);</span><br><span class="line"><span class="comment">// 参数中：0表示首次执行任务的延迟时间，500表示每次执行任务的间隔时间</span></span><br><span class="line">scheduled.scheduleAtFixedRate(<span class="keyword">new</span> TargetTask(), <span class="number">0</span>, <span class="number">500</span>, TimeUnit.MILLISECONDS);</span><br></pre></td></tr></tbody></table></figure>
-
-<p>“可调度线程池”的适用场景：周期性地执行任务的场景。</p>
-<h3 id="1-6-3-线程池的标准创建方式"><a href="#1-6-3-线程池的标准创建方式" class="headerlink" title="1.6.3 线程池的标准创建方式"></a>1.6.3 线程池的标准创建方式</h3><p>大部分企业的开发规范会禁止时候用上述Java 提供的4种创建线程池的方式。，要求通过标准创建方式自行创建。标准创建的一个构造方法如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 使用标准构造器构造一个普通的线程池</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolExecutor</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function"> <span class="keyword">int</span> corePoolSize, // 核心线程数，即使线程空闲（Idle），也不会回收</span></span></span><br><span class="line"><span class="params"><span class="function"> <span class="keyword">int</span> maximumPoolSize, // 线程数的上限</span></span></span><br><span class="line"><span class="params"><span class="function"> <span class="keyword">long</span> keepAliveTime, TimeUnit unit, // 线程最大空闲（Idle）时长</span></span></span><br><span class="line"><span class="params"><span class="function"> BlockingQueue&lt;Runnable&gt; workQueue, // 任务的排队队列</span></span></span><br><span class="line"><span class="params"><span class="function"> ThreadFactory threadFactory, // 新线程的产生方式</span></span></span><br><span class="line"><span class="params"><span class="function"> RejectedExecutionHandler handler)</span> <span class="comment">// 拒绝策略</span></span></span><br></pre></td></tr></tbody></table></figure>
-
-<h5 id="corePoolSize-与-maximumPoolSize"><a href="#corePoolSize-与-maximumPoolSize" class="headerlink" title="corePoolSize 与 maximumPoolSize"></a>corePoolSize 与 maximumPoolSize</h5><p>corePoolSize 与 maximumPoolSize 自动维护线程池中的工作线程，规则如下：</p>
-<ul>
-<li>收到新任务，并且当前线程数少于 corePoolSize，即使其他线程处于空闲状态，也会创建新线程来处理该请求</li>
-<li>核心线程不会被回收，但是如果设置了 allowCoreThreadTimeOut 的话，则会例外，这时候是可以被回收的</li>
-<li>如果当前线程数大于 corePoolSize ，但是小于 maximumPoolSize ，那么仅当任务排队队列已满才会创建新线程。</li>
-<li>当 maximumPoolSize 被设置为无界值（如Integer.MAX_VALUE，因为这是int的最大值了）时，线程池可以接受任意数量的并发任务</li>
-<li>corePoolSize 与 maximumPoolSize 的值可以动态更改</li>
-</ul>
-<blockquote>
-<p>根据上述规则可知，<strong>给 corePoolSize 和 maximumPoolSize 设置相同的值可以创建一个固定大小的线程池。</strong></p>
-</blockquote>
-<h5 id="BlockingQueue"><a href="#BlockingQueue" class="headerlink" title="BlockingQueue"></a>BlockingQueue</h5><p>BlockingQueue 也就是阻塞队列，如果线程池的核心线程都在忙，则收到的任务都缓存在阻塞队列中</p>
-<h5 id="keepAliveTime"><a href="#keepAliveTime" class="headerlink" title="keepAliveTime"></a>keepAliveTime</h5><p>用于设置线程的最大 Idle 市场，如果非 Core 线程（默认情况下只针对非Core线程，但如果allowCoreThreadTimeOut 设置为true，则也会应用于Core线程）空闲超过这个时常，就会被回收。<strong>如果要防止 Idle 线程被回收，可以将 keepAliveTime 设置为 Long.MAX_VALUE</strong>。当然，这个值也是能动态调整的。</p>
-<h3 id="1-6-4-向线程池提交任务的2种方式"><a href="#1-6-4-向线程池提交任务的2种方式" class="headerlink" title="1.6.4 向线程池提交任务的2种方式"></a>1.6.4 向线程池提交任务的2种方式</h3><p>有 submit 和 execute 两种方式，这二者的区别：</p>
-<ul>
-<li>submit 有返回值 Future ，execute 没有</li>
-<li>由于 submit 有返回值Future ，所以可以方便对当前任务处理 Exception</li>
-<li>入参不同，submit 可以接收 Callable、Runnable 两种，execute 只能接收 Runnable</li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//submit 结果获取和异常处理</span></span><br><span class="line"><span class="keyword">try</span>{</span><br><span class="line">    Future&lt;Integer&gt; future = pool.submit(callable);</span><br><span class="line">    Interger result = future.get();</span><br><span class="line">} <span class="keyword">catch</span>(Exception e) {</span><br><span class="line">    e.printStack();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="1-6-5-线程池任务调度流程"><a href="#1-6-5-线程池任务调度流程" class="headerlink" title="1.6.5 线程池任务调度流程"></a>1.6.5 线程池任务调度流程</h3><p>任务调度流程大致如下：</p>
-<ol>
-<li>接收任务时，如果当前线程数量小于核心线程数，则创建线程（哪怕其他线程空闲），然后执行任务</li>
-<li>如果线程池中的线程大于核心线程数量，新任务将被加入阻塞队列，直到阻塞队列满了</li>
-<li>完成一个任务后，优先从阻塞队列中获取下一个任务，直到阻塞队列为空</li>
-<li>当核心线程繁忙，并且阻塞队列也已经满了，如果再接收到新任务，将会为新任务创建一个（非核心）线程，并立即开始执行<strong>新任务</strong>。</li>
-<li>当核心线程繁忙，阻塞队列满的情况下，来新任务会一直创建线程，当线程总数超过 maximumPoolSize 时就会执行拒绝策略。</li>
-</ol>
-<h3 id="1-6-6-ThreadFactory-（线程工厂）"><a href="#1-6-6-ThreadFactory-（线程工厂）" class="headerlink" title="1.6.6 ThreadFactory （线程工厂）"></a>1.6.6 ThreadFactory （线程工厂）</h3><p>略</p>
-<h3 id="1-6-7-BlockingQueue（任务阻塞队列）"><a href="#1-6-7-BlockingQueue（任务阻塞队列）" class="headerlink" title="1.6.7 BlockingQueue（任务阻塞队列）"></a>1.6.7 BlockingQueue（任务阻塞队列）</h3><p>阻塞队列与普通队列相比有一个重要的特点: <strong>一个线程从一个空的阻塞队列获取元素时会被阻塞(怎么实现的？)，直到队列中有了元素；当队列中有了元素，被阻塞的线程会被自动唤醒。</strong>比较常用的实现类有以下几种：</p>
-<ul>
-<li>ArrayBlockingQueue：数组实现的<strong>有界阻塞队列</strong>，队列中元素按照 FIFO 排序。</li>
-<li>LinkedBlockingQueue：基于链表实现的阻塞队列，按照 FIFO 排序，<strong>可以设置容量(有界队列)，不设置容量则默认使用 Integer.Max_VALUE 作为容量（即无界队列）</strong>。</li>
-<li>PriorityBlockingQueue： 具有优先级的<strong>无界队列</strong></li>
-<li>DelayQueue：<strong>无界阻塞延迟队列</strong>，底层基于 PriorityBlockingQueue，队列中每个元素都有过期时间，当从队列获取元素时，<strong>只有已经过期的元素才会出队，队列头部是做早过期的元素</strong></li>
-<li>SynchronousQueue ：同步队列，不存储元素的阻塞队列，<strong>每个插入操作必须等到另一个线程的调用移除操作，否则插入一直处于阻塞状态。</strong></li>
-</ul>
-<blockquote>
-<p>Excutors.newScheduledThreadPool所创建的线程池就是使用 DelayQueue<br>而，Executors.newCachedThreadPool 所创建的线程池使用的是 SynchronousQueue</p>
-</blockquote>
-<h3 id="1-6-8-调度器钩子方法"><a href="#1-6-8-调度器钩子方法" class="headerlink" title="1.6.8 调度器钩子方法"></a>1.6.8 调度器钩子方法</h3><ul>
-<li>beforeExecute： 执行目标实例前在工作线程异步执行该方法</li>
-<li>afterExecute： 执行目标实例后在工作线程异步执行该方法</li>
-<li>terminated： 线程池终止时的钩子方法</li>
-</ul>
-<h3 id="1-6-9-线程池的拒绝策略"><a href="#1-6-9-线程池的拒绝策略" class="headerlink" title="1.6.9 线程池的拒绝策略"></a>1.6.9 线程池的拒绝策略</h3><p>当出现如下情况时，新提交的任务会被拒绝：</p>
-<ol>
-<li>线程池已经被关闭</li>
-<li>所有线程繁忙，并且线程数已经达到了 maximunPoolSize</li>
-</ol>
-<p>当拒绝的时候，会调用 RejectedExecutionHandler 实例的 rejectedExecution 方法，JUC 提供了以下几种实现：</p>
-<ul>
-<li>AbortPolicy ： 新任务丢掉同时抛出 RejectedExecutionException 异常，这是线程池默认策略</li>
-<li>DiscardPolicy： 新任务直接丢掉，并且不会抛出异常</li>
-<li>DiscardOldestPolicy： 抛弃最早的任务，然后让新任务入队</li>
-<li>CallerRunsPolicy： 调用者执行策略，提交任务线程会自己执行该任务</li>
-<li>自定义策略</li>
-</ul>
-<h3 id="1-6-10-线程池的优雅关闭"><a href="#1-6-10-线程池的优雅关闭" class="headerlink" title="1.6.10 线程池的优雅关闭"></a>1.6.10 线程池的优雅关闭</h3><p>优雅地关闭线程池主要涉及的方法有 3 个：</p>
-<ul>
-<li>shutDown： 这是有序关闭线程池的方法，调用之后当前线程会立即返回，不会等待线程池关闭完成。<strong>会等待当前工作队列中剩余的任务全部执行完毕，才关闭线程池</strong>。只要调用了这个方法，线程池会转为 SHUTDOWN 状态，不会再接收任务</li>
-<li>shutDownNow ：立即关闭线程池，调用之后当前线程会立即返回，不会等待线程池关闭完成。</li>
-<li>awaitTermination： shutDown与shutDownNow调用后会立即返回，不管线程池的关闭。而这个方法就是用于等待线程池完成关闭。</li>
-</ul>
-<p>优雅关闭线程池的方法：</p>
-<ol>
-<li>调用 shutDown 方法，拒绝新任务提交</li>
-<li>调用 awaitTermination(long timeOut) 指定超时时间，判断是否已经关闭</li>
-<li>如果 awaitTermination 超时，就可以进入循环关闭，循环一定次数(比如1000次)，不断关闭线程池，直到关闭或者结束</li>
-<li>如果 awaitTermination 返回false 或者 被中断，调用 shutDownNow 立即关闭</li>
-</ol>
-<h3 id="1-6-11-Executors-快捷创建线程池的潜在问题-系统默认提供的4种方法"><a href="#1-6-11-Executors-快捷创建线程池的潜在问题-系统默认提供的4种方法" class="headerlink" title="1.6.11 Executors 快捷创建线程池的潜在问题(系统默认提供的4种方法)"></a>1.6.11 Executors 快捷创建线程池的潜在问题(系统默认提供的4种方法)</h3><ul>
-<li>newFixedThreadPool创建的固定大小线程池：它的阻塞队列是 LinkedBlockingQueue 类型的无界队列，可能导致大量的任务等待，队列太大还可能导致 OOM </li>
-<li>单线程的线程池也是无界队列，可能导致OOM</li>
-<li>newCachedThreadPool 创建可缓存线程池：因为核心线程数 0 ，最大线程数为 Integer.MAX_VALUE，阻塞队列为 SynchronousQueue<runnable> 同步队列，不缓存任务，所以理论上任务数量不受限制，相当于来一个任务首先寻找可用线程，没有的话，就创建一个新的。会导致创建的线程过多，可能造成 OOM ，甚至把 CPU资源耗尽</runnable></li>
-<li>newScheduledThreadPool 创建可调度线程池，其最大问题是线程数量不设上限，可能导致CPU资源耗尽</li>
-</ul>
-<h2 id="1-7-确定线程池的线程数"><a href="#1-7-确定线程池的线程数" class="headerlink" title="1.7 确定线程池的线程数"></a>1.7 确定线程池的线程数</h2><h3 id="1-7-1-按照任务类型分类"><a href="#1-7-1-按照任务类型分类" class="headerlink" title="1.7.1 按照任务类型分类"></a>1.7.1 按照任务类型分类</h3><ul>
-<li>IO 密集型： IO任务操作时间长，导致 CPU 利用率不高，常处于空闲状态。线程数确定：设置allowCoreThreadTimeOut为true、使用有界队列、corePollSize 和 maximunPoolSize 保持一致，使得接收新任务而没有空闲线程时，直接创建新线程执行，而不是在阻塞队列中等待。</li>
-<li>CPU 密集型： 主要是计算任务，CPU一直在运行，利用率很高。线程数确定：CPU密集型任务虽然可以并行完成，但是并行任务越多，花在任务切换的时间也越多，效率也就越低。<strong>CPU密集型任务并行执行的数量应当等于CPU的核心数</strong>。</li>
-<li>混合性任务：既要逻辑计算，又要IO。线程数确定：业界有一个公式</li>
-</ul>
-<h2 id="1-8-ThreadLocal-原理与实战"><a href="#1-8-ThreadLocal-原理与实战" class="headerlink" title="1.8 ThreadLocal 原理与实战"></a>1.8 ThreadLocal 原理与实战</h2><p>ThreadLoacal 的应用场景大致有 2 类：</p>
-<ul>
-<li>线程隔离</li>
-<li>跨函数传递数据</li>
-</ul>
-<p>原理：每一个线程在获取本地值时，都会将 ThreadLocal 实例作为 Key 从自己拥有的 ThreadLocalMap 中获取值，别的线程无法访问自己的 ThreadLocalMap ，自己也无法访问别人的。并且，由于 ThreadLocalMap 是线程私有的，当线程销毁时 ThreadLocalMap 也随之销毁，在一定程度上减少内存的消耗。</p>
-<h3 id="1-8-8-ThreadLocal-综合使用案例"><a href="#1-8-8-ThreadLocal-综合使用案例" class="headerlink" title="1.8.8 ThreadLocal 综合使用案例"></a>1.8.8 ThreadLocal 综合使用案例</h3><p>ThreadLocal 使用不当会造成严重的内存泄露，为了避免这种情况，使用时应遵守以下原则：</p>
-<ul>
-<li>尽量使用 private static final 修饰ThreadLocal ，final为了避免他人修改、变更 ThreadLocal 变量的引用，使用static 为了确保全局唯一</li>
-<li>ThreadLocal 使用完后务必调用 remove 方法，这是简单有效避免引发内存泄露问题的方法</li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/06/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC6%E7%AB%A0-%E5%85%B6%E4%BB%96%E4%BC%98%E7%A7%80%E7%9A%84%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%96%B9%E6%A1%88/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/06/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC6%E7%AB%A0-%E5%85%B6%E4%BB%96%E4%BC%98%E7%A7%80%E7%9A%84%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%96%B9%E6%A1%88/" class="post-title-link" itemprop="url">第6章-其他优秀的热修复方案</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-02-06 18:30:00" itemprop="dateCreated datePublished" datetime="2023-02-06T18:30:00+08:00">2023-02-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-02-05 22:01:57" itemprop="dateModified" datetime="2023-02-05T22:01:57+08:00">2023-02-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="Dexposed浅析"><a href="#Dexposed浅析" class="headerlink" title="Dexposed浅析"></a>Dexposed浅析</h2><p>Dexposed 对于某个函数而言，有3个hook点可供选择：函数执行前注入（before），函数执行后注入（after），替换函数执行的代码段（replace），由此衍生了很多典型应用场景：</p>
-<ul>
-<li><p>AOP 编程</p>
-</li>
-<li><p>插桩（例如测试，性能监控等）</p>
-</li>
-<li><p>在线热更新</p>
-</li>
-<li><p>SDK hooking 以提供更好的开发体验</p>
-</li>
-</ul>
-<h3 id="AndFix"><a href="#AndFix" class="headerlink" title="AndFix"></a>AndFix</h3><p>略</p>
-<h3 id="腾讯系热修复方案简介"><a href="#腾讯系热修复方案简介" class="headerlink" title="腾讯系热修复方案简介"></a>腾讯系热修复方案简介</h3><p>略</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC5%E7%AB%A0-so%E5%BA%93%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC5%E7%AB%A0-so%E5%BA%93%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/" class="post-title-link" itemprop="url">第5章-so库热修复技术</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2023-02-05 21:30:00 / 修改时间：21:53:09" itemprop="dateCreated datePublished" datetime="2023-02-05T21:30:00+08:00">2023-02-05</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="so库加载原理"><a href="#so库加载原理" class="headerlink" title="so库加载原理"></a>so库加载原理</h2><p>Java API 提供 2 个接口加载一个 so 库：</p>
-<ul>
-<li><p>System.loadLibrary(String libName): 传进去 so 库名称，位于APK压缩文件的 libs 目录，最后复制到 APK 安装目录下</p>
-</li>
-<li><p>System.load(String pathName)：传进去的是so库在磁盘的完整路径，加载自定义的外部so</p>
-</li>
-</ul>
-<p>以上2中方式最后都调用到 nativeLoad 这个 Native 方法。</p>
-<p><strong>so 库实时生效方案，对于静态注册的 native 方法有一定的局限性，不能满足一般的通用性，所以放弃了 so 库实时生效需求，转而求其次，实现 so 库修复的冷部署重启生效方案。</strong></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/14/">14</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/15/">15</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1864,7 +1737,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">140</span>
+          <span class="site-state-item-count">142</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1950,7 +1823,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共303.1k字</span>
+  <span class="post-count">博客全站共304.1k字</span>
 </div>
 
 

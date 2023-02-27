@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">140</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">142</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,445 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/14/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/14/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E8%87%AA%E5%B7%B1%E7%9A%84%E6%80%BB%E7%BB%93/" class="post-title-link" itemprop="url">特别篇：自己的总结</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-14 19:46:00 / 修改时间：21:39:21" itemprop="dateCreated datePublished" datetime="2021-09-14T19:46:00+08:00">2021-09-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="识别插件的类"><a href="#识别插件的类" class="headerlink" title="识别插件的类"></a>识别插件的类</h2><p>方案：将所有的插件 dex 合并到 宿主中，具体步骤为：</p>
+<ol>
+<li><p>根据宿主的 ClassLoader，获取宿主的 dexElements 字段</p>
+<blockquote>
+<p>具体步骤为： 首先反射出 BaseDexClassLoader 的 pathList 字段，它是 DexPathList  类型的；第二步，反射出 DexPathList 的 dexElements 字段，他是个<strong>数组</strong>。</p>
+</blockquote>
+</li>
+<li><p>根据插件的 dexFile ，反射出一个 Element 类型对象，这就是插件 dex</p>
+</li>
+<li><p>把插件 dex 和 宿主 dexElements 合并成一个新的 dex 数组，替换宿主之前的 dexElements 字段</p>
+</li>
+</ol>
+<h2 id="欺骗系统"><a href="#欺骗系统" class="headerlink" title="欺骗系统"></a>欺骗系统</h2><p>启动时，其实是启动 PlaceHoldActivity ，将真正要启动的 TargetActivity 放在 Intent 的数据里面，主要步骤：</p>
+<p>1、Hook 到 ActivityManagerNative （它里面的gDefault，这个字段是个单例），把 TargetActivity 替换为 PlaceHoldActivity    </p>
+<p>2、Hook 到 H（Handler） 类的 mCallback 字段，将 PlaceHoldActivity 换成真正的 TargetActivity。或者，如果不想使用这种 Hook，可以在创建Activity （execStartActivity）对象的时候再替换回来</p>
+<h2 id="资源使用"><a href="#资源使用" class="headerlink" title="资源使用"></a>资源使用</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><ol>
+<li>通过反射，构建一个 AssetManager 对象 <font color="#CD6889">mAssetManager</font>，之后，反射调用 mAssetManager 的 addAssetPath 方法，将宿主和插件的 dexPath 全部添加进去，这样，这个新的 mAssetManager 拥有宿主以及插件中的所有的资源了。</li>
+<li>根据上述的 mAssetManager 构建处一个 Resources 对象 <font color="#CD6889">mResources</font></li>
+<li>使用 newTheme 创建一个 Theme 对象 <font color="#CD6889">mTheme</font></li>
+<li>在 Activity 中重写 getAssets()、getResources()、getTheme() 方法，分别返回上述的mAssetManager、mResources、mTheme</li>
+</ol>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> void loadResources(){</span><br><span class="line">    <span class="keyword">try</span>{</span><br><span class="line">        AssetManager assetManager= AssetManager.<span class="keyword">class</span>.newInstance();</span><br><span class="line">        Method addAssetPath = assetManager.getClass().getMethod(<span class="string">"addAssetPath"</span>,String.<span class="keyword">class</span>);</span><br><span class="line">        addAssetPath.invoke(assetManager, dexPath);</span><br><span class="line">        mAssetManager = assetManager;</span><br><span class="line">    }<span class="keyword">catch</span> (Exception e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">    Resources superResources = <span class="keyword">super</span>.getResources();</span><br><span class="line">    mResources = new Resources(mAssetManager, superResources.getDisplayMetrics(), superResources.getConfiguration());</span><br><span class="line">    mTheme = mResources.newTheme();</span><br><span class="line">    mTheme.setTo(<span class="keyword">super</span>.getTheme());</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> AssetManager getAssets() {</span><br><span class="line">    <span class="keyword">if</span> (mAssetManager == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getAssets();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mAssetManager;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources getResources() {</span><br><span class="line">    <span class="keyword">if</span> (mResources == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getResources();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mResources;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Resources.Theme getTheme() {</span><br><span class="line">    <span class="keyword">if</span> (mTheme == <span class="literal">null</span>) {</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getTheme();</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> mTheme;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p><strong>注意一点，由于将所有资源集合在一块，所以资源id可能冲突</strong>，解决方案：修改AAPT命令，将宿主和插件之间的id前缀都区分开，比如宿主的资源id以 0x71 开头，插件1以 0x72，插件2以 0x73  等，避免冲突。</p>
+<p><strong>还有</strong>，如果插件需要使用宿主的资源，那么，可以在宿主中将id写死，具体方式为自定义一个public.xml ，在里面写死。然后插件中以 provided 的方式将宿主的aar引入（这样，打包的时候就不会将这个aar打进去），引用资源的时候，直接使用这个写死的id就行。</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--public.xml--&gt;</span></span><br><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="welcom" id="0x71050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="启动模式（LaunchMode）"><a href="#启动模式（LaunchMode）" class="headerlink" title="启动模式（LaunchMode）"></a>启动模式（LaunchMode）</h2><p>普通使用的都是Standard 模式，如果要解决其他 3 种 LaunchMode 问题，使用的是<strong>占位Activity的思想</strong>，即事先为这3种 LaunchMode 创建很多 PlaceHoldActivity。比如：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SingleInstancePlaceHoldActivity1</span><br><span class="line">SingleInstancePlaceHoldActivity2</span><br><span class="line">SingleInstancePlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTaskPlaceHoldActivity1</span><br><span class="line">SingleTaskPlaceHoldActivity2</span><br><span class="line">SingleTaskPlaceHoldActivity3</span><br><span class="line">  </span><br><span class="line">  </span><br><span class="line">SingleTopPlaceHoldActivity1</span><br><span class="line">SingleTopPlaceHoldActivity2</span><br><span class="line">SingleTopPlaceHoldActivity3</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>接下来，从服务器下载一个 Json ，指定插件Activity 要使用哪个 PlaceHoldActivity ，这里所说的 Activity 只包括 LauncherMode 为 SingleTop、SingleTask、SingleInstance 的 Activity。我们无法指定插件 Activity 的 LaunchMode ，但是通过这种指定占位，<strong>当 ActivityA 和 SingleTaskPlaceHoldActivity1 建立对应关系之后，ActivityA 的 LaunchMode 就是 SingleTask 了！</strong></p>
+<p>但是这里还有个小bug，无论是SingleTop 还是 SingleTask ，再回到这个Activity时，并不会触发它的 onCreate ，而是触发 它的 onNewIntent 方法！为此，<strong>我们需要在Hook的 Handler.Callback 中拦截 onNewIntent 方法，把占位的 PlaceHoldActivity 替换回插件Activity</strong>： </p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MockClass2</span> <span class="keyword">implements</span> <span class="title">Handler</span>.<span class="title">Callback</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    <span class="keyword">switch</span>(msg.what) {</span><br><span class="line">      <span class="keyword">case</span> <span class="number">112</span>:</span><br><span class="line">        handleNewIntent(msg);</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleNewIntent</span><span class="params">(Message msg)</span> </span>{</span><br><span class="line">    Object obj = msg.obj;</span><br><span class="line">    ArrayList intents = (ArrayList)RefInvoke.getFieldObject(obj, <span class="string">"intents"</span>);</span><br><span class="line">    <span class="keyword">for</span>(Object object: intents) {</span><br><span class="line">      Intent raw = (Intent)object;</span><br><span class="line">      Intent target = raw.getParcelableExtra(AMSHookHelper.EXTRA_TARGET_INTENT);</span><br><span class="line">      <span class="keyword">if</span>(target != <span class="keyword">null</span>) {</span><br><span class="line">        raw.setComponent(target.getComponent());</span><br><span class="line">        <span class="keyword">if</span>(target.getExtras() != <span class="keyword">null</span>) {</span><br><span class="line">          raw.putExtras(target.getExtras());</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：多态和扩展</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-10 19:29:00 / 修改时间：21:30:53" itemprop="dateCreated datePublished" datetime="2021-09-10T19:29:00+08:00">2021-09-10</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="多态的不同方式"><a href="#多态的不同方式" class="headerlink" title="多态的不同方式"></a>多态的不同方式</h2><p>当一个子类继承父类的时候，这就是<strong>子类型多态</strong>；另一种熟悉的多态是<strong>参数多态</strong>，泛型就是参数多态常见的形式。</p>
+<h3 id="对第三方类扩展"><a href="#对第三方类扩展" class="headerlink" title="对第三方类扩展"></a>对第三方类扩展</h3><p>考虑业务类 ClassA、ClassB是第三方引入的并且<strong>不能修改</strong>，如果我们想要给它们扩展一些方法，比如将对象转换为 Json 字符串，那么利用以前多态技术就会显得麻烦。幸运的是，Kotlin 支持扩展语法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> ClassA.<span class="title">toJson</span><span class="params">()</span></span>: String = {</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>就可以很方便地添加了toJson方法，需要注意的是，<strong>扩展属性和方法的实现运行在ClassA的实例</strong>，他们的定义操作不会修改 ClassA 类本身，所以被扩展的第三方类免于被污染。</p>
+<h3 id="特设多态与运算符重载"><a href="#特设多态与运算符重载" class="headerlink" title="特设多态与运算符重载"></a>特设多态与运算符重载</h3><p>除了子类型多态、参数多态外，还有一种灵活的多态——<strong>特设多态</strong>。可能概念不好理解，举个具体的例子，你想定义一个通用的sum方法，也许会这么写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="title">sum</span><span class="params">(x: <span class="type">T</span>, y: <span class="type">T</span>)</span></span>: T = x + y</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但编译器会报错，因为某些类型不一定支持加法操作。这时候，我们希望定义一种通用的“加法语义上的操作”，可以定义一个通用的 Summable 接口，然后让需要支持假发操作的类来实现它：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">Sumable</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">  <span class="function"><span class="keyword">fun</span> <span class="title">plusThat</span><span class="params">(that: <span class="type">T</span>)</span></span>: T</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">Len</span></span>(<span class="keyword">val</span> v: <span class="built_in">Int</span>): Sumable&lt;Len&gt; {</span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">plusThat</span><span class="params">(that: <span class="type">Len</span>)</span></span> = Len(<span class="keyword">this</span>.v + that.v)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以发现，这并没有什么问题。然而，如果要针对不可修改的第三方类扩展加法操作时，这种方式也会遇到问题。于是，又想到了Kotlin的扩展，针对以上例子，我们完全可以采用扩展的语法来解决问题，此外，Kotlin 原生支持<strong>运算符重载</strong>可以很好解决上述问题：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">Area</span></span>(<span class="keyword">val</span> value: <span class="built_in">Double</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">operator</span> <span class="function"><span class="keyword">fun</span> Area.<span class="title">plus</span><span class="params">(that: <span class="type">Area</span>)</span></span>: Area {</span><br><span class="line">  <span class="keyword">return</span> Area(<span class="keyword">this</span>.value + that.value)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> {</span><br><span class="line">  println(Area(<span class="number">1.0</span>) + Area(<span class="number">2.0</span>)) <span class="comment">//运行结果： Area(value=3.0)</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>通过 operator 关键字以及Kotlin中<strong>内置可重载的运算符plus</strong>，就实现了功能。operator 的作用是，将一个函数标记为重载一个操作符或者实现一个约定，这里的<strong>plus是Kotlin规定的函数名</strong>。除了plus，我们还可以通过重载减法(minus)、乘法(times)、触发(div)、取余(mod，在kotlin 1.1 版本开始被 rem 替代)。此外，回忆kotlin中常用语法，也是用这种神奇的语言特性实现的，比如：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">a <span class="keyword">in</span> list<span class="comment">// 转换为 list.contains(a)</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="扩展：-为别的类添加方法、属性"><a href="#扩展：-为别的类添加方法、属性" class="headerlink" title="扩展： 为别的类添加方法、属性"></a>扩展： 为别的类添加方法、属性</h2><p>继续深入Kotlin 的特设多态语言特性</p>
+<h3 id="扩展与开放封闭原则"><a href="#扩展与开放封闭原则" class="headerlink" title="扩展与开放封闭原则"></a>扩展与开放封闭原则</h3><p>熟悉设计模式的读者知道，在修改现有代码时，我们应该遵循开放封闭原则，对扩展开放，对修改封闭。然而实际并不乐观，比如Android开发，为实现某个需求，引入了第三方库，但是需求发生变动后，当前库无法满足需求，且库的作者没有升级计划。这时候你也许就会考虑对源码修改，这就违背了开放封闭原则。</p>
+<p>Java中一种惯常做法是继承第三方类，添加新功能，但是，强行的继承可能违背“里氏替换原则”。更合理的方案，就是通过Kotlin的扩展功能。</p>
+<h3 id="使用扩展函数、属性"><a href="#使用扩展函数、属性" class="headerlink" title="使用扩展函数、属性"></a>使用扩展函数、属性</h3><p>扩展函数的声明的关键字是 <type> 。此外，我们需要一个“接收者类型”（通常是类或者接口）来作为它的前缀，以为 MutableList<int>扩展exchange方法为例：</int></type></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">  <span class="keyword">val</span> temp = <span class="keyword">this</span>[fromIndex]</span><br><span class="line">  <span class="keyword">this</span>[fromIndex] = <span class="keyword">this</span>[toIndex]</span><br><span class="line">  <span class="keyword">this</span>[toIndex] = temp</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>MutableList<t> 是Kotlin标准库中的类，这里作为接收者类型，exchange是扩展函数名。Kotlin的this要比Java的更灵活，这里扩展函数体内的this代表的是<strong>接收者类型的对象</strong>。注意，Kotlin中是严格区分接收者是否可空的，<strong>如果你的函数是可空的，你需要重写一个可空类型的扩展函数</strong>。</t></p>
+<h4 id="扩展函数的实现机制"><a href="#扩展函数的实现机制" class="headerlink" title="扩展函数的实现机制"></a>扩展函数的实现机制</h4><p>扩展函数这么方便，会不会对性能造成影响呢？以 MutableList<int>.exchange 为例，对应的Java代码为：</int></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 2,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u0012\n\u0000\n\u0002\u0010\u0002\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\u001a \u0010\u0000\u001a\u00020\u0001*\b\u0012\u0004\u0012\u00020\u00030\u00022\u0006\u0010\u0004\u001a\u00020\u00032\u0006\u0010\u0005\u001a\u00020\u0003¨\u0006\u0006"},</span></span><br><span class="line"><span class="meta">   d2 = {"exchange", "", "", "", "fromIndex", "toIndex", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">KotClassKt</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">exchange</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$exchange, <span class="keyword">int</span> fromIndex, <span class="keyword">int</span> toIndex)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$exchange, <span class="string">"$this$exchange"</span>);</span><br><span class="line">      <span class="keyword">int</span> temp = ((Number)$<span class="keyword">this</span>$exchange.get(fromIndex)).intValue();</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(fromIndex, $<span class="keyword">this</span>$exchange.get(toIndex));</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(toIndex, temp);</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>结合上述Java代码可以看出，我们可以将扩展函数近似理解为<strong>静态方法</strong>。我们知道静态方法的特点：不依赖类的特定实例，被该类所有的实例共享，并且，用public修饰，本质上也就是个全局方法，所以，<strong>扩展函数不会带来额外的性能消耗</strong>。</p>
+<h4 id="扩展函数的作用域"><a href="#扩展函数的作用域" class="headerlink" title="扩展函数的作用域"></a>扩展函数的作用域</h4><p>一般来说，我们习惯将扩展函数直接定义在包内，例如之前的 exchange 例子，我们可以将其放在 com.example.extension包下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.extension</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们知道，<strong>在同一个包内是可以直接调用exchange方法的，如果需要在其他包中调用，只需要import即可</strong>，这与Java全局静态方法类似。与此同时，在实际开发中，我们可能会将扩展函数定义在一个 Class 内部统一管理：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Extends</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">        <span class="keyword">val</span> temp = <span class="keyword">this</span>[fromIndex]</span><br><span class="line">        <span class="keyword">this</span>[fromIndex] = <span class="keyword">this</span>[toIndex]</span><br><span class="line">        <span class="keyword">this</span>[toIndex] = temp</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但你会发现，之前的exchange方法无法调用了！我们看下它的Java源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 1,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u001c\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0002\n\u0002\u0010\u0002\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\u0018\u00002\u00020\u0001B\u0005¢\u0006\u0002\u0010\u0002J \u0010\u0003\u001a\u00020\u0004*\b\u0012\u0004\u0012\u00020\u00060\u00052\u0006\u0010\u0007\u001a\u00020\u00062\u0006\u0010\b\u001a\u00020\u0006¨\u0006\t"},</span></span><br><span class="line"><span class="meta">   d2 = {"Lcom/glassx/Extends;", "", "()V", "exchange", "", "", "", "fromIndex", "toIndex", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Extends</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">exchange</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$exchange, <span class="keyword">int</span> fromIndex, <span class="keyword">int</span> toIndex)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$exchange, <span class="string">"$this$exchange"</span>);</span><br><span class="line">      <span class="keyword">int</span> temp = ((Number)$<span class="keyword">this</span>$exchange.get(fromIndex)).intValue();</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(fromIndex, $<span class="keyword">this</span>$exchange.get(toIndex));</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(toIndex, temp);</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们才发现exchange方法没有static关键字了，所以，<strong>当扩展方法在一个 Class 内部时，我们只能在该类和该类的子类中调用</strong>。</p>
+<h3 id="扩展属性"><a href="#扩展属性" class="headerlink" title="扩展属性"></a>扩展属性</h3><p>与扩展函数一样，我们还能为一个类添加扩展属性，比如为MutableList<int>添加一个判断和是否为偶数的属性：</int></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> MutableList&lt;<span class="built_in">Int</span>&gt;.sumIsEven: <span class="built_in">Boolean</span></span><br><span class="line">    <span class="keyword">get</span>() = <span class="keyword">this</span>.sum() % <span class="number">2</span> == <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">val</span> list = mutableListOf(<span class="number">2</span>,<span class="number">2</span>,<span class="number">4</span>)</span><br><span class="line">list.sumIsEven</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是，如果你准备给这个属性添加默认值，并且写出如下代码：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> MutableList&lt;<span class="built_in">Int</span>&gt;.sumIsEven: <span class="built_in">Boolean</span> = <span class="literal">false</span></span><br><span class="line">    <span class="keyword">get</span>() = <span class="keyword">this</span>.sum() % <span class="number">2</span> == <span class="number">0</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>代码会编译不通过，告知扩展属性不能有初始化器。这是为什么呢？其实，与扩展函数一样，其本质也是对应Java中的静态方法，反编译成Java后，会看到一个 getSumIsEven 的静态方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 2,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u0012\n\u0000\n\u0002\u0010\u000b\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\"\u001b\u0010\u0000\u001a\u00020\u0001*\b\u0012\u0004\u0012\u00020\u00030\u00028F¢\u0006\u0006\u001a\u0004\b\u0004\u0010\u0005¨\u0006\u0006"},</span></span><br><span class="line"><span class="meta">   d2 = {"sumIsEven", "", "", "", "getSumIsEven", "(Ljava/util/List;)Z", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ExtendsKt</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">getSumIsEven</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$sumIsEven)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$sumIsEven, <span class="string">"$this$sumIsEven"</span>);</span><br><span class="line">      <span class="keyword">return</span> CollectionsKt.sumOfInt((Iterable)$<span class="keyword">this</span>$sumIsEven) % <span class="number">2</span> == <span class="number">0</span>;</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>由于扩展没有实际地将成员插入类中，因此对扩展属性来说幕后字段是无效的，它们的行为只能由显式提供的 getters 和setters 定义</strong>。</p>
+<blockquote>
+<p>幕后字段：如果属性中存在访问器使用默认实现，那么Kotlin 会自动提供幕后字段 field ，其仅可用于 getter 和 setter 中。</p>
+</blockquote>
+<h3 id="扩展的特殊情况"><a href="#扩展的特殊情况" class="headerlink" title="扩展的特殊情况"></a>扩展的特殊情况</h3><h4 id="类似Java的静态扩展函数"><a href="#类似Java的静态扩展函数" class="headerlink" title="类似Java的静态扩展函数"></a>类似Java的静态扩展函数</h4><p>在Kotlin中，如果要声明一个静态的扩展函数，必须要有 伴生对象（companion object）上，所以我们要这样定义带有伴生对象的类：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Son</span> </span>{</span><br><span class="line">  <span class="keyword">companion</span> <span class="keyword">object</span> {</span><br><span class="line">    <span class="keyword">val</span> age = <span class="number">10</span></span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在已有伴生对象的情况下，如果不想再Son中定义扩展函数，而是在Son的伴生对象上定义，可以这么写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> Son.Companion.<span class="title">foo</span><span class="params">()</span></span> {</span><br><span class="line">  println(<span class="string">"age = <span class="variable">$age</span>"</span>)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//这样在没有Son的实例对象的情况下，也能调用，使用：</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> {</span><br><span class="line">  Son.foo()</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h4 id="成员方法优先级总是高于扩展函数"><a href="#成员方法优先级总是高于扩展函数" class="headerlink" title="成员方法优先级总是高于扩展函数"></a>成员方法优先级总是高于扩展函数</h4><p>如果扩展函数和现有类的成员方法一样，那么<strong>优先调用成员方法</strong>，这一点好理解，我们不应该更改原有实现。</p>
+<h4 id="类的实例与接收者实例"><a href="#类的实例与接收者实例" class="headerlink" title="类的实例与接收者实例"></a>类的实例与接收者实例</h4><p>略，没看清楚表达什么</p>
+<h3 id="标准库中的扩展函数：run、let、also、takeIf"><a href="#标准库中的扩展函数：run、let、also、takeIf" class="headerlink" title="标准库中的扩展函数：run、let、also、takeIf"></a>标准库中的扩展函数：run、let、also、takeIf</h3><p>略</p>
+<h2 id="Android中扩展的应用"><a href="#Android中扩展的应用" class="headerlink" title="Android中扩展的应用"></a>Android中扩展的应用</h2><p>略</p>
+<h2 id="扩展不是万能的"><a href="#扩展不是万能的" class="headerlink" title="扩展不是万能的"></a>扩展不是万能的</h2><p>略</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/06/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/06/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：类型系统</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-06 20:40:00 / 修改时间：20:41:13" itemprop="dateCreated datePublished" datetime="2021-09-06T20:40:00+08:00">2021-09-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="null引用"><a href="#null引用" class="headerlink" title="null引用"></a>null引用</h2><h3 id="null-做了哪些恶"><a href="#null-做了哪些恶" class="headerlink" title="null 做了哪些恶"></a>null 做了哪些恶</h3><ul>
+<li><p>null 存在歧义，一个值为null可以代表很多含义，比如：未初始化、值不合法、值不需要、值不存在    </p>
+<blockquote>
+<p>一个典型的例子就是 HashMap 保存数据，Java中的HashMap允许 key 为null，比如一个教室，我们将座位号与坐在上面的人保存到HashMap中，在获取这些位置信息的时候，null就产生了歧义，到底是座位不存在还是座位没人。</p>
+</blockquote>
+</li>
+<li><p>难以避免的 NPE</p>
+</li>
+<li><p>冗余的防御使代码，各种判空</p>
+</li>
+</ul>
+<h2 id="可空类型"><a href="#可空类型" class="headerlink" title="可空类型"></a>可空类型</h2><p>Java8里面有Optional ，这个不作讨论。</p>
+<h3 id="Kotlin的可空类型"><a href="#Kotlin的可空类型" class="headerlink" title="Kotlin的可空类型"></a>Kotlin的可空类型</h3><p>在Kotlin中，我们可以在任何类型后面加上 ? ，比如 “Int?”，实际等同于 “Int? = Int or null”</p>
+<ol>
+<li><p>安全的调用 ?.</p>
+</li>
+<li><p>Kotlin的Elvis操作符（也称为合并运算符） ?:  ，比如，学生不戴眼镜，度数就为 -1，则可以类似如下表示：</p>
+</li>
+</ol>
+<blockquote>
+<p>val result = student.glasses?.degreeOfMyopia ?: -1</p>
+</blockquote>
+<ol start="3">
+<li>非空断言 !!  ，有时候我们想确保一个学生是戴眼镜的，那么: <code>val result = student!!.glasses</code></li>
+</ol>
+<p>其中，关于第2点，Kotlin能够这样写，具体实现其实还是根据 if-else 去逐层判断，并没有什么魔法。这样判断的原因无非就是：兼容Java、性能考虑</p>
+<h3 id="类型检查"><a href="#类型检查" class="headerlink" title="类型检查"></a>类型检查</h3><p>在经过is判断会后之后使用就无须强制转换，如下使用方法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">when</span>(obj) {</span><br><span class="line">	<span class="keyword">is</span> String -&gt; print(obj.length)</span><br><span class="line">	<span class="keyword">else</span> -&gt; print(<span class="string">"not a String"</span>)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="智能类型转换"><a href="#智能类型转换" class="headerlink" title="智能类型转换"></a>智能类型转换</h3><p>除了上述的智能转换，对于可空类型我们也可以使用 Smart Casts：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> stu: Student = Student(Glasses(<span class="number">189.00</span>))</span><br><span class="line"><span class="keyword">if</span>(stu.glasses != <span class="literal">null</span>) println(stu.glasses.degreeOfMyopia)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>不过，根据官方文档，<strong>当且仅当Kotlin编译器确定在类型检查后该变量不会再改变，才会产生Smart Casts</strong>。利用这点，我们能够确保多线程应用安全，举个例子：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Kot</span> </span>{</span><br><span class="line">	<span class="keyword">var</span> stu: Student? = getStu()</span><br><span class="line">	<span class="function"><span class="keyword">fun</span> <span class="title">dealStu</span><span class="params">()</span></span>{</span><br><span class="line">	    <span class="keyword">if</span>(stu != <span class="literal">null</span>) {</span><br><span class="line">	    <span class="comment">//还是不能这样写，编译器会因为可能在其他线程会修改该值有风险而报错，如果 stu 改成val 的就不会有这样的情况</span></span><br><span class="line">	        print(stu.glasses)</span><br><span class="line">	    }</span><br><span class="line">	}</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>当然，我们也能利用let来更优雅一点：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">dealStu</span><span class="params">()</span></span>{</span><br><span class="line">	stu?.let {print(it.glasses)}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在开发过程中，难免碰到类型转换，一般使用类似：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> stu: Student = getStu <span class="keyword">as</span> Student?</span><br><span class="line"><span class="comment">//当然，也能使用以下方法，二者效果是一样的</span></span><br><span class="line"><span class="keyword">var</span> stu: Student = getStu <span class="keyword">as</span>? Student</span><br></pre></td></tr></tbody></table></figure>
+
+<p>除此之外，有些同学可能会认为需要频繁类型转换，所以会配合泛型封装一个“有效的”类型转换方法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="title">cast</span><span class="params">(original: <span class="type">Any</span>)</span></span>: T? = original <span class="keyword">as</span>? T</span><br></pre></td></tr></tbody></table></figure>
+
+<p>使用上了 as? ，看起来没问题，那我们应该可以这样用：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> ans = cast&lt;String&gt;(<span class="number">140163L</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>用法看起来也挺合理，但是在调用的时候，会抛出 Long cannot be cast to String 这样的异常。这其实是类型擦除的后果。Kotlin的设计者们同样注意到这点，加入了 <strong>reified</strong>关键字，可以理解为<strong>具体化</strong>，利用它我们可以在方法体内访问泛型指定的 JVM 对象(注意，还要在方法前加入 inline 修饰)。代码使用如下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">inline</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;<span class="keyword">reified</span> T&gt;</span> <span class="title">cast</span><span class="params">(original: <span class="type">Any</span>)</span></span>: T? = original <span class="keyword">as</span>? T</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="比Java-更面向对象的设计"><a href="#比Java-更面向对象的设计" class="headerlink" title="比Java 更面向对象的设计"></a>比Java 更面向对象的设计</h2><p>Java并不能真正意义上被称作一门“纯面向对象”的语言，因为它的原始类型（如int）的值与函数并不能视作对象。</p>
+<h3 id="Any：-非空类型的根类型"><a href="#Any：-非空类型的根类型" class="headerlink" title="Any： 非空类型的根类型"></a>Any： 非空类型的根类型</h3><p>与Object 作为 Java类层级的顶层类似，Any类型是Kotlin中所有非空类型（如String、Int）的超类。与Java不同，Kotlin不区分原始类型和其他类型，Koltin中，<strong>所有类型的最终根类型都是Any</strong>。另外，<strong>Kotlin把Java方法参数和返回类型中用到的Object类型看做 Any ，当Kotlin函数中使用Any时，它会被编译成 Java字节码中的 Object</strong>。</p>
+<h3 id="Any-：所有类型的根类型"><a href="#Any-：所有类型的根类型" class="headerlink" title="Any?：所有类型的根类型"></a>Any?：所有类型的根类型</h3><p>如果说Any是所有非空类型的根类型，那么 Any? 才是所有类型(可空和非空类型)的根类型。如果只有Java这门编程语言的经验，很容易陷入一个误区：继承关系决定父子类型关系。因为在Java中，类与类型大部分情况下都是“等价的”。</p>
+<p>事实上，“继承”和“子类型化”是两个完全不同的概念。如Kotlin中的Int是Number的子类，那么在需要Number类型的地方传入 Int类型是没问题的。这是“继承”强调的“实现上的复用”。而子类型化是一种类型语义的关系，与实现没关系。<strong>虽然Any 与 Any? 看起来没有继承关系，然而在我们需要用 Any? 类型值的地方，显然可以传入一个类型为 Any 的值，反之却不然！</strong></p>
+<p>所以，我们可以大胆地说，Any？ 是 Any 的父类型，而且是所有类型的根类型。</p>
+<blockquote>
+<p>Any? 与 Any??。 你可能会问，那 Any??是不是 Any? 的父类型？如果成立，岂不是意味着没有所谓的所有类型的根类型了？其实，Kotlin的可空类型可以看做数学上的并集。如果用类型的并集表示 Any ，可以写成  Any U Null ，那么 Any?? 就可以写成 Any U Null U Null ，等价于 Any U Null ，即 Any??等价于 Any? 。</p>
+</blockquote>
+<h3 id="Nothing-与-Nothing"><a href="#Nothing-与-Nothing" class="headerlink" title="Nothing 与 Nothing?"></a>Nothing 与 Nothing?</h3><p>顾名思义，Nothing是没有实例的类型。<strong>Kotlin 中 return、throw等（流程控制中与跳转相关的表达式）返回值都是 Nothing。</strong>Nothing 只能包含一个值：null，本质上与null没有区别，所以我们可以使用null作为任何可空类型的值。</p>
+<h3 id="自动装箱与拆箱"><a href="#自动装箱与拆箱" class="headerlink" title="自动装箱与拆箱"></a>自动装箱与拆箱</h3><p>Kotlin 中没有 int、float、double、long这类的原始类型，取而代之的是它们对应的引用类型包装类： Int、Float、Double、Long。看起来让Kotlin比Java更加接近纯面向对象设计，但这样说其实是不够严谨的。</p>
+<p>以Int 为例，虽然它可以像Integer 一样提供额外的操作函数，但这两个类型在底层实现上存在差异，看一段代码：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> x1 = <span class="number">18</span> <span class="comment">//kotlin</span></span><br><span class="line">int x2 = <span class="number">18</span>;<span class="comment">//Java</span></span><br><span class="line">Integer x3 = <span class="number">18</span>;<span class="comment">//Java</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是我们观察 Kotlin <strong>编译完成后的字节码可以发现，Kotlin中的Int在JVM中实际以int 存储(对应字节码类型为 I)</strong>。但是作为一个“包装类型”，Int编译后应该装箱才对，难道Kotlin不会自动装箱？其实可以再看看 Int? 的字节码，就可以得出结论：</p>
+<ul>
+<li><strong>Kotlin 中的 Int 类型等同于 int</strong></li>
+<li><strong>Kotlin 中的 Int? 等同于 Integer ！</strong></li>
+</ul>
+<p>Int 作为一种小技巧，让Int看起来是引用类型。</p>
+<h3 id="“新”的数组类型"><a href="#“新”的数组类型" class="headerlink" title="“新”的数组类型"></a>“新”的数组类型</h3><p>Kotlin 中可以这样创造数组：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> funList = arrayOf()<span class="comment">//声明长度为0的数组</span></span><br><span class="line"><span class="keyword">val</span> funList = arrayOf(n1,n2,n3,....nt)<span class="comment">//声明并初始化长度t的数组</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//由于Smart Casts ，编译器能够推出funList的元素类型。当然，我们也能手动指定：</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> funList = arrayOf&lt;T&gt;(n1,n2,...nt)</span><br><span class="line"></span><br><span class="line"><span class="comment">//与array类似，我们可以这样定义原始类型的数组</span></span><br><span class="line"><span class="keyword">val</span> xArray = intArrayOf(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>要注意的是，IntArray等类型并不是 Array的子类。还有，<strong>Kotlin对原始类型的特殊优化，主要体现在避免了自动装箱带来的开销！</strong></p>
+<h2 id="泛型：-让类型更安全"><a href="#泛型：-让类型更安全" class="headerlink" title="泛型： 让类型更安全"></a>泛型： 让类型更安全</h2><p>首先，Kotlin中也有泛型。</p>
+<h3 id="泛型：类型安全的利刃"><a href="#泛型：类型安全的利刃" class="headerlink" title="泛型：类型安全的利刃"></a>泛型：类型安全的利刃</h3><p>大家都知道1.5以前的Java的List需要靠强制转换来取值的，并且可以存入各种各样类型的值，在编译期还发现不了，这就很难受了。所以后来就出了泛型，泛型主要优势有几点：</p>
+<ul>
+<li>类型检查，在编译时就检查出错误。</li>
+<li>更加语义化，List<string>便可以知道里面存储的是 String 类型。<br>自动类型转换，获取数据时不需要手动强转，更安全。</string></li>
+<li>能写出更通用的代码。</li>
+</ul>
+<h3 id="Kotlin中使用泛型"><a href="#Kotlin中使用泛型" class="headerlink" title="Kotlin中使用泛型"></a>Kotlin中使用泛型</h3><p>首先，在Kotlin中，使用 <code>val arrayListt = ArrayList()</code> 这种方式是不允许的，但在Java中可以这么做，这是因为在Java中 1.5版本后才引入的，Java为了兼容可以这么做。但是，由于Kotlin具有类型推导能力，所以 <code>val arrayListt = arrayListOf("one","two")</code> 是允许的。</p>
+<h3 id="类型约束：设定类型上界"><a href="#类型约束：设定类型上界" class="headerlink" title="类型约束：设定类型上界"></a>类型约束：设定类型上界</h3><p>我们知道，泛型本身就有类型约束的作用，比如，你无法向一个String类型List中添加一个Double对象。那么这里说的是约束什么呢？用例子来看下，假设我们有一个盘子：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Plate</span>&lt;<span class="type">T</span>&gt;</span>(<span class="keyword">val</span> t: T)</span><br></pre></td></tr></tbody></table></figure>
+<p>这个盘子类有一个泛型参数，表示可以接收各种东西，如水果或者主食。但是，如果有一天想把盘子归类，有些只能放水果，有些只能放菜，又该如何呢？还是看例子，我们可以定义一个水果类(Fruit)，并声明 Apple 和 Banana 来继承它，并定义出水果盘子：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">open</span> <span class="class"><span class="keyword">class</span> <span class="title">Fruit</span></span>()</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Apple</span></span>(): Fruit()</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Banana</span></span>(): Fruit()</span><br><span class="line"></span><br><span class="line"><span class="comment">//定义一个水果盘子：</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FruitPlate</span>&lt;<span class="type">T: Fruit</span>&gt;</span>()</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述的FruitPlate中T被限定了只能是 Fruit 类及其子类类型，其他类则不被允许。这种约束我们叫做<strong>上界约束</strong>，和Java的语法类似，只不过java 用extends关键字。假如我们要求水果盘子不一定装水果，有时候还能空着，那应该怎么办呢？我们可以在泛型参数类型后面加一个”?”即可：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FruitPlate</span>&lt;<span class="type">T: Fruit?</span>&gt;</span>(<span class="keyword">val</span> t: T)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>**如果，泛型有多个条件，怎么办？比如，有一把刀，只能用来切长在地上的水果，我们可以用 where 关键字这样实现：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">Ground</span></span>{}</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Watermelon</span></span>(): Fruit(), Ground</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="title">cut</span><span class="params">(t: <span class="type">T</span>)</span></span> <span class="keyword">where</span> T: Fruit, T: Ground {</span><br><span class="line">	print(<span class="string">"you can cut me"</span>)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个where关键字就限定了多个条件，水果以及长在地上。</p>
+<h2 id="泛型的背后：-类型擦除"><a href="#泛型的背后：-类型擦除" class="headerlink" title="泛型的背后： 类型擦除"></a>泛型的背后： 类型擦除</h2><h3 id="Java-为何无法声明一个泛型数组"><a href="#Java-为何无法声明一个泛型数组" class="headerlink" title="Java 为何无法声明一个泛型数组"></a>Java 为何无法声明一个泛型数组</h3><p>我们看个简单的例子，Apple是Fruit的子类：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Apple[] appleArray = <span class="keyword">new</span> Apple[<span class="number">10</span>];</span><br><span class="line">Fruit[] fruitArray = appleArray;<span class="comment">//允许的</span></span><br><span class="line">fruitArray[<span class="number">0</span>] = <span class="keyword">new</span> Banana();<span class="comment">//编译通过，运行报错</span></span><br><span class="line"></span><br><span class="line">List&lt;Apple&gt; appleList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">List&lt;Fruit&gt; fruitList = appleList;<span class="comment">//不允许</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>为什么数组可以这么做，而List就不行呢？关键的一点，<strong>数组是协变的，而List是不变的</strong>，换句话说，Object[] 是所有对象数组的父类，而 List<object> 却不是 List<t>的父类！我们知道Java中的List会类型擦除，具体表现如下：<p></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">println(appleArray.getClass());</span><br><span class="line">println(appleList.getClass());</span><br><span class="line"></span><br><span class="line"><span class="comment">//运行结果</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> [<span class="title">Ljavat</span>.<span class="title">Apple</span></span>;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">java</span>.<span class="title">util</span>.<span class="title">ArrayList</span></span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>Kotlin与Java这个机制是一样的，也会存在类型擦除。但与Java不同的是，<strong>Kotlin中的数组是支持泛型的，当然也不再协变</strong>。</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> appleArray = arrayOfNulls&lt;Apple&gt;(<span class="number">3</span>);</span><br><span class="line"><span class="keyword">val</span> anyArray: Array&lt;Any?&gt; = appleArray <span class="comment">//不允许</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这又是为什么呢？</p>
+<h3 id="向后兼容的罪"><a href="#向后兼容的罪" class="headerlink" title="向后兼容的罪"></a>向后兼容的罪</h3><p>Java的list使用类型擦除是为了兼容老版本。既然类型擦除了，为什么我们在使用泛型的时候，能够进行类型检查，类型自动转呢？这是因为类型检查这些操作在编译器编译前就检查了，所以类型擦除不影响它。然后，我们可以发现，List 的get方法其实也是通过强制转换类型来实现的！</p>
+<h3 id="类型擦除的矛盾"><a href="#类型擦除的矛盾" class="headerlink" title="类型擦除的矛盾"></a>类型擦除的矛盾</h3><p>通常情况使用泛型我们不在意它的擦除，但是在序列化/反序列化的时候，我们就需要知道类型了，咋办？既然编译后会擦除泛型参数类型，那么我们是不是可以主动指定参数类型来达到运行时获取泛型参数类型效果呢？看下例子：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//接着上面的Plate的代码写</span></span><br><span class="line"><span class="keyword">open</span> <span class="class"><span class="keyword">class</span> <span class="title">Plate</span>&lt;<span class="type">T</span>&gt; </span>(<span class="keyword">val</span> t: T, <span class="keyword">val</span> clazz: Class&lt;T&gt;) {</span><br><span class="line">	<span class="function"><span class="keyword">fun</span> <span class="title">getType</span><span class="params">()</span></span>{</span><br><span class="line">	    print(clazz)</span><br><span class="line">	}</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">val</span> applePlate = Plate(Apple(), Apple::<span class="keyword">class</span>.java)</span><br><span class="line"></span><br><span class="line">applePlate.getType()<span class="comment">//会打印 class Apple</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述方法可以解决很多问题了，但是它无法获取泛型的类型，比如：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> type = ArraList&lt;String&gt;::<span class="keyword">class</span>.java<span class="comment">//不被允许</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>有没有其他方式呢？有，可以利用匿名内部类：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> list1 = ArraList&lt;String&gt;()</span><br><span class="line"><span class="keyword">val</span> list2 = <span class="keyword">object</span>: ArrayList&lt;String&gt;(){}<span class="comment">//匿名内部类</span></span><br><span class="line"></span><br><span class="line">println(list1.javaClass.genericSuperclass)</span><br><span class="line">println(list2.javaClass.genericSuperclass)</span><br><span class="line"></span><br><span class="line"><span class="comment">//结果</span></span><br><span class="line">java.util.AbstractList&lt;E&gt;</span><br><span class="line">javaUtil.ArrayList&lt;java.lang.String&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>竟然可以了，原理是啥呢？<strong>其实，泛型类型擦除并不是真的将全部的类型信息都擦除，还是会将类型信息放在对应 Class 的常量池的。</strong>所以，我们能通过相应的方式来获取这个类型信息，使用匿名内部类就可以实现这种需求。我们着手来设计一个能获取所有类型信息的泛型类：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">open</span> <span class="class"><span class="keyword">class</span> <span class="title">GenericsToken</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">	<span class="keyword">var</span> type: Type = Any::<span class="keyword">class</span>.java</span><br><span class="line"></span><br><span class="line">	<span class="keyword">init</span> {</span><br><span class="line">	    <span class="keyword">val</span> superClass = <span class="keyword">this</span>.javaClass.genericSuperclass</span><br><span class="line">	    type = (superClass <span class="keyword">as</span> ParameterizedType).getActualTypeArguments()[<span class="number">0</span>]</span><br><span class="line">	}</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> {</span><br><span class="line">	<span class="keyword">val</span> gt = <span class="keyword">object</span>: GenericsToken&lt;Map&lt;String,String&gt;&gt;(){}</span><br><span class="line">	print(gt.type)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//结果</span></span><br><span class="line">java.util.map&lt;java.lang.String, ?extends java.lang.String&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>匿名内部类在初始化的时候就会绑定父类或者接口的相应信息，这样就能通过获取父类或者父接口的泛型类信息来实现我们的需求，你可以用这样一个类来获取任何泛型的类型，我们常用的Gson也是使用了相同的设计</strong>。比如，我们在Kotlin中可以这样使用Gson来进行泛型类的反序列化：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> json = ...</span><br><span class="line"><span class="keyword">val</span> rType = <span class="keyword">object</span>: TypeToken&lt;List&lt;String&gt;&gt;(){}.type</span><br><span class="line"><span class="keyword">val</span> stringList = Gson.fromJson&lt;List&lt;String&gt;&gt;(json,tType)</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="使用内联函数获取泛型"><a href="#使用内联函数获取泛型" class="headerlink" title="使用内联函数获取泛型"></a>使用内联函数获取泛型</h3><p>其实，Kotlin中除了上述方法外，还可以通过内联函数实现。<strong>内联函数在编译的时候，便会将相应函数的字节码插入调用的地方，也就是说参数类型也会被插入字节码中</strong>。下面我们就用内联函数实现一个可以获取泛型参数的方法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">inline</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;<span class="keyword">reified</span> T&gt;</span> <span class="title">getType</span><span class="params">()</span></span> {</span><br><span class="line">	<span class="keyword">return</span> T::<span class="keyword">class</span>.java</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>非常简单，只需要加上 reified 关键词即可。所以，我们可以在Kotlin中改进Gson的使用方式：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">inline</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;<span class="keyword">reified</span> T: Any&gt;</span> Gson.<span class="title">fromJson</span><span class="params">(json: <span class="type">String</span>)</span></span>: T {</span><br><span class="line">	<span class="keyword">return</span> Gson().fromJson(json, T::<span class="keyword">class</span>.java)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">val</span> list = Gson.fromJson&lt;List&lt;Stirng&gt;&gt;(json)</span><br></pre></td></tr></tbody></table></figure>
+<p>这里是对Gson进行了扩展，实现很优雅。注意，<strong>Java不支持内联函数，所以在Kotlin中声明的普通内联函数可以在Java中调用，被当做常规函数了；而用reified来实例化参数类型的内联函数不能在Java 中调用，因为它永远需要内联的</strong>。</p>
+<h2 id="打破泛型不变"><a href="#打破泛型不变" class="headerlink" title="打破泛型不变"></a>打破泛型不变</h2><p>略吧，看迷糊了，下次补上</p>
+</t></object></p></body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1048,154 +1487,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/08/10/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC1%E3%80%812%E3%80%813%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/08/10/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC1%E3%80%812%E3%80%813%E7%AB%A0/" class="post-title-link" itemprop="url">第1、2、3章：异步程序设计介绍</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-08-10 15:46:00 / 修改时间：15:48:59" itemprop="dateCreated datePublished" datetime="2021-08-10T15:46:00+08:00">2021-08-10</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="异步程序设计的关键问题"><a href="#异步程序设计的关键问题" class="headerlink" title="异步程序设计的关键问题"></a>异步程序设计的关键问题</h2><ul>
-<li>结果传递——异步（数据未准备好）或者同步（数据已经准备好）</li>
-<li>异常处理，一旦异步调用，异常处理变得复杂。（执行前错误，执行时错误、数据错误等）</li>
-<li>取消响应</li>
-<li>‘复杂分支（比如涉及同步）</li>
-</ul>
-<h2 id="常见的异步程序设计思路"><a href="#常见的异步程序设计思路" class="headerlink" title="常见的异步程序设计思路"></a>常见的异步程序设计思路</h2><ul>
-<li><p>Future，没有偏离主流程，但是一旦调用get就会阻塞</p>
-</li>
-<li><p>CompletableFuture，get调用之后，不会阻塞主调用流程，但是整体偏离了主流程</p>
-</li>
-<li><p>Promise 与 async/await， 在JS、C#等语言中实现</p>
-</li>
-<li><p>响应式编程，比如 RxJava 就是这种思想，注重描述数据输入和输出之间的关系，因此很容易奇幻线程</p>
-</li>
-<li><p>Kotlin 协程，只用了一个关键字suspend表示挂起点，包含了异步调用和回调两层含义。在挂起点我们可以做很多事情，既可以像async/await异步回调，也能添加调度器来处理线程切换</p>
-<blockquote>
-<p>如果说kotlin协程只是一个“线程框架”，那就有点“一叶障目不见泰山”了，</p>
-</blockquote>
-</li>
-</ul>
-<p>我们来看一个Kotlin协程处理异步调用的例子：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">bitmapSuspendable</span><span class="params">(url: <span class="type">String</span>)</span></span>: Bitmap = </span><br><span class="line">    suspendCoroutin&lt;Bitmap&gt; { continuation -&gt;</span><br><span class="line">      thread {</span><br><span class="line">        continuation.resume(download(url))</span><br><span class="line">      } <span class="keyword">catch</span> (e: Exception) {</span><br><span class="line">        continuation.resumeWithException(e)</span><br><span class="line">      }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>我们用标准库 API suspendCoroutin<t> 的返回值作为挂起函数 bitmapSuspendable 的返回值类型，也就是反省参数T的实参 Bitmap，这个函数除了确定返回值类型外，还能帮我们拿到一个Continuation的实例，负责保存和恢复挂起状态。<strong>suspend 函数只能在 其他suspend函数或者协程体中调用</strong>。</t></p>
-<p>ConcurrentHashMap 的value不能为null</p>
-<p>———第2章：协程的基本概念</p>
-<h2 id="协程是什么"><a href="#协程是什么" class="headerlink" title="协程是什么"></a>协程是什么</h2><p>线程与协程的最大区别：从任务的角度看，线程一旦开始就不会暂停，直到任务结束，这个过程是连续的，线程之间是抢占调度的，因此不存在协作。而协程会自己处理挂起和恢复来实现协作调度。</p>
-<h2 id="协程的分类"><a href="#协程的分类" class="headerlink" title="协程的分类"></a>协程的分类</h2><h3 id="按照调用栈分"><a href="#按照调用栈分" class="headerlink" title="按照调用栈分"></a>按照调用栈分</h3><p>通常说的调用栈，指的是<strong>函数调用栈</strong>，是用来保存函数调用时的状态信息的数据结构。线程会因为CPU调度权的切换而被中断，它的中断状态会保存在调用栈中，因而，协程也能按照是否开辟相应的调用栈来分类：</p>
-<ul>
-<li>有栈协程，这就类似线程了，与线程的不同体现在调度上</li>
-<li>无栈协程，没有自己的调用栈，挂起点的状态通过<strong>状态机</strong>或者<strong>闭包</strong>等语法来实现</li>
-</ul>
-<p>有栈协程的优点是<strong>可以在任意函数调用层级的任意位置挂起，并转移调度权</strong>，无栈协程的优点那就是<strong>节省了这块栈内存</strong>。一般来说，<strong>Kotlin 属于 无栈协程</strong>，它依靠对协程体本身编译生成的状态机的状态流转实现，变量的保存也是通过闭包语法实现。</p>
-<h3 id="按调度方式分类"><a href="#按调度方式分类" class="headerlink" title="按调度方式分类"></a>按调度方式分类</h3><p>根据协程调度权的转移目标的不同，又可以将协程分为以下两种：</p>
-<ul>
-<li>对称协程，每个协程都是相互独立且平等的，调度权可以在任意协程之间转移    </li>
-<li>非对称协程，协程出让调度权的目标只能是它的<strong>调用者</strong>，也即协程之间存在调用和被调用的关系</li>
-</ul>
-<p>对称协程接近线程的样子了，而非对称协程更符合我们的思维习惯。非对称协程的一个例子就是：async/await ，await时，将调度权转移到异步调用中，异步调用返回结果或者抛出异常时，总是将调度权转移回await 的位置。至于Kotlin协程，书中没有具体分类，不过从言语中可以<strong>推断出Kotlin协程属于 非对称协程</strong>。</p>
-<h3 id="协程的实现举例"><a href="#协程的实现举例" class="headerlink" title="协程的实现举例"></a>协程的实现举例</h3><p>简略写下：</p>
-<ul>
-<li>Python的Generator 通过在函数中调用  yield 来实现当前函数调用的挂起 ，yield 的参数作为对下一次调用的返回值   </li>
-<li>Lua 就提供了几个API ，让开发者灵活调用： create创建、yield 挂起、resume 恢复</li>
-</ul>
-<p>————–第3章：Kotlin协程的基础设施</p>
-<h2 id="协程的构造"><a href="#协程的构造" class="headerlink" title="协程的构造"></a>协程的构造</h2><p>要想进入协程的世界，首先需要构造出一个协程实例。</p>
-<h3 id="协程创建"><a href="#协程创建" class="headerlink" title="协程创建"></a>协程创建</h3><p>标准库中提供了一个createCoroutin 函数，我们可以通过它来创建协程：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> continuation = <span class="keyword">suspend</span> {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    <span class="number">5</span></span><br><span class="line">}.createCoroutine(<span class="keyword">object</span> : Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> context: CoroutineContext</span><br><span class="line">        <span class="keyword">get</span>() = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">        println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>不过这个协程不会立即执行，我们来看这个 createCoroutine 函数的声明：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).createCoroutine(</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其中，</p>
-<ul>
-<li>suspend () -&gt; T 是 createCoroutine 函数的 Receiver ，<strong>是一个被suspend 修饰的挂起函数</strong>，这也是协程的执行体，不妨称之为协程体</li>
-<li>参数 completion 会在协程执行完成后调用，协程的<strong>完成回调</strong></li>
-<li>返回值是一个 Continuation 对象，由于现在协程仅仅被创建出来，因此<strong>需要通过这个值在之后出发协程的启动</strong></li>
-</ul>
-<h3 id="协程的启动"><a href="#协程的启动" class="headerlink" title="协程的启动"></a>协程的启动</h3><p>调用 continuation.resume(Unit) 之后，协程会立即开始执行。为什么触发返回的 Continuation 的resume 就会触发携程体呢？通过阅读源码我们直到，返回的 Continuation 是 SafeContinuation 的实例。</p>
-<p>我们的协程体，也就是那个用于创建协程的 suspend Lambda 表达式（应该是这一截：suspend () -&gt; T），编译器在它编译之后会将其封装成一个 <strong>实现了 Continuation 接口的实现类SuspendLambda</strong>！Continuation接口里面有个 invokeSuspend 抽象函数，编译生成的匿名内部类中的这个函数的实现就是我们的协程体！</p>
-<p>这样看来就很清晰了，<strong>创建协程返回的 Continuation 实例就是套了几层马甲的协程体，因而调用它的resume就能触发协程体的运行</strong>。</p>
-<h3 id="协程体的Receiver（个人理解是提供了个作用域）"><a href="#协程体的Receiver（个人理解是提供了个作用域）" class="headerlink" title="协程体的Receiver（个人理解是提供了个作用域）"></a>协程体的Receiver（个人理解是提供了个作用域）</h3><p>除之前介绍的，还有另一种创建协程的方法：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="params">(<span class="keyword">suspend</span> R.()</span></span> -&gt; T).createCoroutine(</span><br><span class="line">    receiver: R,</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以看到，与之前的方法对比，这个创建方法主要多了个 Receiver 类型 R  ，这个R 提供了一个作用域，<strong>在协程体内我们可以直接使用作用域内提供的函数或者状态等</strong>。为了使用方便，我们封装一个采用这种方法启动协程的方法：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="title">launchCoroutine</span><span class="params">(receiver: <span class="type">R</span>, block: <span class="type">suspend</span> <span class="type">R</span>.() -&gt; <span class="type">T</span>)</span></span> {</span><br><span class="line">  block.startCoroutine(receiver, <span class="keyword">object</span>: Continuation&lt;T&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt; {</span></span></span><br><span class="line"><span class="params"><span class="function">      <span class="type">println</span>("<span class="type">Coroutin</span> <span class="type">End</span>: $"<span class="type">result</span>")</span></span></span><br><span class="line"><span class="params"><span class="function">    }</span></span></span><br><span class="line"><span class="params"><span class="function">              </span></span></span><br><span class="line"><span class="params"><span class="function">    <span class="type">override</span> <span class="type">val</span> <span class="type">context</span> = EmptyCoroutinContext</span></span></span><br><span class="line"><span class="params"><span class="function">      </span></span></span><br><span class="line"><span class="params"><span class="function">  })</span></span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>接下来，我们用一个例子来使用这个方法：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProducerScope</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">  <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">produce</span><span class="params">(value: <span class="type">T</span>)</span></span> { ... }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">callLaunchCoroutin</span><span class="params">()</span></span> {</span><br><span class="line">  launchCoroutine(ProducerScope&lt;<span class="built_in">Int</span>&gt;()) {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    produce(<span class="number">1024</span>)<span class="comment">//注意，这里调用 ProducerScope 里面的方法，也就是这个域里面的方法</span></span><br><span class="line">    delay(<span class="number">1000</span>)</span><br><span class="line">    produce(<span class="number">2048</span>)<span class="comment">//注意，这里调用 ProducerScope 里面的方法，也就是这个域里面的方法</span></span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>由于添加了作用域 ProducerScope 作为Receiver，示例中我们可以在协程体中直接调用 produce 函数；delay 是在协程体外定义的挂起函数，在协程体内也能直接调用。作用域可以用来提供函数支持，自然也能用来增加限制，如果我们为 Receiver 对应的类型增加一个 RestrictsSuspension 注解，那么在它的作用下，协程体内就无法调用协程体外的挂起函数：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RestrictsSuspension</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProducerScope</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">  <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">produce</span><span class="params">(value: <span class="type">T</span>)</span></span> { ... }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">callLaunchCoroutin</span><span class="params">()</span></span> {</span><br><span class="line">  launchCoroutine(ProducerScope&lt;<span class="built_in">Int</span>&gt;()) {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    produce(<span class="number">1024</span>)</span><br><span class="line">    delay(<span class="number">1000</span>)<span class="comment">//错误，不能调用外部的挂起函数</span></span><br><span class="line">    produce(<span class="number">2048</span>)</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="可挂起的main-函数"><a href="#可挂起的main-函数" class="headerlink" title="可挂起的main 函数"></a>可挂起的main 函数</h3><p>从Kotlin 1.3 开始，main 可以直接被声明为挂起函数，只需要在main函数的声明前添加一个 suspend 关键字。这意味着从程序入口就能获得一个协程。我们直到，main是程序入口，所以呢，这个加了 suspend 的main函数不可能是真正的程序入口，不然 JVM 不可能认识。所以呢，无非是 编译器帮我们生成了一个真正的main方法，里面调用了一个叫做 runSuspend 函数来执行可挂起的main函数。</p>
-<h2 id="函数的挂起"><a href="#函数的挂起" class="headerlink" title="函数的挂起"></a>函数的挂起</h2></body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/08/10/%E4%B9%A6-ReactNative%E7%B2%BE%E8%A7%A3%E4%B8%8E%E5%AE%9E%E6%88%98/ReactNative%E7%B2%BE%E8%A7%A3%E4%B8%8E%E5%AE%9E%E6%88%98-%E7%AC%AC1%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1478,255 +1769,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC22%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC22%E7%AB%A0/" class="post-title-link" itemprop="url">第22章：插件化技术总结</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-04-06 21:52:00" itemprop="dateCreated datePublished" datetime="2021-04-06T21:52:00+08:00">2021-04-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-06-08 10:13:41" itemprop="dateModified" datetime="2022-06-08T10:13:41+08:00">2022-06-08</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>这章是重新梳理插件化技术的整体思路</p>
-<h2 id="插件的工程化"><a href="#插件的工程化" class="headerlink" title="插件的工程化"></a>插件的工程化</h2><p>插件化技术分为宿主App 和 插件Plugin1这两个 apk，有时候还有 MyPluginLibrary ，宿主和插件都要引用它。</p>
-<h2 id="加载插件中的类"><a href="#加载插件中的类" class="headerlink" title="加载插件中的类"></a>加载插件中的类</h2><p>宿主App 想要使用 Plugin1 中的类，还使用 宿主App 中的 ClassLoder 是不行的，由此缠身很多种解决方案：</p>
-<ul>
-<li>最直接的就是，在反射插件中的类时，使用 Plugin1.apk 对应的 ClassLoader (参考第6章)    </li>
-<li>无论是宿主还是插件，他们各自的 ClassLoader 都对应一个 dex 数组，把这些插件的dex数组都合并到宿主的 dex 数组中，那么，宿主App就可以加载任何类(参考9.3节)。     </li>
-<li>自定义一个ClassLoader，取代原先宿主的ClassLoader 。同时在自定义的 ClassLoader 中放一个集合，承载所有插件的 ClassLoader 。那么自定义的 ClassLoader 在加载任何一个类的时候，无论是插件还是宿主的类，都会现在宿主中找，如果没有，再遍历 ClassLoader 集合，看哪个 ClassLoader 能加载这个类(参考9.36节)。    </li>
-</ul>
-<h2 id="哪些地方可以Hook"><a href="#哪些地方可以Hook" class="headerlink" title="哪些地方可以Hook"></a>哪些地方可以Hook</h2><p>关于Hook 的技术可以参考第4章，Hook可以分为三类：</p>
-<ul>
-<li>在 App 中使用的类，可以Hook。Android 系统源码中被标记为hide的方法和类，<strong>我们可以通过反射使用它们，但是不能Hook</strong>。还有一些类，比如 Instrumentation 和 Callback ，在App中也能用，因此可以Hook替换。             </li>
-<li>实现了接口的类，可以Hook。虽然大部分类和方法都标记为hide，但是<strong>只要合格类实现了一个接口，我们就可以借助 Proxy.newProxyInstance 方法去截获它的方法</strong>，比较典型的是 IActivityManager 接口，以及实现这个接口的 AMN 。    </li>
-<li>集合。 没办法Hook一个标记为hide 的类，但是如果Android源码中某个类<strong>拥有集合变量的时候，我们可以反射构造出一个对象，然后还是通过反射添加到这个集合中</strong>。典型的是，穿件一个 LoadedApk ，把它事先放在 mPackages 缓存中，这样就能直接命中缓存(参考9.2节)。</li>
-</ul>
-<h2 id="Activity-的插件化解决方案"><a href="#Activity-的插件化解决方案" class="headerlink" title="Activity 的插件化解决方案"></a>Activity 的插件化解决方案</h2><p>从大方向来讲，分为动态替换和静态代理两种：</p>
-<ul>
-<li>动态替换：这是“占位”思想。宿主App中声明一个用于占位的 StubActivity ，启动插件中的ActivityA，但是告诉AMS启动的是 StubActivity ，欺骗成功之后，在即将启动Activity时，再把 StubActivity 换回 ActivityA(参考第9章)。      </li>
-<li>静态代理。这是一种牵线木偶的思想，在宿主App中设计一个 ProxyActivity ，由他来决定启动插件中的哪个 Activity。<strong>插件中的Activity都是没有生命的，得在ProxyActivity 生命周期中，调用插件Activity 的生命周期函数</strong>(参考9.5节)。</li>
-</ul>
-<p>此外，还需要解决 LaunchMode 问题，解决方案参考 9.5 节。</p>
-<h2 id="资源的解决方案"><a href="#资源的解决方案" class="headerlink" title="资源的解决方案"></a>资源的解决方案</h2><p>资源主要为Activity 服务。主要有两种解决方案：</p>
-<ul>
-<li>进入Plugin1 ，则加载Plugin1的资源，反射调用 AssetManager 的 addAssetPath 方法，参数是 Plugin1.apk 的路径。每次进入或者离开插件，都要切换资源。这是一件很繁琐的事情(参考第7章)。      </li>
-<li>事先把 宿主App的资源以及所有插件的资源都通过 AssetManager 的 addAssetPath 方法添加到一个全局变量中。这样，在插件 Activity 的基类中，重写 Activity 的 getResource 方法，从这个全局变量中提取资源。</li>
-</ul>
-<p>针对方案2，由于资源合并到一起，就可能发生资源id冲突，由此产生多种解决方案：</p>
-<ol>
-<li>修改aapt，更改id的前缀(参考15.2节)    </li>
-<li>修改resources.arsc，在 aapt 执行完成后，修改生成的文件(参考21章)    </li>
-<li>通过 public.xml 固定 plugin1 中所有的资源。这种方案不现实，针对固定一个资源的id还是很好的解决方案。</li>
-</ol>
-<h2 id="Fragment是哪个门派"><a href="#Fragment是哪个门派" class="headerlink" title="Fragment是哪个门派"></a>Fragment是哪个门派</h2><p>Fragment 与Activity 的最大区别，就是后者的一举一动需要和 AMS 交互，而Fragment不用。这种方案整个应用只有一个Activity ，Fragment 可以在 宿主App 中或者 插件中，只要使用合适的 ClassLoader 加载插件中的类，使用合适的 AssetManager 加载插件中的资源，就是一个完美的解决方案。可以参考 16 章。</p>
-<h2 id="Service、ContentProvider-和-BroadcastReceiver-插件化通用方案"><a href="#Service、ContentProvider-和-BroadcastReceiver-插件化通用方案" class="headerlink" title="Service、ContentProvider 和 BroadcastReceiver 插件化通用方案"></a>Service、ContentProvider 和 BroadcastReceiver 插件化通用方案</h2><p>因为这三者的数量并不多，插件化中也不会动态新增一个组件，所以最简单的方案是：在 宿主App 的 AndroidManifest 文件中事先声明这些组件。缺点是不能动态新增一个组件。参考 8.1节。</p>
-<h2 id="特定于Service-的插件化解决方案"><a href="#特定于Service-的插件化解决方案" class="headerlink" title="特定于Service 的插件化解决方案"></a>特定于Service 的插件化解决方案</h2><p>如果不事先在宿主App中声明插件的Service，那么Service 也有自己的解决方案：</p>
-<ul>
-<li>动态代理。也是欺上瞒下的思路。Service 不同于 Activity ，一个StubActivity 可以对应多个插件Activity，但是StubService 和插件Service 只能一一对应，所以应该在 宿主App 中声明多个 StubService。参考第10章。</li>
-<li>静态代理，牵线木偶思想。创建一个ProxyService，由 ProxyService 来启动插件中的Service，缺点是插件中有几个Service，宿主App 中就要有相同数量的 ProxyService。，参见 14.1和 14.2.</li>
-<li>结合前两种，能否在 宿主App中只声明一个Stubservice。参考 14.4</li>
-</ul>
-<h2 id="特定于BroadcastReceiver-的插件化解决方案"><a href="#特定于BroadcastReceiver-的插件化解决方案" class="headerlink" title="特定于BroadcastReceiver 的插件化解决方案"></a>特定于BroadcastReceiver 的插件化解决方案</h2><p>它的插件化解决方案是把静态的Receiver 转换为动态的Receiver。</p>
-<h2 id="特定于ContentProvider-的插件化解决方案"><a href="#特定于ContentProvider-的插件化解决方案" class="headerlink" title="特定于ContentProvider 的插件化解决方案"></a>特定于ContentProvider 的插件化解决方案</h2><p>占位思想。宿主App 中由 StubContentProvider 来欺骗 AMS，而实际执行的是 插件中的 ContentProvider 。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/" class="post-title-link" itemprop="url">第15章：再谈资源</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-04-06 21:29:00 / 修改时间：22:05:51" itemprop="dateCreated datePublished" datetime="2021-04-06T21:29:00+08:00">2021-04-06</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="Android-App-打包流程"><a href="#Android-App-打包流程" class="headerlink" title="Android App 打包流程"></a>Android App 打包流程</h2><p>早期Android打包都是基于Ant来做，为此我们需要熟悉Android App 打包的每一个过程。随着Gradle的问世，打包简化为几行配置代码。一套完整的Android App 打包流程如下图所示：</p>
-<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC15%E7%AB%A0/Android%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.png" alt="Android打包流程图"></p>
-<p>介绍下各部分的作用：</p>
-<ul>
-<li>aapt： 为res目录下的资源生成 R.java 文件，<strong>同时为AndroidManifest生成Manifest.java文件</strong>     </li>
-<li>aidl： 把项目中自定义的aidl文件生成相应的java代码文件    </li>
-<li>javac： 把项目中所有的Java 代码编译成 class 文件。包括3部分： 自己写的代码；aapt生成的代码；aidl生成的Java文件    </li>
-<li>proguard： 混淆的同时生成proguardMapping.txt，这个步骤是可选的    </li>
-<li>dex： 把所有的class文件(包括第三方库的class 文件)转换为dex文件      </li>
-<li>aapt： 这里还是使用aapt，这里是它的另一个功能：打包。即将res目录下的资源、assets下的文件，打包成一个 .ap_ 文件     </li>
-<li>apkbuilder：将所有的dex、ap_文件、AndroidManifest.xml 打包为.apk文件，此时未签名       </li>
-<li>jarsigner： 签名    </li>
-<li>zipalign： 对齐，以便运行时节省内存           </li>
-</ul>
-<h2 id="资源冲突解决方案一：修改AAPT"><a href="#资源冲突解决方案一：修改AAPT" class="headerlink" title="资源冲突解决方案一：修改AAPT"></a>资源冲突解决方案一：修改AAPT</h2><p>插件中的资源id可能会和宿主资源id是同一个值，为了解决资源id冲突，有3中解决方案：</p>
-<ul>
-<li>修改打包流程中的aapt命令，为插件资源id指定 0x71 之类的前缀，就可以避免冲突     </li>
-<li>仍然是将插件资源的id前缀改为 0x71，但是在Android打包生成 resources.arsc 文件后，对这个文件进行修改(具体可见21.2节)       </li>
-<li>进入到哪个插件，就为这个插件生成新的 AssetManager 和 Resources 对象，使用这两个新对象加载资源，就只能是插件中的资源，永远不会和宿主中冲突(详见 7.2)</li>
-</ul>
-<h3 id="修改并生成新的aapt命令"><a href="#修改并生成新的aapt命令" class="headerlink" title="修改并生成新的aapt命令"></a>修改并生成新的aapt命令</h3><p>R文件中有十六进制整数变量，内容如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>这些十六进制的变量，由三部分组成： packageId(apk包id，默认 0x7f) + typeId(资源类型，如attr=0x01，drawable=0x02，还有layout、string等) + entryId(typeId下的资源编码，从0开始递增)。以 0x7f0b006d 为例，packageId 为 0x7f，typeId为 0b，entryId 为 006d。</p>
-<p>插件中为防止资源冲突，会为每个插件设置不同的packageId，比如游戏大厅中，斗地主插件可能是 0x71开头，斗牛可能是 0x72。为asset 生成 R 文件 是通过 aapt 完成的，为了实现上述目的，我们要修改 aapt 源码，定位到 Android SDK，找到 aapt 目录，里面有一堆 C 代码， 命令行工具就是用这些代码编译成的，可以在这个目录直接搜索 0x7f，在 ResourcesTable.cpp 中可以找到如下代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>在 ResourcesTable 的构造函数中，有一个 Bundle 类型的参数，其次，判断 mPackageType 如果是 App，则都是 0x7f，此外 0x01 和 0x00 都被系统占用了，所以我们不要将这两个值设置为插件的 id前缀(事实上，有些手机厂商会占用其他的一些值，为了保险，我们一般只使用 0x71~0xff 作为插件的前缀)。修改 AAPT 的代码，基本思路如下：</p>
-<ol>
-<li>在 aapt 的命令行参数中传递打包时的前缀   </li>
-<li>把这个值设置给 Bundle 实体的 mApkModule 字段，作为 ResourcesTable 的构造函数参数传入        </li>
-<li>在 ResourcesTable 构造函数读取 mApkModule 值，也就是前缀值，设置给 packageId    </li>
-</ol>
-<p>实现代码： 略</p>
-<h3 id="在插件化项目中使用新的aapt命令"><a href="#在插件化项目中使用新的aapt命令" class="headerlink" title="在插件化项目中使用新的aapt命令"></a>在插件化项目中使用新的aapt命令</h3><p>现在，可以用我们修改的aapt文件替换sdk下的aapt 命令，但是如果这么做，每当Android系统更新，我们都要替换一次aapt命令。一种可行的做法是，我们把这个新的 aapt 工具命名为 aapt_mac ，放到项目的根目录下：</p>
-<p><img src="" alt="自定义的aapt放置"></p>
-<p>之后，修改项目中 gradle 文件：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述脚本通过反射，<strong>把aapt的路径临时修改为指向当前App根目录下的aapt_mac</strong>。此外，我们将App的资源前缀设置为 0x71 ，这样在打包后，R文件中的资源就以 0x71 作为前缀了。</p>
-<h2 id="public-xml-固定资源id值"><a href="#public-xml-固定资源id值" class="headerlink" title="public.xml 固定资源id值"></a>public.xml 固定资源id值</h2><p>如下场景：多个插件都需要<strong>同一个</strong>自定义控件，于是我们把这个自定义控件卸载宿主 App，插件调用宿主的Java 代码，使用宿主的资源(有控件肯定有资源)。考虑到App在每次打包后，随着资源的增减，同一个资源id的值可能会发生变化。为避免这种情况，我们可以<strong>把公用的资源id值固定写死</strong>，如下public.xml文件所示（注意，type和id后面的空格不可省略）：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="string1" id="0x7f050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>之后，把public.xml放到 res/values 目录下，R.string.string1 这个资源就会固定成 0x7f050024。当然，还可以指定资源值的一个区间,将上述代码中间那行改成如下代码即可：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">public-padding</span> <span class="attr">name</span>=<span class="string">"my_"</span> <span class="attr">end</span>=<span class="string">"0x7f02000f"</span> <span class="attr">start</span>=<span class="string">"0x7f020001"</span> <span class="attr">type</span>=<span class="string">"drawable"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>但是从gradle 1.3开始，就忽略 public.xml了，因此需要我们自己使用gradle 脚本来实现，代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>之后，打包宿主 ActivityHost1 ，使用Jadx-GUI 查看资源id，可以看到 R.string.string1 的值永远是 2131034148(也即十六进制0x7f050024)。</p>
-<h2 id="插件使用宿主的资源"><a href="#插件使用宿主的资源" class="headerlink" title="插件使用宿主的资源"></a>插件使用宿主的资源</h2><p>宿主资源值固定了，但是插件怎么访问宿主中的资源呢？如果插件内部能保持一个对宿主项目的引用，那就可以随便访问宿主的任何资源了。<strong>我们需要编写gradle脚本，把宿主打包成 jar 包。之后设置插件的gradle文件，通过provided来引用这个jar包</strong>。之前介绍过，provided方式引用只在编码时候有用，正式打包的时候不会被引用进去。代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章给出插件化中资源id冲突的解决方案：</p>
-<ul>
-<li>把宿主和插件的资源都合并到一起，通过AssetManager的addAssetPath 来实现。只不过，<strong>这种方案会产生资源id冲突的问题</strong>      </li>
-<li>如果不事先合并资源，那就为每个插件创建一个 AssetManager，每个 AssetManager 都是通过反射调用 addAssetPath 方法，把插件资源加进去。当宿主进入一个插件时，就把 AssetManager 切换为 插件的AssetManager ；反之，当从插件回到宿主的时候，再把 AssetManager 切换回宿主的 AssetManager(详见第5章的loadResource方法)。</li>
-</ul>
-<p>第一种方案，主要缺陷是资源冲突，并且资源id的前缀是有限的，也就256个值，如果超过256个插件，就要使用方案2了。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/3/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><span class="space">&hellip;</span><a class="page-number" href="/page/14/">14</a><a class="extend next" rel="next" href="/page/5/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/3/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><span class="space">&hellip;</span><a class="page-number" href="/page/15/">15</a><a class="extend next" rel="next" href="/page/5/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1772,7 +1819,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">140</span>
+          <span class="site-state-item-count">142</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1858,7 +1905,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共303.1k字</span>
+  <span class="post-count">博客全站共304.1k字</span>
 </div>
 
 

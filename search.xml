@@ -4618,96 +4618,6 @@
       </tags>
   </entry>
   <entry>
-    <title>第1、2、3章：异步程序设计介绍</title>
-    <url>/2021/08/10/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC1%E3%80%812%E3%80%813%E7%AB%A0/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="异步程序设计的关键问题"><a href="#异步程序设计的关键问题" class="headerlink" title="异步程序设计的关键问题"></a>异步程序设计的关键问题</h2><ul>
-<li>结果传递——异步（数据未准备好）或者同步（数据已经准备好）</li>
-<li>异常处理，一旦异步调用，异常处理变得复杂。（执行前错误，执行时错误、数据错误等）</li>
-<li>取消响应</li>
-<li>‘复杂分支（比如涉及同步）</li>
-</ul>
-<h2 id="常见的异步程序设计思路"><a href="#常见的异步程序设计思路" class="headerlink" title="常见的异步程序设计思路"></a>常见的异步程序设计思路</h2><ul>
-<li><p>Future，没有偏离主流程，但是一旦调用get就会阻塞</p>
-</li>
-<li><p>CompletableFuture，get调用之后，不会阻塞主调用流程，但是整体偏离了主流程</p>
-</li>
-<li><p>Promise 与 async/await， 在JS、C#等语言中实现</p>
-</li>
-<li><p>响应式编程，比如 RxJava 就是这种思想，注重描述数据输入和输出之间的关系，因此很容易奇幻线程</p>
-</li>
-<li><p>Kotlin 协程，只用了一个关键字suspend表示挂起点，包含了异步调用和回调两层含义。在挂起点我们可以做很多事情，既可以像async/await异步回调，也能添加调度器来处理线程切换</p>
-<blockquote>
-<p>如果说kotlin协程只是一个“线程框架”，那就有点“一叶障目不见泰山”了，</p>
-</blockquote>
-</li>
-</ul>
-<p>我们来看一个Kotlin协程处理异步调用的例子：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">bitmapSuspendable</span><span class="params">(url: <span class="type">String</span>)</span></span>: Bitmap = </span><br><span class="line">    suspendCoroutin&lt;Bitmap&gt; { continuation -&gt;</span><br><span class="line">      thread {</span><br><span class="line">        continuation.resume(download(url))</span><br><span class="line">      } <span class="keyword">catch</span> (e: Exception) {</span><br><span class="line">        continuation.resumeWithException(e)</span><br><span class="line">      }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>我们用标准库 API suspendCoroutin<t> 的返回值作为挂起函数 bitmapSuspendable 的返回值类型，也就是反省参数T的实参 Bitmap，这个函数除了确定返回值类型外，还能帮我们拿到一个Continuation的实例，负责保存和恢复挂起状态。<strong>suspend 函数只能在 其他suspend函数或者协程体中调用</strong>。</t></p>
-<p>ConcurrentHashMap 的value不能为null</p>
-<p>———第2章：协程的基本概念</p>
-<h2 id="协程是什么"><a href="#协程是什么" class="headerlink" title="协程是什么"></a>协程是什么</h2><p>线程与协程的最大区别：从任务的角度看，线程一旦开始就不会暂停，直到任务结束，这个过程是连续的，线程之间是抢占调度的，因此不存在协作。而协程会自己处理挂起和恢复来实现协作调度。</p>
-<h2 id="协程的分类"><a href="#协程的分类" class="headerlink" title="协程的分类"></a>协程的分类</h2><h3 id="按照调用栈分"><a href="#按照调用栈分" class="headerlink" title="按照调用栈分"></a>按照调用栈分</h3><p>通常说的调用栈，指的是<strong>函数调用栈</strong>，是用来保存函数调用时的状态信息的数据结构。线程会因为CPU调度权的切换而被中断，它的中断状态会保存在调用栈中，因而，协程也能按照是否开辟相应的调用栈来分类：</p>
-<ul>
-<li>有栈协程，这就类似线程了，与线程的不同体现在调度上</li>
-<li>无栈协程，没有自己的调用栈，挂起点的状态通过<strong>状态机</strong>或者<strong>闭包</strong>等语法来实现</li>
-</ul>
-<p>有栈协程的优点是<strong>可以在任意函数调用层级的任意位置挂起，并转移调度权</strong>，无栈协程的优点那就是<strong>节省了这块栈内存</strong>。一般来说，<strong>Kotlin 属于 无栈协程</strong>，它依靠对协程体本身编译生成的状态机的状态流转实现，变量的保存也是通过闭包语法实现。</p>
-<h3 id="按调度方式分类"><a href="#按调度方式分类" class="headerlink" title="按调度方式分类"></a>按调度方式分类</h3><p>根据协程调度权的转移目标的不同，又可以将协程分为以下两种：</p>
-<ul>
-<li>对称协程，每个协程都是相互独立且平等的，调度权可以在任意协程之间转移    </li>
-<li>非对称协程，协程出让调度权的目标只能是它的<strong>调用者</strong>，也即协程之间存在调用和被调用的关系</li>
-</ul>
-<p>对称协程接近线程的样子了，而非对称协程更符合我们的思维习惯。非对称协程的一个例子就是：async/await ，await时，将调度权转移到异步调用中，异步调用返回结果或者抛出异常时，总是将调度权转移回await 的位置。至于Kotlin协程，书中没有具体分类，不过从言语中可以<strong>推断出Kotlin协程属于 非对称协程</strong>。</p>
-<h3 id="协程的实现举例"><a href="#协程的实现举例" class="headerlink" title="协程的实现举例"></a>协程的实现举例</h3><p>简略写下：</p>
-<ul>
-<li>Python的Generator 通过在函数中调用  yield 来实现当前函数调用的挂起 ，yield 的参数作为对下一次调用的返回值   </li>
-<li>Lua 就提供了几个API ，让开发者灵活调用： create创建、yield 挂起、resume 恢复</li>
-</ul>
-<p>————–第3章：Kotlin协程的基础设施</p>
-<h2 id="协程的构造"><a href="#协程的构造" class="headerlink" title="协程的构造"></a>协程的构造</h2><p>要想进入协程的世界，首先需要构造出一个协程实例。</p>
-<h3 id="协程创建"><a href="#协程创建" class="headerlink" title="协程创建"></a>协程创建</h3><p>标准库中提供了一个createCoroutin 函数，我们可以通过它来创建协程：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> continuation = <span class="keyword">suspend</span> {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    <span class="number">5</span></span><br><span class="line">}.createCoroutine(<span class="keyword">object</span> : Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> context: CoroutineContext</span><br><span class="line">        <span class="keyword">get</span>() = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">        println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>不过这个协程不会立即执行，我们来看这个 createCoroutine 函数的声明：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).createCoroutine(</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其中，</p>
-<ul>
-<li>suspend () -&gt; T 是 createCoroutine 函数的 Receiver ，<strong>是一个被suspend 修饰的挂起函数</strong>，这也是协程的执行体，不妨称之为协程体</li>
-<li>参数 completion 会在协程执行完成后调用，协程的<strong>完成回调</strong></li>
-<li>返回值是一个 Continuation 对象，由于现在协程仅仅被创建出来，因此<strong>需要通过这个值在之后出发协程的启动</strong></li>
-</ul>
-<h3 id="协程的启动"><a href="#协程的启动" class="headerlink" title="协程的启动"></a>协程的启动</h3><p>调用 continuation.resume(Unit) 之后，协程会立即开始执行。为什么触发返回的 Continuation 的resume 就会触发携程体呢？通过阅读源码我们直到，返回的 Continuation 是 SafeContinuation 的实例。</p>
-<p>我们的协程体，也就是那个用于创建协程的 suspend Lambda 表达式（应该是这一截：suspend () -&gt; T），编译器在它编译之后会将其封装成一个 <strong>实现了 Continuation 接口的实现类SuspendLambda</strong>！Continuation接口里面有个 invokeSuspend 抽象函数，编译生成的匿名内部类中的这个函数的实现就是我们的协程体！</p>
-<p>这样看来就很清晰了，<strong>创建协程返回的 Continuation 实例就是套了几层马甲的协程体，因而调用它的resume就能触发协程体的运行</strong>。</p>
-<h3 id="协程体的Receiver（个人理解是提供了个作用域）"><a href="#协程体的Receiver（个人理解是提供了个作用域）" class="headerlink" title="协程体的Receiver（个人理解是提供了个作用域）"></a>协程体的Receiver（个人理解是提供了个作用域）</h3><p>除之前介绍的，还有另一种创建协程的方法：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="params">(<span class="keyword">suspend</span> R.()</span></span> -&gt; T).createCoroutine(</span><br><span class="line">    receiver: R,</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以看到，与之前的方法对比，这个创建方法主要多了个 Receiver 类型 R  ，这个R 提供了一个作用域，<strong>在协程体内我们可以直接使用作用域内提供的函数或者状态等</strong>。为了使用方便，我们封装一个采用这种方法启动协程的方法：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="title">launchCoroutine</span><span class="params">(receiver: <span class="type">R</span>, block: <span class="type">suspend</span> <span class="type">R</span>.() -&gt; <span class="type">T</span>)</span></span> {</span><br><span class="line">  block.startCoroutine(receiver, <span class="keyword">object</span>: Continuation&lt;T&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt; {</span></span></span><br><span class="line"><span class="params"><span class="function">      <span class="type">println</span>("<span class="type">Coroutin</span> <span class="type">End</span>: $"<span class="type">result</span>")</span></span></span><br><span class="line"><span class="params"><span class="function">    }</span></span></span><br><span class="line"><span class="params"><span class="function">              </span></span></span><br><span class="line"><span class="params"><span class="function">    <span class="type">override</span> <span class="type">val</span> <span class="type">context</span> = EmptyCoroutinContext</span></span></span><br><span class="line"><span class="params"><span class="function">      </span></span></span><br><span class="line"><span class="params"><span class="function">  })</span></span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>接下来，我们用一个例子来使用这个方法：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProducerScope</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">  <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">produce</span><span class="params">(value: <span class="type">T</span>)</span></span> { ... }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">callLaunchCoroutin</span><span class="params">()</span></span> {</span><br><span class="line">  launchCoroutine(ProducerScope&lt;<span class="built_in">Int</span>&gt;()) {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    produce(<span class="number">1024</span>)<span class="comment">//注意，这里调用 ProducerScope 里面的方法，也就是这个域里面的方法</span></span><br><span class="line">    delay(<span class="number">1000</span>)</span><br><span class="line">    produce(<span class="number">2048</span>)<span class="comment">//注意，这里调用 ProducerScope 里面的方法，也就是这个域里面的方法</span></span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>由于添加了作用域 ProducerScope 作为Receiver，示例中我们可以在协程体中直接调用 produce 函数；delay 是在协程体外定义的挂起函数，在协程体内也能直接调用。作用域可以用来提供函数支持，自然也能用来增加限制，如果我们为 Receiver 对应的类型增加一个 RestrictsSuspension 注解，那么在它的作用下，协程体内就无法调用协程体外的挂起函数：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@RestrictsSuspension</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProducerScope</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">  <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">produce</span><span class="params">(value: <span class="type">T</span>)</span></span> { ... }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">callLaunchCoroutin</span><span class="params">()</span></span> {</span><br><span class="line">  launchCoroutine(ProducerScope&lt;<span class="built_in">Int</span>&gt;()) {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    produce(<span class="number">1024</span>)</span><br><span class="line">    delay(<span class="number">1000</span>)<span class="comment">//错误，不能调用外部的挂起函数</span></span><br><span class="line">    produce(<span class="number">2048</span>)</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="可挂起的main-函数"><a href="#可挂起的main-函数" class="headerlink" title="可挂起的main 函数"></a>可挂起的main 函数</h3><p>从Kotlin 1.3 开始，main 可以直接被声明为挂起函数，只需要在main函数的声明前添加一个 suspend 关键字。这意味着从程序入口就能获得一个协程。我们直到，main是程序入口，所以呢，这个加了 suspend 的main函数不可能是真正的程序入口，不然 JVM 不可能认识。所以呢，无非是 编译器帮我们生成了一个真正的main方法，里面调用了一个叫做 runSuspend 函数来执行可挂起的main函数。</p>
-<h2 id="函数的挂起"><a href="#函数的挂起" class="headerlink" title="函数的挂起"></a>函数的挂起</h2></body></html>]]></content>
-      <categories>
-        <category>读书笔记</category>
-      </categories>
-      <tags>
-        <tag>读书笔记-深入理解Kotlin协程</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>第2章：进程与线程</title>
     <url>/2018/05/29/%E4%B9%A6-%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC2%E7%AB%A0/</url>
     <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>进程是操作系统提供的最古老也是最重要的抽象概念之一。即使CPU只有一个，但他们也支持（伪）并发操作的能力。他们将一个单独的CPU变换成多个虚拟的CPU，没有进程的抽象，现代计算将不复存在。</p>
@@ -13522,6 +13432,199 @@ public View getView(final int i, View view, ViewGroup viewGroup) {
       </categories>
       <tags>
         <tag>Java高并发核心编程(卷2)</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第1章：异步程序设计介绍</title>
+    <url>/2023/02/25/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC1%E7%AB%A0/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="1-2-异步程序设计的关键问题"><a href="#1-2-异步程序设计的关键问题" class="headerlink" title="1.2 异步程序设计的关键问题"></a>1.2 异步程序设计的关键问题</h2><h3 id="1-2-1-结果传递"><a href="#1-2-1-结果传递" class="headerlink" title="1.2.1 结果传递"></a>1.2.1 结果传递</h3><p>不同于同步调用，异步调用是立即返回的，因此被调用方的逻辑通常存在2种情形：</p>
+<ul>
+<li><p>结果尚未就绪：进入任务执行的状态，等结果就绪后通过回调传递给调用方</p>
+</li>
+<li><p>结果已经就绪，可以立即提供结果</p>
+</li>
+</ul>
+<p>用图片获取作为例子，上述2种情况代码示意如下所示（<strong>这是我个人觉得理解Kotlin协程实现最巧妙的例子了，其实后面的本质就是这个</strong>）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">// 方法实现</span></span><br><span class="line"><span class="function">fun <span class="title">asyncBitmap</span><span class="params">(url: String, callback: (Bitmap)</span> -&gt; Unit): Bitmap </span>{</span><br><span class="line">          val bitmap = asyncBitmap(url) {</span><br><span class="line">        show(it) <span class="comment">//...② 异步请求</span></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (bitmap != <span class="keyword">null</span>) {</span><br><span class="line">        show(bitmap) <span class="comment">//... ① 直接返回了</span></span><br><span class="line">    }  <span class="keyword">return</span> when (val bitmap = Cache.get(url)) {</span><br><span class="line">        <span class="keyword">null</span> -&gt; {</span><br><span class="line">            thread {</span><br><span class="line">                download(url)</span><br><span class="line">                    .also { Cache.put(url, it) }</span><br><span class="line">                    .also(callback)</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="keyword">else</span> -&gt; bitmap</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用方法，如果有同步返回，就使用同步返回，否则依赖异步回调</span></span><br><span class="line"><span class="meta">@JvmStatic</span></span><br><span class="line"><span class="function">fun <span class="title">main</span><span class="params">(args: Array&lt;String&gt;)</span> </span>{</span><br><span class="line">    val bitmap = asyncBitmap(url) {</span><br><span class="line">        show(it) <span class="comment">//...② 异步请求</span></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (bitmap != <span class="keyword">null</span>) {</span><br><span class="line">        show(bitmap) <span class="comment">//... ① 直接返回了</span></span><br><span class="line">    }</span><br><span class="line">} </span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Kotlin 协程的挂起函数 (suspend function) 本质上就是采取了这个异步返回值的设计思路</p>
+</blockquote>
+<h3 id="1-2-2-异常处理"><a href="#1-2-2-异常处理" class="headerlink" title="1.2.2 异常处理"></a>1.2.2 异常处理</h3><p>我们希望异步的任务在 suspend 的时候执行，执行完成后 resume 回来，之后再同步判断是否发生了异常。这样逻辑就会简单很多。<strong>异步逻辑同步化也是 Kotlin 协程要解决的问题。</strong></p>
+<h3 id="1-2-4-复杂分支"><a href="#1-2-4-复杂分支" class="headerlink" title="1.2.4 复杂分支"></a>1.2.4 复杂分支</h3><p>为同步操作添加分支甚至循环操作是很容易的，比如获取图片是同步的情况下，获取多个图片：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">val bitmap = urls.map { syncBitmap(it) }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在上述情况下我们甚至还能方便地通过一个 try-catch 捕捉所有异常。而当获取图片的操作是异步的情况时，就变得复杂，还需要用到一些同步工具来辅助：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">val countDownLatch = CountDownLatch(urls.size)</span><br><span class="line"></span><br><span class="line">val map = urls.map { it to EMPTY_BITMAP }</span><br><span class="line">    .toMap(ConcurrentHashMap&lt;String, Bitmap&gt;())</span><br><span class="line"></span><br><span class="line">urls.map { url -&gt;</span><br><span class="line">    asyncBitmap(url, onSuccess = {</span><br><span class="line">        map[url] = it</span><br><span class="line">        countDownLatch.countDown() <span class="comment">//...②</span></span><br><span class="line">    }, onError = {</span><br><span class="line">        showError(it)</span><br><span class="line">        countDownLatch.countDown()<span class="comment">//...③</span></span><br><span class="line">    })</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">countDownLatch.await() <span class="comment">//...①</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//获取所有的图片 bitmap</span></span><br><span class="line">val bitmaps = map.values</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里还需要借助 <strong>CountDownLatch 门闩</strong> 来实现，因此在 ① 处会阻塞当前线程，直到所有回调的 ② 或 ③ 位置执行之后，才会执行获取所有图片的操作：val bitmaps = map.values ，总之，这个过程还是挺复杂的。</p>
+<blockquote>
+<p>EMPTY_BITMAP 是一个空的 Bitmap 对象，为什么要这么做呢？<strong>因为 ConcurrentHashMap 不允许 value 为空！</strong></p>
+</blockquote>
+<h2 id="1-3-常见异步程序设计思路"><a href="#1-3-常见异步程序设计思路" class="headerlink" title="1.3 常见异步程序设计思路"></a>1.3 常见异步程序设计思路</h2><h3 id="1-3-1-Future"><a href="#1-3-1-Future" class="headerlink" title="1.3.1 Future"></a>1.3.1 Future</h3><p>但是 Future.get() 方法会造成当前调用阻塞。</p>
+<h3 id="1-3-2-CompletableFuture"><a href="#1-3-2-CompletableFuture" class="headerlink" title="1.3.2 CompletableFuture"></a>1.3.2 CompletableFuture</h3><p>它的 get() 方法无需阻塞，异步调用不阻塞主流程调用但是结果脱离了主调用流程（需要回调获取）</p>
+<h3 id="1-3-3-JavaScript-的-Promise——async-await"><a href="#1-3-3-JavaScript-的-Promise——async-await" class="headerlink" title="1.3.3 JavaScript 的 Promise——async/await"></a>1.3.3 JavaScript 的 Promise——async/await</h3><p>比较完好地实现了需求，他们 async/await 的语义稍微不同。</p>
+<h3 id="1-3-5-Kotlin协程"><a href="#1-3-5-Kotlin协程" class="headerlink" title="1.3.5 Kotlin协程"></a>1.3.5 Kotlin协程</h3><p>Kotlin 协程是为异步程序设计而生的。</p>
+<blockquote>
+<p>有人称协程只是“一个线程框架”，认为协程就是用来切换线程的，显然有点“一叶障目不见泰山”了</p>
+</blockquote>
+<p>Kotlin 协程用一个 suspend 关键字，包含了<strong>异步调用</strong> 和 <strong>回调</strong> 两层含义。我们知道，所有异步回调对于当前调用流程只是一个<strong>挂起点</strong>。在这个挂起点可以做的事情非常多：既可以做异步回调，还可以添加调度器来处理线程切换，还可以作为协程取消响应的位置。</p>
+<p>看一个 Kotlin 处理异步调用的例子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function">suspend fun <span class="title">bitmapSuspendable</span><span class="params">(url: String)</span>: Bitmap </span>=</span><br><span class="line">    suspendCoroutine&lt;Bitmap&gt; { continuation -&gt;</span><br><span class="line">        thread {</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                continuation.resume(download(url))</span><br><span class="line">            } <span class="keyword">catch</span> (e: Exception) {</span><br><span class="line">                continuation.resumeWithException(e)</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>suspend 修饰函数，意味着支持同步化的异步调用。上述代码中，</p>
+<ul>
+<li><p>continuation.resume(download(url)) 将正常的结果返回</p>
+</li>
+<li><p>continuation.resumeWithException(e) 则是将异常返回，在调用 bitmapSuspendable() 方法时，如果产生异常会把这个异常抛出</p>
+</li>
+</ul>
+<p>效果如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function">suspend fun <span class="title">main</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        val bitmap = bitmapSuspendable(<span class="string">"xxxx"</span>)</span><br><span class="line">        <span class="comment">//todo 正常图片处理</span></span><br><span class="line">    } <span class="keyword">catch</span> (e: Exception) {</span><br><span class="line">        <span class="comment">//todo 异常处理</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<blockquote>
+<p>从 1.3.0 开始，开始支持 suspend fun main 作为函数入口了</p>
+</blockquote>
+</body></html>]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>深入理解Kotlin协程</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第2章：协程基本概念</title>
+    <url>/2023/02/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC2%E7%AB%A0/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="2-2-协程的分类"><a href="#2-2-协程的分类" class="headerlink" title="2.2 协程的分类"></a>2.2 协程的分类</h2><p>可以按照按照调用栈（函数调用栈，用来保存函数调用时的状态信息的数据结构）来分，因为<strong>协程需要挂起和恢复</strong>，因此对于挂起点的状态保存就极其关键。</p>
+<h3 id="2-2-1-按照调用栈分类"><a href="#2-2-1-按照调用栈分类" class="headerlink" title="2.2.1 按照调用栈分类"></a>2.2.1 按照调用栈分类</h3><p>根据是否开辟相应的调用栈来分的话可以分为 2 类：</p>
+<ul>
+<li><p>有栈协程，需要额外的栈空间，但是灵活，可以在任意函数调用层级的任意位置挂起</p>
+</li>
+<li><p>无栈协程， 节省内存，咱 Kotlin 协程一般认为就归为这一类，<strong>依靠对协程体本身编译生成的状态机的状态流转来实现控制流</strong></p>
+</li>
+</ul>
+<blockquote>
+<p>不过，Kotlin 协程可以在<strong>挂起函数范围</strong>内任意调用层次挂起，换句话说，我们启动一个 Kotlin 协程，可以在其中任意嵌套 suspend 函数 ！</p>
+</blockquote>
+<h3 id="2-2-2-按调度方式分类"><a href="#2-2-2-按调度方式分类" class="headerlink" title="2.2.2 按调度方式分类"></a>2.2.2 按调度方式分类</h3><ul>
+<li><p>对称协程： 任何一个协程都是相互独立且平等的，调度权可以在任意协程之间转移</p>
+</li>
+<li><p>非对称协程：协程出让调度权的目标只能是它的调用者，即<strong>协程之间存在调用和非调用关系</strong></p>
+</li>
+</ul>
+<blockquote>
+<p>可以看出来，对称协程和线程已经非常接近了</p>
+</blockquote>
+<h2 id="2-3-协程的实现举例"><a href="#2-3-协程的实现举例" class="headerlink" title="2.3 协程的实现举例"></a>2.3 协程的实现举例</h2><p>列举了各种语言协程的实现，这里先略过。</p>
+</body></html>]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>深入理解Kotlin协程</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>第3章：Kotlin协程的基础设施</title>
+    <url>/2023/02/27/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC3%E7%AB%A0/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="3-1-协程的构造"><a href="#3-1-协程的构造" class="headerlink" title="3.1 协程的构造"></a>3.1 协程的构造</h2><h3 id="3-1-1-协程的创建"><a href="#3-1-1-协程的创建" class="headerlink" title="3.1.1 协程的创建"></a>3.1.1 协程的创建</h3><p>Kotlin 提供了一个 createCoroutine 函数用来创建协程：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).createCoroutine(</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其中 suspend() -&gt; T 是 createCoroutin 函数的 Receiver，对 Kotlin 函数不了解的话，这个还是有点费解的。我们依次剖析 createCoroutine 的参数和返回值：</p>
+<ul>
+<li><p>Receiver 是一个被 suspend 修饰的挂起函数，这也是协程协程的执行体（协程体）</p>
+</li>
+<li><p>参数是 completion（是 Continuation 类型）会在协程体执行完后调用，实际上就是<strong>协程完成的回调</strong></p>
+</li>
+<li><p>返回值也是一个 Continuation 对象，由于现在协程仅仅被创建出来，因此需要通过这个值在之后触发协程的启动</p>
+</li>
+</ul>
+<p>以一个例子来说明 createCoroutine 的用法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">val</span> continuation = <span class="keyword">suspend</span> {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    <span class="number">5</span></span><br><span class="line">}.createCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> context = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">        println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>目前协程被创建出来了，但是它还未启动。</p>
+<h3 id="3-1-2-协程的启动"><a href="#3-1-2-协程的启动" class="headerlink" title="3.1.2 协程的启动"></a>3.1.2 协程的启动</h3><p>在上述的例子中，我们已经创建了协程，之后只需要调用 continuation.resume(Unit) 之后，协程就会立即开始。为什么这样就可以触发协程体执行呢？</p>
+<p>其实，我们创建协程得到的 continuation 是 SafeContinuation 的实例，不过这也是个“马甲”，它有个 delegate 属性，里面将 suspend() -&gt; T  封装成了一个 Continuation 对象</p>
+<p><strong>也就是说，我们创建协程得到的 continuation 其实就是套了几层“马甲”的协程体，故调用这个 continuation.resume() 可以触发协程体的执行</strong></p>
+<p>一般来讲，我们创建协程之后就会启动它，所以标准库还提供了另一个一步到位的API——startCoroutin ：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).startCoroutine(completion: Continuation&lt;T&gt;)</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>我们知道，作为参数传入的 completion 就如同回调一样，**协程体的返回值会作为 resumeWith 的参数传入，例如，下面的例子：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    <span class="keyword">suspend</span> {</span><br><span class="line">        println(<span class="string">"我跑在协程里"</span>)</span><br><span class="line">        <span class="number">3</span></span><br><span class="line">    }.startCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">        <span class="keyword">override</span> <span class="keyword">val</span> context: CoroutineContext</span><br><span class="line">            <span class="keyword">get</span>() = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">            println(<span class="string">"协程执行完成，result = <span class="variable">$result</span>"</span>)</span><br><span class="line">        }</span><br><span class="line">    })</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>如果协程体执行正常，则 result 为 Success 结果；否则返回 Failure 结果。上述代码结果如下：</p>
+<blockquote>
+<p>我跑在协程里<br>//协程执行完成，result = Failure(java.lang.IllegalStateException: 抛出异常)<br>协程执行完成，result = Success(3)</p>
+</blockquote>
+<h3 id="3-1-3-协程体的-Receiver"><a href="#3-1-3-协程体的-Receiver" class="headerlink" title="3.1.3 协程体的 Receiver"></a>3.1.3 协程体的 Receiver</h3><p>与协程创建和启动相关的 API 还有一组：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="params">(<span class="keyword">suspend</span> R.()</span></span> -&gt; T).create(</span><br><span class="line">    receiver: R,</span><br><span class="line">    completion: Continuation&lt;T&gt;</span><br><span class="line">): Continuation&lt;<span class="built_in">Unit</span>&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment">// start 方法略</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述的 R 可以为协程体提供一个作用域，在协程体内我们可以直接使用，如下代码所示：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//先把上述方法封装下，如果不封装怎么调用？</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="title">launchCoroutine</span><span class="params">(receiver: <span class="type">R</span>, block: <span class="type">suspend</span> <span class="type">R</span>.() -&gt; <span class="type">T</span>)</span></span> {</span><br><span class="line">    block.startCoroutine(receiver, <span class="keyword">object</span> : Continuation&lt;T&gt; {</span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt;)</span></span> {</span><br><span class="line">            println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="keyword">override</span> <span class="keyword">val</span> context = EmptyCoroutineContext</span><br><span class="line">    })</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//创建额外的域</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProducerScope</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">    <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">produce</span><span class="params">(value: <span class="type">T</span>)</span></span> {</span><br><span class="line">        println(<span class="string">"我在额外的 Receiver 中了: <span class="variable">$value</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    launchCoroutine(ProducerScope&lt;<span class="built_in">Int</span>&gt;()) {</span><br><span class="line">        println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">        produce (<span class="number">1024</span>)</span><br><span class="line">        <span class="comment">//delay (1000)  //我自己测试的时候，如果放开这个注释，就不会打到 2048，coroutine end 也不会执行到</span></span><br><span class="line">        produce (<span class="number">2048</span>)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<blockquote>
+<p>这里要注意的一点是，如果额外的域 ProducerScope 添加了 @RestrictsSuspension 注解，则无法使用外部的函数，因此例子中的 delay 也不会调用</p>
+</blockquote>
+<h3 id="3-1-4-可挂起的-main-函数"><a href="#3-1-4-可挂起的-main-函数" class="headerlink" title="3.1.4 可挂起的 main 函数"></a>3.1.4 可挂起的 main 函数</h3><p>前面我们一直这样写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    ....</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这样就能在程序入口就获得一个协程了，这到底是怎么实现的呢？首先，我们能确认2点：</p>
+<ul>
+<li><p>JVM 压根就不知道什么挂起函数，kotlin协程</p>
+</li>
+<li><p>JVM 肯定有一个 main 函数的</p>
+</li>
+</ul>
+<p>为了搞清楚原理，我们可以对 Kotlin 反编译成 Java 代码（IDEA的 Kotlin byteCode 功能）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] var0)</span> </span>{</span><br><span class="line">   RunSuspendKt.runSuspend(<span class="keyword">new</span> KotlinMainKt$$$main(var0));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>可以看到，其实它是有真正的 main 函数的，里面的协程封装逻辑都被扔到 RunSuspendKt里面了</p>
+<h3 id="3-2-1-挂起函数"><a href="#3-2-1-挂起函数" class="headerlink" title="3.2.1 挂起函数"></a>3.2.1 挂起函数</h3><p>整个 kotlin 语境下有 2种函数： 普通函数和挂起函数，<strong>其中：挂起函数能调用任何函数，但是普通函数不能调用挂起函数。</strong></p>
+<p>所谓的协程挂起其实就是程序执行流程发生异步调用时，当前调用流程进入等待状态。注意：<strong>挂起函数不一定真的会挂起，只是提供了挂起的条件</strong>，那额什么情况才会真正挂起呢？</p>
+<h3 id="3-2-2-挂起点"><a href="#3-2-2-挂起点" class="headerlink" title="3.2.2 挂起点"></a>3.2.2 挂起点</h3><p>回想下协程的创建过程，我们的协程体本身就是一个 Continuation 实例，正因如此，挂起函数才能在协程体内运行。<strong>在协程体内部，挂起函数的调用处称为挂起点，挂起点如果出现异步调用，当前协程就会被挂起，直到对应的 Continuation.resume 函数被调用才会恢复执行。</strong></p>
+<p><strong>异步调用如何发生，取决于 resume 函数与对应的挂起函数的调用是否在相同的调用栈上</strong></p>
+<h3 id="3-2-3-CPS-变换"><a href="#3-2-3-CPS-变换" class="headerlink" title="3.2.3 CPS 变换"></a>3.2.3 CPS 变换</h3><p>我们知道，挂起函数如果需要挂起，则需要通过 suspendCoroutine 来获取 Continuation 实例，我们已经知道它是协程体封装成的 Continuation，但是这个实例是怎么传入的呢？先看下面的suspend 函数：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">notSuspend</span><span class="params">()</span></span> = suspendCoroutine&lt;<span class="built_in">Int</span>&gt; { continuation -&gt;</span><br><span class="line">    continuation.resume(<span class="number">100</span>)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>看起来这个方法没有接收任何参数，kotlin 中看不出来我们就用 Java 直接调用它：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    Object result = KotlinMainKt.notSuspend(<span class="keyword">new</span> Continuation&lt;Integer&gt;() {</span><br><span class="line">        <span class="meta">@NotNull</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> CoroutineContext <span class="title">getContext</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">resumeWith</span><span class="params">(<span class="meta">@NotNull</span> Object o)</span> </span>{</span><br><span class="line"></span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>我们发现用Java 调用的时候，需要传入一个 Continuation<integer> ，也就是说kotlin 中的 suspend() -&gt; Int 类型 在Java 看来实际上是 Continuation<integer> -&gt; Object 类型 ！</integer></integer></p>
+<p>这与我们平时写的异步回调相似，传入callback 等待结果回调。但是为什么会有返回值 Object？这里的 Object 会有 2 种情况：</p>
+<ul>
+<li><p>挂起函数同步返回时：作为参数传入的 Continuation 的 resumeWith 不会被调用，函数实际地返回值 Object 就是挂起函数的返回值</p>
+</li>
+<li><p>挂起函数挂起，执行异步逻辑。此时函数返回值 Object 是一个挂起标志，通过这个标志外部协程就可以知道该函数需要挂起等到异步逻辑执行。</p>
+</li>
+</ul>
+<p>挂起标志是一个常量，定义在 Intrinsics.kt 当中：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">val</span> COROUTINE_SUSPENDED: Any <span class="keyword">get</span>() = CoroutineSingletons.COROUTINE_SUSPENDED</span><br><span class="line"></span><br><span class="line"><span class="keyword">internal</span> <span class="keyword">enum</span> <span class="class"><span class="keyword">class</span> <span class="title">CoroutineSingletons</span> </span>{ </span><br><span class="line">    COROUTINE_SUSPENDED, </span><br><span class="line">    UNDECIDED, </span><br><span class="line">    RESUMED </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>现在大家知道了原来挂起函数就是普通函数<strong>参数</strong>中多了一个 Continuation 实例，这也难怪<strong>普通函数不能调用挂起函数，但是挂起函数可以调用普通函数的原因</strong>。</p>
+<p>还可以仔细想想，为什么Kotlin 语法要求挂起函数一定要运行在协程体内或者挂起函数中呢？答案是：协程体或者挂起函数中都隐含了 Continuation 实例 </p>
+<h2 id="3-3-协程的上下文"><a href="#3-3-协程的上下文" class="headerlink" title="3.3 协程的上下文"></a>3.3 协程的上下文</h2></body></html>]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>深入理解Kotlin协程</tag>
       </tags>
   </entry>
 </search>
