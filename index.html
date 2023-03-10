@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">145</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">147</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,223 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/03/11/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/03/11/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：Kotlin协程框架开发初探</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-03-11 09:10:00" itemprop="dateCreated datePublished" datetime="2023-03-11T09:10:00+08:00">2023-03-11</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-03-10 21:01:35" itemprop="dateModified" datetime="2023-03-10T21:01:35+08:00">2023-03-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id=""><a href="#" class="headerlink" title=""></a></h2><p>为了学习官方协程，我们先实现一些轻量级的复合协程，只是用于学习，不适合生产环境。</p>
+<h2 id="5-1-开胃菜：实现一个-delay-函数"><a href="#5-1-开胃菜：实现一个-delay-函数" class="headerlink" title="5.1 开胃菜：实现一个 delay 函数"></a>5.1 开胃菜：实现一个 delay 函数</h2><p>使用线程的时候，如果希望代码延迟一段时间再执行，通常会调用 Thread.sleep 函数，<strong>这会令当前线程阻塞</strong>。在协程中也可以这样，不过协程可以挂起还去阻塞线程，就很浪费资源，我们的目的是后面的代码延迟一段时间执行，因此可以确定以下2点：</p>
+<ul>
+<li><p>不要阻塞线程</p>
+</li>
+<li><p>是个挂起函数，指定时间之后能够恢复执行即可</p>
+</li>
+</ul>
+<p>从上面 2 点我们可以给出 delay 函数的声明： </p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">delay</span><span class="params">(time: <span class="type">Long</span>, unit: <span class="type">TimeUnit</span> = TimeUnit.MILLISECONDS)</span></span> {</span><br><span class="line">    <span class="keyword">if</span> (time &lt;= <span class="number">0</span>) <span class="keyword">return</span></span><br><span class="line">    。。。</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来要考虑挂起，<strong>自然就想到了 suspendCoroutin</strong>：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">delay</span><span class="params">(time: <span class="type">Long</span>, unit: <span class="type">TimeUnit</span> = TimeUnit.MILLISECONDS)</span></span> {</span><br><span class="line">    。。。</span><br><span class="line">    suspendCoroutine&lt;<span class="built_in">Unit</span>&gt; {continuation: Continuation&lt;<span class="built_in">Unit</span>&gt; -&gt;  </span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line">    。。。</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>只需要做到在指定的 time 之后执行 continuation.resume() 就行，因此，<strong>我们只需要提供这样一个定时回调机制就可以！</strong>,定时任务很容易想到 <strong>ScheduledExecutorService</strong>，因此代码可以这样写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">val</span> executor = Executors.newScheduledThreadPool(<span class="number">1</span>, <span class="keyword">object</span> : ThreadFactory{</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">newThread</span><span class="params">(r: <span class="type">Runnable</span>)</span></span>: Thread {</span><br><span class="line">        <span class="keyword">return</span> Thread(r, <span class="string">"Scheduler"</span>).apply {</span><br><span class="line">            isDaemon = <span class="literal">true</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里为什么要设置 isDaemon ，放到后面说。接着我们可以实现功能了：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">delay</span><span class="params">(time: <span class="type">Long</span>, unit: <span class="type">TimeUnit</span> = TimeUnit.MILLISECONDS)</span></span> {</span><br><span class="line">    suspendCoroutine&lt;<span class="built_in">Unit</span>&gt; {continuation: Continuation&lt;<span class="built_in">Unit</span>&gt; -&gt;</span><br><span class="line">        executor.schedule(<span class="keyword">object</span>: Runnable{</span><br><span class="line">            <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">run</span><span class="params">()</span></span> {</span><br><span class="line">                continuation.resume(<span class="built_in">Unit</span>)</span><br><span class="line">            }</span><br><span class="line">        }, time, unit)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h3 id="5-1-1-为什么这样用-ScheduledExecutorService（自己加的标题）"><a href="#5-1-1-为什么这样用-ScheduledExecutorService（自己加的标题）" class="headerlink" title="5.1.1 为什么这样用 ScheduledExecutorService（自己加的标题）"></a>5.1.1 为什么这样用 ScheduledExecutorService（自己加的标题）</h3><p>了解 ScheduledExecutorService 工作机制的朋友还会有疑惑：Scheduled-ExecutorService <strong>在等待延时的阶段还是会阻塞</strong>，这不也浪费资源吗？这里说明下2个原因：</p>
+<ul>
+<li><p>如果当前线程有特殊地位，例如 UI线程 等，那么它们是不能被阻塞的，因此我们将阻塞动作放到后台线程上是有意义的</p>
+</li>
+<li><p>后台<strong>一个线程可以承载非常多的延时任务</strong>，例如：有 10 个协程调用 delay ，那么只需要阻塞一个 后台线程即可实现这 10 个协程的延时执行 ！参考下图：</p>
+</li>
+</ul>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3kotlin%E5%8D%8F%E7%A8%8B/%E7%AC%AC5%E7%AB%A0/%E5%A4%9A%E4%B8%AAdelay%E5%8D%8F%E7%A8%8B%E5%85%AC%E7%94%A8%E4%B8%80%E4%B8%AA%E5%90%8E%E5%8F%B0%E7%BA%BF%E7%A8%8B.png" alt="多个delay协程公用一个后台线程"></p>
+<h2 id="5-2-协程的描述"><a href="#5-2-协程的描述" class="headerlink" title="5.2 协程的描述"></a>5.2 协程的描述</h2><p>Java 平台上 Thread 的定义很直观，让人很容易识别 Java 线程；而协程一开始只是在标准库中放了协程基础设施，导致难以上手和分辨。这里我们尝试给一个类来描述协程，按照官方的做法把它命名为 Job ，如下代码清单：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">Job</span> : <span class="type">CoroutineContext.Element {</span></span></span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> Key : CoroutineContext.Key&lt;Job&gt;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> key: CoroutineContext.Key&lt;*&gt; <span class="keyword">get</span>() = Job</span><br><span class="line">    <span class="keyword">val</span> isActive: <span class="built_in">Boolean</span></span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">invokeOnCancel</span><span class="params">(onCancel: <span class="type">OnCancel</span>)</span></span>: Disposable</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">invokeOnCompletion</span><span class="params">(onComplete: <span class="type">OnComplete</span>)</span></span>: Disposable</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">cancel</span><span class="params">()</span></span></span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">remove</span><span class="params">(disposable: <span class="type">Disposable</span>)</span></span></span><br><span class="line">    <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">join</span><span class="params">()</span></span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>与 Thread 相比， Job 同样有 join ，调用时会挂起( 而线程的 join 则会阻塞线程 )，直到协程完成；cancel() 类比与 Thread 的 interrupt() ，用于取消协程； isAlive() 类比 Thread 的 isAlive()  ，用于查询协程是仍在执行。</p>
+<p>invokeOnCancel 用于协程取消时的回调；invokeOnCompletion 可以注册协程完成的回调。remove 用于移除回调。 key 将协程 Job 存入上下文，这样就很容易拿到 Job 实例。</p>
+<h3 id="5-2-2-协程的状态"><a href="#5-2-2-协程的状态" class="headerlink" title="5.2.2 协程的状态"></a>5.2.2 协程的状态</h3><p>我们对协程进行封装，目的就是让它状态更容易管理。对于协程来讲，启动之后主要就是 <strong>未完成、已取消、已完成</strong>这几种状态，接下来定义一下状态：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">sealed</span> <span class="class"><span class="keyword">class</span> <span class="title">CoroutineState</span> </span>{</span><br><span class="line">    <span class="comment">//未完成：协程启动后立即进入该状态，直到完成获取取消</span></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Imcomplete</span> : <span class="type">CoroutineState</span></span>()</span><br><span class="line">    <span class="comment">//已取消：协程被取消后立即进入该状态</span></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Cancelling</span> : <span class="type">CoroutineState</span></span>()</span><br><span class="line">    <span class="comment">//已完成：协程执行完后（不管成功失败）进入该状态</span></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Complete</span>&lt;<span class="type">T</span>&gt;</span>(<span class="keyword">val</span> value: T? = <span class="literal">null</span>, <span class="keyword">val</span> exception: Throwable? = <span class="literal">null</span>) : CoroutineState()</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>——————-中间略过一大截，看不懂—————————–</p>
+<h2 id="5-4-协程的执行调度"><a href="#5-4-协程的执行调度" class="headerlink" title="5.4 协程的执行调度"></a>5.4 协程的执行调度</h2><p>协程在哪里挂起、什么时候恢复都是开发者自己决定的，意味着不像线程那样把调度工作交给操作系统，而是在用户态解决，所以协程也经常被称为<strong>用户态线程</strong>。</p>
+<h3 id="5-4-2-协程的调度位置"><a href="#5-4-2-协程的调度位置" class="headerlink" title="5.4.2 协程的调度位置"></a>5.4.2 协程的调度位置</h3><p><strong>当协程执行到挂起点为止时，如果产生异步行为，协程就会在这个挂起点挂起</strong>，这里的一部情形包括以下形式：</p>
+<ul>
+<li><p>挂起点对应的挂起函数内部切换了线程，并在线程内部调用 Continuation 的恢复调用来恢复。</p>
+</li>
+<li><p>挂起函数内部通过某种事件循环机制将 Continuation 的恢复调用转到新的线程调用栈上执行。如：Android平台通过 Handler 的 post 操作，实际上这个过程不一定发生线程切换</p>
+</li>
+<li><p>挂起函数内部将 Continuation 保存，在后续某个时机再执行恢复调用，这个过程也不一定发生线程切换，但是函数调用栈会发生变化。</p>
+</li>
+</ul>
+<p><strong>综上所述，不管何种形式，恢复和挂起不再同一个函数调用栈中执行就是挂起点挂起的充分条件！</strong>只有当挂起点真正挂起，我们才有机会实现调度，而<strong>实现调度需要使用协程拦截器</strong>。</p>
+<h3 id="5-4-3-协程的调度器设计"><a href="#5-4-3-协程的调度器设计" class="headerlink" title="5.4.3 协程的调度器设计"></a>5.4.3 协程的调度器设计</h3><p>官方协程框架的默认调度器就是基于线程池实现的：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">object</span> DefaultDispatcher : Dispatcher {</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">val</span> threadGroup = ThreadGroup(<span class="string">"DefaultDispatcher"</span>) </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">val</span> threadIndex = AtomicInteger(<span class="number">0</span>)</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">val</span> executor = Executors.newFixedThreadPool(</span><br><span class="line">        Runtime.getRuntime().availableProcessors() + <span class="number">1</span></span><br><span class="line">    ) { runnable -&gt;</span><br><span class="line">        Thread(</span><br><span class="line">            threadGroup,</span><br><span class="line">            runnable,</span><br><span class="line">            <span class="string">"<span class="subst">${threadGroup.name}</span>-worker-<span class="subst">${threadIndex.getAndIncrement()}</span>"</span></span><br><span class="line">        ).apply { isDaemon = <span class="literal">true</span> }</span><br><span class="line">    } </span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">dispatch</span><span class="params">(block: () -&gt; <span class="type">Unit</span>)</span></span> {</span><br><span class="line">        executor.submit(block)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>调用dispatch 方法的时候，实际上是将 block 扔给 executor 放到线程中执行。</p>
+<p>其实也可以实现成基于拦截器的方式：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt;)</span></span> {</span><br><span class="line">    dispatcher.dispatch { delegate.resumeWith(result) }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>基于UI事件循环的调度器就是通过在disptch() 方法中用 Handler 的 post 实现：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">object</span> AndroidDispatcher : Dispatcher {</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">val</span> handler = Handler(Looper.getMainLooper()) </span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">dispatch</span><span class="params">(block: () -&gt; <span class="type">Unit</span>)</span></span> {</span><br><span class="line">        handler.post(block)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+<p>——————-后续的又看懵逼了—————————–</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/03/10/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC4%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/03/10/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Kotlin%E5%8D%8F%E7%A8%8B-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：Kotlin协程的拓展实践</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-03-10 16:55:00 / 修改时间：17:25:33" itemprop="dateCreated datePublished" datetime="2023-03-10T16:55:00+08:00">2023-03-10</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id=""><a href="#" class="headerlink" title=""></a></h2><p>前面的介绍了解了协程可以挂起和恢复，但是对于协程如何使用仍然倍感疑惑，所以还需要机遇简单协程构建足够有好的上层 API ，即复合协程。</p>
+<h2 id="4-1-序列生成器"><a href="#4-1-序列生成器" class="headerlink" title="4.1 序列生成器"></a>4.1 序列生成器</h2><p>看得云里雾里，先略过</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -329,10 +546,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2023-02-27 14:25:00 / 修改时间：21:05:25" itemprop="dateCreated datePublished" datetime="2023-02-27T14:25:00+08:00">2023-02-27</time>
+              <time title="创建时间：2023-02-27 14:25:00" itemprop="dateCreated datePublished" datetime="2023-02-27T14:25:00+08:00">2023-02-27</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-03-10 16:54:39" itemprop="dateModified" datetime="2023-03-10T16:54:39+08:00">2023-03-10</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
@@ -371,21 +594,15 @@
 <p>以一个例子来说明 createCoroutine 的用法：</p>
 <figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> continuation = <span class="keyword">suspend</span> {</span><br><span class="line">    println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">    <span class="number">5</span></span><br><span class="line">}.createCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> context = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">        println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
 
-
-
 <p>目前协程被创建出来了，但是它还未启动。</p>
 <h3 id="3-1-2-协程的启动"><a href="#3-1-2-协程的启动" class="headerlink" title="3.1.2 协程的启动"></a>3.1.2 协程的启动</h3><p>在上述的例子中，我们已经创建了协程，之后只需要调用 continuation.resume(Unit) 之后，协程就会立即开始。为什么这样就可以触发协程体执行呢？</p>
 <p>其实，我们创建协程得到的 continuation 是 SafeContinuation 的实例，不过这也是个“马甲”，它有个 delegate 属性，里面将 suspend() -&gt; T  封装成了一个 Continuation 对象</p>
 <p><strong>也就是说，我们创建协程得到的 continuation 其实就是套了几层“马甲”的协程体，故调用这个 continuation.resume() 可以触发协程体的执行</strong></p>
 <p>一般来讲，我们创建协程之后就会启动它，所以标准库还提供了另一个一步到位的API——startCoroutin ：</p>
-<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).startCoroutine(completion: Continuation&lt;T&gt;)</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="params">(<span class="keyword">suspend</span> ()</span></span> -&gt; T).startCoroutine(completion: Continuation&lt;T&gt;)</span><br></pre></td></tr></tbody></table></figure>
 
 <p>我们知道，作为参数传入的 completion 就如同回调一样，**协程体的返回值会作为 resumeWith 的参数传入，例如，下面的例子：</p>
 <figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    <span class="keyword">suspend</span> {</span><br><span class="line">        println(<span class="string">"我跑在协程里"</span>)</span><br><span class="line">        <span class="number">3</span></span><br><span class="line">    }.startCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">        <span class="keyword">override</span> <span class="keyword">val</span> context: CoroutineContext</span><br><span class="line">            <span class="keyword">get</span>() = EmptyCoroutineContext</span><br><span class="line"></span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">            println(<span class="string">"协程执行完成，result = <span class="variable">$result</span>"</span>)</span><br><span class="line">        }</span><br><span class="line">    })</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
 
 <p>如果协程体执行正常，则 result 为 Success 结果；否则返回 Failure 结果。上述代码结果如下：</p>
 <blockquote>
@@ -396,8 +613,6 @@
 
 <p>上述的 R 可以为协程体提供一个作用域，在协程体内我们可以直接使用，如下代码所示：</p>
 <figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//先把上述方法封装下，如果不封装怎么调用？</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;R, T&gt;</span> <span class="title">launchCoroutine</span><span class="params">(receiver: <span class="type">R</span>, block: <span class="type">suspend</span> <span class="type">R</span>.() -&gt; <span class="type">T</span>)</span></span> {</span><br><span class="line">    block.startCoroutine(receiver, <span class="keyword">object</span> : Continuation&lt;T&gt; {</span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt;)</span></span> {</span><br><span class="line">            println(<span class="string">"Coroutine End: <span class="variable">$result</span>"</span>)</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="keyword">override</span> <span class="keyword">val</span> context = EmptyCoroutineContext</span><br><span class="line">    })</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//创建额外的域</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProducerScope</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">    <span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">produce</span><span class="params">(value: <span class="type">T</span>)</span></span> {</span><br><span class="line">        println(<span class="string">"我在额外的 Receiver 中了: <span class="variable">$value</span>"</span>)</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> {</span><br><span class="line">    launchCoroutine(ProducerScope&lt;<span class="built_in">Int</span>&gt;()) {</span><br><span class="line">        println(<span class="string">"In Coroutine."</span>)</span><br><span class="line">        produce (<span class="number">1024</span>)</span><br><span class="line">        <span class="comment">//delay (1000)  //我自己测试的时候，如果放开这个注释，就不会打到 2048，coroutine end 也不会执行到</span></span><br><span class="line">        produce (<span class="number">2048</span>)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
 
 <blockquote>
 <p>这里要注意的一点是，如果额外的域 ProducerScope 添加了 @RestrictsSuspension 注解，则无法使用外部的函数，因此例子中的 delay 也不会调用</p>
@@ -415,8 +630,6 @@
 <p>为了搞清楚原理，我们可以对 Kotlin 反编译成 Java 代码（IDEA的 Kotlin byteCode 功能）：</p>
 <figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] var0)</span> </span>{</span><br><span class="line">   RunSuspendKt.runSuspend(<span class="keyword">new</span> KotlinMainKt$$$main(var0));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
-
-
 <p>可以看到，其实它是有真正的 main 函数的，里面的协程封装逻辑都被扔到 RunSuspendKt里面了</p>
 <h3 id="3-2-1-挂起函数"><a href="#3-2-1-挂起函数" class="headerlink" title="3.2.1 挂起函数"></a>3.2.1 挂起函数</h3><p>整个 kotlin 语境下有 2种函数： 普通函数和挂起函数，<strong>其中：挂起函数能调用任何函数，但是普通函数不能调用挂起函数。</strong></p>
 <p>所谓的协程挂起其实就是程序执行流程发生异步调用时，当前调用流程进入等待状态。注意：<strong>挂起函数不一定真的会挂起，只是提供了挂起的条件</strong>，那额什么情况才会真正挂起呢？</p>
@@ -427,8 +640,6 @@
 
 <p>看起来这个方法没有接收任何参数，kotlin 中看不出来我们就用 Java 直接调用它：</p>
 <figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    Object result = KotlinMainKt.notSuspend(<span class="keyword">new</span> Continuation&lt;Integer&gt;() {</span><br><span class="line">        <span class="meta">@NotNull</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> CoroutineContext <span class="title">getContext</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">resumeWith</span><span class="params">(<span class="meta">@NotNull</span> Object o)</span> </span>{</span><br><span class="line"></span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
 
 <p>我们发现用Java 调用的时候，需要传入一个 Continuation<integer> ，也就是说kotlin 中的 suspend() -&gt; Int 类型 在Java 看来实际上是 Continuation<integer> -&gt; Object 类型 ！</integer></integer></p>
 <p>这与我们平时写的异步回调相似，传入callback 等待结果回调。但是为什么会有返回值 Object？这里的 Object 会有 2 种情况：</p>
@@ -441,11 +652,56 @@
 <p>挂起标志是一个常量，定义在 Intrinsics.kt 当中：</p>
 <figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">val</span> COROUTINE_SUSPENDED: Any <span class="keyword">get</span>() = CoroutineSingletons.COROUTINE_SUSPENDED</span><br><span class="line"></span><br><span class="line"><span class="keyword">internal</span> <span class="keyword">enum</span> <span class="class"><span class="keyword">class</span> <span class="title">CoroutineSingletons</span> </span>{ </span><br><span class="line">    COROUTINE_SUSPENDED, </span><br><span class="line">    UNDECIDED, </span><br><span class="line">    RESUMED </span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
-
-
 <p>现在大家知道了原来挂起函数就是普通函数<strong>参数</strong>中多了一个 Continuation 实例，这也难怪<strong>普通函数不能调用挂起函数，但是挂起函数可以调用普通函数的原因</strong>。</p>
 <p>还可以仔细想想，为什么Kotlin 语法要求挂起函数一定要运行在协程体内或者挂起函数中呢？答案是：协程体或者挂起函数中都隐含了 Continuation 实例 </p>
-<h2 id="3-3-协程的上下文"><a href="#3-3-协程的上下文" class="headerlink" title="3.3 协程的上下文"></a>3.3 协程的上下文</h2></body></html>
+<h2 id="3-3-协程的上下文"><a href="#3-3-协程的上下文" class="headerlink" title="3.3 协程的上下文"></a>3.3 协程的上下文</h2><h3 id="3-3-1-协程上下文的集合特征"><a href="#3-3-1-协程上下文的集合特征" class="headerlink" title="3.3.1 协程上下文的集合特征"></a>3.3.1 协程上下文的集合特征</h3><p>协程的 Context 更像是个 List 结构，都有空的表示：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> list: List&lt;<span class="built_in">Int</span>&gt; = emptyList()</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> context: CoroutineContext = EmptyCoroutineContext</span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来，我们往里面添加数据(<strong>要记得将 list 和 context 设置为 var 而不是 val ，我就是因为设置 val 所以不能用  “+” 操作</strong>)：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">list += <span class="number">0</span>   <span class="comment">//添加一个元素，得到一个新的list</span></span><br><span class="line">list += listOf&lt;<span class="built_in">Int</span>&gt;(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>) <span class="comment">//将listOf中的元素都添加进去，生成一个新的 list</span></span><br><span class="line"></span><br><span class="line">context += EmptyCoroutineContext</span><br></pre></td></tr></tbody></table></figure>
+
+<p>协程 Context 是一个集合，那么它的元素类型是什么呢？看下代码:</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">CoroutineContext</span> </span>{</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Returns the element with the given [key] from this context or `null`.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">operator</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;E : Element&gt;</span> <span class="title">get</span><span class="params">(key: <span class="type">Key</span>&lt;<span class="type">E</span>&gt;)</span></span>: E?</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * An element of the [CoroutineContext]. An element of the coroutine context is a singleton context by itself.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Element</span> : <span class="type">CoroutineContext {</span></span></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * A key of this coroutine context element.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">public</span> <span class="keyword">val</span> key: Key&lt;*&gt;</span><br><span class="line">        <span class="comment">//省略其他代码</span></span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>Element 是本身也实现了 CoroutineContext 接口，这看上去就好像  Int 实现了 List<int> 接口一样，这就很奇怪。其实这主要是为了 API 设计方便，Element 中是不会存放除了它自己以外的其他数据的（<strong>这句话其实不太明白，还需要后续的理解</strong>）</int></p>
+<p>Element 中有个属性 key ，这个属性很关键，虽然我们往 list中添加元素时没有明确指出，但是我们都知道 list 中的元素都有一个 index 索引，而<strong>这里的协程上下文Element 的 key 就是这个集合中元素的索引，不同之处是这个索引“长”在数据里面，意味着上下文的数据在出生时就找到了自己的位置</strong>（这句话同样不太理解。。。）</p>
+<blockquote>
+<p>可能有人觉得协程 Context 和 Map 似乎更近，为什么这里要与 List 对比呢？一是 List 的 Key 类型是固定的 Int ，而 Map 的Key 有很多种类型；二是是协程上下文内部实现是一个单链表，这也反映出它与 List 之间的关系。</p>
+</blockquote>
+<h3 id="3-3-2-协程上下文元素的实现"><a href="#3-3-2-协程上下文元素的实现" class="headerlink" title="3.3.2 协程上下文元素的实现"></a>3.3.2 协程上下文元素的实现</h3><p>上一节知道协程 Conext 是个接口，实际上还有个抽象类 AbstractCoroutineContextElement，能让我们实现协程上下文更加方便：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractCoroutineContextElement</span></span>(<span class="keyword">public</span> <span class="keyword">override</span> <span class="keyword">val</span> key: Key&lt;*&gt;) : Element</span><br></pre></td></tr></tbody></table></figure>
+
+<p>创建元素并不难，<strong>只需要提供对应的 Key 即可，以下是协程名的实现（系统源码）：</strong></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">CoroutineName</span></span>(</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * User-defined coroutine name.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">val</span> name: String</span><br><span class="line">) : AbstractCoroutineContextElement(CoroutineName) {</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Key for [CoroutineName] instance in the coroutine context.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">companion</span> <span class="keyword">object</span> Key : CoroutineContext.Key&lt;CoroutineName&gt;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>以下是协程异常处理器的实现源码：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CoroutineExceptionHandler</span></span>(<span class="keyword">val</span> onErrorAction: (Throwable) -&gt; <span class="built_in">Unit</span>) : AbstractCoroutineContextElement(Key) {</span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> Key : CoroutineContext.Key&lt;CoroutineExceptionHandler&gt;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">onError</span><span class="params">(error: <span class="type">Throwable</span>)</span></span> {</span><br><span class="line">        error.printStackTrace()</span><br><span class="line">        onErrorAction(error)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="3-3-3-协程上下文的使用"><a href="#3-3-3-协程上下文的使用" class="headerlink" title="3.3.3 协程上下文的使用"></a>3.3.3 协程上下文的使用</h3><p>前面说了，可以为协程上下文添加多个 Context，添加好之后，我们可以将 Context 绑定到协程上了：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> {</span><br><span class="line">    println(<span class="string">"我在协程里面"</span>)</span><br><span class="line">    <span class="number">5</span></span><br><span class="line">}.createCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt; {</span><br><span class="line">    <span class="keyword">var</span> tempContext: CoroutineContext = CoroutineName(<span class="string">"name-01"</span>) + </span><br><span class="line">            CoroutineExceptionHandler(){</span><br><span class="line">        println(<span class="string">"出错啦"</span>)</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> context: CoroutineContext = tempContext</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">        <span class="comment">// todo</span></span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
+
+<p>先自己构建出 tempContext 然后再将 tempContext 赋值给 context。绑定了协程的上下文，我们的协程就初步成型了！接下来演示如何使用这个CoroutineExceptionHandler:</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">    result.onFailure {</span><br><span class="line">        context[CoroutineExceptionHandler]?.onError(it)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>不管结果如何，这个 resumeWith 是一定会被调用的，如果有异常出现，我们就从协程上下文找到 CoroutineExceptionHandler 实例，调用它的 onError 方法即可</strong>，这个上下文在协程内部都是可以直接获取的，比如，在协程内部获取名字：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> {</span><br><span class="line">    println(<span class="string">"协程名字：<span class="subst">${coroutineContext[CoroutineName]?.name}</span>"</span>)</span><br><span class="line">    <span class="number">5</span></span><br><span class="line">}.createCoroutine(<span class="keyword">object</span>: Continuation&lt;<span class="built_in">Int</span>&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这样，我们就知道了协程上下文的设置和获取方法了。</p>
+<h2 id="3-4-协程的拦截器"><a href="#3-4-协程的拦截器" class="headerlink" title="3.4 协程的拦截器"></a>3.4 协程的拦截器</h2><p>之前的内容知道 Kotlin 协程<strong>通过调用挂起函数实现挂起，通过Continuation 的恢复调用来实现恢复</strong>，还可以通过 Context 的设置来丰富协程能力，那么，如果处理线程的调度？其实标准库还提供了拦截器（Interceptor）的组件，允许我们拦截协程异步回调时的恢复调用，那么线程调度应该也不是什么难事。</p>
+<h3 id="3-4-2-拦截器的使用"><a href="#3-4-2-拦截器的使用" class="headerlink" title="3.4.2 拦截器的使用"></a>3.4.2 拦截器的使用</h3><p>拦截器 ContinuationInterceptor 继承了 CoroutineContext.Element ，而Element 又继承 CoroutineContext 类型，所以<strong>拦截器也是 上下文 的一种实现</strong>。</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ContinuationInterceptor</span> : <span class="type">CoroutineContext.Element</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Element</span> : <span class="type">CoroutineContext</span></span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>自己定义拦截器只需要实现拦截器接口 ContinuationInterceptor 即可，比如打印日志(<strong>注意：拦截器的 Key 是一个固定值: ContinuationInterceptor</strong>,协程执行时会拿到拦截器并拦截)：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LogInterceptor</span></span>() : ContinuationInterceptor{</span><br><span class="line">    <span class="keyword">override</span> <span class="keyword">val</span> key: CoroutineContext.Key&lt;*&gt; = ContinuationInterceptor</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="title">interceptContinuation</span><span class="params">(continuation: <span class="type">Continuation</span>&lt;<span class="type">T</span>&gt;)</span></span>: Continuation&lt;T&gt; {</span><br><span class="line">        <span class="keyword">return</span> LogContinuation(continuation)</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LogContinuation</span>&lt;<span class="type">T</span>&gt; </span>(<span class="keyword">private</span> <span class="keyword">val</span> continuation: Continuation&lt;T&gt;): Continuation&lt;T&gt; <span class="keyword">by</span> continuation {</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt;)</span></span> {</span><br><span class="line">        println(<span class="string">"执行前"</span>)</span><br><span class="line">        continuation.resumeWith(result)</span><br><span class="line">        println(<span class="string">"执行后"</span>)</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来使用的时候，我们就将拦截器作为context就好了，前面说了拦截器本来就是上下文：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">haha</span> <span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">val</span> continuation = <span class="keyword">suspend</span> {</span><br><span class="line">        println(<span class="string">"我在协程里面"</span>)</span><br><span class="line">        <span class="number">5</span></span><br><span class="line">    }.startCoroutine(<span class="keyword">object</span> : Continuation&lt;<span class="built_in">Int</span>&gt;{</span><br><span class="line">        <span class="keyword">override</span> <span class="keyword">val</span> context: CoroutineContext = LogInterceptor()</span><br><span class="line"></span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Int</span>&gt;)</span></span> {</span><br><span class="line">            <span class="comment">//。。。</span></span><br><span class="line">        }</span><br><span class="line">    })</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h3 id="3-4-3-拦截器的执行细节"><a href="#3-4-3-拦截器的执行细节" class="headerlink" title="3.4.3 拦截器的执行细节"></a>3.4.3 拦截器的执行细节</h3><p>略</p>
+<h2 id="3-5-Kotlin-协程所属类别"><a href="#3-5-Kotlin-协程所属类别" class="headerlink" title="3.5 Kotlin 协程所属类别"></a>3.5 Kotlin 协程所属类别</h2><p>略</p>
+</body></html>
       
     </div>
 
@@ -1290,244 +1546,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：可见性与有序性的原理</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-02-17 14:20:00" itemprop="dateCreated datePublished" datetime="2023-02-17T14:20:00+08:00">2023-02-17</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-02-18 15:53:19" itemprop="dateModified" datetime="2023-02-18T15:53:19+08:00">2023-02-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="4-1-CPU物理缓存结构"><a href="#4-1-CPU物理缓存结构" class="headerlink" title="4.1 CPU物理缓存结构"></a>4.1 CPU物理缓存结构</h2><p>L1缓存离 CPU 最近也最快，一般就 32k/64k水平；L2 缓存速度次之，容量一般比L1大；L3级缓存最大，比前面二者都大，速度也最慢，大小可能 12M 的水平。</p>
-<h2 id="4-2-并发编程的三大问题"><a href="#4-2-并发编程的三大问题" class="headerlink" title="4.2 并发编程的三大问题"></a>4.2 并发编程的三大问题</h2><p>三大问题分别是： 原子性、可见性、有序性 问题。必须要保证这 3 个，只要有一个没保证，在多线程情况下就可能不正确。</p>
-<p>后续的略。</p>
-<h2 id="4-3-硬件层的MESI协议原理"><a href="#4-3-硬件层的MESI协议原理" class="headerlink" title="4.3 硬件层的MESI协议原理"></a>4.3 硬件层的MESI协议原理</h2><p>为了缓解内存速度和CPU速度差问题，现在计算机都会为CPU添加高速缓存，每个CPU内核都有自己的一级、二级高速缓存，同一个CPU多个内核之间共享一个三级高速缓存。</p>
-<h3 id="4-3-1-总线锁和缓存锁"><a href="#4-3-1-总线锁和缓存锁" class="headerlink" title="4.3.1 总线锁和缓存锁"></a>4.3.1 总线锁和缓存锁</h3><p>CPU的处理流程为：现将计算需要用到的数据缓存到CPU的高速缓存中，CPU计算时，直接从高速缓存获取数据并在计算完成后写会高速缓存，整个运算完成后再把高速缓存的数据同步回主存。由于每个线程可能运行在不同的CPU内核中，因此<strong>同一份数据可能被缓存到多个CPU内核中，就会发生内存可见性问题</strong>。</p>
-<p>后续的略。</p>
-<h3 id="4-4-1-重排序"><a href="#4-4-1-重排序" class="headerlink" title="4.4.1 重排序"></a>4.4.1 重排序</h3><p><strong>编译器</strong>为什么要重排序？其目的为： <strong>与其等待阻塞指令（如等待缓存刷入），不如先去执行其他指令。</strong>另外，CPU层面也有重排序。</p>
-<h2 id="4-5-JMM-详解"><a href="#4-5-JMM-详解" class="headerlink" title="4.5 JMM 详解"></a>4.5 JMM 详解</h2><p>JMM (Java Memory Model ，Java 内存模型) 并不像JVM 内存结构一样是真实存在的运行实体，更多体现为一种规范和规则。</p>
-<p>JMM 定义了一组规则或规范，该规范定义了<strong>一个线程对共享变量写入时，如何确保对另一个线程是可见的</strong>，实际上 JMM 提供了合理的禁用缓存以及禁止重排序的方法，所以其核心价值在于<strong>解决可见性和有序性</strong>。它的另一大价值在于：<strong>屏蔽各大硬件和操作系统差异，保证 Java 程序在各大平台堆内存访问是一致的。</strong></p>
-<p>JMM 规定所有的变量都存储在主存（类似于物理内存，但是有区别）中，每个 Java 线程都有自己的工作内存（类似于CPU高速缓存，但有区别）。</p>
-<p>JMM 提供了一套自己的方案解决可见性和有序性问题，包括 volatile、synchronized、final 等。</p>
-<h2 id="4-7-volatile-不具备原子性"><a href="#4-7-volatile-不具备原子性" class="headerlink" title="4.7 volatile 不具备原子性"></a>4.7 volatile 不具备原子性</h2><p>对于关键字 volatile 修饰的内存可见变量而言，具有2个重要的语义：</p>
-<ul>
-<li><p>使用 volatile 修饰的变量在变量的值发生改变时，会立刻同步到主存，并使其他线程的变量副本失效</p>
-</li>
-<li><p>禁止指令重排序</p>
-</li>
-</ul>
-<p>使用++操作说明volatile不具备重排序功能：</p>
-<ol>
-<li><p>A、B线程分别运行在Core1 和 Core2 核上，假设此时共享value 的值为 0，现在线程 A、B 都读取value值到自己的工作内存上</p>
-</li>
-<li><p>线程 A 将 value 的值变为 1，完成了 assign、store 操作，假设在执行 write 指令前 A 的时间片用完，线程 A 被空闲但是 write 操作还没达到主存，但是呢， store 操作触发了写的信号，导致了 B 缓存过期</p>
-</li>
-<li><p>B重新从主存读到 value，可想而知这时候还是 0</p>
-</li>
-<li><p>线程 B 执行完所有操作，将 value 值变成 1 写入主存</p>
-</li>
-<li><p>线程 A 重新拿到时间片，将过期了的 1 写入主存</p>
-</li>
-</ol>
-<p>所以，<strong>对于复合操作，volatile无法保障原子性，如果要保证复合操作的原子性，就需要用到锁</strong>。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC3%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/16/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章：CAS原理与JUC原子类</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-02-16 14:50:00" itemprop="dateCreated datePublished" datetime="2023-02-16T14:50:00+08:00">2023-02-16</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-02-22 22:22:30" itemprop="dateModified" datetime="2023-02-22T22:22:30+08:00">2023-02-22</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>JVM 的Synchrod 轻量级锁使用 CAS 进行自旋抢锁，并且处于用户态下，所以轻量级锁开销较小。</p>
-<h2 id="3-1-什么是-CAS"><a href="#3-1-什么是-CAS" class="headerlink" title="3.1 什么是 CAS"></a>3.1 什么是 CAS</h2><p>JDK 5 增加的 JUC (java.util.concurrent) 并发包对操作系统的底层 CAS 原子操作进行了封装，为上层提供了 CAS 操作的 API 。</p>
-<h3 id="3-1-1-Unsafe-类中的-CAS-方法"><a href="#3-1-1-Unsafe-类中的-CAS-方法" class="headerlink" title="3.1.1 Unsafe 类中的 CAS 方法"></a>3.1.1 Unsafe 类中的 CAS 方法</h3><p>Unsafe 是位于 sun.misc 包下的一个类，主要提供一些用于执行低级别、不安全的底层操作，如直接访问系统内存资源、自主管理内存资源等。从名字都可以看出这个类对普通程序员来说是“危险”的，官方也不建议直接在程序中使用这些类。</p>
-<h5 id="获取-Unsafe-实例"><a href="#获取-Unsafe-实例" class="headerlink" title="获取 Unsafe 实例"></a>获取 Unsafe 实例</h5><p>Unsafe 类时一个final 修饰的不允许继承的类，并且构造函数是 private 类型，源码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Unsafe</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> {</span><br><span class="line">        Reflection.registerMethodsToFilter(Unsafe.class, Set.of(<span class="string">"getUnsafe"</span>));</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Unsafe</span><span class="params">()</span> </span>{}</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Unsafe theUnsafe = <span class="keyword">new</span> Unsafe();</span><br><span class="line">    ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>所以我们无法在外部对 Unsafe 实例化，那么应该怎么获取呢？可以通过反射方式获取 theUnsafe 实例：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JvmUtil</span> </span>{</span><br><span class="line">    <span class="comment">//自定义地获取Unsafe实例的辅助方法</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Unsafe <span class="title">getUnsafe</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            Field theUnsafe = Unsafe.class.getDeclaredField(<span class="string">"theUnsafe"</span>);</span><br><span class="line">            theUnsafe.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">            <span class="keyword">return</span> (Unsafe) theUnsafe.get(<span class="keyword">null</span>);</span><br><span class="line">        } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> AssertionError(e);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    <span class="comment">// 省略不相干代码</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h5 id="Unsafe提供的-CAS-方法"><a href="#Unsafe提供的-CAS-方法" class="headerlink" title="Unsafe提供的 CAS 方法"></a>Unsafe提供的 CAS 方法</h5><p>总共提供了如下3种方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSwapObject</span><span class="params">(Object o, <span class="keyword">long</span> offset, Object expected,Object x)</span> </span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSwapInt</span><span class="params">(Object o, <span class="keyword">long</span> offset,  <span class="keyword">int</span> expected,  <span class="keyword">int</span> x)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSwapLong</span><span class="params">(Object o, <span class="keyword">long</span> offset,<span class="keyword">long</span> expected, <span class="keyword">long</span> x)</span></span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>这些方法首先将内存位置的值与预期值比较，如果相匹配，那么CPU 会自动将该内存位置的值更新为新值，并返回true；否则，CPU不做任何操作，并返回false。</p>
-<h3 id="3-1-2-使用-CAS-进行无锁编程"><a href="#3-1-2-使用-CAS-进行无锁编程" class="headerlink" title="3.1.2 使用 CAS 进行无锁编程"></a>3.1.2 使用 CAS 进行无锁编程</h3><p>CAS 是一种无锁算法，底层CPU 利用原子操作判断 <strong>内存值与期望值是否相等，如果相等就给内存地址赋新值，否则不做任何操作。</strong>使用 CAS 进行无锁编程的步骤大概如下：</p>
-<ol>
-<li><p>获得字段的期望值(oldValue)</p>
-</li>
-<li><p>计算出需要替换的新值(newValue)</p>
-</li>
-<li><p>通过 CAS 将 newValue 放在字段的内存地址上，如果 CAS 失败就重复从第1步开始，直到 CAS 成功。<strong>这种重复俗称“自旋”</strong></p>
-</li>
-</ol>
-<p>举例： 假如 2 个线程 A 和B 对一个共享变量做 +1 操作，用 CAS 去做这个操作。但是线程是并发进行的，假如 A 和 B 都读到旧值是 1 ，然后并发通过 CAS 操作，都是 CAS(1, 2)  ，但是CAS 是原子操作，同一个内存地址的 CAS 在同一个时刻只能执行一个，因此，假设 A 先执行，A 的 CAS(1, 2) 因为期望值是1，内存值也是1，操作成功，返回true；接下来 B 执行 CAS(1, 2) 肯定会失败了，因为内存值目前已经是 2 了，而期望值是 1 ，所以只得重新获取得到期望值 2，计算出新的值 3， 最后通过 CAS(2, 3) 才能成功。</p>
-<h2 id="3-2-JUC原子类"><a href="#3-2-JUC原子类" class="headerlink" title="3.2 JUC原子类"></a>3.2 JUC原子类</h2><p>并发执行时，诸如 ++ 或者 – 类的运算不具备原子性，大家可能会用 synchronized 方法做同步，但效率肯定会影响的。JDK 为这些类型不安全的操作提供了一些原子类，与 synchronized 相比效率会更高。</p>
-<h3 id="3-2-1-JUC中的Atomic-原子操作包"><a href="#3-2-1-JUC中的Atomic-原子操作包" class="headerlink" title="3.2.1 JUC中的Atomic 原子操作包"></a>3.2.1 JUC中的Atomic 原子操作包</h3><p>只需要知道有： </p>
-<ul>
-<li><p>基本原子类：AtomicInteger、AtomicLong、AtomicBoolean</p>
-</li>
-<li><p>数组原子类：AtomicIntegerArray、AtomicLongArray、AtomicReferenceArray</p>
-</li>
-<li><p>引用原子类：AtomicReference、AtomicMarkableReference、AtomicStampedReference</p>
-</li>
-</ul>
-<p>等等一些常见的即可。</p>
-<h2 id="3-4-ABA问题"><a href="#3-4-ABA问题" class="headerlink" title="3.4 ABA问题"></a>3.4 ABA问题</h2><p>什么是 ABA 问题，举个例子：比如线程 A 从内存位置 M 取出 V1，另一个线程 B 也取出 V1 ，假设 B 进行了一些操作后将 M 位置的数据 V1 变成了 V2，然后又在一些操作之后将 V2 变成了 V1，然后线程 A 通过 CAS 操作时发现条件满足，CAS 操作成功。</p>
-<p>但是这个过程是有问题的，A 操作的时候 V1 已经不是以前的 V1 了，这就是 ABA 问题。</p>
-<h3 id="3-4-2-ABA问题的解决方案"><a href="#3-4-2-ABA问题的解决方案" class="headerlink" title="3.4.2 ABA问题的解决方案"></a>3.4.2 ABA问题的解决方案</h3><p>很多乐观锁的实现版本是： <strong>使用版本号(Version)方式来解决ABA问题。</strong> 每次在执行数据的修改操作时<strong>都会带上一个版本号</strong>，版本号和数据的版本号一致就可以执行修改操作，否则执行失败。因为操作的版本号只会增加，不会减少。</p>
-<p>当然，参考乐观锁的版本号实现， JDK 提供了一个 AtomicStampedReference 类来解决 ABA 问题，AtomicStampedReference 在 CAS 的基础上增加了一个 Stamp（印戳或标记）来察觉数据是否发生了变化。</p>
-<p>当然，还可以使用 AtomicMarkableReference 解决。它是 AtomicStampedReference 的简化版，不关心修改过几次，只关心是否修改过。</p>
-<h2 id="3-5-提升高并发场景下-CAS-操作的性能"><a href="#3-5-提升高并发场景下-CAS-操作的性能" class="headerlink" title="3.5 提升高并发场景下 CAS 操作的性能"></a>3.5 提升高并发场景下 CAS 操作的性能</h2><p>在竞争激烈的场景下，会导致大量的 CAS 自旋，比如大量线程同时并发修改一个 AtomicInteger 是，很多线程可能不停地自旋， 这浪费了大量的 CPU。</p>
-<h3 id="3-5-1-以空间换时间：LongAdder"><a href="#3-5-1-以空间换时间：LongAdder" class="headerlink" title="3.5.1 以空间换时间：LongAdder"></a>3.5.1 以空间换时间：LongAdder</h3><p>AtomicLong 使用内部变量 value 保存着实际的 long 值，所有操作都是针对该 value 的，也就是说，当高并发的情况下，value 变量其实是一个热点，N 个线程竞争这一个热点，重试的线程越多，意味着 CAS 失败的概率越高。</p>
-<p>LongAdder 的核心思想是热点分离，与 ConcurrentHashMap 的设计思想类似：将 value 值分离成一个数组，当多线程访问时，通过 Hash 算法将线程映射到数组的一个元素进行操作；而获取最终value 结果时，则将数组的元素求和。</p>
-<p>具体一点：LongAdder 将 value 值分散到一个数组中，不同的线程会命中到数组的不同槽中，各个线程只对自己槽中的那个值进行 CAS 操作，这样热点就被分散了，这样，即使线程数再多也不担心，各个线程分配到多个元素更新。<strong>如果要获取完整的 LongAdder 存储的值，只要将各个槽中的变量值累加即可</strong></p>
-<blockquote>
-<p>在 CAS 竞争非常激烈的场景， LongAdder 的性能可达到 AtomicLong 的 8 倍。</p>
-</blockquote>
-<h2 id="3-6-CAS在JDK中的广泛应用"><a href="#3-6-CAS在JDK中的广泛应用" class="headerlink" title="3.6 CAS在JDK中的广泛应用"></a>3.6 CAS在JDK中的广泛应用</h2><h3 id="3-6-1-CAS操作的弊端和规避措施"><a href="#3-6-1-CAS操作的弊端和规避措施" class="headerlink" title="3.6.1 CAS操作的弊端和规避措施"></a>3.6.1 CAS操作的弊端和规避措施</h3><p>CAS 操作弊端主要有下面 3 点：</p>
-<ul>
-<li><p>ABA问题，<strong>解决思路</strong>： 添加版本号、使用 AtomicStampedReference、AtomicMarkableReference，其中前者比较常用</p>
-</li>
-<li><p>只能保证一个共享变量的原子操作。<strong>解决思路</strong>：将多个共享变量合并成一个共享变量来操作</p>
-</li>
-<li><p>开销问题。<strong>解决思路</strong>：分散操作热点(如 LongAdder)、使用队列削峰(将 发生 CAS 争用的线程加入一个队列中排队，降低 CAS 争用的激烈程度，JUC 中非常重要的基础类 AQS 就是这么做的！)</p>
-</li>
-</ul>
-<h3 id="3-6-2-CAS-在JDK中的应用"><a href="#3-6-2-CAS-在JDK中的应用" class="headerlink" title="3.6.2 CAS 在JDK中的应用"></a>3.6.2 CAS 在JDK中的应用</h3><p>CAS 在 在java.util.concurrent.atomic包中的原子类、Java AQS 以及 显式锁、ConcurrentHashMap 等重要并发容器中都有非常广泛的应用</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1578,7 +1596,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">145</span>
+          <span class="site-state-item-count">147</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1664,7 +1682,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共340.9k字</span>
+  <span class="post-count">博客全站共343.8k字</span>
 </div>
 
 

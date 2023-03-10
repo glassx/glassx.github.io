@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">145</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">147</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,251 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/25/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/25/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：资源初探</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-25 20:00:00" itemprop="dateCreated datePublished" datetime="2021-03-25T20:00:00+08:00">2021-03-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 21:54:18" itemprop="dateModified" datetime="2021-03-29T21:54:18+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Activity 与资源是一对孪生兄弟，想彻底解决Activity 插件化，就要面对如何使用插件中资源的问题。</p>
+<h2 id="资源加载机制"><a href="#资源加载机制" class="headerlink" title="资源加载机制"></a>资源加载机制</h2><h3 id="资源分类"><a href="#资源分类" class="headerlink" title="资源分类"></a>资源分类</h3><p>Android资源分为两类：</p>
+<ul>
+<li>第一类是res目录下存放的可编译资源文件，编译时，系统会自动在R.java中生成资源文件的十进制值，这种访问比较简单，只需要获取Resources对象，进而通过Resources的getxxx即可得到资源        </li>
+<li>第二类是assets目录下存放的原始资源文件，因为apk在编译的时候不会编译它们，所以我们也不能通过 R.xx 来访问，通过绝对路径呢？也不行，因为apk不会解压到本地，所以我们无法直接获取，只能通过AssetManager类的open方法去获取，类似如下代码：</li>
+</ul>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Resources resources = getResources();</span><br><span class="line">AssetManager am = getResources().getAssets();</span><br><span class="line">InputStream is = getResources().getAssets().open(<span class="string">"filename"</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由此可见啊，Resources 就能搞定一切！</p>
+<h3 id="剪不断理还乱：Resources-和-AssetManager"><a href="#剪不断理还乱：Resources-和-AssetManager" class="headerlink" title="剪不断理还乱：Resources 和 AssetManager"></a>剪不断理还乱：Resources 和 AssetManager</h3><p>AssetManager 中有一个 addAssetPath(String path) 方法，App启动时，会把当前的Apk路径穿进去，接下来AssetManager 和 Resources 就能访问当前apk的所有资源了。addAssetPath 方法是不对外的，不过我们可以通过反射的方式，把插件apk的路径传入这个方法，就把插件资源添加到一个资源池了，当然，当前App的资源早已经在这个池子中了。App有几个插件，就调用几次addAssetPath ，把插件资源都塞到池子里。</p>
+<blockquote>
+<p>apk打包时，每个资源都会在R文件中有一个十六进制值，并且会生成一个 resources.arsc 文件，它是一个 Hash 表，存放着每个十六进制值和资源的对应关系，这样在运行时，就能知道十六进制值对应res目录下哪个目录哪个资源。</p>
+</blockquote>
+<h2 id="资源插件化解决方案"><a href="#资源插件化解决方案" class="headerlink" title="资源插件化解决方案"></a>资源插件化解决方案</h2><p>以 在宿主App 中读取插件里面的字符串资源 为例，说明这个解决方案，总共会分为 4 个步骤：</p>
+<ol>
+<li>loadResources 。通过反射，创建 AssetManager 对象，调用 addAssetPath 方法，把插件 Plugin1 的路径添加到 AssetManager 对象中，从此，这个AssetManager 就只为这个插件 Plugin1 服务了。在这个 AssetManager 基础上，创建相应的 Resources 和 Theme 对象。    </li>
+<li>重写 Activity 的getAsset ，getResources 和 getTheme 方法，它们的思路都是一样的，如果插件的对象中相应的对象为空，则使用默认的，即类似： if(mAssetManager == null) { return super.getAssets(); }     </li>
+<li>加载外部的插件，生成这个插件的对应的 ClassLoader：</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">File extractFile = <span class="keyword">this</span>.getFileStreamPath(apkName);</span><br><span class="line">dexPath = extractFile.getPath();</span><br><span class="line"></span><br><span class="line">fileRelease = getDir(<span class="string">"dex"</span>, <span class="number">0</span>);<span class="comment">//0代表Context.MODE_PRIVATE</span></span><br><span class="line">classLoder = newDexClassLoader(dexPath, fileRelease.getAbsolutePath(), <span class="keyword">null</span>, getClassLoder());</span><br></pre></td></tr></tbody></table></figure>
+<ol start="4">
+<li>通过反射，获取插件中的类，构造出插件类的对象 dynamicObject ，然后就可以让插件中的类读取插件中的资源了。</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//整个章节的示例代码可以参考： https://github.com/BaoBaoJianqiang/Dynamic2</span></span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="换肤"><a href="#换肤" class="headerlink" title="换肤"></a>换肤</h2><p>在学习了插件化编程后，换肤其实是可以把图片放到插件App中，然后生成R文件来动态读取这些资源：</p>
+<p>因为前面已经讲过原理，所以这里暂且不表</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//示例代码可以参考： https://github.com/BaoBaoJianqiang/Dynamic3.2</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：插件化技术基础知识</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-03-21 22:37:00 / 修改时间：22:37:56" itemprop="dateCreated datePublished" datetime="2021-03-21T22:37:00+08:00">2021-03-21</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>这是第二部分【解决方案】的第一章</p>
+<h2 id="加载外部dex"><a href="#加载外部dex" class="headerlink" title="加载外部dex"></a>加载外部dex</h2><p>加载外部dex主要有3个步骤：</p>
+<ol>
+<li>从服务器下载插件 apk到手机 sdcard(需要sdcard权限)    </li>
+<li>读取插件apk中的dex，生成对应的 DexClassLoader    </li>
+<li>使用DexClassLoader 的loadClass 方法读取插件 dex 中的任何一个类   </li>
+</ol>
+<p>在理解原理的时候，可以把插件App放在主App的 assets 目录中，用于替代从服务器下载插件。</p>
+<p>接下来的部分是例子演示，这里不表。</p>
+<h2 id="插件的瘦身"><a href="#插件的瘦身" class="headerlink" title="插件的瘦身"></a>插件的瘦身</h2><p>在插件化编程过程中会出现某个moudule在测试的时候需要，但是在正式环境中不需要，因此，可以把这个module打包成jar包，之后使用provided引用：</p>
+<blockquote>
+<p>provided files(“lib/classes.jar”)</p>
+</blockquote>
+<p>因为关键字provided只支持jar包，而不支持module</p>
+<h2 id="Application-的插件化解决方案"><a href="#Application-的插件化解决方案" class="headerlink" title="Application 的插件化解决方案"></a>Application 的插件化解决方案</h2><p>在插件中可能自定义Application，插件会在这个自定义的Application的onCreate中做一些初始化工作，但我们知道<strong>插件的Application是没机会执行的</strong>，此时，我们可以<strong>在宿主的自定义的Application的onCreate方法中，手动把这些插件Application都反射出来，执行他们的onCreate</strong>，不过这样一来，插件Application就是没有生命周期的，它彻底沦为一个普通类。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//示例代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.8</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1180,210 +1425,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/" class="post-title-link" itemprop="url">第20课-UI优化-UI渲染关键概念</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-27 10:32:00" itemprop="dateCreated datePublished" datetime="2020-06-27T10:32:00+08:00">2020-06-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 16:59:16" itemprop="dateModified" datetime="2021-05-05T16:59:16+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="UI优化-lt-上-gt-20讲"><a href="#UI优化-lt-上-gt-20讲" class="headerlink" title="UI优化<上>-20讲"></a>UI优化&lt;上&gt;-20讲</h2><h3 id="UI渲染的背景知识"><a href="#UI渲染的背景知识" class="headerlink" title="UI渲染的背景知识"></a>UI渲染的背景知识</h3><p>ppi 像素密度，每英寸包含的像素数，这是物理参数，不可改</p>
-<p>dpi 像素密度，指的是单位尺寸像素数量。这是可以人为调整的         </p>
-<p>density 密度，每平方英寸中包含的像素点数，density = dpi / 160    </p>
-<p>dp ： px = dp * density</p>
-<h3 id="屏幕适配方案"><a href="#屏幕适配方案" class="headerlink" title="屏幕适配方案"></a>屏幕适配方案</h3><p>使用dp</p>
-<p>限制符适配</p>
-<h3 id="CPU-与-GPU"><a href="#CPU-与-GPU" class="headerlink" title="CPU 与 GPU"></a>CPU 与 GPU</h3><p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E8%BD%AF%E4%BB%B6%E7%BB%98%E5%88%B6%E5%92%8C%E7%A1%AC%E4%BB%B6%E7%BB%98%E5%88%B6.png" alt="软件绘制与硬件绘制"></p>
-<p>由上面的图可以知道，软件绘制使用的是Skia 库，硬件绘制是通过 open GL 之后在GPU 上实现的        </p>
-<p>在Android 7.0以后，添加了对 Vulkan 的支持，它比 OpenGL 功耗和多核优化上更优秀</p>
-<h3 id="Android-渲染的演进"><a href="#Android-渲染的演进" class="headerlink" title="Android 渲染的演进"></a>Android 渲染的演进</h3><p>可以通过下图整体看下Android 图形体系：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%9B%BE%E5%BD%A2%E7%B3%BB%E7%BB%9F.png" alt="Android图形体系"></p>
-<p>各个部分的功能可以比喻成以下内容：</p>
-<ul>
-<li>画笔：Skia 或者 OpenGL 。Skia 使用CPU 绘制，OpenGL 使用 GPU 绘制         </li>
-<li>画纸：Surface。所有元素都在 Surface 这张画纸上绘制和渲染。<strong>在Android中，Window 是View的容器，每个Window 都会关联一个Surface</strong>。windowManager 负责管理这些 window ，并且把它们的数据传递给 SurfaceFlinger。   </li>
-<li>画板：Graphic Buffer。Graphic Buffer 缓冲用于应用程序图形的绘制，Android 4.1 之前使用的是双缓冲；4.1之后使用三缓冲      </li>
-<li>显示：SurfaceFliger 。将WindowManager 提供的所有 Surface ，通过Hardware Composer 合成并输出到显示屏      </li>
-</ul>
-<h3 id="开启硬件加速"><a href="#开启硬件加速" class="headerlink" title="开启硬件加速"></a>开启硬件加速</h3><p>软件绘制流程图如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E8%BD%AF%E4%BB%B6%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B.png" alt="软件绘制流程"></p>
-<ul>
-<li>Surface： 每个View 都由某个Window 管理，每个Window 关联一个Surface     </li>
-<li>Cavas。通过Surface的lock 函数获得一个Cavas，Cavas 可以理解成Skia 底层接口的封装      </li>
-<li>Grapic Buffer。 SurfaceFlinger 帮我们托管 BufferQueue ，我们从BufferQueue 中拿到 Graphic Buffer，然后通过Canvas 和 Skia 将绘制内容栅格化到上面(个人理解为栅格化后的数据保存在这个buffer中)。     </li>
-<li>SurfaceFlinger 。通过 Swap Buffer 把 Front Graphic Buffer 的内容交给 SurfaceFlinger ，最后硬件合成器 Hardware Composer 合成并输出到显示屏。      </li>
-</ul>
-<p>硬件加速绘制流程如下图(3.0以后支持硬件加速)：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E7%A1%AC%E4%BB%B6%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B.png" alt="硬件绘制流程"></p>
-<p>硬件绘制与软件绘制最核心的区别是<strong>硬件绘制通过GPU完成 Graphic Buffer内容的绘制</strong>，此外，硬件绘制引入了 DisplayList 的概念，<strong>每个View内部都有一个DisplayList，当某个View需要重绘时，将其标记为Dirty，重绘也仅仅只需要重绘一个View的DisplayList</strong>，这样，无需像软件绘制那样向上递归，大大减少绘图的操作数量，提高了渲染效率，更新的过程示意如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E7%A1%AC%E4%BB%B6%E7%BB%98%E5%88%B6%E6%9B%B4%E6%96%B0Display.png" alt="硬件绘制更新Display"></p>
-<p>硬件加速虽然极大地提高了显示和刷新速度，但是它也存在一些问题，一方面是内存消耗，另一方面是部分绘制函数不支持</p>
-<h3 id="Project-Butter-（黄油计划）"><a href="#Project-Butter-（黄油计划）" class="headerlink" title="Project Butter （黄油计划）"></a>Project Butter （黄油计划）</h3><p>4.1的时候，提出黄油计划，主要包括两个方面，一是 VSYNC ,一是 Triple Bufferfing (三缓冲)。</p>
-<p>在4.0 及以前，cpu可能在忙别的事情，导致没来得及处理UI 绘制，为了解决这个问题，VSYNC 出现了，它类似于时钟中断，这个信号到来时，CPU立即准备Buffer数据，大部分设备刷新频率都是60Hz，所以一帧数据的准备工作要在 16ms内完成。</p>
-<p>4.0及以前，Android使用双缓冲，一般不同的View或者Activity 都会公用一个Window，也就是公用一个Surface，每个Surface 会有一个BufferQueue 缓存队列，这个队列由SurfaceFlinger 管理，<strong>通过匿名共享内存与App应用层交互。</strong>示意图如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/app%E4%B8%8Eui%E6%9C%BA%E5%88%B6%E4%BA%A4%E4%BA%92%E5%9B%BE.png" alt="app与ui机制交互图"></p>
-<p>整个流程如下：</p>
-<p>每个Surface对应的 BufferQueue 内有有两个Graphic Buffer，一个用于绘制，一个用于显示。</p>
-<p>同一时刻可能有多个Surface (可能是不同应用的Surface，也可能是同一个应用里面类似SurfaceView 和TexureView ，它们都会有自己单独的Surface)，SurfaceFlinger 把所有的Surface 要显示的内容统一交给 Hardware Composer，它会最终合成屏幕显示的内容。</p>
-<p>如果只有两个Buffer，当CPU/GPU 绘制时间过长，则两个缓冲区分别被显示设备和GPU 占用，cpu 无法准备下一帧数据，造成浪费。三个缓冲区的话，cpu、gpu 显示设备都能使用各自的缓冲区工作，个不影响，最大限度利用空闲时间。</p>
-<p>在黄油计划之后，Android 5.0 推出了 RenderThread ，将所有GL 命令执行放到 RenderThread 中执行，减轻UI 线程的负担。</p>
-<h3 id="数据测量"><a href="#数据测量" class="headerlink" title="数据测量"></a>数据测量</h3><p>可以通过开发者选项中查看过度绘制的情况</p>
-<p>还可以使用 Systrace 性能数据采样和分析工具</p>
-<p>4.1及以后，可以采用 Tracer for OpenGL ES 逐帧分析</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/26/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-18%E3%80%8119%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/26/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-18%E3%80%8119%E8%AF%BE/" class="post-title-link" itemprop="url">第18课-耗电优化<上></a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-26 17:28:00" itemprop="dateCreated datePublished" datetime="2020-06-26T17:28:00+08:00">2020-06-26</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-06-27 10:40:22" itemprop="dateModified" datetime="2020-06-27T10:40:22+08:00">2020-06-27</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="第18课-耗电优化-lt-上-gt"><a href="#第18课-耗电优化-lt-上-gt" class="headerlink" title="第18课-耗电优化<上>"></a>第18课-耗电优化&lt;上&gt;</h2><p>准确的测量电量并不是那么容易，在<a target="_blank" rel="noopener" href="https://tech.meituan.com/2018/03/11/dianping-shortvideo-battery-testcase.html">《大众点评App的短视频耗电量优化实战》</a>一文中，为我们总结了下面几种电量测试的方法:</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E8%80%97%E7%94%B5%E9%87%8F%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95.png" alt="耗电量测试方法"></p>
-<p>当测试反馈耗电问题时，<a target="_blank" rel="noopener" href="https://developer.android.google.cn/studio/debug/bug-report">bug report</a> 结合 <a target="_blank" rel="noopener" href="https://github.com/google/battery-historian">Battery Historian</a> 是最好的排除方法：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">//7.0和7.0以后</span><br><span class="line">$ adb bugreport bugreport.zip</span><br><span class="line">//6.0和6.0之前:</span><br><span class="line">$ adb bugreport &gt; bugreport.txt</span><br><span class="line">//通过historian图形化展示结果</span><br><span class="line">python historian.py -a bugreport.txt &gt; battery.html</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="19讲-耗电优化-lt-下-gt"><a href="#19讲-耗电优化-lt-下-gt" class="headerlink" title="19讲-耗电优化<下>"></a>19讲-耗电优化&lt;下&gt;</h2><h3 id="如何优化"><a href="#如何优化" class="headerlink" title="如何优化"></a>如何优化</h3><ul>
-<li>耗电优化的第一个优化方向是优化应用后台耗电    </li>
-<li>第二个优化方向是符合系统的规则，让系统认为你的耗电是正常的。</li>
-</ul>
-<p>比如，Android P 通过 Android Vitals 监控后台耗电，所以我们需要符合它的规则，它的规则如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android-Vitals%E8%A7%84%E5%88%99.png" alt="Android-Vitals规则"></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1434,7 +1475,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">145</span>
+          <span class="site-state-item-count">147</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1520,7 +1561,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共340.9k字</span>
+  <span class="post-count">博客全站共343.8k字</span>
 </div>
 
 
