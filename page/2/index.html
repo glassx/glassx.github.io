@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">147</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">148</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,186 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/18/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/18/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：JUC显式锁的原理与实战</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-18 15:54:00" itemprop="dateCreated datePublished" datetime="2023-02-18T15:54:00+08:00">2023-02-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-22 22:36:01" itemprop="dateModified" datetime="2023-02-22T22:36:01+08:00">2023-02-22</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="5-1-显式锁"><a href="#5-1-显式锁" class="headerlink" title="5.1 显式锁"></a>5.1 显式锁</h2><p>使用 Java内置锁 时，无需通过 Java 代码显式地对同步对象的监视器进行抢占和释放，使用起来非常方便。但是不具备一些比较高级的锁功能：</p>
+<ul>
+<li><p>限时抢锁：设置超时时长，不至于无限等下去</p>
+</li>
+<li><p>可中断抢锁：抢锁时，外部线程给抢锁线程发一个中断信号，就能唤起等待锁的线程，并终止抢占过程</p>
+</li>
+<li><p>多个等待队列：为锁维持多个等待队列，以提高锁的效率。比如生产者-消费者模式中，生产者和消费者公用一把锁，锁上维持2个队列：一个生产队列和一个消费者队列</p>
+</li>
+</ul>
+<h3 id="5-1-3-使用显式锁的模板代码"><a href="#5-1-3-使用显式锁的模板代码" class="headerlink" title="5.1.3 使用显式锁的模板代码"></a>5.1.3 使用显式锁的模板代码</h3><p>因为 JUC 中的显式锁都实现了 Lock 接口，所以不同类型的显式锁对象使用的方法都是模板化的、套路化的，模板代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//创建锁对象，SomeLock 为 Lock 的某个实现类，如 ReentrantLock</span></span><br><span class="line">Lock lock = <span class="keyword">new</span> SomeLock();</span><br><span class="line"><span class="comment">//step 1： 抢占锁</span></span><br><span class="line">lock.lock;</span><br><span class="line"><span class="keyword">try</span> {</span><br><span class="line">    <span class="comment">//step2 ： 抢锁成功，执行临界区代码</span></span><br><span class="line">    doSomething();</span><br><span class="line">} <span class="keyword">finally</span> {</span><br><span class="line">    lock.unlock(); <span class="comment">//step3： 释放锁</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>模板代码有几个需要注意的点：</p>
+<ul>
+<li><p>释放锁操作 unlock 必须在 try-catch 的finally 中执行，否则如果临界区代码抛出异常，锁就可能永远也得不到释放了</p>
+</li>
+<li><p>抢占锁的操作<strong>lock 必须在 try 语句之外</strong>，原因：lock 方法不一定能够抢锁成功（我猜测作者是想说 tryLock() 之类的方法不一定会获取成功），如果没有抢占到锁，也肯定不需要释放锁，<strong>在没有占有锁的情况下释放锁可能导致异常</strong>。</p>
+</li>
+<li><p>在抢占锁操作 lock 和 try 语句之间不要插入任何代码，避免抛出异常而无法执行到 try，进而无法释放锁。</p>
+</li>
+</ul>
+<h3 id="5-1-4-基于显式锁进行“等待-通知”方式的线程间通信"><a href="#5-1-4-基于显式锁进行“等待-通知”方式的线程间通信" class="headerlink" title="5.1.4 基于显式锁进行“等待-通知”方式的线程间通信"></a>5.1.4 基于显式锁进行“等待-通知”方式的线程间通信</h3><p>Java 内置锁可以通过 Object 的 wait 和 notify 方法来实现简单的线程间通信，与此类似的是，基于 Lock 显式锁，JUC 也提供了一个用于线程间通信的接口 Condition</p>
+<p>Condition 接口有2类主要方法：</p>
+<ul>
+<li>await() ： 在功能上与 Object.wait() 语意等效，线程会加入 await() 等待队列，<strong>并释放当前锁</strong></li>
+<li>signal() ： 在功能上与 Object.notify() 语意等效，唤醒 await() 等待队列中的线程</li>
+</ul>
+<blockquote>
+<p>为了避免与 Object 中的 wait/notify 2类方法在使用时发生混淆，JUC 对 Condition 接口方法改了名称，成为了 await/signal。Condition 对象的 signal 和<strong>同一个对象的 await 是一一配对使用的</strong>。</p>
+</blockquote>
+<p><strong>Condition 对象是基于显式锁的，所以不能独立创建 Condition 对象，可以通过 lock.newCondition() 方法获取</strong>一个与当前显式锁绑定的 Condition 对象。用法举例如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Lock lock = <span class="keyword">new</span> ReentrantLock();</span><br><span class="line"><span class="keyword">private</span> Condition condition = lock.newCondition();</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WaitTarget</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>{</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        lock.lock();<span class="comment">//抢锁</span></span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            print(<span class="string">"开始等待"</span>);</span><br><span class="line">            condition.await();<span class="comment">//开始等待，并且释放锁</span></span><br><span class="line">            print(<span class="string">"收到通知，开始继续执行"</span>);</span><br><span class="line">        } <span class="keyword">finally</span> {</span><br><span class="line">            lock.unlock();<span class="comment">//释放锁</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>使用 await 方法前必须要先获取锁，await 方法会让当前线程加入 Condition 的等待队列，同理， signal 方法也要在获取锁之后才能调用，调用 signal 之后一定要释放锁，只有这样被唤醒的等待线程才能抢锁。</p>
+<h3 id="5-1-5-LockSupport"><a href="#5-1-5-LockSupport" class="headerlink" title="5.1.5 LockSupport"></a>5.1.5 LockSupport</h3><p>LockSupport 是JUC 提供的一个 <strong>线程阻塞与唤醒的工具类</strong>。大体有2类方法(阻塞和唤醒)：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 无限期阻塞当前线程</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">park</span><span class="params">()</span></span>; </span><br><span class="line"> </span><br><span class="line"> <span class="comment">// 唤醒某个被阻塞的线程</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">unpark</span><span class="params">(Thread thread)</span></span>;</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>一个简单的演示的实例：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WaitTarget</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>{</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            print(<span class="string">"即将进入阻塞"</span>);</span><br><span class="line">            LockSupport.park();<span class="comment">//阻塞当前线程</span></span><br><span class="line">            <span class="keyword">if</span> (Thread.currentThread().isInterrupted()) {</span><br><span class="line">                print(<span class="string">"被中断了"</span>);</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                print(<span class="string">"被重新唤醒"</span>);</span><br><span class="line">            }</span><br><span class="line">            </span><br><span class="line">        } <span class="keyword">finally</span> {</span><br><span class="line">            lock.unlock();<span class="comment">//释放锁</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="5-1-5-1-LockSupport-park-的对比（自己改的标题）"><a href="#5-1-5-1-LockSupport-park-的对比（自己改的标题）" class="headerlink" title="5.1.5.1 LockSupport.park() 的对比（自己改的标题）"></a>5.1.5.1 LockSupport.park() 的对比（自己改的标题）</h4><p>1、与 Thread.sleep() 的区别</p>
+<ul>
+<li>Thread.sleep() 只能自己醒来，没法外部唤醒；LockSupport.park() 可以通过 unpark 唤醒</li>
+<li>Thread.sleep() 声明了中断异常(InterruptedException) ，而LockSupport.park() 没有</li>
+<li>被中断的时候，虽然线程都会被设置中断标记，但是线程表现不同：sleep 会抛异常，park 不会</li>
+</ul>
+<p>2、与 Object.wait() 的区别</p>
+<ul>
+<li>wait 需要在同步块中执行，park 可以在任意地方执行</li>
+<li>当阻塞线程被中断时，wait 方法抛出中断异常；而park 不会抛出异常</li>
+<li>如果没有调用过 wait 而直接执行 notify 会导致 IllegalMonitorStateException异常；而未做park 直接做 unpark 不会有任何异常</li>
+</ul>
+<blockquote>
+<p>自己看了下 LockSupport 的源码，发现 park 和 unpark 都是 native 方法，所以在代码层面就没对比了</p>
+</blockquote>
+<h3 id="5-1-6-显式锁分类"><a href="#5-1-6-显式锁分类" class="headerlink" title="5.1.6 显式锁分类"></a>5.1.6 显式锁分类</h3><p>从多个维度分类： 可重入、悲观/乐观、公平、共享/独占、可中断/不可中断</p>
+<h3 id="5-2-2-通过-CAS-实现乐观锁"><a href="#5-2-2-通过-CAS-实现乐观锁" class="headerlink" title="5.2.2 通过 CAS 实现乐观锁"></a>5.2.2 通过 CAS 实现乐观锁</h3><p>乐观锁通过 CAS 实现主要就是两个步骤：</p>
+<ol>
+<li>冲突检测 （CAS 检测内存位置 V 的值是否为 A）</li>
+<li>数据更新 (CAS 上述检测如果是，则将位置 V 更新为 B 值，否则不更改)</li>
+</ol>
+<p>在实际使用中，仅仅进行一次 CAS 是不够的，一般情况下需要不断循环重试直到CAS 操作成功，也即<strong>自旋</strong></p>
+<blockquote>
+<p>乐观锁是一种思想，CAS 是这种思想的一种实现</p>
+</blockquote>
+<p>作为演示，这里设计一个简单版本的不可重入（如果需要重入就count计数，这里不贴例子了）的自旋锁：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyLock</span> <span class="keyword">implements</span> <span class="title">Lock</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="comment">//当前锁的拥有者</span></span><br><span class="line">    <span class="keyword">private</span> AtomicReference&lt;Thread&gt; owner = <span class="keyword">new</span> AtomicReference&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>{</span><br><span class="line">        Thread t = Thread.currentThread();</span><br><span class="line">        <span class="comment">//书中的例子这里是写错了，它写成 while(owner.compareAndSet(null, t))</span></span><br><span class="line">        <span class="keyword">while</span>(!owner.compareAndSet(<span class="keyword">null</span>, t)) {<span class="comment">//循环竞争锁</span></span><br><span class="line">            <span class="comment">//没获取到锁，让出cpu</span></span><br><span class="line">            Thread.yield();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span> </span>{</span><br><span class="line">        Thread t = Thread.currentThread();</span><br><span class="line">        <span class="keyword">if</span>(t == owner.get()) {</span><br><span class="line">            owner.set(<span class="keyword">null</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="5-2-5-CAS-可能导致“总线风暴”"><a href="#5-2-5-CAS-可能导致“总线风暴”" class="headerlink" title="5.2.5 CAS 可能导致“总线风暴”"></a>5.2.5 CAS 可能导致“总线风暴”</h3><p>为了保障“缓存一致性”，不同的内核需要通过总线来回通信，使用 lock 前缀（用于内存屏障）指令的 Java 操作（比如CAS、volatile）会产生缓存一致性流量，很多线程同时执行lock前缀操作时，会在总线上产生过多的流量，也就是 “总线风暴”。</p>
+<p>那么，基于 JUC 实现的轻量级锁怎么避免总线风暴？答案是：使用队列对抢锁线程进行排队。</p>
+<h3 id="5-2-6-CLH自旋锁"><a href="#5-2-6-CLH自旋锁" class="headerlink" title="5.2.6 CLH自旋锁"></a>5.2.6 CLH自旋锁</h3><p>CLH锁就是一种基于队列排队的自旋锁（由3个发明人的名字命名的），AQS 也是基于这种原理，为了说明其原理，这里实现一个 CLH 锁的学习版本，并不是真正的源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CLHLock</span> <span class="keyword">implements</span> <span class="title">Lock</span> </span>{</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 当前节点的线程本地变量</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> ThreadLocal&lt;Node&gt; curNodeLocal = <span class="keyword">new</span> ThreadLocal();</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * CLHLock队列的尾部指针，使用AtomicReference，方便进行</span></span><br><span class="line"><span class="comment">     * CAS操作</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> AtomicReference&lt;Node&gt; tail = <span class="keyword">new</span> AtomicReference&lt;&gt;(<span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">CLHLock</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="comment">//设置尾部节点</span></span><br><span class="line">        tail.getAndSet(Node.EMPTY);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//加锁操作：将节点添加到等待队列的尾部</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>{</span><br><span class="line">        Node curNode = <span class="keyword">new</span> Node(<span class="keyword">true</span>, <span class="keyword">null</span>);</span><br><span class="line">        Node preNode = tail.get();</span><br><span class="line">        <span class="comment">//CAS自旋：将当前节点插入队列的尾部</span></span><br><span class="line">        <span class="keyword">while</span> (!tail.compareAndSet(preNode, curNode)) {</span><br><span class="line">            preNode = tail.get();</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//设置前驱节点</span></span><br><span class="line">        curNode.setPrevNode(preNode);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 自旋，监听前驱节点的locked变量，直到其值为false</span></span><br><span class="line">        <span class="comment">// 若前驱节点的locked状态为true，则表示前一个线程还在抢占或者占有锁</span></span><br><span class="line">        <span class="keyword">while</span> (curNode.getPrevNode().isLocked()) {</span><br><span class="line">            <span class="comment">//让出CPU时间片，提高性能</span></span><br><span class="line">            Thread.yield();</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">// 能执行到这里，说明当前线程获取到了锁</span></span><br><span class="line">        <span class="comment">// Print.tcfo("获取到了锁！！！");</span></span><br><span class="line">        <span class="comment">//将当前节点缓存在线程本地变量中，释放锁会用到</span></span><br><span class="line">        curNodeLocal.set(curNode);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//释放锁</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span> </span>{</span><br><span class="line">        Node curNode = curNodeLocal.get();</span><br><span class="line">        curNode.setLocked(<span class="keyword">false</span>);</span><br><span class="line">        curNode.setPrevNode(<span class="keyword">null</span>); <span class="comment">//help for GC</span></span><br><span class="line">        curNodeLocal.set(<span class="keyword">null</span>); <span class="comment">//方便下一次抢锁</span></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//虚拟等待队列的节点</span></span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span> </span>{</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Node</span><span class="params">(<span class="keyword">boolean</span> locked, Node prevNode)</span> </span>{</span><br><span class="line">            <span class="keyword">this</span>.locked = locked;</span><br><span class="line">            <span class="keyword">this</span>.prevNode = prevNode;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="comment">// true：当前线程正在抢占锁，或者已经占有锁</span></span><br><span class="line">        <span class="comment">// false：当前线程已经释放锁，下一个线程可以占有锁了</span></span><br><span class="line">        <span class="keyword">volatile</span> <span class="keyword">boolean</span> locked;</span><br><span class="line">        <span class="comment">// 前一个节点，需要监听其locked字段</span></span><br><span class="line">        Node prevNode;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 空节点</span></span><br><span class="line">        <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> Node EMPTY = <span class="keyword">new</span> Node(<span class="keyword">false</span>, <span class="keyword">null</span>);</span><br><span class="line">    }</span><br><span class="line">    <span class="comment">// 省略其他代码</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>CLH 算法的几个要点就是（我理解的是，这种步骤就是公平锁环境下弄的，非公平锁不会每次头节点获得锁）：</p>
+<ol>
+<li>初始状态队列尾部(tail)指向一个 EMPTY节点，tail 节点使用 AtomicReference 类型是为了让多线程并发操作时安全</li>
+<li>Thread 在抢锁时会创建一个 Node 加入等待队列尾部（默认lock 属性为true），同时自己作为新的尾部，这些操作通过 CAS 自旋操作</li>
+<li>Node 加入之后，会循环判断前去节点的 lock 属性是否为false，如果为false，即前驱节点释放了锁，当前节点获得了锁</li>
+<li>当前node 获得锁之后，将locked 属性设置为true</li>
+<li>临界区代码执行完毕后，当前节点的 locked 置为 false，方便后续节点获取锁</li>
+</ol>
+<h3 id="5-4-2-死锁的监测与中断"><a href="#5-4-2-死锁的监测与中断" class="headerlink" title="5.4.2 死锁的监测与中断"></a>5.4.2 死锁的监测与中断</h3><p>JDK 8 中包含一个 ThreadMXBean 接口，提供多种监视线程的方法：</p>
+<ul>
+<li>findDeadlockedThreads ：用于检测由于抢占JUC显式锁、Java内置锁引起死锁的线程。</li>
+<li>findMonitorDeadlockedThreads：仅仅用于检测由于抢占Java内置锁引起死锁的线程。</li>
+</ul>
+<h2 id="5-5-共享锁与独占锁"><a href="#5-5-共享锁与独占锁" class="headerlink" title="5.5 共享锁与独占锁"></a>5.5 共享锁与独占锁</h2><p>JUC 中的共享锁包括 Semaphore（信号量）、ReadLock（读写锁中的读锁）、CountDownLatch 倒数闩</p>
+<h3 id="5-5-2-共享锁-Semaphore"><a href="#5-5-2-共享锁-Semaphore" class="headerlink" title="5.5.2 共享锁 Semaphore"></a>5.5.2 共享锁 Semaphore</h3><p>Semaphore 可以用来控制在同一时刻共享资源的线程数量，维护了一组虚拟许可。<strong>将 Semaphore 称为一个许可管理器 更形象。</strong></p>
+<h4 id="5-5-2-1-Semaphore-使用示例"><a href="#5-5-2-1-Semaphore-使用示例" class="headerlink" title="5.5.2.1 Semaphore 使用示例"></a>5.5.2.1 Semaphore 使用示例</h4><p>Semaphore 使用一个很形象的场景是银行排队办理业务，只有 N 个窗口，M 个人在排队，那么其实相当于有 N 个许可：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> Semaphore semaphore = <span class="keyword">new</span> Semaphore(N);</span><br><span class="line"></span><br><span class="line">Runnable r = () -&gt; {</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        <span class="comment">//阻塞开始获取许可</span></span><br><span class="line">        semaphore.acquire(<span class="number">1</span>);</span><br><span class="line">        <span class="comment">//获取了一个许可</span></span><br><span class="line">        print(<span class="string">"业务办理中"</span>);</span><br><span class="line">        <span class="comment">//模拟业务操作: 处理排队业务</span></span><br><span class="line">        Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">        <span class="comment">//用完了释放许可</span></span><br><span class="line">        semaphore.release(<span class="number">1</span>);</span><br><span class="line">    } <span class="keyword">catch</span>(Exception e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="5-5-3-共享锁-CountDownLatch"><a href="#5-5-3-共享锁-CountDownLatch" class="headerlink" title="5.5.3 共享锁 CountDownLatch"></a>5.5.3 共享锁 CountDownLatch</h3><p>CountDownLatch 功能相当于一个多线程环境下的倒数门闩，它可以指定一个计数值，在并发环境下由线程进行减1操作，当计数变为 0 之后，被 await 阻塞的线程将会唤醒。</p>
+<p>它的一个经典示例就是，司机开车之前需要每个人报数，报数到 100 后说明人到齐发车：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">CountDownLatch doneSignal = <span class="keyword">new</span> CountDownLatch(N);</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= N; ++i) {<span class="comment">// 启动报数任务</span></span><br><span class="line">    threadPoll.execute(<span class="keyword">new</span> Runable() {</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            print(<span class="string">"第"</span> + i + <span class="string">"个人已到"</span>);</span><br><span class="line">            <span class="comment">//倒数闩减1</span></span><br><span class="line">            doneSignal.countDown();</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">}</span><br><span class="line"> doneSignal.await(); <span class="comment">//step2：等待报数完成，倒数闩计数值为0</span></span><br><span class="line"> print(<span class="string">"人到齐，开车"</span>); </span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="5-6-读写锁"><a href="#5-6-读写锁" class="headerlink" title="5.6 读写锁"></a>5.6 读写锁</h2><p>读写锁的读和写操作的互斥原则如下：</p>
+<ul>
+<li>读读能共存</li>
+<li>读写不能共存</li>
+<li>写写不能共存</li>
+</ul>
+<p>JUC 包中的读写锁接口为 ReadWriteLock ，主要有2个方法： </p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ReadWriteLock</span> </span>{</span><br><span class="line"> <span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 返回读锁</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="function">Lock <span class="title">readLock</span><span class="params">()</span></span>;</span><br><span class="line"> </span><br><span class="line"> <span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 返回写锁</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="function">Lock <span class="title">writeLock</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>其主要实现类为 ReentrantReadWriteLock ，与 ReentrantLock 相比，<strong>前者更适合 读多写少 的场景，而 ReentrantLock 适合 读写比例相差不大 的场景</strong>。</p>
+<h3 id="5-6-3-StampedLock-印戳锁"><a href="#5-6-3-StampedLock-印戳锁" class="headerlink" title="5.6.3 StampedLock 印戳锁"></a>5.6.3 StampedLock 印戳锁</h3><p>StampedLock 是对 ReentrantReadWriteLock 读写所的一种改进，主要改进为： 在没有写只有读的场景，<strong>StampedLock 支持不用加读锁而是直接进行读操作，最大限度提升读的效率，只有发生过写操作后，再加读锁才能进行读操作。</strong></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1742,101 +1922,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2022/12/01/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC1%E7%AB%A0-%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E4%BB%8B%E7%BB%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/12/01/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC1%E7%AB%A0-%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">热修复技术介绍</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-12-01 10:12:00" itemprop="dateCreated datePublished" datetime="2022-12-01T10:12:00+08:00">2022-12-01</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-01-30 12:13:07" itemprop="dateModified" datetime="2023-01-30T12:13:07+08:00">2023-01-30</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h3 id="为什么需要热修复？"><a href="#为什么需要热修复？" class="headerlink" title="为什么需要热修复？"></a>为什么需要热修复？</h3><ul>
-<li>重新发版代价太大，用户更新还不及时</li>
-<li>bug修复不及时，用户体验差</li>
-<li>插件化？那就很小的改动也要发布一个模块</li>
-<li>Hybrid方案？需要将经常变更的业务以H5独立出来，但是如果无法转为H5,bug还是无法修复，并且需要开发人员新增技术栈</li>
-<li>热修复对用户的流量小，影响小，损失降到最低</li>
-</ul>
-<h3 id="从本质理解热修复的实现"><a href="#从本质理解热修复的实现" class="headerlink" title="从本质理解热修复的实现"></a>从本质理解热修复的实现</h3><p>AndroidManifest 出现bug是无法修复的，因为它是由系统进行解析的，解析过程不会访问补丁包，因此如果想要增加四大组件，通常来说是不可以直接添加的。<strong>通常的做法是预先在安装包AndroidManifest 中埋入代理的组件</strong>。</p>
-<p>代码如何修复，所有的java代码最终都编译为 class.dex 格式文件，因此，任何的热修复方案，都需要在补丁包中包含一个新逻辑的 dex 文件，并且改变执行流，引导执行到新 dex 文件。</p>
-<p>资源的修复，必须想办法把原油安装包替换为新的资源包，<strong>而有些资源，比如桌面图标、通知栏图标以及 RemoteView 之类的资源，是由系统直接解析安装包的资源得到的</strong>，对于这类资源，任何热修复方法都无法进行资源替换和修复。</p>
-<p>so的修复应该是最明确的，Android 系统中所有的 so 库都是由 System.load 进行加载，因此只要找到办法在加载的时候优先加载补丁包的 so，就能够进行底层代码替换了。</p>
-<h3 id="发展历程"><a href="#发展历程" class="headerlink" title="发展历程"></a>发展历程</h3><p>阿里最开始的 Dexposed 框架基于 Xposed 框架的 Java Method Hook 技术，但是对底层 Dalvik 结构过于依赖，最终无法继续兼容 Android 5.0 以后的 ART 虚拟机，后续作罢。</p>
-<p>后来提出的 Andfix 同样是底层结构替换的方案，做到了 Dalvik 和 ART 环境的兼容。再者，还有基于 Andfix 阿里百川 HotFix ，但是都是基于底层固定结构，使用有很多限制，只提供代码层修复，不支持资源和so层修复。</p>
-<p>行业内著名的还有： 腾讯空间超级补丁技术、微信的Tinker、饿了么的 Amigo、美团的 Robust等。</p>
-<p>最终，阿里推出了 Sophix 方案，支持 <strong>代码修复、资源修复、so修复</strong>。它的核心理念就是 <strong>非侵入性</strong>。不修改打包流程，也不插入任何 AOP 代码。唯一需要的就是 <strong>初始化和请求补丁</strong>两行代码。</p>
-<h3 id="代码修复"><a href="#代码修复" class="headerlink" title="代码修复"></a>代码修复</h3><p>代码修复主要有2大方案：</p>
-<ul>
-<li><strong>阿里的底层替换方案</strong>： 立即见效，加载也轻快，但是限制很多。</li>
-<li><strong>腾讯系的类加载方案</strong>：需要冷启动见效，修复范围广，限制少。</li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1887,7 +1972,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">147</span>
+          <span class="site-state-item-count">148</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
