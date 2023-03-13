@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="12.1 引言12.1.1 ARQ 和 重传重传的时候，接收方可能收到被传送分苏的重复副本，这就要求使用序列号来解决：在被远端发送时，每个唯一的分组都有一个新的序列号。 如果想要吞吐量更高，我们就要求在网络中可以同时存在多个分组，这就变得更加复杂：发送方不仅要决定什么时候注入一个分组到网络中，还要考虑注入多少个，并且在等待 ACK 的时候，怎样维持计时器，同时还需要保存每个还没收到 ACK 分组的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第12章：TCP:传输控制协议（初步）">
+<meta property="og:url" content="https://glassx.github.io/2023/03/13/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71-%E7%AC%AC12%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="12.1 引言12.1.1 ARQ 和 重传重传的时候，接收方可能收到被传送分苏的重复副本，这就要求使用序列号来解决：在被远端发送时，每个唯一的分组都有一个新的序列号。 如果想要吞吐量更高，我们就要求在网络中可以同时存在多个分组，这就变得更加复杂：发送方不仅要决定什么时候注入一个分组到网络中，还要考虑注入多少个，并且在等待 ACK 的时候，怎样维持计时器，同时还需要保存每个还没收到 ACK 分组的">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/12%E7%AB%A0/%E5%8F%91%E9%80%81%E7%AA%97%E5%8F%A3%E7%A4%BA%E6%84%8F.png">
+<meta property="article:published_time" content="2023-03-13T08:00:00.000Z">
+<meta property="article:modified_time" content="2023-03-13T10:01:08.191Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="读书笔记-TCP IP详解卷1：协议 原书第2版">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/Book-Notes/TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/12%E7%AB%A0/%E5%8F%91%E9%80%81%E7%AA%97%E5%8F%A3%E7%A4%BA%E6%84%8F.png">
+
+<link rel="canonical" href="https://glassx.github.io/2023/03/13/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71-%E7%AC%AC12%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第12章：TCP:传输控制协议（初步） | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">152</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/03/13/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71-%E7%AC%AC12%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第12章：TCP:传输控制协议（初步）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-03-13 16:00:00 / 修改时间：18:01:08" itemprop="dateCreated datePublished" datetime="2023-03-13T16:00:00+08:00">2023-03-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="12-1-引言"><a href="#12-1-引言" class="headerlink" title="12.1 引言"></a>12.1 引言</h2><h3 id="12-1-1-ARQ-和-重传"><a href="#12-1-1-ARQ-和-重传" class="headerlink" title="12.1.1 ARQ 和 重传"></a>12.1.1 ARQ 和 重传</h3><p>重传的时候，接收方可能收到被传送分苏的重复副本，这就要求使用序列号来解决：在被远端发送时，每个唯一的分组都有一个新的序列号。</p>
+<p>如果想要吞吐量更高，我们就要求在网络中可以同时存在多个分组，这就变得更加复杂：发送方不仅要决定什么时候注入一个分组到网络中，还要考虑注入多少个，并且在等待 ACK 的时候，怎样维持计时器，同时还需要保存每个还没收到 ACK 分组的副本防止重传需要。</p>
+<h3 id="12-1-2-分组窗口和滑动窗口"><a href="#12-1-2-分组窗口和滑动窗口" class="headerlink" title="12.1.2 分组窗口和滑动窗口"></a>12.1.2 分组窗口和滑动窗口</h3><p>为了解决上述问题，我们假设每个分组有一个序列号，并且定义一个分组窗口作为<strong>已经被发送但是还没完成确认</strong>的分组集合，我们把窗口中分组的数量称为<strong>窗口大小</strong>，如下图所示：</p>
+<p><img src="/assets/Book-Notes/TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/12%E7%AB%A0/%E5%8F%91%E9%80%81%E7%AA%97%E5%8F%A3%E7%A4%BA%E6%84%8F.png" alt="发送窗口示意图"></p>
+<p>上图显示当前窗口有3个分组，整个窗口大小是3。其中，3号分组已经被发送和确认，所以发送方保存的副本可以释放了；分组 7 在发送方已经准备好，但是还没发送，因为还没“进入窗口”。现在假如发送方下一步收到分组 4 的 ACK，此时窗口向右边 “滑动”一个分组，意味着 4 可以释放了，而 7 可以发送了。这种就叫做 “滑动窗口”协议。</p>
+<p>一般来说，这个滑动窗口在发送方和接收方都会有，在发送方，它记录着哪些分组可以释放，哪些正在等待 ACK，哪些分组还不能被发送；在接收方，它记录着哪些分组已经被接收和确认，哪些分组时下一步期望的，哪些分组即使接收了也会被丢弃。</p>
+<h3 id="12-1-3-变量窗口：流量控制和拥塞控制"><a href="#12-1-3-变量窗口：流量控制和拥塞控制" class="headerlink" title="12.1.3 变量窗口：流量控制和拥塞控制"></a>12.1.3 变量窗口：流量控制和拥塞控制</h3><p>为了处理接收方相对发送方太慢的问题，我们在接收方跟不上时会强迫发送方慢下来，这称为<strong>流量控制</strong>。主要有以下2种方式：</p>
+<ul>
+<li><p>基于速率流量控制：给发送方指定某个速率，去报数据不能超过这个速率发送。多用于流应用程序，可被用于广播和组播发现</p>
+</li>
+<li><p>基于窗口流量控制：这是使用滑动窗口最流行的方法，思想是：窗口大小不固定，允许随时间变化而变化，必须有一种方法让接收方可以通知到发送方使用多大窗口（即窗口通告）</p>
+</li>
+</ul>
+<p>拥塞控制用于发送方减低速度以不至于压垮发送方与接收方之间的网络。</p>
+<h2 id="12-2-TCP的引入"><a href="#12-2-TCP的引入" class="headerlink" title="12.2 TCP的引入"></a>12.2 TCP的引入</h2><p>TCP 提供一种字节流抽象概念给应用程序使用，这就意味着没有消息边界。举例解释一下：如果应用程序一一端写入 10 字节，随后又写入 20 字节，再随后写入 50 字节，那么在另一端时不知道每次写入多少字节的；另一端可能以每次读取20字节分4次读取或者一次性读取80字节的方式读取。</p>
+<p><strong>TCP根本不会解读字节流中的字节内容</strong>，它不知道传输的是二进制数据、ASCII 还是其他东西。</p>
+<h3 id="12-2-2-TCP中的可靠性"><a href="#12-2-2-TCP中的可靠性" class="headerlink" title="12.2.2 TCP中的可靠性"></a>12.2.2 TCP中的可靠性</h3><p>TCP 必须把应用程序发送的字节流转换为一组 IP可以携带的分组，这被称为组包。这些分组包含序列号，该序列号在TCP 中代表了每个分组的第一个字节在整个数据流中的字节偏移，而不是分组号。TCP传给IP的块称为 <strong>报文段</strong>。</p>
+<p>而UDP 就不同了，应用程序每次写入通常就产生一个 UDP 数据，其大小就是写入的那么大（加上头部）。</p>
+<p>TCP 发送一组报文段时会设置一个<strong>重传计时器</strong>，等待对方的确认。不过它不会为每个报文段设置，而是发送一个窗口的数据，它只设置一个计时器，当 ACK 到达时再更新超时。如果有一个确认没有及时接收到，这个报文段就会被重传。</p>
+<h2 id="12-3-TCP-头部封装"><a href="#12-3-TCP-头部封装" class="headerlink" title="12.3 TCP 头部封装"></a>12.3 TCP 头部封装</h2><p>UDP 的头部一般是 8 字节，TCP 头部通常是 20 个字节（带选项的话可达 60 字节）。每个TCP 的头部都包含了 源和目的IP地址，以及源和目的 端口号。</p>
+<blockquote>
+<p>在 TCP 术语中，一个 IP 地址和一个端口的组合被称为 套接字（Socket） 或者 端点（endpoint）</p>
+</blockquote>
+<p>TCP 报文段的数据部分是可选的，基于后面的知识我们可以看到：当一个连接被建立和终止时（我理解的是 握手和挥手），交换的报文段只包含 TCP 头部而没有数据。</p>
+<h2 id="12-4-总结"><a href="#12-4-总结" class="headerlink" title="12.4 总结"></a>12.4 总结</h2><p>处理传输过程的差错主要有2种方法：</p>
+<ul>
+<li><p>差错校正码：添加一些冗余比特，使得即使某些比特被毁，真实的信息也能被恢复过来</p>
+</li>
+<li><p>重传，直至信息被正确接收</p>
+</li>
+</ul>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-TCP-IP%E8%AF%A6%E8%A7%A3%E5%8D%B71%EF%BC%9A%E5%8D%8F%E8%AE%AE-%E5%8E%9F%E4%B9%A6%E7%AC%AC2%E7%89%88/" rel="tag"># 读书笔记-TCP IP详解卷1：协议 原书第2版</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/03/13/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71-%E7%AC%AC10%E7%AB%A0/" rel="next" title="第10章：用户数据报协议和IP分片">
+                  <i class="fa fa-chevron-left"></i> 第10章：用户数据报协议和IP分片
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/03/13/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71/%E4%B9%A6-TCP:IP%E8%AF%A6%E8%A7%A3-%E5%8D%B71-%E7%AC%AC13%E7%AB%A0/" rel="prev" title="第13章：TCP连接管理">
+                  第13章：TCP连接管理 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#12-1-%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">12.1 引言</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#12-1-1-ARQ-%E5%92%8C-%E9%87%8D%E4%BC%A0"><span class="nav-number">1.1.</span> <span class="nav-text">12.1.1 ARQ 和 重传</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#12-1-2-%E5%88%86%E7%BB%84%E7%AA%97%E5%8F%A3%E5%92%8C%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3"><span class="nav-number">1.2.</span> <span class="nav-text">12.1.2 分组窗口和滑动窗口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#12-1-3-%E5%8F%98%E9%87%8F%E7%AA%97%E5%8F%A3%EF%BC%9A%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6%E5%92%8C%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6"><span class="nav-number">1.3.</span> <span class="nav-text">12.1.3 变量窗口：流量控制和拥塞控制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12-2-TCP%E7%9A%84%E5%BC%95%E5%85%A5"><span class="nav-number">2.</span> <span class="nav-text">12.2 TCP的引入</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#12-2-2-TCP%E4%B8%AD%E7%9A%84%E5%8F%AF%E9%9D%A0%E6%80%A7"><span class="nav-number">2.1.</span> <span class="nav-text">12.2.2 TCP中的可靠性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12-3-TCP-%E5%A4%B4%E9%83%A8%E5%B0%81%E8%A3%85"><span class="nav-number">3.</span> <span class="nav-text">12.3 TCP 头部封装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12-4-%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">12.4 总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">152</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共346.2k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '996d172492b1059e8494d51a0eff8c28',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
