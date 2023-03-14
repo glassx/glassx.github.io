@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">152</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">153</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,141 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/10/%E4%B9%A6-kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B/Kotlin%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：多态和扩展</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-09-10 19:29:00 / 修改时间：21:30:53" itemprop="dateCreated datePublished" datetime="2021-09-10T19:29:00+08:00">2021-09-10</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="多态的不同方式"><a href="#多态的不同方式" class="headerlink" title="多态的不同方式"></a>多态的不同方式</h2><p>当一个子类继承父类的时候，这就是<strong>子类型多态</strong>；另一种熟悉的多态是<strong>参数多态</strong>，泛型就是参数多态常见的形式。</p>
+<h3 id="对第三方类扩展"><a href="#对第三方类扩展" class="headerlink" title="对第三方类扩展"></a>对第三方类扩展</h3><p>考虑业务类 ClassA、ClassB是第三方引入的并且<strong>不能修改</strong>，如果我们想要给它们扩展一些方法，比如将对象转换为 Json 字符串，那么利用以前多态技术就会显得麻烦。幸运的是，Kotlin 支持扩展语法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> ClassA.<span class="title">toJson</span><span class="params">()</span></span>: String = {</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>就可以很方便地添加了toJson方法，需要注意的是，<strong>扩展属性和方法的实现运行在ClassA的实例</strong>，他们的定义操作不会修改 ClassA 类本身，所以被扩展的第三方类免于被污染。</p>
+<h3 id="特设多态与运算符重载"><a href="#特设多态与运算符重载" class="headerlink" title="特设多态与运算符重载"></a>特设多态与运算符重载</h3><p>除了子类型多态、参数多态外，还有一种灵活的多态——<strong>特设多态</strong>。可能概念不好理解，举个具体的例子，你想定义一个通用的sum方法，也许会这么写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="type">&lt;T&gt;</span> <span class="title">sum</span><span class="params">(x: <span class="type">T</span>, y: <span class="type">T</span>)</span></span>: T = x + y</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但编译器会报错，因为某些类型不一定支持加法操作。这时候，我们希望定义一种通用的“加法语义上的操作”，可以定义一个通用的 Summable 接口，然后让需要支持假发操作的类来实现它：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">Sumable</span>&lt;<span class="type">T</span>&gt; </span>{</span><br><span class="line">  <span class="function"><span class="keyword">fun</span> <span class="title">plusThat</span><span class="params">(that: <span class="type">T</span>)</span></span>: T</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">Len</span></span>(<span class="keyword">val</span> v: <span class="built_in">Int</span>): Sumable&lt;Len&gt; {</span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">plusThat</span><span class="params">(that: <span class="type">Len</span>)</span></span> = Len(<span class="keyword">this</span>.v + that.v)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以发现，这并没有什么问题。然而，如果要针对不可修改的第三方类扩展加法操作时，这种方式也会遇到问题。于是，又想到了Kotlin的扩展，针对以上例子，我们完全可以采用扩展的语法来解决问题，此外，Kotlin 原生支持<strong>运算符重载</strong>可以很好解决上述问题：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">Area</span></span>(<span class="keyword">val</span> value: <span class="built_in">Double</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">operator</span> <span class="function"><span class="keyword">fun</span> Area.<span class="title">plus</span><span class="params">(that: <span class="type">Area</span>)</span></span>: Area {</span><br><span class="line">  <span class="keyword">return</span> Area(<span class="keyword">this</span>.value + that.value)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> {</span><br><span class="line">  println(Area(<span class="number">1.0</span>) + Area(<span class="number">2.0</span>)) <span class="comment">//运行结果： Area(value=3.0)</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>通过 operator 关键字以及Kotlin中<strong>内置可重载的运算符plus</strong>，就实现了功能。operator 的作用是，将一个函数标记为重载一个操作符或者实现一个约定，这里的<strong>plus是Kotlin规定的函数名</strong>。除了plus，我们还可以通过重载减法(minus)、乘法(times)、触发(div)、取余(mod，在kotlin 1.1 版本开始被 rem 替代)。此外，回忆kotlin中常用语法，也是用这种神奇的语言特性实现的，比如：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">a <span class="keyword">in</span> list<span class="comment">// 转换为 list.contains(a)</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="扩展：-为别的类添加方法、属性"><a href="#扩展：-为别的类添加方法、属性" class="headerlink" title="扩展： 为别的类添加方法、属性"></a>扩展： 为别的类添加方法、属性</h2><p>继续深入Kotlin 的特设多态语言特性</p>
+<h3 id="扩展与开放封闭原则"><a href="#扩展与开放封闭原则" class="headerlink" title="扩展与开放封闭原则"></a>扩展与开放封闭原则</h3><p>熟悉设计模式的读者知道，在修改现有代码时，我们应该遵循开放封闭原则，对扩展开放，对修改封闭。然而实际并不乐观，比如Android开发，为实现某个需求，引入了第三方库，但是需求发生变动后，当前库无法满足需求，且库的作者没有升级计划。这时候你也许就会考虑对源码修改，这就违背了开放封闭原则。</p>
+<p>Java中一种惯常做法是继承第三方类，添加新功能，但是，强行的继承可能违背“里氏替换原则”。更合理的方案，就是通过Kotlin的扩展功能。</p>
+<h3 id="使用扩展函数、属性"><a href="#使用扩展函数、属性" class="headerlink" title="使用扩展函数、属性"></a>使用扩展函数、属性</h3><p>扩展函数的声明的关键字是 <type> 。此外，我们需要一个“接收者类型”（通常是类或者接口）来作为它的前缀，以为 MutableList<int>扩展exchange方法为例：</int></type></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">  <span class="keyword">val</span> temp = <span class="keyword">this</span>[fromIndex]</span><br><span class="line">  <span class="keyword">this</span>[fromIndex] = <span class="keyword">this</span>[toIndex]</span><br><span class="line">  <span class="keyword">this</span>[toIndex] = temp</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>MutableList<t> 是Kotlin标准库中的类，这里作为接收者类型，exchange是扩展函数名。Kotlin的this要比Java的更灵活，这里扩展函数体内的this代表的是<strong>接收者类型的对象</strong>。注意，Kotlin中是严格区分接收者是否可空的，<strong>如果你的函数是可空的，你需要重写一个可空类型的扩展函数</strong>。</t></p>
+<h4 id="扩展函数的实现机制"><a href="#扩展函数的实现机制" class="headerlink" title="扩展函数的实现机制"></a>扩展函数的实现机制</h4><p>扩展函数这么方便，会不会对性能造成影响呢？以 MutableList<int>.exchange 为例，对应的Java代码为：</int></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 2,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u0012\n\u0000\n\u0002\u0010\u0002\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\u001a \u0010\u0000\u001a\u00020\u0001*\b\u0012\u0004\u0012\u00020\u00030\u00022\u0006\u0010\u0004\u001a\u00020\u00032\u0006\u0010\u0005\u001a\u00020\u0003¨\u0006\u0006"},</span></span><br><span class="line"><span class="meta">   d2 = {"exchange", "", "", "", "fromIndex", "toIndex", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">KotClassKt</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">exchange</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$exchange, <span class="keyword">int</span> fromIndex, <span class="keyword">int</span> toIndex)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$exchange, <span class="string">"$this$exchange"</span>);</span><br><span class="line">      <span class="keyword">int</span> temp = ((Number)$<span class="keyword">this</span>$exchange.get(fromIndex)).intValue();</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(fromIndex, $<span class="keyword">this</span>$exchange.get(toIndex));</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(toIndex, temp);</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>结合上述Java代码可以看出，我们可以将扩展函数近似理解为<strong>静态方法</strong>。我们知道静态方法的特点：不依赖类的特定实例，被该类所有的实例共享，并且，用public修饰，本质上也就是个全局方法，所以，<strong>扩展函数不会带来额外的性能消耗</strong>。</p>
+<h4 id="扩展函数的作用域"><a href="#扩展函数的作用域" class="headerlink" title="扩展函数的作用域"></a>扩展函数的作用域</h4><p>一般来说，我们习惯将扩展函数直接定义在包内，例如之前的 exchange 例子，我们可以将其放在 com.example.extension包下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.extension</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">  ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们知道，<strong>在同一个包内是可以直接调用exchange方法的，如果需要在其他包中调用，只需要import即可</strong>，这与Java全局静态方法类似。与此同时，在实际开发中，我们可能会将扩展函数定义在一个 Class 内部统一管理：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Extends</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> MutableList<span class="type">&lt;Int&gt;</span>.<span class="title">exchange</span><span class="params">(fromIndex: <span class="type">Int</span>, toIndex: <span class="type">Int</span>)</span></span> {</span><br><span class="line">        <span class="keyword">val</span> temp = <span class="keyword">this</span>[fromIndex]</span><br><span class="line">        <span class="keyword">this</span>[fromIndex] = <span class="keyword">this</span>[toIndex]</span><br><span class="line">        <span class="keyword">this</span>[toIndex] = temp</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但你会发现，之前的exchange方法无法调用了！我们看下它的Java源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 1,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u001c\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0002\n\u0002\u0010\u0002\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\u0018\u00002\u00020\u0001B\u0005¢\u0006\u0002\u0010\u0002J \u0010\u0003\u001a\u00020\u0004*\b\u0012\u0004\u0012\u00020\u00060\u00052\u0006\u0010\u0007\u001a\u00020\u00062\u0006\u0010\b\u001a\u00020\u0006¨\u0006\t"},</span></span><br><span class="line"><span class="meta">   d2 = {"Lcom/glassx/Extends;", "", "()V", "exchange", "", "", "", "fromIndex", "toIndex", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Extends</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">exchange</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$exchange, <span class="keyword">int</span> fromIndex, <span class="keyword">int</span> toIndex)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$exchange, <span class="string">"$this$exchange"</span>);</span><br><span class="line">      <span class="keyword">int</span> temp = ((Number)$<span class="keyword">this</span>$exchange.get(fromIndex)).intValue();</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(fromIndex, $<span class="keyword">this</span>$exchange.get(toIndex));</span><br><span class="line">      $<span class="keyword">this</span>$exchange.set(toIndex, temp);</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们才发现exchange方法没有static关键字了，所以，<strong>当扩展方法在一个 Class 内部时，我们只能在该类和该类的子类中调用</strong>。</p>
+<h3 id="扩展属性"><a href="#扩展属性" class="headerlink" title="扩展属性"></a>扩展属性</h3><p>与扩展函数一样，我们还能为一个类添加扩展属性，比如为MutableList<int>添加一个判断和是否为偶数的属性：</int></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> MutableList&lt;<span class="built_in">Int</span>&gt;.sumIsEven: <span class="built_in">Boolean</span></span><br><span class="line">    <span class="keyword">get</span>() = <span class="keyword">this</span>.sum() % <span class="number">2</span> == <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//使用</span></span><br><span class="line"><span class="keyword">val</span> list = mutableListOf(<span class="number">2</span>,<span class="number">2</span>,<span class="number">4</span>)</span><br><span class="line">list.sumIsEven</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是，如果你准备给这个属性添加默认值，并且写出如下代码：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> MutableList&lt;<span class="built_in">Int</span>&gt;.sumIsEven: <span class="built_in">Boolean</span> = <span class="literal">false</span></span><br><span class="line">    <span class="keyword">get</span>() = <span class="keyword">this</span>.sum() % <span class="number">2</span> == <span class="number">0</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>代码会编译不通过，告知扩展属性不能有初始化器。这是为什么呢？其实，与扩展函数一样，其本质也是对应Java中的静态方法，反编译成Java后，会看到一个 getSumIsEven 的静态方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Metadata(</span></span><br><span class="line"><span class="meta">   mv = {1, 5, 1},</span></span><br><span class="line"><span class="meta">   k = 2,</span></span><br><span class="line"><span class="meta">   d1 = {"\u0000\u0012\n\u0000\n\u0002\u0010\u000b\n\u0002\u0010!\n\u0002\u0010\b\n\u0002\b\u0003\"\u001b\u0010\u0000\u001a\u00020\u0001*\b\u0012\u0004\u0012\u00020\u00030\u00028F¢\u0006\u0006\u001a\u0004\b\u0004\u0010\u0005¨\u0006\u0006"},</span></span><br><span class="line"><span class="meta">   d2 = {"sumIsEven", "", "", "", "getSumIsEven", "(Ljava/util/List;)Z", "CommoKotlin"}</span></span><br><span class="line"><span class="meta">)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ExtendsKt</span> </span>{</span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">getSumIsEven</span><span class="params">(<span class="meta">@NotNull</span> List $<span class="keyword">this</span>$sumIsEven)</span> </span>{</span><br><span class="line">      Intrinsics.checkNotNullParameter($<span class="keyword">this</span>$sumIsEven, <span class="string">"$this$sumIsEven"</span>);</span><br><span class="line">      <span class="keyword">return</span> CollectionsKt.sumOfInt((Iterable)$<span class="keyword">this</span>$sumIsEven) % <span class="number">2</span> == <span class="number">0</span>;</span><br><span class="line">   }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>由于扩展没有实际地将成员插入类中，因此对扩展属性来说幕后字段是无效的，它们的行为只能由显式提供的 getters 和setters 定义</strong>。</p>
+<blockquote>
+<p>幕后字段：如果属性中存在访问器使用默认实现，那么Kotlin 会自动提供幕后字段 field ，其仅可用于 getter 和 setter 中。</p>
+</blockquote>
+<h3 id="扩展的特殊情况"><a href="#扩展的特殊情况" class="headerlink" title="扩展的特殊情况"></a>扩展的特殊情况</h3><h4 id="类似Java的静态扩展函数"><a href="#类似Java的静态扩展函数" class="headerlink" title="类似Java的静态扩展函数"></a>类似Java的静态扩展函数</h4><p>在Kotlin中，如果要声明一个静态的扩展函数，必须要有 伴生对象（companion object）上，所以我们要这样定义带有伴生对象的类：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Son</span> </span>{</span><br><span class="line">  <span class="keyword">companion</span> <span class="keyword">object</span> {</span><br><span class="line">    <span class="keyword">val</span> age = <span class="number">10</span></span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在已有伴生对象的情况下，如果不想再Son中定义扩展函数，而是在Son的伴生对象上定义，可以这么写：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> Son.Companion.<span class="title">foo</span><span class="params">()</span></span> {</span><br><span class="line">  println(<span class="string">"age = <span class="variable">$age</span>"</span>)</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//这样在没有Son的实例对象的情况下，也能调用，使用：</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">(args: <span class="type">Array</span>&lt;<span class="type">String</span>&gt;)</span></span> {</span><br><span class="line">  Son.foo()</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h4 id="成员方法优先级总是高于扩展函数"><a href="#成员方法优先级总是高于扩展函数" class="headerlink" title="成员方法优先级总是高于扩展函数"></a>成员方法优先级总是高于扩展函数</h4><p>如果扩展函数和现有类的成员方法一样，那么<strong>优先调用成员方法</strong>，这一点好理解，我们不应该更改原有实现。</p>
+<h4 id="类的实例与接收者实例"><a href="#类的实例与接收者实例" class="headerlink" title="类的实例与接收者实例"></a>类的实例与接收者实例</h4><p>略，没看清楚表达什么</p>
+<h3 id="标准库中的扩展函数：run、let、also、takeIf"><a href="#标准库中的扩展函数：run、let、also、takeIf" class="headerlink" title="标准库中的扩展函数：run、let、also、takeIf"></a>标准库中的扩展函数：run、let、also、takeIf</h3><p>略</p>
+<h2 id="Android中扩展的应用"><a href="#Android中扩展的应用" class="headerlink" title="Android中扩展的应用"></a>Android中扩展的应用</h2><p>略</p>
+<h2 id="扩展不是万能的"><a href="#扩展不是万能的" class="headerlink" title="扩展不是万能的"></a>扩展不是万能的</h2><p>略</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1641,134 +1776,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/" class="post-title-link" itemprop="url">第15章：再谈资源</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-04-06 21:29:00 / 修改时间：22:05:51" itemprop="dateCreated datePublished" datetime="2021-04-06T21:29:00+08:00">2021-04-06</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="Android-App-打包流程"><a href="#Android-App-打包流程" class="headerlink" title="Android App 打包流程"></a>Android App 打包流程</h2><p>早期Android打包都是基于Ant来做，为此我们需要熟悉Android App 打包的每一个过程。随着Gradle的问世，打包简化为几行配置代码。一套完整的Android App 打包流程如下图所示：</p>
-<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC15%E7%AB%A0/Android%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.png" alt="Android打包流程图"></p>
-<p>介绍下各部分的作用：</p>
-<ul>
-<li>aapt： 为res目录下的资源生成 R.java 文件，<strong>同时为AndroidManifest生成Manifest.java文件</strong>     </li>
-<li>aidl： 把项目中自定义的aidl文件生成相应的java代码文件    </li>
-<li>javac： 把项目中所有的Java 代码编译成 class 文件。包括3部分： 自己写的代码；aapt生成的代码；aidl生成的Java文件    </li>
-<li>proguard： 混淆的同时生成proguardMapping.txt，这个步骤是可选的    </li>
-<li>dex： 把所有的class文件(包括第三方库的class 文件)转换为dex文件      </li>
-<li>aapt： 这里还是使用aapt，这里是它的另一个功能：打包。即将res目录下的资源、assets下的文件，打包成一个 .ap_ 文件     </li>
-<li>apkbuilder：将所有的dex、ap_文件、AndroidManifest.xml 打包为.apk文件，此时未签名       </li>
-<li>jarsigner： 签名    </li>
-<li>zipalign： 对齐，以便运行时节省内存           </li>
-</ul>
-<h2 id="资源冲突解决方案一：修改AAPT"><a href="#资源冲突解决方案一：修改AAPT" class="headerlink" title="资源冲突解决方案一：修改AAPT"></a>资源冲突解决方案一：修改AAPT</h2><p>插件中的资源id可能会和宿主资源id是同一个值，为了解决资源id冲突，有3中解决方案：</p>
-<ul>
-<li>修改打包流程中的aapt命令，为插件资源id指定 0x71 之类的前缀，就可以避免冲突     </li>
-<li>仍然是将插件资源的id前缀改为 0x71，但是在Android打包生成 resources.arsc 文件后，对这个文件进行修改(具体可见21.2节)       </li>
-<li>进入到哪个插件，就为这个插件生成新的 AssetManager 和 Resources 对象，使用这两个新对象加载资源，就只能是插件中的资源，永远不会和宿主中冲突(详见 7.2)</li>
-</ul>
-<h3 id="修改并生成新的aapt命令"><a href="#修改并生成新的aapt命令" class="headerlink" title="修改并生成新的aapt命令"></a>修改并生成新的aapt命令</h3><p>R文件中有十六进制整数变量，内容如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>这些十六进制的变量，由三部分组成： packageId(apk包id，默认 0x7f) + typeId(资源类型，如attr=0x01，drawable=0x02，还有layout、string等) + entryId(typeId下的资源编码，从0开始递增)。以 0x7f0b006d 为例，packageId 为 0x7f，typeId为 0b，entryId 为 006d。</p>
-<p>插件中为防止资源冲突，会为每个插件设置不同的packageId，比如游戏大厅中，斗地主插件可能是 0x71开头，斗牛可能是 0x72。为asset 生成 R 文件 是通过 aapt 完成的，为了实现上述目的，我们要修改 aapt 源码，定位到 Android SDK，找到 aapt 目录，里面有一堆 C 代码， 命令行工具就是用这些代码编译成的，可以在这个目录直接搜索 0x7f，在 ResourcesTable.cpp 中可以找到如下代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>在 ResourcesTable 的构造函数中，有一个 Bundle 类型的参数，其次，判断 mPackageType 如果是 App，则都是 0x7f，此外 0x01 和 0x00 都被系统占用了，所以我们不要将这两个值设置为插件的 id前缀(事实上，有些手机厂商会占用其他的一些值，为了保险，我们一般只使用 0x71~0xff 作为插件的前缀)。修改 AAPT 的代码，基本思路如下：</p>
-<ol>
-<li>在 aapt 的命令行参数中传递打包时的前缀   </li>
-<li>把这个值设置给 Bundle 实体的 mApkModule 字段，作为 ResourcesTable 的构造函数参数传入        </li>
-<li>在 ResourcesTable 构造函数读取 mApkModule 值，也就是前缀值，设置给 packageId    </li>
-</ol>
-<p>实现代码： 略</p>
-<h3 id="在插件化项目中使用新的aapt命令"><a href="#在插件化项目中使用新的aapt命令" class="headerlink" title="在插件化项目中使用新的aapt命令"></a>在插件化项目中使用新的aapt命令</h3><p>现在，可以用我们修改的aapt文件替换sdk下的aapt 命令，但是如果这么做，每当Android系统更新，我们都要替换一次aapt命令。一种可行的做法是，我们把这个新的 aapt 工具命名为 aapt_mac ，放到项目的根目录下：</p>
-<p><img src="" alt="自定义的aapt放置"></p>
-<p>之后，修改项目中 gradle 文件：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述脚本通过反射，<strong>把aapt的路径临时修改为指向当前App根目录下的aapt_mac</strong>。此外，我们将App的资源前缀设置为 0x71 ，这样在打包后，R文件中的资源就以 0x71 作为前缀了。</p>
-<h2 id="public-xml-固定资源id值"><a href="#public-xml-固定资源id值" class="headerlink" title="public.xml 固定资源id值"></a>public.xml 固定资源id值</h2><p>如下场景：多个插件都需要<strong>同一个</strong>自定义控件，于是我们把这个自定义控件卸载宿主 App，插件调用宿主的Java 代码，使用宿主的资源(有控件肯定有资源)。考虑到App在每次打包后，随着资源的增减，同一个资源id的值可能会发生变化。为避免这种情况，我们可以<strong>把公用的资源id值固定写死</strong>，如下public.xml文件所示（注意，type和id后面的空格不可省略）：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="string1" id="0x7f050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>之后，把public.xml放到 res/values 目录下，R.string.string1 这个资源就会固定成 0x7f050024。当然，还可以指定资源值的一个区间,将上述代码中间那行改成如下代码即可：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">public-padding</span> <span class="attr">name</span>=<span class="string">"my_"</span> <span class="attr">end</span>=<span class="string">"0x7f02000f"</span> <span class="attr">start</span>=<span class="string">"0x7f020001"</span> <span class="attr">type</span>=<span class="string">"drawable"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>但是从gradle 1.3开始，就忽略 public.xml了，因此需要我们自己使用gradle 脚本来实现，代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>之后，打包宿主 ActivityHost1 ，使用Jadx-GUI 查看资源id，可以看到 R.string.string1 的值永远是 2131034148(也即十六进制0x7f050024)。</p>
-<h2 id="插件使用宿主的资源"><a href="#插件使用宿主的资源" class="headerlink" title="插件使用宿主的资源"></a>插件使用宿主的资源</h2><p>宿主资源值固定了，但是插件怎么访问宿主中的资源呢？如果插件内部能保持一个对宿主项目的引用，那就可以随便访问宿主的任何资源了。<strong>我们需要编写gradle脚本，把宿主打包成 jar 包。之后设置插件的gradle文件，通过provided来引用这个jar包</strong>。之前介绍过，provided方式引用只在编码时候有用，正式打包的时候不会被引用进去。代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章给出插件化中资源id冲突的解决方案：</p>
-<ul>
-<li>把宿主和插件的资源都合并到一起，通过AssetManager的addAssetPath 来实现。只不过，<strong>这种方案会产生资源id冲突的问题</strong>      </li>
-<li>如果不事先合并资源，那就为每个插件创建一个 AssetManager，每个 AssetManager 都是通过反射调用 addAssetPath 方法，把插件资源加进去。当宿主进入一个插件时，就把 AssetManager 切换为 插件的AssetManager ；反之，当从插件回到宿主的时候，再把 AssetManager 切换回宿主的 AssetManager(详见第5章的loadResource方法)。</li>
-</ul>
-<p>第一种方案，主要缺陷是资源冲突，并且资源id的前缀是有限的，也就256个值，如果超过256个插件，就要使用方案2了。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1819,7 +1826,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">152</span>
+          <span class="site-state-item-count">153</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1905,7 +1912,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共346.2k字</span>
+  <span class="post-count">博客全站共346.9k字</span>
 </div>
 
 
