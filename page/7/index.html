@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">153</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">158</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,777 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Service的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-27 21:29:00" itemprop="dateCreated datePublished" datetime="2021-03-27T21:29:00+08:00">2021-03-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:16:28" itemprop="dateModified" datetime="2021-03-29T22:16:28+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Android界的荀彧和荀攸：Service和Activity"><a href="#Android界的荀彧和荀攸：Service和Activity" class="headerlink" title="Android界的荀彧和荀攸：Service和Activity"></a>Android界的荀彧和荀攸：Service和Activity</h2><p>根据Context的族谱，Service 是 Activity 的叔叔，结合作用来看，二者有太多相似，但是备份不同，类似三国时期的荀彧和荀攸。不过，二者的区别也挺明显：</p>
+<ul>
+<li>Activity 是面向用户的，有大量的用户交互的方法，而Service 是后台运行的，生命周期函数很少    </li>
+<li>Activity 中有LaunchMode 的概念，每个Activity启动时都会放在栈顶，根据不同的 LaunchMode 可能会有复用以前的实例或者不复用以前的实例。但是Service不同，<strong>同一个 Service 调用多次startService并不会启动多个实例，只会有一个实例</strong>，所以，只用一个StubActivity 是应付不了多个插件的Service 的     </li>
+<li>ActivityThread 最终通过Instrumentation 启动一个Activity。而ActivityThread 启动Service 并不借助于 Instrumentation ，而是直接把Service 反射出来就启动了    </li>
+</ul>
+<p>注意一点，Service 有两种形式： 由 startService 启动的服务；由 bindService 绑定的服务。二者的区别在于：startService 以及对应的 stopService ，就是简单地启动和停止 Service ；bindService 执行时会传递一个 ServiceConnection 对象给 AMS ，接下来 Service 在执行 onBind 时，可以把生成的 binder 对象返回给 App 调用端，这个值存于 ServiceConnection 对象的 onServiceConnected 回调函数的第二个参数中。       </p>
+<h2 id="预先占位"><a href="#预先占位" class="headerlink" title="预先占位"></a>预先占位</h2><p>前面说过，Service 与 Activity 不一样，它只会存在一个实例，所以只用一个StubService 是应付不了多个插件Service 的。考虑到在绝大部分App中Service 数据不会超过10个，所以我们完全可以在宿主App 中创建 10 个 StubService ，StubService1，StubService2…StubService10 ，每个 StubService 只对应插件中的一个Service，如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png" alt="StubService占位示意"></p>
+<p>接下来就是让每个插件Service匹配一个宿主中的 StubService 了，有两种匹配方式：</p>
+<ul>
+<li>服务器下发一个 JSON 字符串，给出二者的一一对应关系     </li>
+<li>在每个插件 App 的 assets 目录中，创建一个 plugin_config 配置文件，把这个 JSON 字符串放进去</li>
+</ul>
+<p>第2种做法更自然，不需要和服务器交互，json文件解析类似如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">String strJson = Utils.readZipFileString(dexFile.getAbsolutePath(), <span class="string">"assets/plugin_config.json"</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (strJson == <span class="keyword">null</span> || TextUtils.isEmpty(strJson)) {</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">JSONObject jobject = <span class="keyword">new</span> JSONObject(strJson.replaceAll(<span class="string">"\r|\n"</span>, <span class="string">""</span>));</span><br><span class="line">JSONArray jsonArray = jobject.getJSONArray(<span class="string">"plugins"</span>);</span><br><span class="line"><span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; jsonArray.length(); i++) {</span><br><span class="line">    JSONObject jsonObject = (JSONObject) jsonArray.get(i);</span><br><span class="line">    UPFApplication.pluginServices.put(</span><br><span class="line">        jsonObject.optString(<span class="string">"PluginService"</span>),</span><br><span class="line">        jsonObject.optString(<span class="string">"StubService"</span>));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们将 JSON 转化为一个 HashMap ，<strong>以插件的类名作为key，以宿主的替身作为value</strong>，这个HashMap 存放在宿主App 的 UPFApplication 的 plutinServices 中，是一个全局变量。</p>
+<h2 id="startService-的解决方案"><a href="#startService-的解决方案" class="headerlink" title="startService 的解决方案"></a>startService 的解决方案</h2><p>Service 的插件化机制和Activity 很像，因为它们是亲戚。我们首先从简单的startService 和 stopService 的插件化做起。</p>
+<p>首先，把插件和宿主的dex合并，之前有封装过 BaseDexClassLoaderHookHelper 类，合并后才能随心所欲加载类；其次，采用“欺骗AMS”方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//即 Hook AMN 的 gDefault，它是一个Singleton 对象，之后创建它的代理对象 MockClass1 ，然后替换这个字段</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//之后，再Hook 到 Handler 类型的 H 类的 mCallback 字段，替换为 MockClass2</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>主要流程分析一下：</p>
+<ol>
+<li><p>Hook AMN，让 AMS 启动 StubService，这次要拦截的是 startServcie 和 stopService 这两个方法(也即在AMN中就拦截这两个方法，将要操作的目标Service替换成相应的StubService)。不过，这次不再需要把 Intent 缓存了，因为有了 UPFApplication 中的 plutinServices ，我们可以根据插件 Service 找到对应的 StubService，也可以根据 StubService 反向找到 Service</p>
+</li>
+<li><p>AMS 被“欺骗”之后，它原本会通知App启动StubService，而我们要Hook掉ActivityThread 的 mH 对象的 mCallback 对象，仍然截获它的 handleMessage 方法，只不过这次截获的是 “CREATE_SERVICE” 分支，这个分支执行 ActivityThread 的 handleCreateService 方法。在 handleCreateService 中，并不能获取到 App 发送给 AMS 的 Intent，AMS 要启动那个Service ，这个信息是存在 handleCreateService 方法的 dat 参数中，是 CreateServiceData 类型的。Android系统的实现如下：   </p>
+</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleCreateService</span> <span class="params">(CreateServiceData data)</span> </span>{ </span><br><span class="line">    LoadedApk packageinfo = getPackageinfoNoCheck(data.info.applicationinfo, data.compatInfo);</span><br><span class="line">    Service service = <span class="keyword">null</span>; </span><br><span class="line">    java.lang.ClassLoader cl= packageinfo.getClassLoader(); </span><br><span class="line">    service = (Service) cl.loadClass(data.info.name).newinstance(); </span><br><span class="line">    <span class="comment">//省略无关代码</span></span><br><span class="line">    service . onCreate ();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上面代码中，data.info.name 就是Service 的名称，<strong>所以我们只需要将这个值 Hook 为插件的Service即可</strong>。至此，一个支持 startService 的插件化框架就完成了。</p>
+<h2 id="bindService-的解决方案"><a href="#bindService-的解决方案" class="headerlink" title="bindService 的解决方案"></a>bindService 的解决方案</h2><p>有了前面的基础，Service 的 bind 与 unbind 就非常简单了，只要在 AMN 的Hook 中添加一个分支，在 “bindService” 的时候 “欺骗AMS” 就行：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (”bindService”.equals(method . getName())) { </span><br><span class="line">    <span class="comment">//找到参数里面的第一个 Intent 对象</span></span><br><span class="line">    <span class="keyword">int</span> index = <span class="number">0</span>; </span><br><span class="line">    <span class="keyword">for</span> (inti= <span class="number">0</span>; i &lt; args . length ; i++) { </span><br><span class="line">        <span class="keyword">if</span> (args [i) <span class="keyword">instanceof</span> Intent) { </span><br><span class="line">            index = i ; </span><br><span class="line">            <span class="keyword">break</span>; </span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    Intent rawintent = (Intent) args[index); </span><br><span class="line">    String rawServiceName = rawintent.getComponent().getClassName(); </span><br><span class="line">    String stubServiceName = UPFApplication.pluginServces.get(rawServiceName)</span><br><span class="line">    <span class="comment">//替换 Plugin Service of StubService </span></span><br><span class="line">    ComponentName componentName =<span class="keyword">new</span> ComponentName(stubPackage, stubServiceName); </span><br><span class="line">    Intent newintent = <span class="keyword">new</span> Intent(); </span><br><span class="line">    newintent.setComponet(componentName);</span><br><span class="line">    <span class="comment">//替换 Intent ，欺骗 AMS</span></span><br><span class="line">    args[index] = newintent ; </span><br><span class="line">    Log.d(TAG, ” hook success <span class="string">"); </span></span><br><span class="line"><span class="string">    return method.invoke(mBase , args);</span></span><br><span class="line"><span class="string">}</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个过程就完成了，接下来就是使用：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnBind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        <span class="keyword">final</span> Intent = <span class="keyword">new</span> Intent();</span><br><span class="line">        intent.setComponent(<span class="keyword">new</span> ComponentName(<span class="string">"jianqiang.com.testservice1"</span>), <span class="string">"jianqiang.com.testservice1.MyService2"</span>);</span><br><span class="line">        bindService(intent, conn, Service.BIND_AUTO_CREATE);</span><br><span class="line">    }</span><br><span class="line">});</span><br><span class="line"></span><br><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnUnbind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        unbindService(conn);</span><br><span class="line">    }</span><br><span class="line">});</span><br></pre></td></tr></tbody></table></figure>
+<p>看了上面的使用方法，可能会有疑惑了：</p>
+<ul>
+<li>上半场，对于unbind行为，为什么不像bind一样在 unbind 的时候做“欺骗AMS”？    </li>
+<li>下半场，为什么不用在MockClass2中写代码，把StubService2 换回 MyService2？        </li>
+</ul>
+<p>关于第一个问题，因为我们 unbind 的语法是这样的 <em>unbindService(conn)</em> ，只需要一个 ServiceConnection 类型的参数 conn 即可，这个 conn 在前面的bindService 时用到了，<strong>AMS 会根据这个conn 来找到对应的Service，所以并不需要在unbind的时候去做欺骗</strong>。</p>
+<p>第二个问题，这要从Android 系统源码说起，bindService 过程在 AMS通知 App 下半场的流程图如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/bindService%E8%BF%87%E7%A8%8BAMS%E9%80%9A%E7%9F%A5App%E8%BF%99%E4%B8%8B%E5%8D%8A%E5%9C%BA.png" alt="bindService过程AMS通知App这下半场"></p>
+<p>也就是说，bindService 先走114(handleCreateSrvice)分支，再走 121 (handleBindService) ，在 handleCreateSrvice 中已经把我们要启动的 MyService2 放到了 mService 这个集合中了，那么，在 handleBindService 和 handleUnbindService 中，都会从 mService 集合中找到 Service2 。在之前章节，为了解决 createService ，已经拦截了 114 分支把 StubService2 换回了 MyService2 了，所以我们不需要要拦截 121 和 122 了， 无需再MockClass2 添加额外代码。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这里给出Service第一种解决方案——预先占位，在宿主中预先声明若干个StubService。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/" class="post-title-link" itemprop="url">第9章：Activity的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-27 20:05:00" itemprop="dateCreated datePublished" datetime="2021-03-27T20:05:00+08:00">2021-03-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:17:24" itemprop="dateModified" datetime="2021-03-29T22:17:24+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Activity的插件化需要解决3方面的技术问题：</p>
+<ul>
+<li>宿主App可以加载插件App中的类         </li>
+<li>宿主App可以加载插件中的App资源           </li>
+<li>宿主App可以加载插件中的Activity          </li>
+</ul>
+<h2 id="启动没有在AndroidManifest中声明的插件Activity"><a href="#启动没有在AndroidManifest中声明的插件Activity" class="headerlink" title="启动没有在AndroidManifest中声明的插件Activity"></a>启动没有在AndroidManifest中声明的插件Activity</h2><p>在5.4节介绍了启动没有在AndroidManifest 中声明的 Activity，借助宿主App中的StubActivity ，在 AMN 中欺骗，在ActivityThread 中欺骗。这种方式的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参见： https://github.com/BaoBaoJianqiang/ActivityHook1</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="基于动态替换的Activity插件化解决方案"><a href="#基于动态替换的Activity插件化解决方案" class="headerlink" title="基于动态替换的Activity插件化解决方案"></a>基于动态替换的Activity插件化解决方案</h2><p>这章节好混乱，压根就没说这里解决的是什么问题</p>
+<h2 id="加载插件中类的方案2：-合并多个dex"><a href="#加载插件中类的方案2：-合并多个dex" class="headerlink" title="加载插件中类的方案2： 合并多个dex"></a>加载插件中类的方案2： 合并多个dex</h2><h2 id="对LaunchMode的支持"><a href="#对LaunchMode的支持" class="headerlink" title="对LaunchMode的支持"></a>对LaunchMode的支持</h2><p>前面介绍的 Activity 插件化技术，对于LaunchMode 都是standard的情况是完全适用的。对于 SingleTop、SingleTask 和 SingleInstance 需要重新考虑。</p>
+<p>解决LaunchMode 的问题，适用的还是 <strong>占位Activity</strong> 的思想，即实现为这3种 LaunchMode 创建很多StubActivity，如下图所示：</p>
+<p><img src="" alt="占位思想解决LaunchMode问题"></p>
+<p>我们可以从服务端下载一个Json，指定插件中的Activity 对应哪种 StubActivity ，写Demo的时候，可以直接在本地 Mock 这些数据，保存在 MyApplication 中，然后再 Mock1Class 接货 startActivity 的时候，如果发现要启动的Activity 在 MyApplication 的 pluginActivities 集合中，那就使用这个插件 Activity 对应的占位 StubActivity，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.3</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来可以测试下。这里有个小bug，无论singleTop还是singleTask，再回到这个Activity时，并不会触发它的onCreate，而是会触发它的onNewIntent(其实这里说的bug我并没有明白，等测试后再说)。为此，我们需要在MockClass2 中，拦截onNewIntent方法，把占位 StubActivity 替换回插件Activity，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参考上面的链接</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="加载插件中类的方案3：修改App原生的ClassLoader"><a href="#加载插件中类的方案3：修改App原生的ClassLoader" class="headerlink" title="加载插件中类的方案3：修改App原生的ClassLoader"></a>加载插件中类的方案3：修改App原生的ClassLoader</h2><p>..</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/26/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/26/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/" class="post-title-link" itemprop="url">第8章：最简单的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-26 21:02:00" itemprop="dateCreated datePublished" datetime="2021-03-26T21:02:00+08:00">2021-03-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:03:10" itemprop="dateModified" datetime="2021-03-29T22:03:10+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：</p>
+<ul>
+<li>合并所有的插件dex，用以解决插件类的加载问题             </li>
+<li>在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)      </li>
+<li>把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)     </li>
+</ul>
+<h2 id="在AndroidManifest-中声明插件中的组件"><a href="#在AndroidManifest-中声明插件中的组件" class="headerlink" title="在AndroidManifest 中声明插件中的组件"></a>在AndroidManifest 中声明插件中的组件</h2><p>在插件中有啥，在宿主中声明啥就行     </p>
+<h2 id="宿主App加载插件中的类"><a href="#宿主App加载插件中的类" class="headerlink" title="宿主App加载插件中的类"></a>宿主App加载插件中的类</h2><p>把插件dex都合并到宿主的dex中，那么宿主App对应的ClassLoader 就可以加载插件中任意类：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考： https://github.com/BaoBaoJianqiang/ZeusStudy1.0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseDexClassLoaderHookHelper</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">patchClassLoder</span><span class="params">(ClassLoader cl,File apkFile,File optDexFile)</span></span>{</span><br><span class="line">        <span class="comment">//获取BaseDexClassLoder: pathList</span></span><br><span class="line">        Object pathListObj = RefInvoke.getFiledObject(DexClassLoader.class.getSuperclass(), cl, <span class="string">"pathList"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取PathList: Element[] dexElements</span></span><br><span class="line">        Object[] dexElements = (Object[])RefInvoke.getFieldObject(pathListObj.getClass(), pathListObj, <span class="string">"dexElements"</span>);</span><br><span class="line"></span><br><span class="line">        ...<span class="comment">//手敲太难了，到时候复制下</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="启动插件Service"><a href="#启动插件Service" class="headerlink" title="启动插件Service"></a>启动插件Service</h2><p>根据前面两章，素组App就能启动一个插件中的Service了，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">String serviceName = <span class="string">"jianqiang.com.plugin1.TestService1"</span>;</span><br><span class="line">intent.setClassName(<span class="keyword">this</span>, serviceName);</span><br><span class="line">startService(intent);</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="加载插件中的资源"><a href="#加载插件中的资源" class="headerlink" title="加载插件中的资源"></a>加载插件中的资源</h2><p>四大组件都可以这样实现插件化方案，Service 、ContentProvider 和 Receiver 都只要合并dex就够了，他们没有资源的概念。Activity严重依赖资源，所以必须解决插件中的资源问题。前面章节介绍了AssetManager 和 Resources ，AssetManager 有个 addAssetPath 方法，可以一次性把插件的路径都“灌进去”，然后根据这个“超级” AssetManager 生成一个“超级” Resources ，以后无论是查找插件还是宿主的资源，都能通过这个“超级”Resources 找到了。上述实现如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考：  https://github.com/BaoBaoJianqiang/ZeusStudy1.1</span></span><br></pre></td></tr></tbody></table></figure>
+<p>至此，Activity 的“傻瓜式”插件化解决方案就完成了，我们甚至可以从插件Activity跳转到宿主中的Activity，但是这个方案有以下两个问题：</p>
+<ul>
+<li>插件的四大组件都必需先在宿主中声明，不能新增      </li>
+<li>插件和宿主的资源都合并到一起，资源id可能会有冲突     </li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/25/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/25/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：资源初探</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-25 20:00:00" itemprop="dateCreated datePublished" datetime="2021-03-25T20:00:00+08:00">2021-03-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 21:54:18" itemprop="dateModified" datetime="2021-03-29T21:54:18+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Activity 与资源是一对孪生兄弟，想彻底解决Activity 插件化，就要面对如何使用插件中资源的问题。</p>
+<h2 id="资源加载机制"><a href="#资源加载机制" class="headerlink" title="资源加载机制"></a>资源加载机制</h2><h3 id="资源分类"><a href="#资源分类" class="headerlink" title="资源分类"></a>资源分类</h3><p>Android资源分为两类：</p>
+<ul>
+<li>第一类是res目录下存放的可编译资源文件，编译时，系统会自动在R.java中生成资源文件的十进制值，这种访问比较简单，只需要获取Resources对象，进而通过Resources的getxxx即可得到资源        </li>
+<li>第二类是assets目录下存放的原始资源文件，因为apk在编译的时候不会编译它们，所以我们也不能通过 R.xx 来访问，通过绝对路径呢？也不行，因为apk不会解压到本地，所以我们无法直接获取，只能通过AssetManager类的open方法去获取，类似如下代码：</li>
+</ul>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Resources resources = getResources();</span><br><span class="line">AssetManager am = getResources().getAssets();</span><br><span class="line">InputStream is = getResources().getAssets().open(<span class="string">"filename"</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由此可见啊，Resources 就能搞定一切！</p>
+<h3 id="剪不断理还乱：Resources-和-AssetManager"><a href="#剪不断理还乱：Resources-和-AssetManager" class="headerlink" title="剪不断理还乱：Resources 和 AssetManager"></a>剪不断理还乱：Resources 和 AssetManager</h3><p>AssetManager 中有一个 addAssetPath(String path) 方法，App启动时，会把当前的Apk路径穿进去，接下来AssetManager 和 Resources 就能访问当前apk的所有资源了。addAssetPath 方法是不对外的，不过我们可以通过反射的方式，把插件apk的路径传入这个方法，就把插件资源添加到一个资源池了，当然，当前App的资源早已经在这个池子中了。App有几个插件，就调用几次addAssetPath ，把插件资源都塞到池子里。</p>
+<blockquote>
+<p>apk打包时，每个资源都会在R文件中有一个十六进制值，并且会生成一个 resources.arsc 文件，它是一个 Hash 表，存放着每个十六进制值和资源的对应关系，这样在运行时，就能知道十六进制值对应res目录下哪个目录哪个资源。</p>
+</blockquote>
+<h2 id="资源插件化解决方案"><a href="#资源插件化解决方案" class="headerlink" title="资源插件化解决方案"></a>资源插件化解决方案</h2><p>以 在宿主App 中读取插件里面的字符串资源 为例，说明这个解决方案，总共会分为 4 个步骤：</p>
+<ol>
+<li>loadResources 。通过反射，创建 AssetManager 对象，调用 addAssetPath 方法，把插件 Plugin1 的路径添加到 AssetManager 对象中，从此，这个AssetManager 就只为这个插件 Plugin1 服务了。在这个 AssetManager 基础上，创建相应的 Resources 和 Theme 对象。    </li>
+<li>重写 Activity 的getAsset ，getResources 和 getTheme 方法，它们的思路都是一样的，如果插件的对象中相应的对象为空，则使用默认的，即类似： if(mAssetManager == null) { return super.getAssets(); }     </li>
+<li>加载外部的插件，生成这个插件的对应的 ClassLoader：</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">File extractFile = <span class="keyword">this</span>.getFileStreamPath(apkName);</span><br><span class="line">dexPath = extractFile.getPath();</span><br><span class="line"></span><br><span class="line">fileRelease = getDir(<span class="string">"dex"</span>, <span class="number">0</span>);<span class="comment">//0代表Context.MODE_PRIVATE</span></span><br><span class="line">classLoder = newDexClassLoader(dexPath, fileRelease.getAbsolutePath(), <span class="keyword">null</span>, getClassLoder());</span><br></pre></td></tr></tbody></table></figure>
+<ol start="4">
+<li>通过反射，获取插件中的类，构造出插件类的对象 dynamicObject ，然后就可以让插件中的类读取插件中的资源了。</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//整个章节的示例代码可以参考： https://github.com/BaoBaoJianqiang/Dynamic2</span></span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="换肤"><a href="#换肤" class="headerlink" title="换肤"></a>换肤</h2><p>在学习了插件化编程后，换肤其实是可以把图片放到插件App中，然后生成R文件来动态读取这些资源：</p>
+<p>因为前面已经讲过原理，所以这里暂且不表</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//示例代码可以参考： https://github.com/BaoBaoJianqiang/Dynamic3.2</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：插件化技术基础知识</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-03-21 22:37:00 / 修改时间：22:37:56" itemprop="dateCreated datePublished" datetime="2021-03-21T22:37:00+08:00">2021-03-21</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>这是第二部分【解决方案】的第一章</p>
+<h2 id="加载外部dex"><a href="#加载外部dex" class="headerlink" title="加载外部dex"></a>加载外部dex</h2><p>加载外部dex主要有3个步骤：</p>
+<ol>
+<li>从服务器下载插件 apk到手机 sdcard(需要sdcard权限)    </li>
+<li>读取插件apk中的dex，生成对应的 DexClassLoader    </li>
+<li>使用DexClassLoader 的loadClass 方法读取插件 dex 中的任何一个类   </li>
+</ol>
+<p>在理解原理的时候，可以把插件App放在主App的 assets 目录中，用于替代从服务器下载插件。</p>
+<p>接下来的部分是例子演示，这里不表。</p>
+<h2 id="插件的瘦身"><a href="#插件的瘦身" class="headerlink" title="插件的瘦身"></a>插件的瘦身</h2><p>在插件化编程过程中会出现某个moudule在测试的时候需要，但是在正式环境中不需要，因此，可以把这个module打包成jar包，之后使用provided引用：</p>
+<blockquote>
+<p>provided files(“lib/classes.jar”)</p>
+</blockquote>
+<p>因为关键字provided只支持jar包，而不支持module</p>
+<h2 id="Application-的插件化解决方案"><a href="#Application-的插件化解决方案" class="headerlink" title="Application 的插件化解决方案"></a>Application 的插件化解决方案</h2><p>在插件中可能自定义Application，插件会在这个自定义的Application的onCreate中做一些初始化工作，但我们知道<strong>插件的Application是没机会执行的</strong>，此时，我们可以<strong>在宿主的自定义的Application的onCreate方法中，手动把这些插件Application都反射出来，执行他们的onCreate</strong>，不过这样一来，插件Application就是没有生命周期的，它彻底沦为一个普通类。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//示例代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.8</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：对startActivity 方法进行Hook</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-03-21 22:35:00 / 修改时间：22:36:12" itemprop="dateCreated datePublished" datetime="2021-03-21T22:35:00+08:00">2021-03-21</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="startActivity-的两种形式"><a href="#startActivity-的两种形式" class="headerlink" title="startActivity 的两种形式"></a>startActivity 的两种形式</h2><p>我们知道，最常见的启动Activity的方式：</p>
+<ul>
+<li>在Activity 中通过Activity 的startActivity 来启动    </li>
+<li>利用Context 的startActivity 方式</li>
+</ul>
+<p>在前面我们了解过了，二者最终都是使用 Instrumentation 的 EXEStartActivity 来实现的，只不过前面的步骤略有不同而已。</p>
+<h2 id="对Activity-的startActivity-方法进行Hook"><a href="#对Activity-的startActivity-方法进行Hook" class="headerlink" title="对Activity 的startActivity 方法进行Hook"></a>对Activity 的startActivity 方法进行Hook</h2><p> Activity1通过startActivity 启动Activity2，这个流程很长，上半场是：Activity1通知AMS要启动Activity2；下半场是： AMS 通知App进程，要启动Activity2 。针对上半场，我们可以Hook的地方包括：</p>
+<ul>
+<li>Activity 的startActivityForResult方法    </li>
+<li>Activity 的 mInstrumentation 字段     </li>
+<li>AMN 的 getDefault 方法获取到的对象    </li>
+</ul>
+<p>针对下半场，我们可以Hook的地方包括：</p>
+<ul>
+<li>H 的 mCallback 字段    </li>
+<li>ActivityThread 的 mInstrumentation 对象，对应的 newActivity 方法和 callActivityOnCreate 方法    </li>
+</ul>
+<p><strong>注意：这里为什么说只能Hook这些地方，一开始我也不理解。经过请教旭哥(刘旭)，我们只能访问到自己所在进程的内容，所以只能Hook自己本身进程，而不能Hook到其他进程去。这也是为什么我们不能Hook到AMS的原因，因为压根就不运行在同一个进程</strong>。经国斌大神指出，只能Hook到自己的进程以及子进程，<strong>如果要Hook其他进程，得有Root权限</strong>。</p>
+<h3 id="Hook-Activity-的-startActivityForResult-方法"><a href="#Hook-Activity-的-startActivityForResult-方法" class="headerlink" title="Hook Activity 的 startActivityForResult 方法"></a>Hook Activity 的 startActivityForResult 方法</h3><p>实际上就是为App写个BaseActivity基类，重写其startActivityForResult方法，这样，不论调用 startActivity 还是 startActivityForResult ，都会执行这个重写逻辑。实际上这都不能称为Hook，只是覆写了而已。</p>
+<h3 id="对Activity-的mInstrumentation-字段进行Hook"><a href="#对Activity-的mInstrumentation-字段进行Hook" class="headerlink" title="对Activity 的mInstrumentation 字段进行Hook"></a>对Activity 的mInstrumentation 字段进行Hook</h3><p>Activity 的startActivityForResult 最终会用 mInstrumentation 去调用 execStartActivity ，mInstrumentation 是private的，可以通过反射来获取这个对象，之后把它Hook成我们自己写的 EvilInstrumentation 类型对象，这次我们只是在调用 execStartActivity 之前打印一行日志。</p>
+<h3 id="对AMN的getDefault-方法进行Hook"><a href="#对AMN的getDefault-方法进行Hook" class="headerlink" title="对AMN的getDefault 方法进行Hook"></a>对AMN的getDefault 方法进行Hook</h3><p>在之前曾经介绍过，AMN的getDefault 返回的是IActivityManager 类型，**IActivityManager 是个接口，那么我们就可以使用 Proxy.newProxyInstance 这种动态代理，把这个IActivityManager 接口类型的对象Hook成我们自定义类MockClass1生成的对象。在实际应用的框架中，一般在 Application 的 attachBaseContext 方法中进行 Hook，这样可以在进入任意一个Activity的时候就能应用这个Hook。</p>
+<h3 id="对H类的mCallback-字段进行Hook"><a href="#对H类的mCallback-字段进行Hook" class="headerlink" title="对H类的mCallback 字段进行Hook"></a>对H类的mCallback 字段进行Hook</h3><p>因为 App 在收到 AMS 发送的 LAUNCH_ACTIVITY 命令后，会通过 Handler 类型的 H 类发送消息，以启动指定的Activity，我们知道，在Handler 内部有个 CallBack 类型的 mCallback 对象，所以我们可以对 H 类的 mCallback 字段进行Hook，拦截这个过程。这时候，你也许会问，为什么不直接Hook了ActivityThread 的mH字段，答案是： 实现不了。截止现在，可以回顾下：</p>
+<ul>
+<li>使用静态代理，只有两个类，一个是Handler.Callback，另一个是 Instrumentation，参与Android运转的类，系统只暴露了这两个    </li>
+<li>使用动态代理，只有两个<strong>接口</strong>： 一个是IActivityManager ，一个是IpackageManager，这<strong>很符合Proxy.newProxyInstance 方法特性，它只能对接口类型对象进行Hook</strong>    </li>
+</ul>
+<h3 id="再次对Instrumentation字段进行Hook"><a href="#再次对Instrumentation字段进行Hook" class="headerlink" title="再次对Instrumentation字段进行Hook"></a>再次对Instrumentation字段进行Hook</h3><p>与前面不同，我们这次截获的是 Instrumentation 的 newActivity 和 callActivityOncreate 方法，这两个方法会创建目标 Activity 实例，并且调用它的 onCreate。</p>
+<h3 id="对AMN的getDefault-方法进行Hook是一劳永逸的"><a href="#对AMN的getDefault-方法进行Hook是一劳永逸的" class="headerlink" title="对AMN的getDefault 方法进行Hook是一劳永逸的"></a>对AMN的getDefault 方法进行Hook是一劳永逸的</h3><p>Instrumentation 调用execStartActivity ，最终调用 AMN.getDefault().startActivity() 方法来启动Activity。我们前面知道，Context 和 Activity 都是通过 Instrumentation 来启动Activity。所以如果我们对 AMN 的 getDefault 方法进行 Hook，那么，不管是从Context 进行startActivity还是从 Activity 进行 startActivityForResult，都能生效，是一劳永逸的。</p>
+<h2 id="启动没有在AndroidManifest-中声明的Activity"><a href="#启动没有在AndroidManifest-中声明的Activity" class="headerlink" title="启动没有在AndroidManifest 中声明的Activity"></a>启动没有在AndroidManifest 中声明的Activity</h2><p>我们插件的App一般是没有在宿主App的AndroidManifest中声明的。</p>
+<h3 id="“欺骗AMS”策略分析"><a href="#“欺骗AMS”策略分析" class="headerlink" title="“欺骗AMS”策略分析"></a>“欺骗AMS”策略分析</h3><p>这要从Activity 页面跳转流程说起：</p>
+<p><img src="" alt="启动Activity的时序图"></p>
+<p>AMS在第2步会检查Activity是否在AndroidManifest中声明，如果不存在就会报错。如果要让AMS检查不到要启动的Activity怎么办呢？难道要Hook AMS ？不行，做不到的，AMS还管理着其他的App，如果这么做，所有App都受影响了，Android整个的安全性都会有问题了。既然如此，我们就只能在第 1 步(检查之前) 和第 5 步上做文章了。基本思路是：</p>
+<ul>
+<li>在第 1 步，发送要启动的Activity 信息给AMS 之前，<strong>把这个Activity 替换为一个在AndroidManifest中声明的StubActivity，这样就能绕过AMS的检查了</strong>。在替换过程中，要把原来的Activity信息存放在Bundle中。    </li>
+<li>在第 5 步，AMS通知App启动StubActivity的时候，我们肯定不是启动StubActivity ，而是要替换成目标 Activity，原先的Activity 存在Bundle中，取出来就行。    </li>
+</ul>
+<p>整个流程如下图所示：</p>
+<p><img src="" alt="Hook Activity 启动流程"></p>
+<h3 id="Hook-的上半场"><a href="#Hook-的上半场" class="headerlink" title="Hook 的上半场"></a>Hook 的上半场</h3><p>前面说了，对AMN进行Hook，可以一劳永逸，这里我们就按照整个思路来：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参见： https://github.comBaoBaoJianqiang/Hook31</span></span><br></pre></td></tr></tbody></table></figure>
+<p>MockClass1 的基本思路是：拦截startActivity 方法，从参数中取出原油的Intent，替换为启动StubActivity的newIntent，同时把原有的Intent保存在newIntent中，后面换回来的时候还会用到。</p>
+<h3 id="Hook的下半场：对H类的mCallback字段进行Hook"><a href="#Hook的下半场：对H类的mCallback字段进行Hook" class="headerlink" title="Hook的下半场：对H类的mCallback字段进行Hook"></a>Hook的下半场：对H类的mCallback字段进行Hook</h3><p>经过前面的AMS欺骗，在第4步的时候AMS就会通知App启动 StubActivity了，我们没有权限修改AMS进程，只能需改第5步。本节的解决方案是基于对H类的mCallback字段进行Hook。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参考： https://github.com/BaoBaoJianqiang/Hook31</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里主要是将“替身”换成“真身”。</p>
+<h3 id="Hook下半场：对ActivityThread的mInstrumentation字段Hook"><a href="#Hook下半场：对ActivityThread的mInstrumentation字段Hook" class="headerlink" title="Hook下半场：对ActivityThread的mInstrumentation字段Hook"></a>Hook下半场：对ActivityThread的mInstrumentation字段Hook</h3><p>上一节是通过 Hook Handler 的mCallback 把真身换回来，这节换个思路：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参考： https://github.com/BaoBaoJianqiang/Hook32</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>对Instrumentation的 newActivity 和 callActivityOnCreate 方法进行拦截。虽然我们没有在源头把真身换回来，但是我在创建目标Activity的对象时，创建的是目标Activity，并调用目标Activity的onCreate  。</p>
+<h3 id="“欺骗AMS”的弊端"><a href="#“欺骗AMS”的弊端" class="headerlink" title="“欺骗AMS”的弊端"></a>“欺骗AMS”的弊端</h3><p>这种欺骗AMS手段有个大大的问题——AMS会认为每次打开的都是StubActivity。<strong>在AMS端有个栈，会存放每次打开的Activity，那么现在栈上就都是StubActivity了，这就相当于那些没有在AndroidManifest中声明的Activity的LaunchMode就只能是standard类型了，即使为此设置了singleTask或者singleTop也不会生效</strong>。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：代理模式</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-03-21 22:33:00 / 修改时间：22:34:20" itemprop="dateCreated datePublished" datetime="2021-03-21T22:33:00+08:00">2021-03-21</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>插件化用到代理模式，所以要掌握代理模式。随着泛型引进，代理模式分为动态代理和静态代理，在插件化中分别表现为对 Instrumentation 和 对 AMN 进行Hook。</p>
+<p>代理模式的UML图如下：</p>
+<p><img src="" alt="代理模式类图"></p>
+<p>其中RealSubject 和 Proxy 都是Subject 的子类，在Proxy内部有一个RealSubject类型的成员变量，Proxy 的Reqeust 方法会调用 RealSubject 的Request方法，代码如下；</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Subject</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">void</span> <span class="title">Request</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RealSubject</span> : <span class="title">Subject</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> override <span class="keyword">void</span> <span class="title">Request</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="comment">//完成一些任务</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Proxy</span> : <span class="title">Subject</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> RealSubject realSubject;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> override <span class="keyword">void</span> <span class="title">Request</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="comment">//关键是这句话</span></span><br><span class="line">        realSubject.Request();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>简单的UML图和这短短的代码，就是代理的精髓，在介绍代理模式的使用场景时，就知道它的威力了。</p>
+<h2 id="远程代理（AIDL）"><a href="#远程代理（AIDL）" class="headerlink" title="远程代理（AIDL）"></a>远程代理（AIDL）</h2><p>在Android系统中，远程代理的设计实现就是AIDL。以之前的例子来说，add 方法把a和b两个整数写入data中，通过mRemote的transact方法，把data和reply发送到AIDL的另一端，replay是回调函数，会把计算结果传递回来，UML图如下所示：</p>
+<p><img src="" alt="AIDL的UML图"></p>
+<h3 id="给生活加点料-记日记"><a href="#给生活加点料-记日记" class="headerlink" title="给生活加点料(记日记)"></a>给生活加点料(记日记)</h3><p>Class1有个doSomething方法，我们想在这个方法之前记录一行日志，一般的做法是，直接在在doSomething 方法的最前端写一行代码用于记录日志，在学习了代理模式后，我们可以设计一个Class1Proxy，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Class1Proxy</span> <span class="keyword">implements</span> <span class="title">Class1Interface</span> </span>{</span><br><span class="line"></span><br><span class="line">    Class <span class="number">1</span> clazz = <span class="keyword">new</span> Class1();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span> </span>{</span><br><span class="line">        println(<span class="string">"begin log"</span>);</span><br><span class="line">        clazz.doSomething();</span><br><span class="line">        println(<span class="string">"End log"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//接下来使用ClassProxy 而不是使用 Class1：</span></span><br><span class="line"></span><br><span class="line">Class1Proxy proxy = <span class="keyword">new</span> Class1Proxy();</span><br><span class="line">proxy.doSomething();</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="静态代理和动态代理"><a href="#静态代理和动态代理" class="headerlink" title="静态代理和动态代理"></a>静态代理和动态代理</h2><p>前面讲的是“静态代理”，但是其实这样是有问题的，每个类都要有个对应的Proxy类，Proxy类的数量会很多，<strong>但其实它们的逻辑大同小异</strong>。接下来介绍“动态代理”，基于 Proxy 类的 newProxyInstance 方法，它的声明如下：</p>
+<blockquote>
+<p>static Object newProxyInstance(ClassLoder loader, Class&lt;?&gt;[] interfaces, InvocationHandler h)</p>
+</blockquote>
+<p>其中，interfaces 设置为目标对象Class1 所实现的接口类型，对应上面的例子是 Class1Interface，我们通过h对象，可以实现把目标对象 class1 注入，我们看下在实际应用中自己实现的这个h：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">InvocationHandlerTest</span> <span class="keyword">implements</span> <span class="title">InvocationHandler</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> Object target;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">InvocationHandlerTest</span><span class="params">(Object target)</span> </span>{</span><br><span class="line">        <span class="keyword">this</span>.target = target;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Overrid</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object o, Method method,Object[] objects)</span> <span class="keyword">throws</span> Throwable </span>{</span><br><span class="line">        println(<span class="string">"start log"</span>);</span><br><span class="line">        Object obj = method.invoke(target,objects);</span><br><span class="line">        println(<span class="string">"end log"</span>);</span><br><span class="line">        retun obj;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>注意 method.invoke(target,objects)，其中target 就是 class1 对象，接下来调用就是如下方式：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Class1Interface proxy = <span class="keyword">new</span> Class1();</span><br><span class="line">Class1Interface class1Proxy = (Class1Interface)Proxy.newProxyInstance(class1.getclass.getClassLoder(),class1.getclass.getInterfaces(),<span class="keyword">new</span> InvocationHandlerTest(class1));</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以，invoke方法实际上就是在执行 class1 的doSomething 方法。</p>
+<h2 id="对AMN的Hook"><a href="#对AMN的Hook" class="headerlink" title="对AMN的Hook"></a>对AMN的Hook</h2><p>后续有时间补上</p>
+<h2 id="对PMS的Hook"><a href="#对PMS的Hook" class="headerlink" title="对PMS的Hook"></a>对PMS的Hook</h2><p>PMS 是系统服务，是没办法Hook的，这个标题只是为了容易理解。我们只能修改它在Android App 进程中的代理对象，它是PackageManager 类型的在很多类中都有这个代理的对象，比如，在ActivityThread 中，有一个字段 sPackageManager ，以及 ApplicationPackageManager 的 mPM字段，我们可以尝试Hook这些字段。</p>
+<p>代码：略，后续补上。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -653,698 +1424,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/28/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/28/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/" class="post-title-link" itemprop="url">存储优化<上>-常见的存储方式</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-28 18:36:00" itemprop="dateCreated datePublished" datetime="2020-06-28T18:36:00+08:00">2020-06-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-04 11:45:58" itemprop="dateModified" datetime="2020-07-04T11:45:58+08:00">2020-07-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="Android存储安全"><a href="#Android存储安全" class="headerlink" title="Android存储安全"></a>Android存储安全</h2><p>在4.3以前，应用都在自己的沙盒里，沙盒使用标准Linux保护机制，为每个应用创建唯一 Linux UID 来定义。<strong>简单来说，就是保证微信不能访问淘宝的数据</strong>。</p>
-<p>4.3以后引入SELinux，进一步定义应用沙盒边界。即使我们进程有root权限也不能为所欲为(想干事情必须先在安全策略配置文件中赋予权限)。</p>
-<p>数据加密：Android 两种加密，全盘加密和文件加密。全盘加密在4.4引入，在 5.0 后默认打开</p>
-<h2 id="常见数据存储方法"><a href="#常见数据存储方法" class="headerlink" title="常见数据存储方法"></a>常见数据存储方法</h2><p>综合来看,Android提供了 SharedPreferences /ContentProvider/文件/数据库</p>
-<h3 id="SharedPreferences"><a href="#SharedPreferences" class="headerlink" title="SharedPreferences"></a>SharedPreferences</h3><p>非常简便，但是问题比较多:</p>
-<ul>
-<li>跨进程不安全       </li>
-<li>加载缓慢(使用异步加载，且没设置线程优先级，就有可能出现主线程等待低优先级线程所问题)        </li>
-<li>全量写入(无论commit还是apply，即使只改动一个条目，也会把全部内容写入，并且多次写入一个同一文件，也不会合并为一次)       </li>
-<li>卡顿(收到系统广播或onPause等时机，系统会强制把sp文件写到磁盘，此过程或阻塞)      </li>
-<li>还有，存储json等复杂文件时，会有转义等操作，会额外耗时     </li>
-</ul>
-<p>如果我们想的话，可以使用 MMKV 替代sp，<strong>它利用文件锁保证跨进程安全</strong>，并且性能也比较好</p>
-<h3 id="ContentProvider"><a href="#ContentProvider" class="headerlink" title="ContentProvider"></a>ContentProvider</h3><p><strong>ContentProvider 的生命周期默认在 Application 的onCreate 之前，而且是在主线程的</strong>，ContentProvider 跨进程传递数据是利用 Android 的 Binder 和匿名共享内存机制。简单来说，<strong>就是通过 Binder 传递 (CusorWindow 对象内部的）匿名共享内存的文件描述符</strong>，这样数据无需跨进程。</p>
-<p>ContentProvider 主要存在以下几个问题：</p>
-<ul>
-<li>自定义的 ContentProvider 的构造函数、静态代码块、onCreate 函数尽量不要做耗时操作       </li>
-<li>性能。传输数据比较小的时候，使用 ContentProvider 不一定划算    </li>
-<li>安全：ContentProvider本身提供了很好的安全，但是如果是exported，当支持执行 sql 语句时，就要注意 sql 注入问题。     </li>
-</ul>
-<p>简而言之，ContentProvider 适合相对比较笨重，适合传输量大的数据</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/" class="post-title-link" itemprop="url">第21课-UI优化-优化UI渲染</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-27 11:00:00" itemprop="dateCreated datePublished" datetime="2020-06-27T11:00:00+08:00">2020-06-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 16:59:33" itemprop="dateModified" datetime="2021-05-05T16:59:33+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="UI优化-lt-下-gt"><a href="#UI优化-lt-下-gt" class="headerlink" title="UI优化<下>"></a>UI优化&lt;下&gt;</h2><h3 id="ui渲染测量"><a href="#ui渲染测量" class="headerlink" title="ui渲染测量"></a>ui渲染测量</h3><p>测试工具： Profile GPU Rendeing 和 Show GPU Overdraw ，定位方法可以参考<a target="_blank" rel="noopener" href="https://developer.android.com/studio/profile/inspect-gpu-rendering">官方文档，检查GPU渲染速度和过度绘制</a></p>
-<p>问题定位工具可以使用 Systrace 和 Tracer for OpenGL ES，具体可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/topic/performance/vitals/render">官方文档：渲染速度慢</a></p>
-<h3 id="适用于自动化测试场景的测试方式-自己加的标题"><a href="#适用于自动化测试场景的测试方式-自己加的标题" class="headerlink" title="适用于自动化测试场景的测试方式(自己加的标题)"></a>适用于自动化测试场景的测试方式(自己加的标题)</h3><p>虽然图形化界面工具非常好用，但是难以用在自动化测试场景，以下测量方式可以用于自动化测试：</p>
-<h4 id="gfxinfo"><a href="#gfxinfo" class="headerlink" title="gfxinfo"></a>gfxinfo</h4><p>gfxinfo 可以输出包含各个阶段发生的动画以及帧相关的性能信息，以及渲染相关的内存和View hierachy 信息，命令如下：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename></packagename></p>
-</blockquote>
-<p>在Android 6.0 之后，gxfinfo 命令新增了 framestats 参数，可以拿到最近120帧每个绘制阶段的耗时信息：</p>
-<blockquote>
-<p>adb shell dumpsys gfxinfo <packagename> framestats</packagename></p>
-</blockquote>
-<h4 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h4><p>除了耗时，还需要关心渲染使用的内存，4.1以后每个 Surface 都会有 3个 Graphic Buffer，那如何查看 Graphic Buffer 占用的内存，可以通过如下命令查看相应信息：</p>
-<blockquote>
-<p>adb shell dumpsys SurfaceFlinger</p>
-</blockquote>
-<p>这部分内存大小和 屏幕分辨率，以及Surface的个数有关。</p>
-<h3 id="UI优化的常用手段"><a href="#UI优化的常用手段" class="headerlink" title="UI优化的常用手段"></a>UI优化的常用手段</h3><p>我们的目标是实现app的帧率达到 60fps，意味着所有操作要在 16.7 ms 内完成，这期间要做的事情如下所示：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/UI%E6%B8%B2%E6%9F%93%E6%B5%81%E7%A8%8B.png" alt="UI渲染流程"></p>
-<p>我们优化，就是拆解渲染的各个阶段耗时，找到瓶颈，加以优化。ui优化的方法如下：</p>
-<h4 id="1、尽量使用硬件加速。"><a href="#1、尽量使用硬件加速。" class="headerlink" title="1、尽量使用硬件加速。"></a>1、尽量使用硬件加速。</h4><p>硬件加速绘制的性能是远远高于软件绘制的，所以ui优化第一个手段应该尽量使用硬件加速。但是有些api不支持硬件加速，这个需要注意，比如 渐变、磨砂、圆角等，它们的渲染性能比较低。</p>
-<h4 id="2、View-的创建优化"><a href="#2、View-的创建优化" class="headerlink" title="2、View 的创建优化"></a>2、View 的创建优化</h4><p>View 的创建在UI线程，对于复杂的界面，这部分耗时不容忽视。View 的创建过程中，会包括xml的读取io，解析xml 以及生成对象的时间(Framework会大量使用反射)</p>
-<p>因此建议：</p>
-<p>1、使用代码创建view 对象缺点是不能直接预览<br>2、提前创建、异步创建<br>3、View 重用(模仿ListView、RecyclerView，不过重用要注意先清空状态)。  </p>
-<p>如果异步创建，那么会导致系统抛出异常。这时候，我们可以通过非常取巧的方式来异步创建ui：<strong>先把线程的Looper的MessageQueue替换成Looper的Queue：</strong></p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AD%90%E7%BA%BF%E7%A8%8B%E5%88%9B%E5%BB%BAui.png" alt="子线程创建ui"></p>
-<p><strong>要注意的是，在创建完成view之后，需要把线程的Looper恢复成原来的。</strong></p>
-<h4 id="3、measure-layout-优化"><a href="#3、measure-layout-优化" class="headerlink" title="3、measure/layout 优化"></a>3、measure/layout 优化</h4><p>这两部分也是在ui线程执行的，一般的优化方法有：</p>
-<ul>
-<li>减少UI布局层次      </li>
-<li>优化layout开销。尽量不要使用 RelativeLayout 和 weighted LinearLayout ，它们开销很大，建议使用 ConstranLayout    </li>
-<li>背景优化。尽量不要重复设置背景，<strong>尤其注意的是主题背景，theme默认会是一个纯色背景，如果我们自定义了界面背景，那么主题背景对我们来说是无用的</strong>，由于主题背景是设置在DecorView 中的，所以会带来重复绘制，也会带来绘制性能损耗。     </li>
-</ul>
-<h4 id="4、UI优化进阶"><a href="#4、UI优化进阶" class="headerlink" title="4、UI优化进阶"></a>4、UI优化进阶</h4><p>可以采用flutter</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/27/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E7%BA%A2%E9%BB%91%E6%A0%91/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/27/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E7%BA%A2%E9%BB%91%E6%A0%91/" class="post-title-link" itemprop="url">面试题-算法-红黑树</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-06-27 10:46:00 / 修改时间：10:46:38" itemprop="dateCreated datePublished" datetime="2020-06-27T10:46:00+08:00">2020-06-27</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="二叉查找树-也称二叉搜索树"><a href="#二叉查找树-也称二叉搜索树" class="headerlink" title="二叉查找树(也称二叉搜索树)"></a>二叉查找树(也称二叉搜索树)</h2><ul>
-<li>左子树上的节点值都<strong>小于等于</strong>根节点的值    </li>
-<li>右子树上的节点值都<strong>大于等于</strong>根节点的值    </li>
-<li>左右子树也是二叉搜索树    </li>
-</ul>
-<p>它是基于二分查找的思想，<strong>查找最大的次数为二叉树高度</strong>     </p>
-<h3 id="查找代价"><a href="#查找代价" class="headerlink" title="查找代价"></a>查找代价</h3><ul>
-<li>当左右子树高度大致平衡时，时间复杂度在 O(logN)     </li>
-<li>当先后插入的关键字<strong>有序</strong>时，退化成链表，查找的时间复杂度就在 O(N)了     </li>
-</ul>
-<h3 id="插入代价"><a href="#插入代价" class="headerlink" title="插入代价"></a>插入代价</h3><p>新节点插入到树的叶子节点上，因此，插入节点和查找一个不存在的数据的代价相同    </p>
-<h3 id="删除代价"><a href="#删除代价" class="headerlink" title="删除代价"></a>删除代价</h3><ul>
-<li>如果被删除的节点左、右 有一个为null时，代价仅为 O(1)      </li>
-<li>如果左右子树都存在，时间复杂度最大也不会超过O(logN)      </li>
-</ul>
-<p>缺陷：</p>
-<p>极端情况可能退化成链表，时间复杂度为  n。这主要是由于树不平衡导致的</p>
-<h2 id="平衡二叉查找树-平衡二叉搜索树"><a href="#平衡二叉查找树-平衡二叉搜索树" class="headerlink" title="平衡二叉查找树(平衡二叉搜索树)"></a>平衡二叉查找树(平衡二叉搜索树)</h2><p>是严格的平衡二叉树，它是空树或者左右两个子树的高度差 <strong>小于等于1</strong>，同时，左右两个子树也是平衡二叉搜索树</p>
-<h3 id="查找代价-1"><a href="#查找代价-1" class="headerlink" title="查找代价"></a>查找代价</h3><p>时间很稳定，查找效率最好最坏都是  O(logN)</p>
-<h3 id="插入代价-1"><a href="#插入代价-1" class="headerlink" title="插入代价"></a>插入代价</h3><p>由于要保证严格的平衡，插入时可能要进行再平衡(最多旋转一次)，因此插入的整体代价还在 O(logN)</p>
-<h3 id="删除代价-1"><a href="#删除代价-1" class="headerlink" title="删除代价"></a>删除代价</h3><p>和插入一样，要考虑再平衡，但是最多需要O(logN)次旋转，所以时间复杂度为  O(2logN)</p>
-<h2 id="红黑树-Red-Black-Tree"><a href="#红黑树-Red-Black-Tree" class="headerlink" title="红黑树(Red-Black Tree)"></a>红黑树(Red-Black Tree)</h2><p>它并不严格地平衡，最长路径长度不超过最短路径长度的2倍。它删除和插入引起平衡性改变的概率要远低于平衡二叉搜索树</p>
-<h3 id="查找代价-2"><a href="#查找代价-2" class="headerlink" title="查找代价"></a>查找代价</h3><p>查找代价基本上维持在 O(logN) 级别，最差情况下肯定比平衡二叉搜索树要差，因为没有那么平衡</p>
-<h3 id="插入代价-2"><a href="#插入代价-2" class="headerlink" title="插入代价"></a>插入代价</h3><p>不容易引起失衡，整体代价和平衡二叉搜索树差不多，也是 O(logN) 级别(虽然涉及变色，但是变色的代价很小)</p>
-<h3 id="删除代价-2"><a href="#删除代价-2" class="headerlink" title="删除代价"></a>删除代价</h3><p>相对平衡二叉搜索树，不容易引起失衡，时间复杂度也在 O(logN) 级别</p>
-<h3 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h3><p>平衡二叉搜索树由于插入和删除，会引起需要调整，可以通过 ：变色、左旋转、右旋转  三种方式调整。是否需要调整要根据红黑树的特性：</p>
-<ul>
-<li>节点是红色或黑色    </li>
-<li>根节点是黑色    </li>
-<li>叶子节点都是黑色的空节点    </li>
-<li>红色节点的两个子节点都是黑的(红节点不能连续出现)    </li>
-<li>任一点到每个叶子节点的路径包含相同数目的黑节点    </li>
-</ul>
-<h2 id="B-树和B-树"><a href="#B-树和B-树" class="headerlink" title="B-树和B+ 树"></a>B-树和B+ 树</h2><p>我们所谓的B-树，其实并不是B减树，中间是横线，不是减号；B + 就是 B加树了</p>
-<p>如 os 的文件目录存储、数据库中的索引结构的存储，不可能在内存中建立查找结构，必须在磁盘中建立好结构。</p>
-<p>在磁盘组织结构下，从任何一个节点指向其他节点都可能读取一次磁盘，再将数据写入内存比较。这回带来大量的IO操作，所以我们需要新的数据结构，即 B树和B+树。</p>
-<p>B树是一种<strong>多路平衡查找树</strong>，每个节点最多包含k个孩子，k称为B树的阶。K大小取决于<strong>磁盘页的大小</strong>。</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/54084335">知乎专栏</a>、<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/31805309">知乎</a>、<a target="_blank" rel="noopener" href="https://blog.csdn.net/z702143700/article/details/49079107">csdn博客</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/" class="post-title-link" itemprop="url">第20课-UI优化-UI渲染关键概念</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-27 10:32:00" itemprop="dateCreated datePublished" datetime="2020-06-27T10:32:00+08:00">2020-06-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 16:59:16" itemprop="dateModified" datetime="2021-05-05T16:59:16+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="UI优化-lt-上-gt-20讲"><a href="#UI优化-lt-上-gt-20讲" class="headerlink" title="UI优化<上>-20讲"></a>UI优化&lt;上&gt;-20讲</h2><h3 id="UI渲染的背景知识"><a href="#UI渲染的背景知识" class="headerlink" title="UI渲染的背景知识"></a>UI渲染的背景知识</h3><p>ppi 像素密度，每英寸包含的像素数，这是物理参数，不可改</p>
-<p>dpi 像素密度，指的是单位尺寸像素数量。这是可以人为调整的         </p>
-<p>density 密度，每平方英寸中包含的像素点数，density = dpi / 160    </p>
-<p>dp ： px = dp * density</p>
-<h3 id="屏幕适配方案"><a href="#屏幕适配方案" class="headerlink" title="屏幕适配方案"></a>屏幕适配方案</h3><p>使用dp</p>
-<p>限制符适配</p>
-<h3 id="CPU-与-GPU"><a href="#CPU-与-GPU" class="headerlink" title="CPU 与 GPU"></a>CPU 与 GPU</h3><p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E8%BD%AF%E4%BB%B6%E7%BB%98%E5%88%B6%E5%92%8C%E7%A1%AC%E4%BB%B6%E7%BB%98%E5%88%B6.png" alt="软件绘制与硬件绘制"></p>
-<p>由上面的图可以知道，软件绘制使用的是Skia 库，硬件绘制是通过 open GL 之后在GPU 上实现的        </p>
-<p>在Android 7.0以后，添加了对 Vulkan 的支持，它比 OpenGL 功耗和多核优化上更优秀</p>
-<h3 id="Android-渲染的演进"><a href="#Android-渲染的演进" class="headerlink" title="Android 渲染的演进"></a>Android 渲染的演进</h3><p>可以通过下图整体看下Android 图形体系：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%9B%BE%E5%BD%A2%E7%B3%BB%E7%BB%9F.png" alt="Android图形体系"></p>
-<p>各个部分的功能可以比喻成以下内容：</p>
-<ul>
-<li>画笔：Skia 或者 OpenGL 。Skia 使用CPU 绘制，OpenGL 使用 GPU 绘制         </li>
-<li>画纸：Surface。所有元素都在 Surface 这张画纸上绘制和渲染。<strong>在Android中，Window 是View的容器，每个Window 都会关联一个Surface</strong>。windowManager 负责管理这些 window ，并且把它们的数据传递给 SurfaceFlinger。   </li>
-<li>画板：Graphic Buffer。Graphic Buffer 缓冲用于应用程序图形的绘制，Android 4.1 之前使用的是双缓冲；4.1之后使用三缓冲      </li>
-<li>显示：SurfaceFliger 。将WindowManager 提供的所有 Surface ，通过Hardware Composer 合成并输出到显示屏      </li>
-</ul>
-<h3 id="开启硬件加速"><a href="#开启硬件加速" class="headerlink" title="开启硬件加速"></a>开启硬件加速</h3><p>软件绘制流程图如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E8%BD%AF%E4%BB%B6%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B.png" alt="软件绘制流程"></p>
-<ul>
-<li>Surface： 每个View 都由某个Window 管理，每个Window 关联一个Surface     </li>
-<li>Cavas。通过Surface的lock 函数获得一个Cavas，Cavas 可以理解成Skia 底层接口的封装      </li>
-<li>Grapic Buffer。 SurfaceFlinger 帮我们托管 BufferQueue ，我们从BufferQueue 中拿到 Graphic Buffer，然后通过Canvas 和 Skia 将绘制内容栅格化到上面(个人理解为栅格化后的数据保存在这个buffer中)。     </li>
-<li>SurfaceFlinger 。通过 Swap Buffer 把 Front Graphic Buffer 的内容交给 SurfaceFlinger ，最后硬件合成器 Hardware Composer 合成并输出到显示屏。      </li>
-</ul>
-<p>硬件加速绘制流程如下图(3.0以后支持硬件加速)：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E7%A1%AC%E4%BB%B6%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B.png" alt="硬件绘制流程"></p>
-<p>硬件绘制与软件绘制最核心的区别是<strong>硬件绘制通过GPU完成 Graphic Buffer内容的绘制</strong>，此外，硬件绘制引入了 DisplayList 的概念，<strong>每个View内部都有一个DisplayList，当某个View需要重绘时，将其标记为Dirty，重绘也仅仅只需要重绘一个View的DisplayList</strong>，这样，无需像软件绘制那样向上递归，大大减少绘图的操作数量，提高了渲染效率，更新的过程示意如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E7%A1%AC%E4%BB%B6%E7%BB%98%E5%88%B6%E6%9B%B4%E6%96%B0Display.png" alt="硬件绘制更新Display"></p>
-<p>硬件加速虽然极大地提高了显示和刷新速度，但是它也存在一些问题，一方面是内存消耗，另一方面是部分绘制函数不支持</p>
-<h3 id="Project-Butter-（黄油计划）"><a href="#Project-Butter-（黄油计划）" class="headerlink" title="Project Butter （黄油计划）"></a>Project Butter （黄油计划）</h3><p>4.1的时候，提出黄油计划，主要包括两个方面，一是 VSYNC ,一是 Triple Bufferfing (三缓冲)。</p>
-<p>在4.0 及以前，cpu可能在忙别的事情，导致没来得及处理UI 绘制，为了解决这个问题，VSYNC 出现了，它类似于时钟中断，这个信号到来时，CPU立即准备Buffer数据，大部分设备刷新频率都是60Hz，所以一帧数据的准备工作要在 16ms内完成。</p>
-<p>4.0及以前，Android使用双缓冲，一般不同的View或者Activity 都会公用一个Window，也就是公用一个Surface，每个Surface 会有一个BufferQueue 缓存队列，这个队列由SurfaceFlinger 管理，<strong>通过匿名共享内存与App应用层交互。</strong>示意图如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/app%E4%B8%8Eui%E6%9C%BA%E5%88%B6%E4%BA%A4%E4%BA%92%E5%9B%BE.png" alt="app与ui机制交互图"></p>
-<p>整个流程如下：</p>
-<p>每个Surface对应的 BufferQueue 内有有两个Graphic Buffer，一个用于绘制，一个用于显示。</p>
-<p>同一时刻可能有多个Surface (可能是不同应用的Surface，也可能是同一个应用里面类似SurfaceView 和TexureView ，它们都会有自己单独的Surface)，SurfaceFlinger 把所有的Surface 要显示的内容统一交给 Hardware Composer，它会最终合成屏幕显示的内容。</p>
-<p>如果只有两个Buffer，当CPU/GPU 绘制时间过长，则两个缓冲区分别被显示设备和GPU 占用，cpu 无法准备下一帧数据，造成浪费。三个缓冲区的话，cpu、gpu 显示设备都能使用各自的缓冲区工作，个不影响，最大限度利用空闲时间。</p>
-<p>在黄油计划之后，Android 5.0 推出了 RenderThread ，将所有GL 命令执行放到 RenderThread 中执行，减轻UI 线程的负担。</p>
-<h3 id="数据测量"><a href="#数据测量" class="headerlink" title="数据测量"></a>数据测量</h3><p>可以通过开发者选项中查看过度绘制的情况</p>
-<p>还可以使用 Systrace 性能数据采样和分析工具</p>
-<p>4.1及以后，可以采用 Tracer for OpenGL ES 逐帧分析</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/26/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-18%E3%80%8119%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/26/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-18%E3%80%8119%E8%AF%BE/" class="post-title-link" itemprop="url">第18课-耗电优化<上></a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-26 17:28:00" itemprop="dateCreated datePublished" datetime="2020-06-26T17:28:00+08:00">2020-06-26</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-06-27 10:40:22" itemprop="dateModified" datetime="2020-06-27T10:40:22+08:00">2020-06-27</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="第18课-耗电优化-lt-上-gt"><a href="#第18课-耗电优化-lt-上-gt" class="headerlink" title="第18课-耗电优化<上>"></a>第18课-耗电优化&lt;上&gt;</h2><p>准确的测量电量并不是那么容易，在<a target="_blank" rel="noopener" href="https://tech.meituan.com/2018/03/11/dianping-shortvideo-battery-testcase.html">《大众点评App的短视频耗电量优化实战》</a>一文中，为我们总结了下面几种电量测试的方法:</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E8%80%97%E7%94%B5%E9%87%8F%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95.png" alt="耗电量测试方法"></p>
-<p>当测试反馈耗电问题时，<a target="_blank" rel="noopener" href="https://developer.android.google.cn/studio/debug/bug-report">bug report</a> 结合 <a target="_blank" rel="noopener" href="https://github.com/google/battery-historian">Battery Historian</a> 是最好的排除方法：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">//7.0和7.0以后</span><br><span class="line">$ adb bugreport bugreport.zip</span><br><span class="line">//6.0和6.0之前:</span><br><span class="line">$ adb bugreport &gt; bugreport.txt</span><br><span class="line">//通过historian图形化展示结果</span><br><span class="line">python historian.py -a bugreport.txt &gt; battery.html</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="19讲-耗电优化-lt-下-gt"><a href="#19讲-耗电优化-lt-下-gt" class="headerlink" title="19讲-耗电优化<下>"></a>19讲-耗电优化&lt;下&gt;</h2><h3 id="如何优化"><a href="#如何优化" class="headerlink" title="如何优化"></a>如何优化</h3><ul>
-<li>耗电优化的第一个优化方向是优化应用后台耗电    </li>
-<li>第二个优化方向是符合系统的规则，让系统认为你的耗电是正常的。</li>
-</ul>
-<p>比如，Android P 通过 Android Vitals 监控后台耗电，所以我们需要符合它的规则，它的规则如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android-Vitals%E8%A7%84%E5%88%99.png" alt="Android-Vitals规则"></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/26/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-16,17%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/26/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-16,17%E8%AF%BE/" class="post-title-link" itemprop="url">第16课-网络优化<中></a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-06-26 11:36:00 / 修改时间：17:39:43" itemprop="dateCreated datePublished" datetime="2020-06-26T11:36:00+08:00">2020-06-26</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="第16课-网络优化-lt-中-gt"><a href="#第16课-网络优化-lt-中-gt" class="headerlink" title="第16课-网络优化<中>"></a>第16课-网络优化&lt;中&gt;</h2><p>对于速度、弱网络以及安全的优化，该从哪些方面入手，首先我们要弄清楚一个网络请求的整个过程,示意图如下：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E7%BD%91%E7%BB%9C%E8%AF%B7%E6%B1%82%E7%9A%84%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B.png" alt="网络请求的完整流程"></p>
-<p>可以看出，整个流程分为 发起请求-&gt;DNS解析-&gt;创建连接-&gt;发送/接收数据-&gt;关闭连接    </p>
-<h2 id="第17课-网络优化-lt-下-gt-大数据下网络如何监控"><a href="#第17课-网络优化-lt-下-gt-大数据下网络如何监控" class="headerlink" title="第17课-网络优化<下>-大数据下网络如何监控"></a>第17课-网络优化&lt;下&gt;-大数据下网络如何监控</h2><h3 id="插桩"><a href="#插桩" class="headerlink" title="插桩"></a>插桩</h3><p>为了兼容性考虑，首先考虑插桩。如360开源的性能监控工具 ArgusAPM ，就是利用 Aspect 切换插桩，实现监控系统和 OkHttp 网络请求库的请求。</p>
-<p>系统网络库的插桩实现可以参考TraceNetTrafficMonitor，主要利用Aspect的切面功能，关于OkHttp的拦截可以参考OkHttp3Aspect，它会更加简单一些，因为OkHttp本身就有代理机制。</p>
-<h3 id="Native-Hook"><a href="#Native-Hook" class="headerlink" title="Native Hook"></a>Native Hook</h3><p>hook 本地的代码，需要考虑兼容性</p>
-<h3 id="统一网络库"><a href="#统一网络库" class="headerlink" title="统一网络库"></a>统一网络库</h3><p>ios 和Android 都统一使用同一套网络库，统一监控   </p>
-<p><strong>小技巧：1、我们可以通过Android官方的 TrafficStats 类来获取整个手机或者某个 UID 从开机算起的网络流量； 2、Android 和 Iphone 都有一个网络测试模式，可以尝试下：</strong></p>
-<blockquote>
-<p>Android手机：打开拨号界面，输入 <em>#</em>#4636#<em>#</em> ，然后按拨号键（可进入工程测试模式，部分版本可能不支持）<br>iPhone手机：打开拨号界面，输入 <em>3001#12345#</em> ，然后按拨号键。</p>
-</blockquote>
-<p>自己注：在网上找到的<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/da2a0030962a">微信弱网优化方法</a></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/" class="post-title-link" itemprop="url">第13讲-存储优化<中>-如何优化数据存储</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-25 11:36:00" itemprop="dateCreated datePublished" datetime="2020-06-25T11:36:00+08:00">2020-06-25</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 17:43:48" itemprop="dateModified" datetime="2021-05-05T17:43:48+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h3 id="Serializable-的原理"><a href="#Serializable-的原理" class="headerlink" title="Serializable 的原理"></a>Serializable 的原理</h3><p>Serializable 的原理是<strong>通过 ObjectInputStream 和 ObjectOutputStream 来实现的</strong>，通过 Android 6.0 的源码可以看到 ObjectOutPutStream 的部分源码实现：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeFieldValues</span><span class="params">(Object obj, ObjectStreamClass classDesc)</span>  </span>{</span><br><span class="line">    <span class="keyword">for</span> (ObjectStreamField fieldDesc : classDesc.fields()) {</span><br><span class="line">        ...</span><br><span class="line">        Field field = classDesc.checkAndGetReflectionField(fieldDesc);</span><br><span class="line">        ...</span><br></pre></td></tr></tbody></table></figure>
-
-<p>整个序列化过程使用了大量反射(比如说获取整个类的所有属性，反射意味着效率低)和临时变量(临时变量意味着GC)，并且，<strong>在序列化对象时，不仅会序列化当前对象本身，还需要地柜序列化对象引用的其他对象</strong>，可以参考<a target="_blank" rel="noopener" href="https://juejin.cn/post/6844904049997774856">别人的博客</a>。</p>
-<h3 id="Serializable-的进阶"><a href="#Serializable-的进阶" class="headerlink" title="Serializable 的进阶"></a>Serializable 的进阶</h3><p>Serializable 序列化支持使用自定义 writeObject和readObject，他会先反射判断是否存在我们自己实现的 序列化writeObject方法和反序列化readObject 方法。<strong>通过这两个方法，我们可以对某些字段做修改，也能实现序列化的加密功能。</strong></p>
-<p>还有，Serializable 的反序列默认是不会执行构造函数的</p>
-<h3 id="Parcelable-的永久存储"><a href="#Parcelable-的永久存储" class="headerlink" title="Parcelable 的永久存储"></a>Parcelable 的永久存储</h3><p>一般来说，我们使用 parcelable 只是会在内存中序列化操作，并不会存储到磁盘。其实，我们也可以存储到磁盘的：<strong>通过 Parcel.java 中的 marshall 接口获取byte 数组，然后存在文件中，从而实现 Parcelable 的永久存储。</strong></p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Returns the raw bytes of the parcel.</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] marshall() {</span><br><span class="line">    <span class="keyword">return</span> nativeMarshall(mNativePtr);</span><br><span class="line">}</span><br><span class="line"><span class="comment">// Set the bytes in data to be the raw bytes of this Parcel.</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">unmarshall</span><span class="params">(<span class="keyword">byte</span>[] data, <span class="keyword">int</span> offset, <span class="keyword">int</span> length)</span> </span>{</span><br><span class="line">    nativeUnmarshall(mNativePtr, data, offset, length);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>不过，一般不推荐这样做，因为可能会有系统版本兼容性问题，因为我们无法保证所有的 Android 版本的 Parcel.cpp 实现完全一致。还有就是数据前后的兼容性，这里并没有类似 Serializable 里面有个 serialVersionUID 来保证版本一致性。</p>
-<h2 id="14-数据库优化"><a href="#14-数据库优化" class="headerlink" title="14-数据库优化"></a>14-数据库优化</h2><p>SQLite 默认支持多进程并发操作，它通过文件锁来控制多进程的并发，但是SQLite 的锁粒度并没有非常细，针对的是整个DB文件，简单来说，多进程可以同事获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库</p>
-<p>数据库使用注意：</p>
-<ul>
-<li>防止注入   </li>
-<li>防止窃取      </li>
-<li>小表无需维护索引，因为索引是需要一直维护的，有代价        </li>
-<li>慎用 “select * “ 需要多少列，就取多少列      </li>
-<li>定期删除无用数据             </li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1395,7 +1474,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">153</span>
+          <span class="site-state-item-count">158</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1481,7 +1560,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共347.2k字</span>
+  <span class="post-count">博客全站共320.9k字</span>
 </div>
 
 

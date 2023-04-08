@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">153</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">158</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,796 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/14/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/14/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/" class="post-title-link" itemprop="url">第13章: 线程安全与锁优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-14 10:12:00" itemprop="dateCreated datePublished" datetime="2019-09-14T10:12:00+08:00">2019-09-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-03-03 23:02:38" itemprop="dateModified" datetime="2020-03-03T23:02:38+08:00">2020-03-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>并发处理的广泛应用使得 Amdahl 定律替代摩尔定律成为计算机性能发展源动力的根本原因，也是人类“压榨”计算机运算能力的最有力武器。</p>
+<h2 id="线程安全"><a href="#线程安全" class="headerlink" title="线程安全"></a>线程安全</h2><p>线程安全的代码都必须具备一个特征：代码本身封装了所有必要的正确性保障手段（如互斥同步等），令调用者无须关心多线程问题，更无须自己采取任何措施来保证多线程的正确调用。</p>
+<h2 id="Java-线程安全"><a href="#Java-线程安全" class="headerlink" title="Java 线程安全"></a>Java 线程安全</h2><p>为了更深入地理解线程安全，在这里我们可以不把线程安全当做一个非真即假的二元排他选项来看待。按照线程安全的“安全程度”由强至弱来排序，我们可以将Java语言各种操作共享的<strong>数据</strong>分为：不可变、绝对线程安全、相对线程安全、线程兼容和线程对立。</p>
+<h3 id="不可变"><a href="#不可变" class="headerlink" title="不可变"></a>不可变</h3><p>不可变(Immutable) 的对象一定是线程安全的，只要一个不可变对象被正确地创建构建出来(没有发生this引用逃逸的情况)，那其外部的可见状态永远也不会改变，永远也不会看到它在多个线程之中处于不一致的状态。</p>
+<p>Java 语言中，如果共享数据是一个基本数据类型，只要在定义时使用final关键字就可以保证它是不可变的；如果共享数据是一个对象，那就需要保证对象的行为不会对其状态产生任何影响，有很多途径去实现这个目的，最简单的就是把对象中带有状态的变量都声明为final，这样，在构造函数结束之后，它就是不可变的。</p>
+<blockquote>
+<p>Java API 中复合不可变要求的类型，有String、枚举类型、Long、Double以及BigInteger、BigDecimal等大数据类型，但同为Number的子类型的原子类 AtomicInteger 和 AtomicLong 则并非不可变的。</p>
+</blockquote>
+<h3 id="绝对线程安全"><a href="#绝对线程安全" class="headerlink" title="绝对线程安全"></a>绝对线程安全</h3><p>绝对线程安全通常需要付出很大的，甚至有时候是不切实际的代价。<strong>在Java API 中标注自己是线程安全的类，大多数都不是绝对的线程安全</strong>。我们可以通过一个不是“绝对线程安全”的线程安全类来看看这里的“绝对”是什么意思。</p>
+<p>Java程序员基本上都认为 java.util.Vector 是一个线程安全的容器，因为它的add、get、size等方法都被 synchronized 修饰的，尽管这样效率很低，但确实是安全的。但是，即使所有方法都被修饰成同步，也并不意味着调用它的时候永远不需要同步手段了，看如下测试代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> Vector&lt;Integer&gt; vector = <span class="keyword">new</span> Vector&lt;Integer&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) {</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) {</span><br><span class="line">                vector.add(i);</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            Thread removeThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                        vector.remove(i);</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            Thread prindThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                        System.out.println(vector.get(i));</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            removeThread.start();</span><br><span class="line">            prindThread.start();</span><br><span class="line"></span><br><span class="line">            <span class="comment">//不要同时产生过多线程，否则导致操作系统假死</span></span><br><span class="line">            <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">20</span>) ;</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这段代码运行过程中会出现 ArrayIndexOutOfBoundsException，但是在我自己写代码验证的时候，感觉这个错误还是很容易被忽略的，运行了好长时间都还在一直输出，但其实早就报错了，但不知道怎么程序还是正常运行。这点在自己验证的时候要注意一下，我的运行环境是：Android studio 3.5 + jre 1.8 。</p>
+<p>可能你一开始也会和我一样懵逼了，这 Vector 里面每个方法都被 synchronized 关键字修饰，这种情况下调用方法锁定的是对象，虽说synchronized 可以重入，但是上述代码添加、删除、遍历 可是在3个线程当中啊，压根就是互斥的啊，怎么会报错呢？</p>
+<p>原来，我们忽略了一个重要因素：原子操作。在 prindThread 线程中，for 循环会读取 vector.size ，它会先获取锁，然后读取值，假设值是 10，之后释放锁(注意，问题就在这了)，接下来print的时候，假设当前i是7，通过 vector.get(i) 读取元素的时候，会再次加锁，但是由于此时 vector 的size 不知道已经变成多少了，如果此时变成了 6，那么这个 get 操作就会发生越界了。</p>
+<p>如果remove线程恰好在一个错误的时间里删除了一个元素，导致序号i已经不再可用的话，再用vector.get(i) 访问就会抛出 ArrayIndexOutOfBoundsException。如果要保证这段代码的正确运行，书上给出的方案是把两个thread改成如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">Thread removeThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">synchronized</span> (vector){</span><br><span class="line">                        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                            vector.remove(i);</span><br><span class="line">                        }</span><br><span class="line">                    }</span><br><span class="line"></span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            Thread prindThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">synchronized</span> (vector){</span><br><span class="line">                        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vector.size(); i++) {</span><br><span class="line">                            System.out.println(vector.get(i));</span><br><span class="line">                        }</span><br><span class="line">                    }</span><br><span class="line"></span><br><span class="line">                }</span><br><span class="line">            });</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="相对线程安全"><a href="#相对线程安全" class="headerlink" title="相对线程安全"></a>相对线程安全</h3><p>相对线程安全就是我们通常意义上所讲的线程安全，它需要保证这个对象单独的操作是线程安全的，我们在调用的时候无需做额外的保障措施，但是对于一些特定顺序的连续调用，就可能需要在调用端使用额外的同步手段来保证调用的正确性。Java语言中，Vector、HashTable、Collections的synchronizeCollection() 方法包装的集合等。</p>
+<h3 id="线程兼容"><a href="#线程兼容" class="headerlink" title="线程兼容"></a>线程兼容</h3><p>线程兼容指对象本身并不是线程安全的，但是可以通过在调用端正确地使用同步手段来保证对象在并发环境中可以安全地使用。Java API 中大部分类都是属于线程兼容的，如 ArrayList 和 HashMap 等。</p>
+<h3 id="线程对立"><a href="#线程对立" class="headerlink" title="线程对立"></a>线程对立</h3><p>线程对立是指无论调用端是否采取同步措施，都无法再多线程环境并发使用，如 Thread 类的suspend() 和 resume() 方法，如果两个线程同时持有一个线程对象，一个尝试去中断线程，另一个尝试去恢复线程，如果并发的话，无论是否进行了同步，都会存在死锁风险(这两个方法在jdk中已经被声明放弃了)。这类代码很少出现，我们也应该避免。</p>
+<h2 id="线程安全的实现方法"><a href="#线程安全的实现方法" class="headerlink" title="线程安全的实现方法"></a>线程安全的实现方法</h2><p>这听起来是代码编写的问题，但虚拟机提供的同步和锁机制也起到了非常重要的作用。只要读者了解了虚拟机线程安全手段的运作过程，自己去思考代码如何编写并不是一件困难的事情。</p>
+<h3 id="互斥同步"><a href="#互斥同步" class="headerlink" title="互斥同步"></a>互斥同步</h3><p>同步是指在多个线程并发访问共享数据时，保证共享数据在同一时刻只能被一个(或者是一些，使用信号量的时候)线程使用，而互斥是实现同步的一种手段。互斥是因，同步是果；互斥是方法，同步是目的。</p>
+<p>Java中最基本的互斥同步手段是 synchronize 关键字，经过编译后，会在同步快的前后分别形成 monitorenter 和 monitorexit 两个字节指令，<strong>这两个字节码都需要 reference 类型的参数来指明要锁定和解锁的对象</strong>。如果Java程序中的synchronize 指明了对象参数，那就是这个对象的 reference ；<strong>如果没有明确指定，那就根据 synchronize 修饰的是实例方法还是类方法，去取对应的对象实例或 Class 对象来作为锁对象。</strong></p>
+<p>根据虚拟机规范，执行 monitorenter 时首先尝试获取对象的锁，如果没有被锁定，或者当前线程已经拥有这个锁，就把锁的计数器 +1 ，相应地，monitorexit 时减 1 。如果获取对象锁失败，那当前线程就要阻塞等待，直到锁被释放。</p>
+<p><strong>这里有2点是要注意的：synchronize 同步块对同一条线程来说是可重入的，不会出现自己把自己锁死的问题；其次，同步块在已进入的线程执行完之前，会阻塞后面的线程，前面提到过，Java的线程是映射到操作系统的原生线程上的，如果要阻塞或者唤醒一个线程，都需要操作系统来帮忙完成，这就需要从用户态转到核心态中，因此状态转换需要耗费很多的处理器时间。对于代码简单的同步块(如被synchronize修饰的getter() 或 setter() 方法)，状态转换消费的时间可能比代码执行时间还要长，所以 synchronize 是 Java 语言中一个重量级(Heavyweight)操作。</strong></p>
+<p>还可以使用 ReetrantLock 来实现同步，它的基本用法与 synchronize 相似，<strong>都具备线程重入性</strong>，只是 ReetrantLock 表现为API语法层面的互斥锁(lock 和 unlock 方法配合 try/finally 语句块来完成)，synchronize 表现为原生语法层面的互斥锁。不过，ReetrantLock 增加了一些高级功能，主要有以下3项：</p>
+<ul>
+<li>等待可中断：指当持有锁的线程长期不释放锁的时候，正在等待的线程可以选择放弃等待。    </li>
+<li>公平锁：多个线程在等待同一个锁时，必须按照申请锁的时间顺序来依次获得锁：而非公平锁则不保证这一点，在锁被释放时，任何一个等待锁的线程都有机会获得锁。synchronize 是非公平的，ReetrantLock 默认也是非公平的。    </li>
+<li>锁绑定多个条件是指一个 ReetrantLock 对象同时可以绑定多个 Condition 对象。而synchronize 中，锁对象的 wait 、notify或者 notifyAll 方法可以实现一个隐含的条件是：如果要和多于一个的条件关联的时候，就要额外地添加一个锁。而 ReetrantLock 无需这样做，只需要多次调用 newCondition 方法即可。</li>
+</ul>
+<p>在JDK 1.6以前，synchronize 的吞吐量会随着竞争的激烈程度增加而急剧下降，但 ReetrantLock 却基本保持在平稳水平。<strong>但随着后面的优化，二者的性能基本上持平了，并且虚拟机在未来的性能改进中更倾向于原生的 synchronize ，所以还是提倡在 synchronize 能实现需求的情况下，优先考虑使用 synchronize 来同步</strong>。</p>
+<h3 id="非阻塞同步"><a href="#非阻塞同步" class="headerlink" title="非阻塞同步"></a>非阻塞同步</h3><p>互斥同步最主要的问题就是线程阻塞和唤醒带来的性能问题，因此也称为阻塞同步，这是一种悲观的并发策略，总认为不去做正确的同步措施，就肯定会出问题。随着硬件指令集的发展（因为我们需要操作和冲突检测这两个步骤具备原子性，只能靠硬件来保证，如果使用互斥同步就失去意义了），我们有了另一个选择：基于冲突检测的乐观并发策略，通俗讲就是先操作，如果没有其他线程竞争，操作就成功了；如果有竞争产生了冲突，再采取其他补偿措施（常见的措施就是不断重试，直到成功）。这种策略无需把线程挂起，因此称为非阻塞同步。</p>
+<blockquote>
+<p>指令集发展后，可以确保一个从语义上看起来需要多次操作的行为只需要一条处理器指令就能完成，其中最重要的指令为 ：比较并交换(Compare-and-Swap) ，下文简称 CAS，它的语义是：内存地址V，旧的预期值 A,新值 B，当且仅当 V 符合旧预期值 A 是，处理器就用新值 B 更新 V，否则就不更新。</p>
+</blockquote>
+<p>不妨拿一段在第 12 章中没有解决的问题代码来看看如何使用CAS操作来避免阻塞同步，我们曾通过这段20个线程自增 10000 此的代码来证明 volatile 变量不具备原子性，那如何才能让它具备原子性？把 “race ++ “ 操作或 increase() 方法用同步块包裹起来当然是一个办法，但如果改成如下代码，效率会提高很多：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> AtomicInteger race = <span class="keyword">new</span> AtomicInteger(<span class="number">0</span>);</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> THREADS_COUNT = <span class="number">20</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span></span>{</span><br><span class="line">        race.incrementAndGet();</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">       Thread[] threads = <span class="keyword">new</span> Thread[THREADS_COUNT];</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; THREADS_COUNT;i++){</span><br><span class="line">        threads[i] = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; <span class="number">10000</span>;i++){</span><br><span class="line">                    increase();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        });</span><br><span class="line"></span><br><span class="line">        threads[i].start();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">1</span>){</span><br><span class="line">        Thread.yield();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    System.out.println(race);</span><br><span class="line">   }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>运算结果： 200000</p>
+<p>使用AtomicInteger代替int后，程序输出了正确地结果，一切要归功于incrementAndGet 方法的原子性，它的实现非常简单：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">incrementAndGet</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">for</span>(;;){</span><br><span class="line">        <span class="keyword">int</span> current = get();</span><br><span class="line">        <span class="keyword">int</span> next = current + <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">if</span>(compareAndSet(current,next)){</span><br><span class="line">            <span class="keyword">return</span> next;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>incrementAndGet 方法在一个无限循环中，不断尝试将一个比自己当前值大1的新值赋给自己，如果失败了，那说明在执行“获取-设置”操作的时候值已经有了修改，于是再次循环进行下一次操作，直到设置成功为止（设置成功才return 跳出循环）。</p>
+<blockquote>
+<p>如果一个变量V初次读取的时候是A值，并且在准备赋值的时候检查到它仍然为A，这就有可能是这段期间它的值曾经被改成了B，后来又被改成了A，那 CAS 操作就会误认为它从来没被改变过，这称为 “ABA” 问题。如果需要解决 “ABA” 问题，改用传统的互斥同步会比原子类更高效。</p>
+</blockquote>
+<h3 id="无同步方案"><a href="#无同步方案" class="headerlink" title="无同步方案"></a>无同步方案</h3><p>如果一个方法本来就不涉及共享数据，那它自然无需任何同步措施。这种代码是天生线程安全的，这里简单介绍其中两类：</p>
+<ul>
+<li><p>可重入代码：这种代码可以在任何时刻中断它，转而去执行另外一段代码，而在控制权返回后，原来的程序不会出现任何错误。可重入代码有一些共同特征，如 不依赖存储在堆上的数据和公用的系统资源，用到的状态量都是由参数中传入、不调用 非可重入的方法等。   </p>
+</li>
+<li><p>线程本地存储：如果一段代码中所需要的数据必须与其他代码共享，那就看这些共享数据代码是否能保证在同一个线程中执行，如果能保证，我们就可以把共享数据的可见范围限制在同一个线程之内。</p>
+</li>
+</ul>
+<blockquote>
+<p>符合这种特点的应用并不少见。一个应用实例就是web交互模型中“一个请求对应一个服务器线程”的处理方式</p>
+</blockquote>
+<h2 id="锁优化"><a href="#锁优化" class="headerlink" title="锁优化"></a>锁优化</h2><p>JDK 1.6 实现了各种锁优化技术，如适应性自旋、锁消除、锁粗化、轻量级锁 和 偏向锁 等，这些技术都是为了在线程之间更高效地共享数据。</p>
+<h3 id="自旋锁与自适应自旋"><a href="#自旋锁与自适应自旋" class="headerlink" title="自旋锁与自适应自旋"></a>自旋锁与自适应自旋</h3><p>在讨论互斥同步的时候，提到了阻塞对性能影响最大。虚拟机开发团队注意到在许多应用上，共享数据锁定状态只会持续很短时间，为这段时间去挂起和恢复线程不值得。我们可以让后面的请求锁的线程“稍等一下”，但不放弃处理器的执行时间，看锁是否被很快释放。为了让线程等待，我们只需让线程执行一个忙循环（自旋），这项技术就是所谓<strong>自旋锁</strong>。</p>
+<blockquote>
+<p>自旋本身避免了挂起和恢复过程，但是它占用cpu时间，如果锁被占用的时间很短，这是值得的；反之，如果锁被占用的时间过长，则白白消耗处理器资源，因此需要有一定限度，限定自旋次数。</p>
+</blockquote>
+<h3 id="锁消除"><a href="#锁消除" class="headerlink" title="锁消除"></a>锁消除</h3><p>如果代码上要求同步，但是被检测到不可能存在共享数据竞争，就可以对锁进行消除，锁消除的主要判定依据来源于逃逸分析的数据支持。也许读者会有疑问，变量逃逸，对于虚拟机来说需要使用数据流分析来确定，但是程序员自己应该很清楚，怎么会在明知道不存在数据竞争的情况下要求同步呢？答案是：有许多同步措施并不是程序员自己加入的，同步的代码在Java程序中普遍存在，来看看下面例子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">concatString</span><span class="params">(String s1,String s2,String s3)</span></span>{</span><br><span class="line">    <span class="keyword">return</span> s1 + s2 + s3;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们知道，String 是个不可变的类，对字符串的连接操作总是通过生成新的String来进行。JDK 1.5 前，String 连接会转化为 StringBuffer对象的连续 append 操作，1.5 及以后的版本会转化为 StringBuilder 对象的连续 append，即上述代码可能会变成以下的样子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">concatString</span><span class="params">(String s1,String s2,String s3)</span></span>{</span><br><span class="line">    StringBuffer sb = <span class="keyword">new</span> StringBuffer();</span><br><span class="line">    sb.append(s1);</span><br><span class="line">    sb.append(s2);</span><br><span class="line">    sb.append(s3);</span><br><span class="line">    <span class="keyword">return</span> sb.toString();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>现在大家还认为这段代码没有涉及同步吗？每个 StringBuffer.append 方法中都有一个同步块，锁就是sb对象。虚拟机很快会发现它的动态作用域被限制在 concatString 方法内部，永远不会被逃逸到方法外，因此，虽然这里有锁，也可以被安全地消除。</p>
+<h3 id="锁粗化"><a href="#锁粗化" class="headerlink" title="锁粗化"></a>锁粗化</h3><p>原则上，编写代码的时候，总是推荐将同步块的作用范围限制得尽量小，<strong>这是为了使需要同步的操作数量尽可能变小，让等待的线程尽快拿到锁。</strong>大部分情况下这原则是正确的。</p>
+<p>但是，如果一系列连续操作都是对同一个对象反复加锁和解锁，甚至加锁操作是在循环体中，频繁地进行互斥同步操作会导致不必要的性能消耗。上述代码中连续的 append 方法就属于此类范围，虚拟机会把加锁同步的范围扩展(粗化)到整个操作序列的外部，就是扩展到第一个 append() 操作之前直至最后一个 append() 操作之后，这样只需要加锁一次就可以了。</p>
+<h3 id="轻量级锁"><a href="#轻量级锁" class="headerlink" title="轻量级锁"></a>轻量级锁</h3><p>轻量级锁是相对于传统的锁机制而言的，首先强调的一点是，<strong>轻量级锁并不是用来代替重量级锁的，它的本意是在没有多线程竞争的前提下，减少传统的重量级锁使用操作系统互斥量产生的性能消耗。</strong></p>
+<p>要理解轻量级锁，必须从HotSpot虚拟机的对象（对象头部分）的内存布局开始介绍。HotSpot虚拟机的对象头分为两部分：第一部分用于存储对象自身的运行时数据，如哈希码、GC分代年龄等，官方称为 “Mark Word”，它是实现轻量级锁和偏向锁的关键。第二部分用于存储指向方法区对象类型数据的指针。</p>
+<p>在代码进入同步块的时候，如果此同步对象没有被锁定——Mark Word 中锁标记位为 “01”，则虚拟机首先将在当前线程的栈帧中建立一个名为<strong>锁记录(Lock Record)</strong>的空间，用于存储锁对象目前的 Mark Word 的拷贝，然后，虚拟机将使用 CAS 操作尝试将对象的 Mark Word 更新为指向 Lock Record 的指针，如果这个更新动作成功了，那么这个县城就拥有了该对象的锁，并且将对象的 Mark Word 的锁标志位转变为 “00” ，表示对象处于轻量级锁定状态。</p>
+<p>如果这个更新操作失败了，虚拟机首先会检查对象的 Mark Word 是否指向当前线程的栈帧，如果只说明当前线程已经拥有了这个对象的锁，那就可以直接进入同步块继续执行，否则说明这个锁对象已经被其他线程抢占了。如果有两条以上的线程争用同一个锁，那轻量级锁就不再有效，要膨胀为重量级锁，锁标志位变为 “10” ，后面等待锁的线程也要进入阻塞状态。</p>
+<p>上面描述的是加锁过程，解锁过程也是通过CAS 操作来进行的，如果对象的 Mark Word 仍然指向线程的锁记录，那就用 CAS 操作把当前对象的的 Mark Word 和 线程中复制的 Mark Word 替换，如果替换成功，整个同步过程完成。如果替换失败，说明其他线程尝试过获取该锁，那么在释放锁的同时，唤醒被挂起的线程。</p>
+<blockquote>
+<p>轻量锁的依据是“绝大部分锁，在整个同步周期内都是不存在竞争的”，这是经验数据，如果没有竞争，轻量级锁使用CAS 操作避免了使用互斥量的开销；如果存在锁竞争，除了互斥量的开销外，还额外发生了 CAS 操作，因此会比传统重量级锁更慢。</p>
+</blockquote>
+<h3 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h3><p>如果说轻量级锁是在无竞争情况下使用CAS操作去消除同步使用的互斥量，那偏向锁就是在无竞争的情况下把整个同步都消除掉，连CAS操作都不做了。</p>
+<p>假设当前虚拟机启用了偏向锁，那么当锁对象第一次被线程获取的时候，虚拟机会把对象头中的标志位设置为 “01”，即偏向模式。同时，使用CAS操作把获取到这个锁的线程ID记录在对象的 Mark Word 之中，如果 CAS 操作成功，持有偏向锁的线程以后每次进入这个锁相关的同步块时，虚拟机都可以不再进行任何同步操作。</p>
+<p>当另外一个线程去尝试获取这个锁时，偏向模式就结束。根据锁对象目前是否处于被锁定状态，撤销偏向后恢复到 未锁定(标志位 01) 或 轻量级锁定(标志位 00)的状态，后续的同步操作就如上面介绍的轻量级锁执行。</p>
+<blockquote>
+<p>偏向锁可以提高带有同步但无竞争的程序的性能，它不一定总是对程序运行有利。如果程序中大多数的锁总是被多个不同的线程访问，那偏向模式就是多余的。因此，有时候禁止使用偏向锁反而可以提升性能。</p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/13/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/13/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：早期（编译期）优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-13 21:10:00" itemprop="dateCreated datePublished" datetime="2019-09-13T21:10:00+08:00">2019-09-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-03-03 21:41:44" itemprop="dateModified" datetime="2020-03-03T21:41:44+08:00">2020-03-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Java语言的“编译期”是一段“不确定”的操作过程，它可能是指一个前端编译器把.java文件转变成 .class 的过程，也可能是指JIT编译器把字节码变成机器码的过程，还能是指 ATO编译器直接把 .java 文件编译成本地代码的过程。最符合大家认知的应该是第一类，在本章中，我们提到的 “编译期” 以及 “编译器” 都指限于第一类过程。</p>
+<h2 id="Javac-编译器"><a href="#Javac-编译器" class="headerlink" title="Javac 编译器"></a>Javac 编译器</h2><p>前面很多个人觉得只有写编译器才能用得着的内容，先略过。</p>
+<p><strong>标注检查：</strong>javac的编译过程包含标注检查，标注检查的内容包括诸如变量使用前是否已经被声明，变量与赋值类型是否匹配等。此外，标注检查还有一个重要动作称为<strong>常量折叠</strong>，如果我们在代码中谢了如下定义：</p>
+<blockquote>
+<p>int a = 1 + 2;</p>
+</blockquote>
+<p>那么在语法树上仍然能看到字面量“1”、“2” 以及操作符 “+”，但是经过常量折叠后，他们将会被折叠为字面量 “3”，由于编译期进行了常量折叠，因此在代码中定义 “a = 1 + 2” 与直接定义 “a = 3” 的cpu指令运算量是一样的，并不会增加额外的哪怕一个cpu指令开销。数据及控制流分析是对程序上下文逻辑的进一步验证，以下举一个关于 final 修饰符的数据及控制流分析的例子：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//方法一有final修饰</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">final</span> <span class="keyword">int</span> arg)</span></span>{</span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">int</span> <span class="keyword">var</span> = <span class="number">0</span>;</span><br><span class="line">	<span class="comment">//do something</span></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//方法二没有final修饰</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> arg)</span></span>{</span><br><span class="line">	<span class="keyword">int</span> <span class="keyword">var</span> = <span class="number">0</span>;</span><br><span class="line">	<span class="comment">//do something</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这两个 foo() 方法中，在代码编写时程序肯定会受到 final 修饰符的影响，不能再改变第一个方法的 arg 和 var 变量的值，但是<strong>这两段代码编译出来的Class 文件是没有任何区别的</strong>。通过 <a href="https://glassx.github.io/2019/07/27/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/">第六章</a> 的内容可知，局部变量与字段(实例变量、类变量) 是有区别的，前者在常量池中没 CONSTANT_Fieldref_info 符号引用，自然也没有访问标志（Access_Flags）的信息，甚至可能连名称也不会保留下来(取决于编译时的选项)，自然在Class文件中不可能知道一个布局变量是不是声明为 final 了，因此，<strong>将局部变量声明为 final 对运行是没有影响的，变量的不可变性仅仅由编译器在编译期间保障</strong>。</p>
+<h2 id="Java-语法糖的味道"><a href="#Java-语法糖的味道" class="headerlink" title="Java 语法糖的味道"></a>Java 语法糖的味道</h2><p>语法糖可以看做编译器实现的一些 “小把戏” ，这些小把戏不会提供实质性的功能改进，但它可能会使得效率“大提升”，但我们也应该去了解这些“小把戏”背后的真实世界，那样才能利用好它们，而不是被它们迷惑。</p>
+<h3 id="泛型与类型擦除"><a href="#泛型与类型擦除" class="headerlink" title="泛型与类型擦除"></a>泛型与类型擦除</h3><p>Java中的类型，本质是<strong>参数化类型(Parametersized Type)</strong>的应用，也就是说所操作的数据类型被指定为一个参数。泛型技术在Java 和 C# 之中的使用方式看似相同，但实现上却有根本性的分期，C# 中的泛型无论在程序源码中、编译后的IL（中间语言）中或是运行期的 CLR 中，都是切实存在的， List <int> 与 List <string> 就是两个不同的类型，它们在系统运行期生成，有自己的虚方法表和类型数据，这种实现方式称为类型膨胀，基于这种方法实现的泛型称为真实泛型。</string></int></p>
+<p>Java 语言中的泛型规则不一样，它们只在源码中存在，在编译后的字节码文件中就已经替换为原来的原声类型了，因此，对于运行期的Java语言来说， ArraList <integer> 与 ArrayList <string> 就是同一个类，所以泛型技术实际上是Java的一颗语法糖，这种实现方法称为“类型擦除”，基于这种方法实现的泛型称为 伪泛型。可以通过代码反编译来查看Java泛型实现过程：</string></integer></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">	Map&lt;String,String&gt; map = <span class="keyword">new</span> HashMap();</span><br><span class="line">	map.put(<span class="string">"hello"</span>,<span class="string">"你好"</span>);</span><br><span class="line">	map.put(<span class="string">"how are you"</span>,<span class="string">"吃了吗"</span>);</span><br><span class="line">	Systemt.out.println(map.get(<span class="string">"hello"</span>));</span><br><span class="line">	Systemt.out.println(map.get(<span class="string">"how are you"</span>));</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>把这段代码编译成 Class 文件，再用子界面反编译工具反编译成Java代码，会发现代码变成如下形式：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">	Map map = <span class="keyword">new</span> HashMap();</span><br><span class="line">	map.put(<span class="string">"hello"</span>,<span class="string">"你好"</span>);</span><br><span class="line">	map.put(<span class="string">"how are you"</span>,<span class="string">"吃了吗"</span>);</span><br><span class="line">	Systemt.out.println((String)map.get(<span class="string">"hello"</span>));</span><br><span class="line">	Systemt.out.println((String)map.get(<span class="string">"how are you"</span>));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>会发现，反编译回来的 Map 定义都变成了 <strong>Map map = new HashMap()</strong>，输出的时候，是靠强转实现的，也就是把object转为程序员写的实际类型。Java 的伪泛型招致很多批评的声音，不过这种实现方式在某些情况下丧失了泛型思想应有的一些优雅，比如在类中存在如下两个方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GenericTypes</span></span>{</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">(List&lt;String&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;String&gt; list)"</span>);</span><br><span class="line">	}</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">(List&lt;Integer&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;Integer&gt; list)"</span>);</span><br><span class="line">	}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>思考一下，这段代码是否正确。也许你已经知道了，这段代码是不能被编译的，因为List<string> 与 List<integer> 编译后都被擦除了，变成了一样的原生类型 List<e> ,擦除动作导致这两种方法的特征签名变得一样。初看起来，无法重载的原因找到了，但真的如此吗？其实，泛型擦除成相同的原生类型只是无法重载的原因之一，接着看下面的代码：</e></integer></string></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GenericTypes</span></span>{</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">method</span><span class="params">(List&lt;String&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;String&gt; list)"</span>);</span><br><span class="line">	    <span class="keyword">return</span> <span class="string">""</span>;</span><br><span class="line">	}</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">method</span><span class="params">(List&lt;Integer&gt; list)</span></span>{</span><br><span class="line">	    System.out.println(<span class="string">"invoke method(List&lt;Integer&gt; list)"</span>);</span><br><span class="line">	    <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">	}</span><br><span class="line">	</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">	    method(<span class="keyword">new</span> ArrayList&lt;String&gt;());</span><br><span class="line">	    method(<span class="keyword">new</span> ArrayList&lt;Integer&gt;());</span><br><span class="line">	}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>编译执行发现，不但可以编译还能正常输出结果：</p>
+<blockquote>
+<p>System.out.println(“invoke method(List <string> list)”)<br>System.out.println(“invoke method(List <integer> list)”)</integer></string></p>
+</blockquote>
+<p>为两个方法添加了不同的返回值之后，方法重载居然成功（<strong>注意，仅仅只是在jdk 1.6及以下才能编译通过，高版本是编译不通过的，但在书上是没有这个版本说明的，而我们读者只需要知道有这么个事情就行</strong>）了，这是对Java语言中返回值不参与重载选择的基本认知的挑战吗？当然不是的，之所以能够编译成功，是<strong>因为两个 method 方法加入了不同的返回值之后，能够共存在同一个 Class 文件了。</strong>由于这只是针对低版本的功能，故此处不多解释了。</p>
+<h3 id="自动装箱、拆箱与遍历循环"><a href="#自动装箱、拆箱与遍历循环" class="headerlink" title="自动装箱、拆箱与遍历循环"></a>自动装箱、拆箱与遍历循环</h3><p>这几个专门拿出来讲只是因为它们是Java语言中使用得最多的<strong>语法糖</strong>。可以通过以下代码看看这些语法糖在编译后会发生什么变化：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    List&lt;Integer&gt; list =  Arrays.asList(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>);</span><br><span class="line">    <span class="keyword">int</span> sum = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i: list){</span><br><span class="line">        sum += i;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    Systemt.out.println(sum);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码在自动装箱、拆箱与遍历循环编译后，变成以下样式：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    List&lt;Integer&gt; list = Arrays.asList(<span class="keyword">new</span> Integer[]{</span><br><span class="line">        Integer.valueOf(<span class="number">1</span>),</span><br><span class="line">        Integer.valueOf(<span class="number">2</span>),</span><br><span class="line">        Integer.valueOf(<span class="number">3</span>),</span><br><span class="line">        Integer.valueOf(<span class="number">4</span>),</span><br><span class="line">    });</span><br><span class="line">    <span class="keyword">int</span> sum = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span>(Iterator localIterator = list.iterator();localIterator.hasNext();){</span><br><span class="line">        <span class="keyword">int</span> i = ((Integer)localIterator.next()).intValue();</span><br><span class="line">        sum += i;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    Systemt.out.println(sum);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>代码一共包含自动装箱、自动拆箱、遍历循环与变长参数5种语法糖。遍历循环还原成了迭代器的实现，而变长参数则是通过数组的方式转变。语法糖看起来简单，但是也有很多需要注意的地方，如以下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Integer a = <span class="number">1</span>;</span><br><span class="line">Integer b = <span class="number">2</span>;</span><br><span class="line">Integer c = <span class="number">3</span>;</span><br><span class="line">Integer d = <span class="number">3</span>;</span><br><span class="line">Integer e = <span class="number">321</span>;</span><br><span class="line">Integer f = <span class="number">321</span>;</span><br><span class="line"></span><br><span class="line">Long g = <span class="number">3L</span>;</span><br><span class="line"></span><br><span class="line">System.out.println(c==d);  <span class="comment">//true </span></span><br><span class="line">System.out.println(e==f);  <span class="comment">//false   Interger 128限制（缓存了 -128~127的对象，超出这个值就重新new，否则就直接取）</span></span><br><span class="line">System.out.println(c==(a+b));  <span class="comment">// true</span></span><br><span class="line">System.out.println(c.equals(a+b));  <span class="comment">//true </span></span><br><span class="line">System.out.println(g==(a+b));   <span class="comment">//true   ，这个还真没找到解释的方法</span></span><br><span class="line">System.out.println(g.equals(a+ b));   <span class="comment">//false  ,因为 g  是 Long 类型，而 a + b 后是Integer类型，类型都不一样,equals 不会自动处理数据转型</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>结果和注释都已经写上了，关于Integer的128限制，再来例子说明：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Integer i=<span class="number">127</span>;</span><br><span class="line">Integer j =<span class="number">127</span>;</span><br><span class="line">System.out.println(i==j);    <span class="comment">//true</span></span><br><span class="line">i=<span class="number">128</span>;</span><br><span class="line">j=<span class="number">128</span>;</span><br><span class="line">System.out.println(i==j);   <span class="comment">//false </span></span><br><span class="line"></span><br><span class="line">i=<span class="keyword">new</span> Integer(<span class="number">127</span>);</span><br><span class="line">j=<span class="keyword">new</span> Integer(<span class="number">127</span>);</span><br><span class="line">System.out.println(i==j);  <span class="comment">//false </span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>详细解释：jvm在运行时创建了一个缓存区域，并创建了一个integer的数组。这个数组存储了-128至127的值。因此如果integer的值在-128至127之间，则是去缓存里面获取。因此上面的i和j指向的是同一个内存地址。因为128超过了这个缓存区域，因此第二次赋值的时候是重新开辟了两个内存地址。第三次因为使用了new关键字，在java中。new关键字是开辟内存空间。因此第三次赋值是开辟了新的内存空间，此时发现即便i与j都是127，但内存地址不再相同。</p>
+<blockquote>
+<p>包装类的 “==” 运算在不遇到算术运算的情况下不会自动拆箱，并且它们的 equals() 方法不处理数据转型的关系。</p>
+</blockquote>
+<h3 id="条件编译"><a href="#条件编译" class="headerlink" title="条件编译"></a>条件编译</h3><p>略</p>
+<h2 id="实战：-插入式注解处理器"><a href="#实战：-插入式注解处理器" class="headerlink" title="实战： 插入式注解处理器"></a>实战： 插入式注解处理器</h2><p>略</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/08/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC11%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/08/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC11%E7%AB%A0/" class="post-title-link" itemprop="url">第11章: 晚期（运行期）优化</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-08 16:24:00" itemprop="dateCreated datePublished" datetime="2019-09-08T16:24:00+08:00">2019-09-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:49:50" itemprop="dateModified" datetime="2019-11-17T21:49:50+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>Java 程序最初是通过解释器(Interpreter)进行解释执行的，虚拟机发现某个方法或代码块运行特别频繁时，会将它们认定为“热点代码”(Hot Spot Code)。为了提高运行效率，虚拟机会把这些代码编译成本地平台相关的机器码，并进行各种层次的优化，完成这个任务的编译器称为即时编译器(Just In Time Compiler, JIT编译器)。</p>
+<p>JIT 不是虚拟机必需部分，Java虚拟机规范也没有规定实现，但它却是衡量一款商用虚拟机优秀与否的关键指标，也是最能体现虚拟机技术水平的部分。本章所讲的内容都是基于HotSpot虚拟机。</p>
+<h2 id="HotSpot-虚拟机的JIT"><a href="#HotSpot-虚拟机的JIT" class="headerlink" title="HotSpot 虚拟机的JIT"></a>HotSpot 虚拟机的JIT</h2><p>首先看几个问题：</p>
+<ul>
+<li>为何要使用解释器与编译器并存架构    </li>
+<li>为何要实现两个不同的JIT    </li>
+<li>程序何时使用解释器执行？何时使用编译器执行？    </li>
+<li>哪些程序代码会被编译为本地代码？如何编译为本地代码？    </li>
+<li>如何从外部观察JIT的编译过程和编译结果？    </li>
+</ul>
+<h3 id="解释器与编译器"><a href="#解释器与编译器" class="headerlink" title="解释器与编译器"></a>解释器与编译器</h3><p>第一个问题，解释器与编译器两者各有优势：当程序需要迅速启动和执行时，解释器可以首先发挥作用，省去编译的时间，立即执行；程序运行后，随着时间推移，编译器逐渐发挥作用，把越来越多的代码编译成本地代码之后，可以获取更高的执行效率。当程序运行环境中内存资源限制较大时，也可以使用解释执行节约内存。同时，解释器可以作为编译器激进优化时的一个“逃生门”。因此，在整个虚拟机架构中，解释器与编译器经常配合工作。</p>
+<p>第二个问题，两个不同的JIT一般称为 Client Compiler（也称为 C1 编译） 和 Server Compiler（也称为 C2 编译） 。虚拟机一般会启用分层编译策略，分层编译根据编译器编译、优化的规模与耗时，划分出不同的编译层次：</p>
+<ol>
+<li>第0层：解释执行，解释器不开启性能监控(Profiling)，可触发第1层编译。    </li>
+<li>第1层，也称C1编译，将字节码编译成本地代码，进行简单、可靠的优化，如有必要将加入性能监控的逻辑。    </li>
+<li>第2层，也称C2编译，将字节码编译为本地代码，但是会启用一些编译耗时较长的优化，甚至会根据性能监控信息进行一些不可靠的激进优化。</li>
+</ol>
+<p>实施分层编译后，C1和C2将会同时工作，许多代码会被多次编译，用C1获取更高的编译速度，用C2获取更好地编译质量，并且解释执行时也无需承担收集性能监控信息的任务。</p>
+<h3 id="编译对象与触发条件"><a href="#编译对象与触发条件" class="headerlink" title="编译对象与触发条件"></a>编译对象与触发条件</h3><p>第三个问题，上文提到，运行过程中会被即时编译器编译的“热点代码”有两类，即：</p>
+<ul>
+<li>被多次调用的方法。    </li>
+<li>被多次执行的循环体。    </li>
+</ul>
+<p>解释一下第二点，这是为了解决一个方法只被调用过一次或少量几次，但是方法体内部存在循环次数较多的循环体问题。这样，循环体的代码也被重复执行多次，因此这些代码也应该认为是“热点代码”。</p>
+<h3 id="编译过程"><a href="#编译过程" class="headerlink" title="编译过程"></a>编译过程</h3><p>默认设置下，无论是方法调用产生的即时编译请求还是OSR编译请求，虚拟机在代码编译器还未完成之前，都仍将按照解释方式执行。</p>
+<h2 id="编译优化技术"><a href="#编译优化技术" class="headerlink" title="编译优化技术"></a>编译优化技术</h2><p>以如下代码清单来说明编译优化：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">B</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> value;</span><br><span class="line">    <span class="function"><span class="keyword">final</span> <span class="keyword">int</span> <span class="title">get</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">return</span> value;</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.get();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    z = b.get();</span><br><span class="line">    sum = y + z;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>首先说明的是，这些代码优化变换是建立在代码的某种中间表示或机器码之上，绝不是建立在Java源码之上，这里是为了展示方便，使用了Java语言的语法来表示这些优化技术所发挥的作用。</strong></p>
+<p>以上的代码已经非常简单了，但仍有许多优化余地，第一步就是<strong>方法内联(Method Inlining)</strong>，内联后的foo函数代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    z = b.value;</span><br><span class="line">    sum = y + z;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>方法内联的重要性高于其他优化措施，它主要有两个目的：去除方法调用的成本(如建立栈帧等)  以及为其他优化方法建立良好的基础(方法内联膨胀后可以便于在更大范围上采取后续优化手段)。</p>
+<p>第二步进行 <strong>冗余访问消除(Redundant Loads Elimination)</strong>，假设上述代码中 do something 刽改变 b.value的值，那就可以将 z = b.value 替换为 z = y ，因为上一句 y = b.value 已经保证 y 与b.value 是一致的，这样就可以不用再去访问对象b的局部变量了。优化后的代码:</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    z = y;</span><br><span class="line">    sum = y + z;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>第三步我们进行<strong>复写传播(Copy Propagation)</strong>，因为在这段程序的逻辑中没有必要使用 z 这个变量，它与 y 是完全相等的，因此可以用 y 来替代 z ，复写传播后的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    y = y;</span><br><span class="line">    sum = y + y;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>第四步我们进行<strong>无用代码消除(Dead Code Elimination)</strong>。在上述代码清单中， y = y 是没有意义的，把它擦除后的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">    y = b.value;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">    </span><br><span class="line">    sum = y + y;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>经过4次优化后，达到的效果一致，但是比原始代码省略了许多语句，执行效率也更高。接下来继续看几项有代表性的优化技术。</p>
+<h3 id="公共子表达式消除"><a href="#公共子表达式消除" class="headerlink" title="公共子表达式消除"></a>公共子表达式消除</h3><p>这是语言无关的经典优化技术之一，普遍用于各种编译器的经典优化技术，它的含义是：如果一个表达式E已经计算过了，并且从先前的计算到现在E中所有变量的值都没有发生变化，那么E的这次出现就成了公共子表达式。假设存在如下代码：</p>
+<blockquote>
+<p>int d = (c * b) * 12 + a + (a + b * c);</p>
+</blockquote>
+<p>这段代码交给JIT编译后，它将进行如下优化：因为 c * b 与 b * c 是一样的表达式，并且在计算期间 b 与 c 的值是不可变的，因此表达式可能会被视为：</p>
+<blockquote>
+<p>int d = E * 12 + a + (a + E);</p>
+</blockquote>
+<p>这时候，编译器还可能进行 <strong>代数化简(Algebraic Simplification)</strong>，把表达式变为：</p>
+<blockquote>
+<p>int d = E * 13 + a * 2;</p>
+</blockquote>
+<h3 id="数组边界检查消除"><a href="#数组边界检查消除" class="headerlink" title="数组边界检查消除"></a>数组边界检查消除</h3><p>如果有一个数组 foo[] ，在Java语言中访问数组元素 foo[i] 的时候系统将会自动进行上下界的范围检查，即i必须满足 i&gt;= 0 &amp;&amp; i &lt; foo.length ，否则抛出异常。 为了安全，数组边界检查是必须的，但是运行期间一次不漏地检查则优点浪费，是可以“商量”的。假如程序中访问一个对象 foo 的某个属性 value，那以Java伪代码表示虚拟机访问的过程如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(foo != <span class="keyword">null</span>) {</span><br><span class="line">    <span class="keyword">return</span> foo.value;</span><br><span class="line">}<span class="keyword">else</span> {</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> NullPointException();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在使用隐式异常优化后，虚拟机会把上述代码变为如下伪代码过程：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span> {</span><br><span class="line">    <span class="keyword">return</span> foo.value;</span><br><span class="line">}<span class="keyword">catch</span>(segment_fault) {</span><br><span class="line">    uncommon_trap();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>虚拟机会注册一个 segment_fault 信号的异常处理(uncommon_trap),这样当foo不空的时候，对value的访问是不会额外消耗一次对foo判空的开销的。代价就是当 foo 真的为空时，必须转入到异常处理器中恢复并抛出 NullPointException异常，这个过程必须从用户态转到内核态中处理，结束后再回到用户态，速度远比一次判空检查慢，但当 foo 极少为空的时候，隐式异常优化是值得的。</p>
+<h3 id="方法内联"><a href="#方法内联" class="headerlink" title="方法内联"></a>方法内联</h3><p>方法内联是编译器最重要的优化手段之一，除了消除方法调用的成本之外，它更重要的意义在于为其他优化手段建立良好的基础，如下代码就解释了内联对其他优化手段的意义：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">(Object obj)</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(obj != <span class="keyword">null</span>){</span><br><span class="line">        System.out.println(<span class="string">"do something"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">testInline</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">    Object obj = <span class="keyword">null</span>;</span><br><span class="line">    foo(obj);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>事实上 testInline 方法的内部全部是无用代码，如果不做内联，后续即使进行了无用代码消除优化，也无法发现任何“Dead Code”，因为如果分开来看， foo() 和 testInline() 两个方法的操作都可能是有意义的。因此方法内联的意义不只是把目标方法“复制”到发起调用的方法中避免真实的方法调用。但实际上Java 虚拟机中的内联过程远没有那么简单，如果不是即时编译器做了一些努力，按照经典编译原理的优化理论，大多数的方法都无法进行内联。</p>
+<h3 id="逃逸分析"><a href="#逃逸分析" class="headerlink" title="逃逸分析"></a>逃逸分析</h3><p>逃逸分析的基本行为就是分析对象动态作用域：当一个对象在方法中被定义后，它可能被外部方法所引用，例如作为调用参数传递到其他方法中，称为方法逃逸；甚至还可能被外部线程访问到，譬如赋值给类变量或者可以在其他线程中访问的实例变量，称为线程逃逸。</p>
+<p>如果能证明一个方法不会逃逸到方法或线程外，则可能为这个变量进行一些高效优化：</p>
+<ul>
+<li><p>栈上分配(Stack Allocation)：Java 虚拟机中，在Java 堆上分配创建对象的内存空间几乎是Java程序员都清楚的常识了，Java堆中的对象对于各个线程都是共享和可见的，只要持有这个对象的引用，就可以访问堆中存储的对象数据。虚拟机的垃圾收集系统可以回收堆中不再使用的对象，但回收动作（无论是筛选可回收对象还是回收和整理内存）都需要耗费时间。如果确定一个对象不会逃逸出方法之外，那让这个对象在栈上分配内存将会是一个很不错的主意，对象所占的内存空间就可以随栈帧出栈而销毁。在一般应用中，不会逃逸的局部对象所占比例很大，如果能使用栈上分配，那大量的对象就会随着方法的结束而自动销毁，减小垃圾收集系统的压力。</p>
+</li>
+<li><p>同步消除(Synchronization Elimination)：线程同步本身是一个相对耗时的过程，如果逃逸分析能够确定一个变量不会逃逸出线程，无法被其他线程访问，那么变量的读写肯定不会有竞争，对这个变量实施的同步措施就可以被消除。</p>
+</li>
+<li><p>标量替换(Scalar Replacement)：标量(Scalar)是指一个数据已经无法再分解成更小的数据来表示了，Java虚拟机中的原始数据类型(int、long等数值类型及 refrence 类型等)都不能再进一步分解，它们就可以称为标量。相对地，如果一个数据可以继续分解，那它就称作聚合量，Java中的对象就是最典型的聚合量。如果把一个Java 对象拆散，根据程序访问情况将其使用到的成员变量恢复原始类型来访问就叫做标量替换。    </p>
+<blockquote>
+<p>如果逃逸分析证明一个对象不会被外部访问，并且这个对象可以被拆散的话，那程序真正执行的时候将可能不创建这个对象，而改为直接创建它的若干个被这个方法使用到的成员变量来代替。将对象拆分后，除了可以让对象的成员变量在栈上分配和读写外，还可以为后续进一步优化手段创建条件。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="Java-与-C-C-的编译器对比"><a href="#Java-与-C-C-的编译器对比" class="headerlink" title="Java 与 C/C++的编译器对比"></a>Java 与 C/C++的编译器对比</h2><p>有兴趣的时候再来补上，略。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/08/18/%E6%9D%82-%E6%8A%98%E8%85%BE%E7%B3%BB%E7%BB%9F/deepin%E4%BD%BF%E7%94%A8%E5%BF%83%E5%BE%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/08/18/%E6%9D%82-%E6%8A%98%E8%85%BE%E7%B3%BB%E7%BB%9F/deepin%E4%BD%BF%E7%94%A8%E5%BF%83%E5%BE%97/" class="post-title-link" itemprop="url">deepin使用心得</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-08-18 11:40:00" itemprop="dateCreated datePublished" datetime="2019-08-18T11:40:00+08:00">2019-08-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-03-10 21:54:42" itemprop="dateModified" datetime="2020-03-10T21:54:42+08:00">2020-03-10</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/linux/" itemprop="url" rel="index">
+                    <span itemprop="name">linux</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>在windows 10 上使用Android studio 开发，分分钟让你怀疑人生，编译运行一次看效果，5、6分钟很正常，7、8分钟是常有的事，忍无可忍，决心切换到 linux 环境。以个人的理解，Linux 的发行版都是基于相同的内核，所以比较各个发行版的时候，我个人主要比较 美观程度、使用方便程度以及可使用的软件数目。</p>
+<p>在尝试包括ubuntu、中兴的新支点、优麒麟、deepin 之后，最终选择使用 deepin（深度技术）。deepin 有自己的应用商店，里面有包括 wps、qq、微信、TIM、foxmail、百度云盘、MindMaster、搜狗输入法等常用软件（有些是deepin-win版本的，但是优化得很好），并且如果需要安装其他的常用软件，也能通过deepin-wine方式安装；除此之外，deepin的界面极为美观，操作起来也特别方便，很多操作与windows类似。最重要的是，deepin天生对中文环境友好，并且无需费神选择镜像源，几乎安装上就能够正常使用，因此在这里，我强烈安利一波这个国产的，难得的linux发行版。</p>
+<h2 id="软件安装"><a href="#软件安装" class="headerlink" title="软件安装"></a>软件安装</h2><h3 id="一、安装Android-studio"><a href="#一、安装Android-studio" class="headerlink" title="一、安装Android studio"></a>一、安装Android studio</h3><p>按照官方给的教程下载，并且解压到相应的目录即可，你可以把快捷方式的图标固定在decor上，如果之后偶尔通过这个图标不能正常启动，就进入 AS 的解压目录，进入bin 目录中，双击 studio.sh 运行就可以正常使用了。</p>
+<h3 id="二、安装rtx"><a href="#二、安装rtx" class="headerlink" title="二、安装rtx"></a>二、安装rtx</h3><p>打开终端，输入以下命令：</p>
+<blockquote>
+<p>sudo apt install  deepin.com.qq.rtx2015</p>
+</blockquote>
+<p>卸载就输入：</p>
+<blockquote>
+<p>sudo apt remove  deepin.com.qq.rtx2015</p>
+</blockquote>
+<h3 id="三、安装openJdk"><a href="#三、安装openJdk" class="headerlink" title="三、安装openJdk"></a>三、安装openJdk</h3><p>Android 开发使用 openJdk 就足够了，并且安装过程也是超级方便，以下命令就能搞定：</p>
+<blockquote>
+<p>sudo apt-get install openjdk-8-jdk</p>
+</blockquote>
+<h3 id="四、安装git"><a href="#四、安装git" class="headerlink" title="四、安装git"></a>四、安装git</h3><p>作为developer，版本管理是必不可少的，git 最初是为 linux 版本管理而生，因此在linux上安装 git 也是极为方便：</p>
+<blockquote>
+<p>sudo apt-get install git</p>
+</blockquote>
+<h3 id="其他软件"><a href="#其他软件" class="headerlink" title="其他软件"></a>其他软件</h3><p>可以从deepin自带的应用商店安装。</p>
+<h2 id="卸载软件"><a href="#卸载软件" class="headerlink" title="卸载软件"></a>卸载软件</h2><p>linux彻底卸载软件步骤:以卸载wine为例</p>
+<p>1、 删除软件及配置文件</p>
+<blockquote>
+<p>sudo apt-get –purge remove wine</p>
+</blockquote>
+<p>2、 删除没用的依赖包</p>
+<blockquote>
+<p>sudo apt-get autoremove wine</p>
+</blockquote>
+<p>3、 此时dpkg的列表中有”rc”状态的软件包,可以执行以下命令进行最后清理</p>
+<blockquote>
+<p>sudo dpkg -l |grep ^rc|awk ‘{print $2}’ |sudo xargs dpkg -P</p>
+</blockquote>
+<p>4、 然后删除安装包,位于/root/.wine和/home/usrname/.wine</p>
+<blockquote>
+<p>sudo rm -rf /root/.wine<br>sudo rm -rf /home/usrname/.wine</p>
+</blockquote>
+<h2 id="Android-Studio-使用"><a href="#Android-Studio-使用" class="headerlink" title="Android Studio 使用"></a>Android Studio 使用</h2><p>有时候，需要在 Android studio 的 terminal 中输入相应的gradle 命令，尤其是build出错又找不到错误的时候，就想使用命令：</p>
+<blockquote>
+<p>gradlew compileDebugSources –stacktrace -info</p>
+</blockquote>
+<p>但是我们直接在as的terminal中输入这行命令是不行的，并且我一般也懒得去配置环境。这时候，其实我们可以在项目的根目录下能发现 gradlew 的一个文件，我们能不能使用这个gradlew呢？事实上是可以的，只需要执行：</p>
+<blockquote>
+<p>./gradlew compileDebugSources –stacktrace -info </p>
+</blockquote>
+<p>如果提示权限不足，只需要chmod 777 项目的根目录修复下权限即可：</p>
+<blockquote>
+<p>sudo chmod -R 777 chmod -R 777 /media/test/_dde_data/work/test</p>
+</blockquote>
+<h2 id="Android-源码下载"><a href="#Android-源码下载" class="headerlink" title="Android 源码下载"></a>Android 源码下载</h2><h3 id="安装repo"><a href="#安装repo" class="headerlink" title="安装repo"></a>安装repo</h3><p>Android 源码是使用 repo 管理的，所以我们首先安装repo，在安装repo前，你可能需要先安装 curl ：</p>
+<blockquote>
+<p>sudo apt-get install curl</p>
+</blockquote>
+<p>安装完成后，可以通过命令查看 curl 的版本号，同时验证 curl是否安装完成</p>
+<blockquote>
+<p>curl –version</p>
+</blockquote>
+<p>步入正题，在deepn下，我们只需要在终端输入以下3条简单的命令即可完成repo的安装：</p>
+<blockquote>
+<p>mkdir ~/bin<br>curl <a target="_blank" rel="noopener" href="https://storage.googleapis.com/git-repo-downloads/repo">https://storage.googleapis.com/git-repo-downloads/repo</a> &gt; ~/bin/repo<br>chmod a+x ~/bin/repo    </p>
+</blockquote>
+<p>接着，我们还需要为 repo 配置环境变量，在终端中输入：</p>
+<blockquote>
+<p>sudo vim /etc/bash.bashrc</p>
+</blockquote>
+<p>当然，如果你安装了 sublime 的话，可以使用如下命令会更方便一些：</p>
+<blockquote>
+<p>sudo subl /etc/bash.bashrc</p>
+</blockquote>
+<p>在这个打开的文件尾部添加你的环境变量，比如我的就是这样的(你需要把路径换成你的，一般来说你将我的例子中的 glassx 换成你的用户名即可)：</p>
+<blockquote>
+<p>export PATH=$PATH:/home/glassx/bin:$REPOPATH</p>
+</blockquote>
+<p>使环境变量生效：</p>
+<blockquote>
+<p>source /etc/bash.bashrc</p>
+</blockquote>
+<p>接下来，你可以正式下载Android 源码了。</p>
+<h3 id="下载-Android-源码"><a href="#下载-Android-源码" class="headerlink" title="下载 Android 源码"></a>下载 Android 源码</h3><p>由于众所周知的原因，我们下载Android 源码链接不可能成功，因此推荐使用清华大学的源，官方主页为： <a target="_blank" rel="noopener" href="https://mirrors.tuna.tsinghua.edu.cn/help/AOSP/">https://mirrors.tuna.tsinghua.edu.cn/help/AOSP/</a></p>
+<p>你也可以直接直接复制链接： <a target="_blank" rel="noopener" href="https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar">https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar</a> 放在迅雷中下载，这个文件略大，估计下载时间按照天来计算。</p>
+<p>下载完成后，解压到指定文件夹(-C 用来指定解压后的文件存放位置)：</p>
+<blockquote>
+<p>tar -xvf /media/glassx/AndroidSourceCode/aosp-lastest.tar -C /media/glassx/AndroidSourceCode</p>
+</blockquote>
+<p>在解压后的目录下， ls 的话什么也看不到，因为只有一个隐藏的 .repo 目录，cd 到这个文件夹下，执行 :</p>
+<blockquote>
+<p>repo sync</p>
+</blockquote>
+<p>就可以同步所有分支了，这个过程消耗的时间也略长，可能需要若干个小时，请耐心等待。至此，我们已经将 Android 源码成功下载下来并且解压同步分支了。</p>
+<p>由于我同事有这个tar文件了，所以我就直接从他那里copy了过来，如果你同学或者同事也已经有这个tar文件了，可以直接复制这个文件。这里顺带说一下操作方式：如果你是windows ，并且他也是windows，则只需要他将这个文件所属的目录设置为共享文件夹，之后你在你的文件管理器中输入类似以下地址：</p>
+<blockquote>
+<p>\192.168.12.13\d\共享文件夹</p>
+</blockquote>
+<p>其中192.168.12.13 是你同事的ip，后面接的是共享文件夹的路径。</p>
+<p>如果你的是deepin，你同事的也是linux，那么也好办，使用 ssh 登录你同事的电脑：</p>
+<blockquote>
+<p>ssh 192.168.12.13 </p>
+</blockquote>
+<p>登录成功后，进入你同事的电脑，通过 scp 命令可以把文件给copy到你的电脑上。</p>
+<p>很多时候我们想要做的就是自己编译一个 Android 系统安装在模拟器上，这个我目前还未完成，等完成后，再来续上。</p>
+<h2 id="deepin遇到的问题"><a href="#deepin遇到的问题" class="headerlink" title="deepin遇到的问题"></a>deepin遇到的问题</h2><p>今天遇到问题了，安装软件和升级都不行，报错：</p>
+<figure class="highlight cmd"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get upgrade</span><br><span class="line">正在读取软件包列表... 完成</span><br><span class="line">正在分析软件包的依赖关系树</span><br><span class="line">正在读取状态信息... 完成</span><br><span class="line"><span class="function">E: 软件包 <span class="title">mindmaster</span> 需要重新安装，但是我无法找到相应的安装文件。</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>或者是：</p>
+<figure class="highlight cmd"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install mindmaster</span><br><span class="line">正在读取软件包列表... 完成</span><br><span class="line">正在分析软件包的依赖关系树</span><br><span class="line">正在读取状态信息... 完成</span><br><span class="line"><span class="function">E: 软件包 <span class="title">mindmaster</span> 需要重新安装，但是我无法找到相应的安装文件。</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>怎么着解决也不行，最后在<a target="_blank" rel="noopener" href="https://blog.csdn.net/s464036801/article/details/8463607">网上找到这个方法</a>，首先：</p>
+<blockquote>
+<p>rm -rf /var/lib/dpkg/info/mindmaster*</p>
+</blockquote>
+<p>然后：</p>
+<blockquote>
+<p>sudo dpkg –remove –force-remove-reinstreq mindmaster</p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/08/06/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/08/06/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：Android 进程/线程管理</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-08-06 21:40:00" itemprop="dateCreated datePublished" datetime="2019-08-06T21:40:00+08:00">2019-08-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:48:46" itemprop="dateModified" datetime="2019-11-17T21:48:46+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Android-进程和线程"><a href="#Android-进程和线程" class="headerlink" title="Android 进程和线程"></a>Android 进程和线程</h2><p>进程(process) 是程序的一个运行实例，而线程(Thread)则是 CPU 调度的基本单位。</p>
+<p>对于Android应用开发者而言，通常面对的都是 Activity、Service等组件，并不需要特别关心进程是什么，因而产生了一些误区，如部分研发者认为系统四大组件就是进程的载体。</p>
+<p>很遗憾，虽然四大组件很符合我们对进程的印象，但是他们不能算是完整的进程实例，最多只能算进程的组成部分，从 AndroidManifest.xml 中也可以得到一点提示（这个xml是对应用程序的声明和描述）：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">application</span> <span class="attr">android:label</span>=<span class="string">"launch performance"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">"SimpleActivity"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    ...</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看到，Activity的外围有一个名为 <application> 的标签，换句话说，四大组件都只是 “application”的零件。通过例子来分析让读者有个更全面的认识，通过Activity A启动Activity B，在 B 的onCreate(Bundle savedInstanceState) 打断点，查看断点详情可以看到如下图所示的内容：</application></p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC5%E7%AB%A0/activity%E5%90%AF%E5%8A%A8.png" alt="activity启动"></p>
+<p>从这个实验中还解决了一个重要问题，即主线程到底怎么产生的，从上图的函数堆栈可以知道：主线程由ZygoteInit启动，经由一系列调用后最终才执行Activity的onCreate函数，并且，Zygote为Activity创建的主线程是 ActivityThread。以下是源码展示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    CloseGuard.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//只有主线程才能调用这个函数，普通线程应该使用prepare()，具体见对 Looper 的讲解</span></span><br><span class="line">    Looper.prepareMainLooper();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主线程对应的handler</span></span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span>) {</span><br><span class="line">        sMainThreadHandler = thread.getHandler();</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//这个main()是static的，因此这里需要创建一个实例</span></span><br><span class="line">    ActivityThread thread = <span class="keyword">new</span> ActivityThread();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//Activity是由界面显示的，这个函数将与WindowManagerService 建立联系</span></span><br><span class="line">    thread.attach(<span class="keyword">false</span>, startSeq);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//主循环开始</span></span><br><span class="line">    Looper.loop();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//如果程序运行到了这里，说明退出了上面的Looper循环</span></span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其实，启动Activity后，除了main thread 外还有多个binder线程，如下图所示（用于Binder的那些线程是在什么时候创建的，这个问题留到后面Binder章节详细解答）：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC5%E7%AB%A0/%E8%BF%90%E8%A1%8C%E7%9A%84thread%E5%9B%BE.png" alt="运行的thread图"></p>
+<p>图中可以看到，B 被启动之后，主线程也始终只有一个，此时A退出了运行，但没有被杀掉，只是被压入了栈中。同样，如果我们启动一个Service，并把断点打在Service的onCreate方法的中，我们会发现，Service也是寄存于ActivityThread之中的，并且启动流程和Activity基本上一致，并且启动Service时，同样有Binder线程支持。限于篇幅，这里不做截图和代码。</p>
+<p>按照Android系统设计：”By default，all componets of the same application run in the same process and thread(called the “main” thread)”，这可以理解为，对于同一个AndroidManifest中定义的四大组件，除非有特别的声明，否则它们都运行在同一个进程中(并且均由主线程处理事件)。如何证明呢？根据前面操作系统的基础知识，<strong>如果两个对象处于同一个进程空间，那么内存区域应该是可共享访问的</strong>，利用这个原理我们可以论证下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//第1个activity</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainActivity</span> <span class="keyword">extends</span> <span class="title">BaseActivity</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> ConstTemp = -<span class="number">1</span>;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        setContentView(R.layout.activity_main);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//在启动SecondActivity 前，将ConstTemp值改为2，如果他们不是处于同一个进程，那么在 </span></span><br><span class="line">        <span class="comment">// SecondActivity中是无法获得更新后的值 2 的，只可能是 -1</span></span><br><span class="line">        ConstTemp = <span class="number">2</span>;</span><br><span class="line">        startActivity(<span class="keyword">new</span> Intent(<span class="keyword">this</span>,SecondActivity.class));</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//第2个acitivity</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SecondActivity</span> <span class="keyword">extends</span> <span class="title">BaseActivity</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        setContentView(R.layout.activity_second);</span><br><span class="line">        </span><br><span class="line">        Log.e(<span class="string">"SecondActivity"</span>,<span class="string">"ConstTemp = "</span> + MainActivity. ConstTemp);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>最终输出的结果是2，说明都是在同一个进程中，当然，我们还可以通过查看二者的 PID 和 TID 的方法证明这两个Activity默认确实在同一个进程中。当然，Android还提供了特殊方式让不是同一个包的组件也可以运行于相同的进程中，这样做的优势是，它们可以方便地资源共享，而不用大费周章地进程间通信。这可以分为两种情况：</p>
+<ol>
+<li>在AndroidManifest中的四大组件标签中加入 android:process 来表明这一组件想要运行在哪个进程空间。</li>
+<li>针对整个程序包，可以直接在 <application> 标签中，加入 android:process 属性来指明想要依存的进程环境。</application></li>
+</ol>
+<h2 id="Handler、MessageQueue、Runable与Looper"><a href="#Handler、MessageQueue、Runable与Looper" class="headerlink" title="Handler、MessageQueue、Runable与Looper"></a>Handler、MessageQueue、Runable与Looper</h2><p>参考专题里面的内容（现在还没放上去）<br>略</p>
+<h2 id="UI主线程-ActivityThread"><a href="#UI主线程-ActivityThread" class="headerlink" title="UI主线程-ActivityThread"></a>UI主线程-ActivityThread</h2><p>前面提到Activity的部分源码，这里精简下再贴出来：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">   </span><br><span class="line">    Looper.prepareMainLooper();</span><br><span class="line">    ActivityThread thread = <span class="keyword">new</span> ActivityThread();</span><br><span class="line">    thread.attach(<span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (sMainThreadHandler == <span class="keyword">null</span>) {</span><br><span class="line">        sMainThreadHandler = thread.getHandler();</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    Looper.loop();</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Main thread loop unexpectedly exited"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>普通线程使用Looper的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LooperThread</span> <span class="keyword">extends</span> <span class="title">Thread</span></span>{</span><br><span class="line">    <span class="keyword">public</span> Handler mHandler;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>{</span><br><span class="line">        Looper.prepare();</span><br><span class="line">        mHandler = <span class="keyword">new</span> Handler(){</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span></span>{}</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        Looper.loop();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>比较二者的代码可知其中的区别主要体现在：</p>
+<ul>
+<li><p>prepareMainLooper 和 prepare，普通线程prepare就可以了，而主线程使用  prepareMainLooper ，主要是多了一步给sMainLooper 赋值的操作，这样，我们就能从主线程中通过 getMainLooper() 方式获得主线程的 Looper。</p>
+</li>
+<li><p>Handler不同，普通线程申城一个与Looper绑定的Handler，而主线程是从当前线程中获取的Handler，也就是说，ActivityThread 提供了一个“事件管家”，以处理主线程中各种消息。</p>
+</li>
+</ul>
+<h2 id="Thread-类"><a href="#Thread-类" class="headerlink" title="Thread 类"></a>Thread 类</h2><h3 id="Thread-类的内部原理"><a href="#Thread-类的内部原理" class="headerlink" title="Thread 类的内部原理"></a>Thread 类的内部原理</h3><p>Thread 实现了 Runnable ，也就是说线程是“可执行的代码”。我们一般通过2种方式使用Thread ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//第1种</span></span><br><span class="line">MyThread thr = <span class="keyword">new</span> MyThread(...);</span><br><span class="line">thr.start();</span><br><span class="line"></span><br><span class="line"><span class="comment">//第2种</span></span><br><span class="line"><span class="keyword">new</span> Thread(Runnable target).start();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这两种方法最终都通过 start 启动，它会间接调用Runable 的 run 实现.</p>
+<h3 id="线程的休眠和唤醒"><a href="#线程的休眠和唤醒" class="headerlink" title="线程的休眠和唤醒"></a>线程的休眠和唤醒</h3><p>控制线程的相关方法我们至少可以想到以下几个： wait()、notify()、notifyAll()、interrupt()、join() 和 sleep()。</p>
+<ol>
+<li>wait 和 notify/notifyAll</li>
+</ol>
+<p>和其他方法不同，这3个函数是由 Object 类定义的——意味着它们是任何类的共有“属性”，那为什么这么设计呢？官方对wait的解释是：</p>
+<blockquote>
+<p>Causes the calling thread to wait until another thread calls the notify() or notifyAll() method of this object</p>
+</blockquote>
+<p>当某个线程调用一个 Object 的wait 方法时，系统就要在这个 Object 中记录这个请求。因为调用者很可能不止一个，所以可使用列表的形式来逐一添加它们。当后期唤醒条件满足时， Object 既可以使用 notify 来唤醒列表中的一个等待线程，也可以通过 notifyAll 来唤醒列表中的所有线程。值得注意的是，调用者只有称为 Object 的 monitor 后，才能调用它的 wait 方法，而称为一个对象的 monitor 有以下3种途径：</p>
+<ul>
+<li>执行这个 object 的 synchronize 方法     </li>
+<li>执行一段 synchronize 代码，并且是基于这个 object 做的同步    </li>
+<li>如果 object 是 Class 类，可以执行它的 synchronize static 方法    </li>
+</ul>
+<ol start="2">
+<li>interrupt ：如果说wait是自愿行为， 那 interrupt 就是 “被迫” 的了，它的意思就是“中断”。    </li>
+<li>join，用以下例子说明：</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Thread t1 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> ThreadA());</span><br><span class="line">Thread t2 = <span class="keyword">new</span> Thread(<span class="keyword">new</span> ThreadB());</span><br><span class="line">t1.start();</span><br><span class="line">t1.join();</span><br><span class="line">t2.start();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>它希望达到的目的就是只有当 t1 线程执行完成时，我们才接着执行后面的 t2.start() 。这样就保证了两个线程顺序执行。</p>
+<ol start="4">
+<li>sleep：它和 wait 一样都是属于“自愿”的行为，只不过 wait 是等待某个 object ，而sleep 是等待时间，一旦设置的时间到了就会被唤醒。</li>
+</ol>
+<h3 id="Thread-实例"><a href="#Thread-实例" class="headerlink" title="Thread 实例"></a>Thread 实例</h3><p>讲一个典型范例来理解Thread：假如我们使用 SeekBar 开控制系统音效，要求：(1)UI界面响应流畅，(2)并且要能反映出音效的变化，(3)并且系统稳定。同时，有以下几个前提：     </p>
+<ol>
+<li>向系统发送音效调整的命令是个耗时操作     </li>
+<li>频繁向系统发送调整命令会导致死机     </li>
+<li>用户的操作是随意的，没有规律的（用户可能飞快地拉动，也有可能慢慢拉动）    </li>
+</ol>
+<p>对于要求1，可以将发送命令这个耗时操作放到一个独立线程执行，这样就不会影响UI，保证流畅。<br>而根据3个前提条件，条件2和条件3是有矛盾的，如果要实时听到音效变化，在seekbar进度变化错城中需要不停地发送请求，而用户快速滑动导致产生大量请求，可能会引起死机，从而违背第3个要求。</p>
+<p>再来想想其它简单方法，当启动一个新的线程处理调整请求时，显然需要把这些请求先放入消息队列中再排队处理，假设用户1s内产生了24个请求，那么队列中的数量将会陆续增加（假设500ms才处理完一个），直到用户操作结束。<strong>那么，实际上这些请求值是有优先级的，即后产生的调整值更贴近用户想要的效果</strong>。根据这个思想，我们可以适当控制消息队列中元素的数量，比如：</p>
+<ul>
+<li>当产生新的调整值时，先清空消息队列，然后再把请求入队。     </li>
+<li>当产生新的调整值时，先判断消息队列的数量，根据实际情况删除部分消息，然后才请求入队。<br>采用这种方式可以保证最后一个入队的请求总是可以被处理的，这也就意味着用户最终选择的音效值是可以体现出来的。示例代码如下：</li>
+</ul>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Thread mBusinessThread = <span class="keyword">null</span>;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">boolean</span> mBusinessThreadStarted = <span class="keyword">false</span>;</span><br><span class="line"><span class="keyword">private</span> BusinessThreadHandler mBusinessThreadHandler = <span class="keyword">null</span>;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startBusinessThread</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">true</span> == mBusinessThreadStarted)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        mBusinessThreadStarted = <span class="keyword">true</span>;</span><br><span class="line">        </span><br><span class="line">    mBusinessThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable(){</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>{</span><br><span class="line">           Looper.prepare();</span><br><span class="line">           mBusinessThreadHandler = <span class="keyword">new</span> BusinessThreadHandler();</span><br><span class="line">           Looper.loop();</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">    mBusinessThread.start();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码使用Looper.loop 来不断处理调整请求，这些请求是通过 mBusinessThreadHandler 发送到 mBusinessThread 的消息队列中的，如下所示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BusinessThreadHandler</span> <span class="keyword">extends</span> <span class="title">Handler</span></span>{</span><br><span class="line">    <span class="comment">//重写 sendMessage</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">sendMessage</span><span class="params">(<span class="keyword">int</span> what,<span class="keyword">int</span> arg1,<span class="keyword">int</span> arg2)</span></span>{</span><br><span class="line">        <span class="comment">//清理消息队列中未处理的请求</span></span><br><span class="line">        removeMessages(what);</span><br><span class="line">        <span class="comment">//发送消息到队列</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.sendMessage(obtainMessage(what,arg1,arg2));</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleMessage</span><span class="params">(Message msg)</span></span>{</span><br><span class="line">        <span class="keyword">switch</span>(msg.what){</span><br><span class="line">            <span class="keyword">case</span> MSG_CODE:</span><br><span class="line">                <span class="comment">//执行耗时操作</span></span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>sendMessage 方法中首先清除了消息队列中还未被处理的请求，这样一方面降低了程序向系统发送请求的频率，加快了相应速度和UI流畅性；另一方面保证 BusinessThreadHandler 下次取到的是优先级较高的调整请求值，保证用户听到实时的音效变化。</p>
+<h2 id="Android-应用程序的典型启动流程"><a href="#Android-应用程序的典型启动流程" class="headerlink" title="Android 应用程序的典型启动流程"></a>Android 应用程序的典型启动流程</h2><p>我们了解到 Android 系统中一个应用程序的主体是由 ActivityThread 构成的，并且 Android 系统是基于 Linux 的，原则上说它的应用程序并不只是 APK 一种类型，换句话说，所有 Linux 支持的应用程序都可以通过一定方式运行在 Android 上(一些系统级应用程序就是以这种方式存在的)，为了叙述统一，我们这里所指的应用程序都是 APK 类型的应用程序。它们通常由两种方式在系统中被启动：</p>
+<ul>
+<li>在 Launcher 中点击相应的应用程序图标启动    </li>
+<li>通过 startActivity 启动</li>
+</ul>
+<p>这两种启动方式的流程基本上是一致的，最终都会调用 ActivityManagerService(以下简称 AMS) 的 startActivity 来完成。在新的 Activity 启动钱，原先处于 resume 状态的 Activity 会被 pause ，这种管理方式比　Windows 的多窗口系统简单得多，将一个 Activity 置为 pause 主要通过此 Activity 所属进程的 ApplicationThread.schedulePauseActivity 方法完成，ApplicationThread 是应用程序进程提供给 AMS 的一个 Binder 通道。假设即将启动的 Activity 所属的进程并不存在，那么 AMS 还需要先把它启动起来。</p>
+<p>ActivityThread 启动并做好相应的初始化工作后，需要调用 attachApplication 来通知 AMS ，后者才能继续执行未完成的 startActivity 流程。具体而言， AMS 通过 ApplicationThread.scheduleLaunchActivity 请求应用程序来启动一个指定的 Activity ，之后一系列工作就要靠应用进程自己来完成，如 Activity 创建 Window，遍历 View Tree 等。</p>
+<p>在进入后面的章节前，这里先大略熟悉 startActivity 的流程。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1138,879 +1928,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/07/06/%E6%9D%82-%E6%9D%82/git%E5%B8%B8%E7%94%A8%E7%94%A8%E6%B3%95/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/06/%E6%9D%82-%E6%9D%82/git%E5%B8%B8%E7%94%A8%E7%94%A8%E6%B3%95/" class="post-title-link" itemprop="url">常用的git命令</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-06 16:57:00" itemprop="dateCreated datePublished" datetime="2019-07-06T16:57:00+08:00">2019-07-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-02-22 10:16:19" itemprop="dateModified" datetime="2022-02-22T10:16:19+08:00">2022-02-22</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%9F%A5%E9%98%85%E5%B7%A5%E5%85%B7/" itemprop="url" rel="index">
-                    <span itemprop="name">查阅工具</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>常用的git命令（摘抄自官网）</p>
-<h2 id="列显已有的标签"><a href="#列显已有的标签" class="headerlink" title="列显已有的标签"></a>列显已有的标签</h2><p>列出现有标签的命令非常简单，直接运行 git tag 即可：</p>
-<blockquote>
-<p>$ git tag<br>v0.1<br>v1.3</p>
-</blockquote>
-<p>我们可以用特定的搜索模式列出符合条件的标签。在 Git 自身项目仓库中，有着超过 240 个标签，如果你只对 1.4.2 系列的版本感兴趣，可以运行下面的命令：</p>
-<blockquote>
-<p>$ git tag -l ‘v1.4.2.*’<br>v1.4.2.1<br>v1.4.2.2<br>v1.4.2.3<br>v1.4.2.4</p>
-</blockquote>
-<h2 id="新建标签"><a href="#新建标签" class="headerlink" title="新建标签"></a>新建标签</h2><h3 id="含附注的标签"><a href="#含附注的标签" class="headerlink" title="含附注的标签"></a>含附注的标签</h3><p>创建一个含附注类型的标签非常简单，用 -a （译注：取 annotated 的首字母）指定标签名字即可：</p>
-<blockquote>
-<p>$ git tag -a v1.4 -m ‘my version 1.4’</p>
-</blockquote>
-<h2 id="轻量级标签"><a href="#轻量级标签" class="headerlink" title="轻量级标签"></a>轻量级标签</h2><p>轻量级标签实际上就是一个保存着对应提交对象的校验和信息的文件。要创建这样的标签，一个 -a，-s 或 -m 选项都不用，直接给出标签名字即可：</p>
-<blockquote>
-<p>$ git tag v1.4-lw</p>
-</blockquote>
-<h2 id="分享标签"><a href="#分享标签" class="headerlink" title="分享标签"></a>分享标签</h2><p>默认情况下，git push  并不会把标签传送到远端服务器上，只有通过显式命令才能分享标签到远端仓库。其命令格式如同推送分支，运行 git push origin [tagname] 即可：</p>
-<blockquote>
-<p>$ git push origin v1.5</p>
-</blockquote>
-<p>如果要一次推送所有本地新增的标签上去，可以使用 –tags 选项：</p>
-<blockquote>
-<p>$ git push origin –tags</p>
-</blockquote>
-<h2 id="删除分支"><a href="#删除分支" class="headerlink" title="删除分支"></a>删除分支</h2><h3 id="删除本地分支"><a href="#删除本地分支" class="headerlink" title="删除本地分支"></a>删除本地分支</h3><p>删除本地分支可以使用一下命令：</p>
-<blockquote>
-<p>$ git branch -d testing</p>
-</blockquote>
-<p>如果删除失败，需要强制删除可以使用 -D 选项强制删除它：</p>
-<blockquote>
-<p>$ git branch -D testing</p>
-</blockquote>
-<h3 id="删除远程分支"><a href="#删除远程分支" class="headerlink" title="删除远程分支"></a>删除远程分支</h3><blockquote>
-<p>可以运行带有 –delete 选项的 git push 命令来删除一个远程分支。 如果想要从服务器上删除 serverfix 分支，运行下面的命令：</p>
-</blockquote>
-<blockquote>
-<p>$ git push origin –delete serverfix<br>To <a target="_blank" rel="noopener" href="https://github.com/schacon/simplegit">https://github.com/schacon/simplegit</a></p>
-<ul>
-<li>[deleted]         serverfix</li>
-</ul>
-</blockquote>
-<h3 id="merge-某个分支的改动，但是merge过来都是作为未-commit-状态的文件"><a href="#merge-某个分支的改动，但是merge过来都是作为未-commit-状态的文件" class="headerlink" title="merge 某个分支的改动，但是merge过来都是作为未 commit 状态的文件"></a>merge 某个分支的改动，但是merge过来都是作为未 commit 状态的文件</h3><blockquote>
-<p>git merge master_glassx –squash</p>
-</blockquote>
-<p>目前我主要使用该方法操作不能提交的分支：</p>
-<ol>
-<li>当前 A 分支commit 了很多次，但是在push 的时候，提示 commit 的卡片已经关闭了，不能push，必须使用新卡片才能push</li>
-<li>基于 A 中最后一次已经 push 的 commit 新建一个分支 B </li>
-<li>之后，在 B 分支下，执行 git merge A –squash ，将所有改动 merge 到 B 中来</li>
-<li>在 B 中，commit 操作，并将新的卡片信息填入这次commit，之后就能顺利push</li>
-</ol>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/05/12/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC3%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/05/12/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章——View的事件体系</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-05-12 22:42:00" itemprop="dateCreated datePublished" datetime="2019-05-12T22:42:00+08:00">2019-05-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:43:42" itemprop="dateModified" datetime="2019-11-17T21:43:42+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="View-基础知识"><a href="#View-基础知识" class="headerlink" title="View 基础知识"></a>View 基础知识</h2><h3 id="1、-MotionEvent-和-TouchSlop"><a href="#1、-MotionEvent-和-TouchSlop" class="headerlink" title="1、 MotionEvent 和 TouchSlop"></a>1、 MotionEvent 和 TouchSlop</h3><h4 id="MotionEvent"><a href="#MotionEvent" class="headerlink" title="MotionEvent"></a>MotionEvent</h4><p>这里只需要注意一点，通过MotionEvent 可以获得点击事件发生的x和y坐标，系统提供了两组方法，getX/getY 和 getRawX/getRawY ，他们的区别很简单，前者返回的是相对于当前View的左上角的 x 和 y 坐标，后者返回的是相对于手机屏幕左上角的 x和y 坐标。</p>
-<h4 id="TouchSlop"><a href="#TouchSlop" class="headerlink" title="TouchSlop"></a>TouchSlop</h4><p>TouchSlop 是系统所能识别出的被认为是滑动的最小距离，小于这个值就不认为是滑动操作。TouchSlop 是一个常量，和设备有关，在不同的设备上这个值可能是不同的。通过如下方式可以获取这个常量：</p>
-<blockquote>
-<p>ViewConfiguration.get(context).getScaledTouchSlop()</p>
-</blockquote>
-<h3 id="2、VelocityTracker、GestureDetector-和-Scroller"><a href="#2、VelocityTracker、GestureDetector-和-Scroller" class="headerlink" title="2、VelocityTracker、GestureDetector 和 Scroller"></a>2、VelocityTracker、GestureDetector 和 Scroller</h3><h4 id="VelocityTracker"><a href="#VelocityTracker" class="headerlink" title="VelocityTracker"></a>VelocityTracker</h4><p>用于追踪手指在滑动过程中的速度，包括水平和竖直方向的速度。它的使用过程很简单，首先在 View 的 onTouchEvent 方法中追踪当前单击事件的速度：</p>
-<blockquote>
-<p>VelocityTracker velocityTracker = VelocityTracker.obtain();<br>velocityTracker.addMovement(event);</p>
-</blockquote>
-<p>接着，当我们想知道当前的滑动速度时，可以采用如下方法获得：</p>
-<blockquote>
-<p>velocityTracker.computeCurrentVelocity(1000);<br>int xVelocity = (int)velocityTracker.getXVelocity();<br>int yVelocity = (int)velocityTracker.getYVelocity();</p>
-</blockquote>
-<p>这里需要注意的是： 一、获取速度之前必须先计算速度；二、这里的速度是指一段时间内手指所划过的像素数，比如将时间间隔设置为 1000ms，在 1s 内水平从左至右滑过100像素，那么水平速度就是100 。如果将时间间隔设置为100ms，在这100ms 内滑过10像素，则水平速度会变成 10 。此外，这个速度是可以为负值的，当水平方向从右往左滑动时，水平方向的速度即为负值。</p>
-<h4 id="GestureDetector"><a href="#GestureDetector" class="headerlink" title="GestureDetector"></a>GestureDetector</h4><p>手势检测，用于辅助检测用户的单击、滑动、长按、双击等行为。比如要监听双击行为，代码如下：</p>
-<blockquote>
-<p>GestureDetector mGestureDetector = new GestureDetector(listener);<br>//再加上这行可以解决长按屏幕后无法拖动的现象<br>mGestureDetector.setIsLongpressEnabled(false);</p>
-</blockquote>
-<p>接着，接管目标View的onTouchEvent方法，在待监听View的 onTouchEvent 方法中如下实现：</p>
-<blockquote>
-<p>boolean consume = mGestureDetector.onTouchEvent(event);<br>return consume;</p>
-</blockquote>
-<p>OnGestureListener 与 OnDoubleTapListener 里面的方法有很多，常用的有：onSingleTapUp（单击）、onScroll（拖动）、onLongPress（长按）、onFling（快速滑动）、onScroll（拖动）、onDoubleTap（双击）。</p>
-<h4 id="Scroller"><a href="#Scroller" class="headerlink" title="Scroller"></a>Scroller</h4><p>弹性滑动对象，用于实现View的弹性滑动，我们知道，当使用View的scrollTo/scrollBy方法来进行滑动时，其过程是瞬间完成的，这时候就可以使用 Scroller 来实现有过渡效果的滑动，它需要和View的conputeScroll方法配合使用才能共同完成这个功能，典型的使用如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Scroller mScroller = newScroller(context);</span><br><span class="line"></span><br><span class="line"><span class="comment">//缓慢滑动到指定位置</span></span><br><span class="line"><span class="function">privte <span class="keyword">void</span> <span class="title">smoothScrollTo</span><span class="params">(<span class="keyword">int</span> destX,<span class="keyword">int</span> destY)</span></span>{</span><br><span class="line">    <span class="keyword">int</span> scrollX = getScrollX();</span><br><span class="line">    <span class="keyword">int</span> delta = destX - scrollX;</span><br><span class="line">    <span class="comment">//1000ms内滑向destX就是，效果就是慢慢滑动</span></span><br><span class="line">    mScroller.startScroll(scrollX,<span class="number">0</span>,delta,<span class="number">0</span>,<span class="number">1000</span>);</span><br><span class="line">    invalidate();</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">computeScroll</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(mScroller.computeScrollOffset()){</span><br><span class="line">        scrollTo(mScroller.getCurrX(), mScroller.getCurrY());</span><br><span class="line">        postInvalidate()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="View-的滑动"><a href="#View-的滑动" class="headerlink" title="View 的滑动"></a>View 的滑动</h2><p>未完待续。。。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/05/11/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/05/11/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/" class="post-title-link" itemprop="url">第2章——IPC机制</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-05-11 22:40:00" itemprop="dateCreated datePublished" datetime="2019-05-11T22:40:00+08:00">2019-05-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:43:34" itemprop="dateModified" datetime="2019-11-17T21:43:34+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>提到IPC的使用场景就必须提到多进程，如果只有一个进程，又何必使用进程间通信。多进程的情况分为两种：第一种是应用本身需要采用多进程模式实现（比如通过多个进程来获取多份内存空间）；第二种是当前应用需要向其他应用获取数据，由于是两个应用，因此必须采用跨进程通信方式。</p>
-<h2 id="Android中的多进程模式"><a href="#Android中的多进程模式" class="headerlink" title="Android中的多进程模式"></a>Android中的多进程模式</h2><p>我们不讨论两个应用之间的多进程情况。</p>
-<h3 id="1、开启多进程"><a href="#1、开启多进程" class="headerlink" title="1、开启多进程"></a>1、开启多进程</h3><p>，Android中使用多进程有两种方法：第一种是给四大组件在AndroidManifest中指定 android:process 属性；第二种是非常规方式，通过JNI在native层去fork一个新的进程。第二种情况属于特殊情况，暂时不考虑。</p>
-<h3 id="2、多线程模式的运行机制"><a href="#2、多线程模式的运行机制" class="headerlink" title="2、多线程模式的运行机制"></a>2、多线程模式的运行机制</h3><p>如果用一句话形容多进程，那就是：“当应用开启了多进程以后，各种奇怪的现象都出现了”，开启多线程只需要给四大组件指定 android:process 属性，但是是否正常运行就是另外一回事了。看个例子：</p>
-<blockquote>
-<p>有 MainActivity 和 SecondActivity，其中 SecondActivity 指定运行在一个新的进程中，并且项目还新建一个 UserManager 类，类中有个public 的静态变量：</p>
-</blockquote>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UserManager</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> sUserId = <span class="number">1</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>在 MainActivity 的 onCreate 中把 sUserId 的值改为2，打印sUserId，之后再启动 SecondActivity ，在 SecondActivity 中打印 sUserId 。</p>
-</blockquote>
-<p><strong>可以发现在 MainActivity 中打印的值是2，在 SecondActivity 中打印的值是 1 ，看到这里，大家应该明白了多进程带来的问题，绝非只是指定一个 android:process 这么简单</strong>。</p>
-<p><strong>分析：</strong>我们知道，Android 系统为每个进程都分配一个独立的虚拟机，不同的虚拟机在内存分配上有不同的地址空间，这就导致在不同的虚拟机中访问同一个类的对象会产生<strong>多份副本</strong>。拿上面的例子来说，两个进程中都存在一个 UserManager 类，并且这两个类是互相不干扰的，在一个进程中修改 sUserId 的值只会影响当前进程，对其他进程不会造成任何影响。</p>
-<p>通过以上可以知道，运行在不同进程中的四大组件，只要他们之间需要通过内存来共享数据，都会共享失败，这也是多进程所带来的主要影响。一般来说，使用多进程会造成如下几个方面的问题：</p>
-<ul>
-<li>静态成员和单例模式完全失效  </li>
-</ul>
-<blockquote>
-<p>上面做了分析</p>
-</blockquote>
-<ul>
-<li>线程同步机制完全失效 </li>
-</ul>
-<blockquote>
-<p>既然都不是一块内存了，那么不管是锁对象还是锁全局类都无法保证线程同步，因为不同进程锁的不是同一个对象</p>
-</blockquote>
-<ul>
-<li>SharedPreference 的可靠性下降  </li>
-</ul>
-<blockquote>
-<p>是因为 SharedPreference 不支持两个进程同时去执行写操作，否则会导致可能的数据丢失（因其本质是通过读写xml文件来实现的）</p>
-</blockquote>
-<ul>
-<li>Application 会多次创建  </li>
-</ul>
-<blockquote>
-<p>这个问题是显而易见的，由于系统要在创建新的进程同时分配独立的虚拟机，所以这个过程其实就是启动一个应用的过程，因此相当于系统又把应用重新启动了一遍，自然就创建了新的Application。还可以这么理解，运行在同一个进程中的组件是属于同一个虚拟机和同一个Application的；同理，运行在不同进程中的组件是属于两个不同的虚拟机和Application。</p>
-</blockquote>
-<h2 id="IPC-基础概念介绍"><a href="#IPC-基础概念介绍" class="headerlink" title="IPC 基础概念介绍"></a>IPC 基础概念介绍</h2><p>IPC 中的基础概念包括3方面内容： Serializable 接口、Parcelable接口、Binder。</p>
-<h3 id="1、Serializable-接口"><a href="#1、Serializable-接口" class="headerlink" title="1、Serializable 接口"></a>1、Serializable 接口</h3><p>Serializable 是Java提供的一个空的序列化接口，为对象提标准的序列化和反序列化操作。使用 Serializable 实现序列化非常简单，只需要类实现 Serializable 接口，并且在类的声明中指定一个类似下面的标识：</p>
-<blockquote>
-<p>private static final long serialVersionUID = 12345L</p>
-</blockquote>
-<p>实际上，这个 serialVersionUID 也不是必需的，因为serialVersionUID 的机制是这样的： 序列化时，系统会把当前类的 serialVersionUID 写入序列化的文件中；当反序列化的时候，会去检测文件中的 serialVersionUID 是否和当前类的 serialVersionUID 一致，如果一致说明序列化的类版本和当前类的版本是相同的，就可以成功反序列化；否则的话，说明当前类和序列化的类相比发生了某些变换，就无法正常反序列化。以下例子说明 Serializable 的使用：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//序列化的类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">User</span> <span class="keyword">implements</span> <span class="title">Serializable</span></span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = <span class="number">12345L</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">int</span> id;</span><br><span class="line">    <span class="keyword">public</span> String userName;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**********使用*****************/</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//序列化</span></span><br><span class="line">User user = <span class="keyword">new</span> User(<span class="number">12</span>,<span class="string">"tom"</span>);</span><br><span class="line">ObjectOutputStream out = <span class="keyword">new</span> ObjectOutputStream(<span class="keyword">new</span> FileOutputStream(<span class="string">"cache.txt"</span>));</span><br><span class="line">out.writeObject(user);</span><br><span class="line">out.close();</span><br><span class="line"></span><br><span class="line"><span class="comment">//反序列化过程</span></span><br><span class="line">ObjectInputStream in = <span class="keyword">new</span> ObjectInputStream(<span class="keyword">new</span> FileInputStream(<span class="string">"cache.txt"</span>));</span><br><span class="line">User newUser = (User)in.readObject();</span><br><span class="line">in.close();</span><br></pre></td></tr></tbody></table></figure>
-
-<p>另外，系统默认的序列化过程也是可以改变的，通过重写 writeObject 和 readObject 方法即可，只不过大部分情况下我们无需去重写这两个方法。</p>
-<h3 id="2、Parcelable-接口"><a href="#2、Parcelable-接口" class="headerlink" title="2、Parcelable 接口"></a>2、Parcelable 接口</h3><p>Parcelable 也是一个接口，只要实现这个接口，类的对象就可以实现序列化并通过 Intent 和 Binder 传递。</p>
-<p>具体使用方法可以查看<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/os/Parcelable.html">官方文档</a></p>
-<p>既然 Parcelable 和 Serializable 都能实现序列化并且都可用于 Intent 间的数据传递，那如何取舍呢？Serializable 是Java中的序列化接口，序列化和反序列化需要大量I/O操作；而Parcelable 是 Android 中的序列化方式，主要用在内存序列化上，使用起来稍显麻烦，但是效率高，所以这是 Android 官方推荐的序列化方式。综上所述，将对象序列化存储到设备或者通过网络传输时使用 Serializable ，否则使用 Parcelable 。</p>
-<h3 id="3、Binder"><a href="#3、Binder" class="headerlink" title="3、Binder"></a>3、Binder</h3><p>Binder 是 Android 中的一种 IPC 方式，还可以理解为一种虚拟的物理设备，它的设备驱动是 dev/binder。</p>
-<h2 id="Android-中的-IPC-方式"><a href="#Android-中的-IPC-方式" class="headerlink" title="Android 中的 IPC 方式"></a>Android 中的 IPC 方式</h2><h3 id="使用Bundle"><a href="#使用Bundle" class="headerlink" title="使用Bundle"></a>使用Bundle</h3><p>由于Bundle 实现了 Parcelable 接口，所以它可以方便地再不同的进程间传输，基于这一点，当我们在一个进程中启动了另一个进程的 Activity、Service 和 Receiver，我们就可以在Bundle 中附加我们需要传给其他进程的信息，并通过Intent 发送出去，这是一种最简单的进程间通信方式。</p>
-<h3 id="使用文件共享"><a href="#使用文件共享" class="headerlink" title="使用文件共享"></a>使用文件共享</h3><p>共享文件是一种不错的进程间通讯方式，适合在对数据同步要求不高的进程间通信。当然，SharedPreferences 是个特例，由于系统对它的读写会有一定的缓存策略，即在内存中会有一份 SharedPreferences 文件的缓存，因此在多进程模式下，面对高并发的的读写会有很大几率丢失数据，因此不建议在进程间通信中使用 SharedPreferences。</p>
-<h3 id="使用-Messenger"><a href="#使用-Messenger" class="headerlink" title="使用 Messenger"></a>使用 Messenger</h3><p>顾名思义可以翻译成信使，通过它可以在不同的进程中传递 Message 对象,它是轻量级的 IPC 方案，底层实现是 AIDL 。Messenger 只是一串行的方式处理客户端发来的消息，如果大量的消息同时发送到服务端，服务端仍然只能一个个处理。具体可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/os/Messenger">官方文档</a></p>
-<h3 id="使用-AIDL"><a href="#使用-AIDL" class="headerlink" title="使用 AIDL"></a>使用 AIDL</h3><p>由于 Messenger 服务端只能串行处理，所以可以使用 AIDL 来实现跨进程调用。具体内容可以参考<a target="_blank" rel="noopener" href="https://developer.android.google.cn/guide/components/aidl">官方文档</a></p>
-<h3 id="使用-ContentProvider"><a href="#使用-ContentProvider" class="headerlink" title="使用 ContentProvider"></a>使用 ContentProvider</h3><p>这是Android 中提供的专门用于不同应用建进行数据共享的方式。</p>
-<h3 id="使用-Socket"><a href="#使用-Socket" class="headerlink" title="使用 Socket"></a>使用 Socket</h3><p>Socket 是网络通信中的概念，也称为“套接字”，<strong>它分为流式套接字和用户数据报套接字两种，分别对应于网络的传输控制层中的TCP和UDP协议</strong>。</p>
-<h2 id="选择合适的-IPC-方式"><a href="#选择合适的-IPC-方式" class="headerlink" title="选择合适的 IPC 方式"></a>选择合适的 IPC 方式</h2><table>
-<thead>
-<tr>
-<th>名称</th>
-<th>优点</th>
-<th>缺点</th>
-<th>适用场景</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Bundle</td>
-<td>简单易用</td>
-<td>只能传输Bundle支持的数据类型</td>
-<td>四大组件之间的通信</td>
-</tr>
-<tr>
-<td>文件共享</td>
-<td>简单易用</td>
-<td>不适合高并发</td>
-<td>无并发，数据实时性要求不高</td>
-</tr>
-<tr>
-<td>AIDL</td>
-<td>功能强大，支持一对多，支持实时</td>
-<td>使用复杂</td>
-<td>一对多通信且有RPC需求</td>
-</tr>
-<tr>
-<td>Messenger</td>
-<td>一对多串行通信，支持实时</td>
-<td>高并发困难，不支持RPC，只能传输Bundle支持的数据</td>
-<td>低并发的一对多通信</td>
-</tr>
-<tr>
-<td>ContentProvider</td>
-<td>数据源访问功能强大</td>
-<td>理解为受约束的AIDL，主要提供数据源的 CRUD 操作</td>
-<td>一对多的进程间数据共享</td>
-</tr>
-<tr>
-<td>Socket</td>
-<td>支持一对多并发实时通信，支持字节流</td>
-<td>实现繁琐</td>
-<td>网络数据交换</td>
-</tr>
-</tbody></table>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/05/11/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC1%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/05/11/%E4%B9%A6-Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章——Activity 生命周期和启动模式</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-05-11 15:42:00" itemprop="dateCreated datePublished" datetime="2019-05-11T15:42:00+08:00">2019-05-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-22 21:37:59" itemprop="dateModified" datetime="2020-07-22T21:37:59+08:00">2020-07-22</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="Activity-的生命周期全面分析"><a href="#Activity-的生命周期全面分析" class="headerlink" title="Activity 的生命周期全面分析"></a>Activity 的生命周期全面分析</h2><p>本节将分为两部分内容，一部分是典型情况下的生命周期，一部分是异常情况下的生命周期（比如被系统回收或者由于当前设备Configuration 发生改变而导致 Activity 被销毁重建）。</p>
-<h3 id="一、典型情况下的生命周期分析"><a href="#一、典型情况下的生命周期分析" class="headerlink" title="一、典型情况下的生命周期分析"></a>一、典型情况下的生命周期分析</h3><p>正常情况下，Activity 会经历如下生命周期：</p>
-<ol>
-<li>onCreate ： 表示Activity 正在创建，这是生命周期第一个方法。  </li>
-<li>onRestart ： 表示Activity 正在重新启动。一般情况下，当前Activity 从不可见重新变为可见时，onRestart 就会被调用。    </li>
-<li>onStart ： 表示Activity 正在被启动，这时候 Activity 已经可见了，但是还没出现在前台，无法和用户交互。<strong>可以理解为 Activity 已经显示出来了，但是我们还看不到</strong>。  </li>
-<li>onResume ： 表示 Activity 已经可见了，并且出现在前台可以交互。  </li>
-<li>onPause： 表示 Activity 正在停止，正常情况下，紧接着 onStop 会被调用；在特殊情况下，如果这个时候快速地再回到当前 Activity ，那么 onResume 将会被调用。此时可以做一些存储数据、停止动画等工作，但是注意不能太耗时，<strong>因为onPause必须先执行完，新Acitivty 的 onResume 才会执行</strong>。    </li>
-<li>onStop ： 表示 Activity 即将停止，可以做一些稍微重量级的回收工作，同样不能太耗时。  </li>
-<li>onDestroy： 表示 Activity 即将被销毁，这是Activity 生命周期中的最后一个回调，我们可以做一些回收工作和最终的资源释放。  </li>
-</ol>
-<p>以下再针对 Activity 的生命周期具体说明：  </p>
-<ul>
-<li>针对特定的Activity，第一次启动回调如下： onCreate-&gt;onStart-&gt;onResume  </li>
-<li>打开新的Activity 或者(按Home键)回到桌面的时候，回调 onPause-&gt;onStop ；这里有种特殊情况，打开的新Activity 如果是透明主题（意味着当前Activity还是可见的），那么当前Activity 不会回调 onStop 。  </li>
-<li>当用于再次回到原来的 Activity 时，回调 onRestart-&gt;onStart-&gt;onResume  </li>
-<li>当用户按返回键返回上一个页面时，回调 onPause-&gt;onStop-&gt;onDestroy  </li>
-<li>从整个生命周期来看，<strong>onCreate与onDestroy是配对的，分别标识着Activity的创建与销毁；onStart与onStop是配对的，标识着Activity是否可见；onResume 与 onPause 是配对的，标识着Activity是否在前台</strong>。 </li>
-</ul>
-<p>一个问题：当前 Activity 标识为 A，启动一个新的Activity 标识为 B，那么B的onResume 和 A 的onPause 哪个先执行？</p>
-<blockquote>
-<p>由上面的描述可知是限制性A的 onPause，再执行 B 的onResume ，具体看源码，<a target="_blank" rel="noopener" href="https://developer.android.google.cn/reference/android/app/Activity">官方文档</a>也是这么解释(<strong>Always followed by onPause()</strong>)。 </p>
-</blockquote>
-<h3 id="二、异常情况下的生命周期分析"><a href="#二、异常情况下的生命周期分析" class="headerlink" title="二、异常情况下的生命周期分析"></a>二、异常情况下的生命周期分析</h3><h4 id="1、资源相关的系统配置发生改变导致Activity被杀死并重建"><a href="#1、资源相关的系统配置发生改变导致Activity被杀死并重建" class="headerlink" title="1、资源相关的系统配置发生改变导致Activity被杀死并重建"></a>1、资源相关的系统配置发生改变导致Activity被杀死并重建</h4><p>如果没有做特殊处理，当横竖屏切换的时候，由于系统配置发生了改变，Activity 会加载不同的资源（比如横竖屏加载两张不同图片），此时 Activity 会被销毁并且重新创建。由于 Acitivity 是在异常情况下终止的，因此在销毁Activity的时候，<strong>确切来说是在onStop之前（但是跟onPause没有顺序关系，有可能在其之前，也可能在其之后）会调用 onSaveInstanceState 来保存当前 Activity 状态</strong>；  </p>
-<p>Activity 被重新创建后，会把销毁时 onSaveInstanceState 方法保存的Bundle对象作为参数传给 onCreate 方法和 onRestoreInstanceState 方法，因此可以从这两个方法恢复之前保存的数据。<strong>从时序上来说，onRestoreInstanceState 调用时机在 onStart 之后。</strong></p>
-<blockquote>
-<p>这两个方法恢复数据的区别是：onRestoreInstanceState 一旦被调用，其参数 savedInstanceState 是一定有值的，我们不需要额外地判空；而 onCreate 中的数据是可能为空的，官方文档建议采用 onRestoreInstanceState 去恢复数据。</p>
-</blockquote>
-<p>如果没有覆写的话，onSaveInstanceState 和 onRestoreInstanceState 方法中，系统会自动为我们做一定的恢复工作。</p>
-<h4 id="2、资源内存不足导致低优先级Activity被杀死"><a href="#2、资源内存不足导致低优先级Activity被杀死" class="headerlink" title="2、资源内存不足导致低优先级Activity被杀死"></a>2、资源内存不足导致低优先级Activity被杀死</h4><p>Activity 按照优先级从高到低可以分为如下三种：</p>
-<p>（1）前台Activity——正在和用户交互的Activity，优先级最高<br>（2）可见但非前台Activity——比如Activity中弹出了dialog，导致Activity可见但是位于后台无法和用户直接交互。<br>（3）后台Activity——已经被暂停的的Activity，优先级最低。  </p>
-<p>我们知道，当系统配置发生改变时，Activity 会被销毁并重新创建，当然我们也可以通过给 Activity 指定configChanges 属性来阻止销毁重建：</p>
-<blockquote>
-<p>android:configChanges=”orientation”</p>
-</blockquote>
-<p>当然这个属性可以配置的项目还有很多，比如切换系统语言、使用了新字号、界面模式改变（比如 是否开启/关闭夜间模式）。</p>
-<h2 id="Activity-的启动模式"><a href="#Activity-的启动模式" class="headerlink" title="Activity 的启动模式"></a>Activity 的启动模式</h2><ul>
-<li>standard： 标准模式。不复用，每次请求都创建新实例，并且就运行在启动它的那个Activity所在的栈。    </li>
-<li>singleTop： 栈顶复用模式 。如果实例位于任务栈的栈顶就复用，复用时调用 onNewIntent方法，否则就创建新的实例。       </li>
-<li>singleTask： 栈内复用模式。当前栈内没有实例，则创建实例放入栈中；如果实例在当前栈内，则复用，复用时调用 onNewIntent方法，并把它之上的Activity出栈。  </li>
-<li>singleInstance： 单例模式。<strong>只能单独位于一个任务栈中</strong>，只要这个实例存在，后续的请求均不会创建新的Activity。复用时调用 onNewIntent方法。  </li>
-</ul>
-<p>在使用 ApplicationContext 启动standard 模式的Activity时会报错：</p>
-<blockquote>
-<p>Callking startActivity from outside of an Activity context requires the FLAG_ACTIVITY_NEW_TASK flag</p>
-</blockquote>
-<p>这是因为standard模式的Activity 默认会进入启动它的Activity所属的任务栈中，由于非Activity类型的Context 没有所谓的任务栈，所以会报错。解决这个问题的方法是为待启动的Activity指定 FLAG_ACTIVITY_NEW_TASK 标记，这样启动的时候会为它创建一个新的任务栈（体会下，这时候实际上是以singleTask模式启动的）</p>
-<h3 id="参考其他博客的启动模式的原理"><a href="#参考其他博客的启动模式的原理" class="headerlink" title="参考其他博客的启动模式的原理"></a>参考其他博客的启动模式的原理</h3><p>点击launcher 的startactivity 会调用到Instrumentation的execStartActivity，之后交给AMS 来处理启动操作，之后调用 ActivityStackSupervisor 的 startActivityMayWait 方来启动，而ActivityStackSupervisor 是管理Activity堆栈的类</p>
-<p>另外提一下，Activity 在AMS中的形式是 ActivityRecord，task在AMS 中的形式是 TaskRecord，进程在 AMS 中的管理形式为 ProcessRecord</p>
-<p>判断启动模式，根据当前的Activity 和 要启动的Activity 的启动模式，根据相应的启动模式设置launchFlags</p>
-<p>在Android 5.0上 在 ActivityStackSupervisor 类的startActivityUncheckedLocked  里面判断launchmode</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/09365022adac">简书的博客上的内容</a></p>
-</blockquote>
-<h3 id="Activity-的Flags"><a href="#Activity-的Flags" class="headerlink" title="Activity 的Flags"></a>Activity 的Flags</h3><p>Activity 的Flags很多，这里分析比较常用的几个:</p>
-<ul>
-<li>FLAG_ ACTIVITY_ NEW_ TASK</li>
-</ul>
-<blockquote>
-<p>为Activity 指定singleTask启动模式，其效果和在XML中指定 singleTask 启动模式相同</p>
-</blockquote>
-<ul>
-<li>FLAG_ ACTIVITY_ SINGLE_ TOP</li>
-</ul>
-<blockquote>
-<p>为Activity 指定 singleTop 启动模式，其效果和在XML中指定 singleTop 启动模式相同</p>
-</blockquote>
-<ul>
-<li>FLAG_ ACTIVITY_ CLEAR_ TOP</li>
-</ul>
-<blockquote>
-<p>具有此标记的Activity，当它启动时，在同一个任务栈中所有位于它上面的Activity都要出栈，这个标记为一般会和FLAG_ACTIVITY_SINGLE_TOP标记位一起出现。由前面的分析可知，singleTask启动模式默认具有此标记位效果。</p>
-</blockquote>
-<ul>
-<li>FLAG_ ACTIVITY_ EXCLUDE_ FROM_ RECENTS</li>
-</ul>
-<blockquote>
-<p>具有这个标记位的Activity不会出现在历史Activity列表中，当某些情况下我们不希望用户通过历史列表回到我们的Activity的时候，这个标记比较有用。这个标记等同于xml中指定Activity 的属性 android:excludeFromRecents = “true”</p>
-</blockquote>
-<h4 id="IntentFilter-的匹配规则"><a href="#IntentFilter-的匹配规则" class="headerlink" title="IntentFilter 的匹配规则"></a>IntentFilter 的匹配规则</h4><p>略</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/05/04/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E6%80%BB%E7%BB%93/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/05/04/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E6%80%BB%E7%BB%93/" class="post-title-link" itemprop="url">总结</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-05-04 11:16:00" itemprop="dateCreated datePublished" datetime="2019-05-04T11:16:00+08:00">2019-05-04</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-05-10 10:15:31" itemprop="dateModified" datetime="2020-05-10T10:15:31+08:00">2020-05-10</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%98%B6%E6%AE%B5/" itemprop="url" rel="index">
-                    <span itemprop="name">阶段</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="进程间通信方式"><a href="#进程间通信方式" class="headerlink" title="进程间通信方式"></a>进程间通信方式</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>别漏了BroadCastReceiver</p>
-</details>
-
-<blockquote>
-<p>参考链接：<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">ipc机制</a></p>
-</blockquote>
-<h2 id="零散的知识点"><a href="#零散的知识点" class="headerlink" title="零散的知识点"></a>零散的知识点</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ul>
-<li><p>Service 多次启动， onStartCommand 会多次    </p>
-</li>
-<li><p>本地广播无法通过静态方式注册    </p>
-</li>
-<li><p>RemoteViews 通过id来给特定的view更新UI     </p>
-</li>
-<li><p>为毛Thread 废弃 suspend 方法，因为如果被suspend 了一直持有锁，那就可能导致死锁了      </p>
-</li>
-<li><p>stop 方法废弃，主要是防止数据写了一半，导致后期数据不一致问题     </p>
-</li>
-<li><p>在sleep过程中，有可能会执行 thread.interrupt 方法，所以要try-catch      </p>
-</li>
-<li><p>如何禁止指令重排和可见性：final、volatile、加锁             </p>
-</li>
-<li><p>保证原子性：加锁、CAS、原子类型(AtomicInteger等)                </p>
-</li>
-<li><p>onSaveInstanceState 的调用时机： 销毁Activity 的时候，在 onStop 之前(与onPause没啥关系)。          </p>
-</li>
-<li><p>onRestoreInstanceState 的调用时机是在 onStart 之后          </p>
-</li>
-<li><p>开启多进程，可以指定process，还可以在native 上fork出来          </p>
-</li>
-<li><p>多进程问题：Application多次、单例失效、sp不可靠、锁失效(即使锁类也不行了)            </p>
-</li>
-<li><p>view的滑动有几种方法：layout、offsetALeftAndRight/offsetTopAndBottom、LayoutParams、动画、scrollTo、scrollBy、scroller         </p>
-</li>
-<li><p>Android系统分层：应用层、应用框架层、系统运行库层、硬件抽象层、Linux内核        </p>
-</li>
-<li><p>init 进程工作：启动属性服务和zygote 进程       </p>
-</li>
-<li><p>zygote启动工作：创建java虚拟机，并注册jni方法、创建       SocketServer 来监听 fork 请求         </p>
-</li>
-<li><p>SystemServer 的工作：启动系统服务、启动Binder 线程池(用于与其他进程通信)         </p>
-</li>
-<li><p>Android系统启动流程，可以参考<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/22/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC2%E7%AB%A0/">博客</a>           </p>
-</li>
-<li><p>在zygote 通过fork创建进程后，启动它的binder线程池，并通过反射调用ActivityThread 的main 方法，创建主线程环境            </p>
-</li>
-<li><p>ActivityThread 的 attach 方法就是初始化 Application 对象            </p>
-</li>
-<li><p>Launcher 启动某个app应用，首先会为启动的 Activity 的intent 设置 FLAG_ACTIVITY_NEW_TASK，在新任务栈中         </p>
-</li>
-<li><p>新Activity 启动经历三个阶段： Launcher经过Instrumentation 到AMS、AMS 到 ApplicationThread、ActivityThread 启动Activity         </p>
-</li>
-<li><p>ApplicationThread 是ActivityThread 的内部类，负责与AMS 进程间通信，收到进程消息后，在ApplicationThread 中通过 handler.sendMessager 的方式向 ActivityThread 中发送消息启动Activity          </p>
-</li>
-<li><p>LoadApk 用于描述已经加载进来的 APK 文件的。       </p>
-</li>
-<li><p>通过反射创建Activity，attach 方法将新建的Context 设置成mBase          </p>
-</li>
-<li><p>Context包装类目的：ContextImpl 具体实现不会暴露给使用者、组合而不是继承，更灵活          </p>
-</li>
-<li><p>启动应用的的第一个Activity过程中(handleMessage中)，最终会使用LoadApk.makeApplication() 方式创建Application ，同样也是通过反射的方式。        </p>
-</li>
-<li><p>会将 Application 缓存到LoadApk中      </p>
-</li>
-<li><p>Application 的attach ，就是把新建的ContextImpl 设置为mBase，并且，Application 设置为ContextImpl的 mOut变量                </p>
-</li>
-<li><p>获取 Application Context 的方式，首先从 LoadApk中获取，否则 调用ActivityThread 中获取         </p>
-</li>
-<li><p>同理，Activity 的 attach 会将ContextImpl 设置为mBase，并将Activity 对象赋值给 ContextImpl 的 mOuterContext。               </p>
-</li>
-<li><p>类的生命周期，  加载-验证-准备-解析-初始化-使用-卸载                </p>
-</li>
-<li><p>垃圾收集算法： 标记-清除、复制、标记-整理、分代         </p>
-</li>
-<li><p>Java API 中标称自己是线程安全的类，其实大多数不是绝对的线程安全的，如你遍历的时候，读取size 是synchronize修饰的，但是在打印过程中可能被删除了某些元素，这时候读取就会抛异常     </p>
-</li>
-<li><p>线程安全的实现方法： 无同步方案(不共享)、互斥同步、非阻塞同步(如CAS操作)      </p>
-</li>
-<li><p>锁优化：自旋、锁消除(比如在方法内部new出来StringBuffer)、锁粗化(也是StringBuffer的append)、轻量级锁(CAS操作mark word)、偏向锁       </p>
-</li>
-<li><p>轻量级锁，使用CAS操作尝试将对象的 MarkWord 改成轻量级锁标志，如果成功，则拥有锁；否则，判断锁是否指向当前线程，如果是，则直接进入。否则，就等待(个人觉得应该是CAS重试)。如果有两个以上线程在争用这个锁，就升级为重量级锁，后面的线程阻塞。      </p>
-</li>
-<li><p>偏向锁：偏向锁在轻量级锁基础上连 CAS 都不做。在对象第一次被线程获取后，把线程id写在 MarkWord 中(这个当然是CAS操作)，当另一个线程尝试获取的时候，偏向模式就结束(指的是这个CAS操作不做了)，恢复到未锁定或者轻量级锁状态，后续就是轻量级锁规则了       </p>
-</li>
-<li><p>轻量级锁与偏向锁不一定总是有利的，如果程序中大多数锁都被不同线程访问，竞争激烈，那它还得转换状态，因此，有时候禁止它们反而性能提高      </p>
-</li>
-<li><p>https在http之下，tcp之上增加一层 SSL(Secure Socket Layer)    </p>
-</li>
-<li><p>ssl 握手前，先要tcp 握手     </p>
-</li>
-<li><p>ssl握手： 算法、随机数 -&gt; 算法(对称、非对称、摘要)、随机数、证书 -&gt; 验证证书、公钥加密“前主密钥” -&gt; 握手摘要 -&gt; 握手摘要      </p>
-</li>
-<li><p>udp：无需握手、无需维护连接(缓存、拥塞控制、序号确认等)、头部小，8个字节，tcp有20个，值得注意的是，它有校验和，用于防止传输过程引入的差错    </p>
-</li>
-<li><p>快重传：收到3个相同 ack，则立即重传     </p>
-</li>
-<li><p>流量控制：避免接收方缓存溢出     </p>
-</li>
-<li><p>拥塞控制：防止整体网络质量堵塞      </p>
-</li>
-<li><p>确定拥塞：超时没收到ack，或者3次重复的ack    </p>
-</li>
-<li><p>拥塞控制方法：慢启动、拥塞避免(收到ack之后，不像慢启动翻倍增长，而是缓慢增长)、快速恢复(窗口减半，之后执行拥塞避免)        </p>
-</li>
-<li><p>tcp 时延：握手、拥塞控制、捎带确认、TIME-WAIT      </p>
-</li>
-<li><p>多线程下载大文件速度快，为啥？1、多个下载线程能够抢占更多的实时网络带宽（相当于下载进程占用了更多带宽）             </p>
-</li>
-<li><p>改善tcp性能的方法：并行连接、长连接、管道化连接    </p>
-</li>
-<li><p>死锁条件：互斥条件、不可剥夺、占有等待、环路等待，可以采用基于矩阵的算法来检测死锁       </p>
-</li>
-<li><p>死锁恢复：回滚、杀死进程、抢占(需要人工干预)     </p>
-</li>
-<li><p>按返回键，要先清完当前的栈，再清其他的栈，比如：B是singleInstance，则 A启动B，B启动C，则此时按返回键先到A，再按返回键才看到B     </p>
-</li>
-<li><p>如果想fragment commit 立即生效，可以在 FragmentTrasation.commit() 之后，执行 fragmentManager.executePendingTransactions()       </p>
-</li>
-<li><p>Fragment 生命周期： onAttach、onCreate、onCreateView、onActivityCteated、onStart、onResume、onPause、onStop、onDestroyView、onDestroy、onDetach    </p>
-</li>
-<li><p>避免异步使用 commit，因为感知不到Activity 生命周期，可能commit的时候，Activity 结束了      </p>
-</li>
-<li><p>广播分类：标准广播、有序广播、本地广播       </p>
-</li>
-<li><p>BroadcastReceiver 的onReceiver 中也不是不能开启子线程，只是不推荐开启，因为 BroadcastReceiver 的生命周期本身就很短，在子线程还没结束的情况下，Activity 就被退出了，所以能，BroadcastReceiver 的耗时任务建议交给 IntentService 去做        </p>
-</li>
-<li><p>mmkv 可以替代 SharedPreference      </p>
-</li>
-<li><p>MVC 在Android 中导致 Activity 的职责不明确，很臃肿。没有涉及Model 时，View 可以直接调用Controller，Controller 可以直接调用View。并且，View 还可以直接更新Model，只不过Model要更新UI必须经过 Controller 。      </p>
-</li>
-<li><p>二叉搜索树查找代价：logN 或者 N，插入，基本上在logN，删除：O(1) 或者 logN    </p>
-</li>
-<li><p>平衡二叉搜索树：查： logN，插入：logN，删除： 2logN    </p>
-</li>
-<li><p>红黑树：查： logN，插入：logN，删除：logN      </p>
-</li>
-<li><p>发起tcp请求，序列号是随机的，这是防止多次重传时候，(假如已经建立连接了)分不出是哪一次了    </p>
-</li>
-<li><p>三次握手，第一二次不可以携带数据(第一次允许，容易引起攻击，并且不确认有接收能力)，但是第三次是可以携带数据的     </p>
-</li>
-<li><p>udp 面向报文，添加首部之后就可以交给ip层，不拆分；tcp 面向字节流，对报文拆分     </p>
-</li>
-<li><p>udp 没有拥塞控制，tcp会有拥塞控制，tcp还有滑动窗口实现流量控制     </p>
-</li>
-<li><p>http2特性：服务端push、新的二进制格式(而不是文本)、多路复用、新的压缩算法、header 压缩、更安全的ssl     </p>
-</li>
-<li><p>RxJava 线程切换原理：将Observer 封装成 SubscribeTask ，它实现了Runnable接口，如果在main线程的话，会启用Handler(getMainLooper)将Runnable封装成Message 发送出去，其他线程则交给相应的线程池。      </p>
-</li>
-<li><p>LocalBroadcastManager 初始化的时候会创建一个主线程的Handler，发送广播时，根据intent获取action，依次调用    </p>
-</li>
-<li><p>线程池异常处理：1、继承 ThreadPoolExecutor 再重写 afterExecute ，可以得到实际异常  2、对Runnable 里面的整个try-catch   3、自己写ThreadFactory，即自己创建线程，然后实现 setUncaughtExceptionHandler 来捕捉。       </p>
-</li>
-<li><p>synchronize 同步原理：代码块：monitorenter指令插入到同步代码块的开始处，将monitorexit插入到结束处  ，方法同步，采用另外的标记ACC-synchronized，其实是一样的效果，都是针对monitor      </p>
-</li>
-<li><p>线程阻塞的原因： 调用wait、等待同步锁、执行了sleep、执行了 join      </p>
-</li>
-<li><p>yield 将线程状态由Running 转变为 Runnable状态，但是系统可能不理会这个请求，所以不一定可靠，官方只建议用来调试      </p>
-</li>
-<li><p>onCreate 中，子线程可以刷新ui，是因为ViewGroup 的attachInfo 还是空的，后续的线程检测就不进行了。还有，线程判断主要是判断和new 这个view的线程是不是同一个。      </p>
-</li>
-<li><p>LruCache 原理：LinkedList，最近使用过的就插在头部，淘汰的时候，淘汰尾部      </p>
-</li>
-<li><p>Object 的方法：  clone、equals、finalize、getClass、hashCode、identityHashCode、notify、notifyAll、toString、wait       </p>
-</li>
-<li><p>HashMap 中链表元素达到一定阈值(8个)，就会转化为红黑树，然后转成树key总要通过什么对比吧，其实是通过 System.identityHashCode 来对比的，它不受hashCode 的影响        </p>
-</li>
-<li><p>RecyclerView 的优化：数据处理与视图分开(在bindViewHolder的时候不做数据处理了)、布局优化、设置setHasFixedSize(根据最初的高度、后面就不会重新测量了)、减少item的监听器创建、滑动过程停止加载、DiffUtil工具、公用 RecycledViewPool      </p>
-</li>
-<li><p>嵌套的RecyclerView 中可能用得着 Linearlayoutmanager 的 onSaveInstanceState 和 onRestoreInstanceState 来恢复嵌套的recyclerview的滑动状态        </p>
-</li>
-<li><p>全局捕捉异常，在Application 中为Thread.setUncatchExceptionHandler      </p>
-</li>
-<li><p>SharedPreference 在解析xml 的时候，commit 和apply 是不可以调用的，解析完了就会notifyAll            </p>
-</li>
-<li><p>每次调用edit()方法时，都会创建一个 EditorImpl 对象，所以不要频繁 调用 edit() 方法         </p>
-</li>
-<li><p>sp 执行 commit 时，首先更新到内存，之后再在当前线程直接写入到xml文件中，所以要注意这里的耗时          </p>
-</li>
-<li><p>sp的apply方法，首先写到内存，然后交给HandlerThread，即在子线程中，单线程地依次提交到xml文件中           </p>
-</li>
-<li><p>sp  不要跨进程使用sp(会有缓存，不可靠)、不要存储超大的key或者value，因为加载xml一直会等待，然后后来会放在内存中，占用内存、不要存储JSOn等特殊字符很多的value，会触发转义、不要多次执行 edit，不要多次apply(在api 11 之前，activity 退出时，要等待apply的那些 Runnable 执行完成才能退出，如果时间过长，就导致ANR 了)         </p>
-</li>
-<li><p>常见内存泄露：资源性资源未关闭(buffer/cursor)、非静态内部类的静态变量、Context泄露、非静态Handler泄露、注册的对象未反注册、匿名内部类和异步的线程(线程与外部类的生命周期不一致)                 </p>
-</li>
-<li><p>LeakCanary原理：registerActivityLifecycleCallbacks 监听生命周期、弱引用查看对象是否存在         </p>
-</li>
-<li><p>apk安装过程：安装源、复制apk到/data/data 、解析apk(签名、四大组件注册)、dexopt、更新权限信息(更新到pms)，判断是否允许这些权限、安装完成，发送广播           </p>
-</li>
-<li><p>Android 资源替换原理：替换 AssertManager                </p>
-</li>
-<li><p>热修复原理：DexClassLoder 可以从外部加载 classes.dex，插件化也是利用 DexClassLoder                </p>
-</li>
-<li><p>新特性：5.0-材料设计，ART、6.0-动态权限，Dozen模式、7.0-JIT和ART 交叉编译 、8.0-notification、画中画、9.0-刘海屏支持、Q、文件权限，uri，深色主题、折叠设备                 </p>
-</li>
-<li><p>Handler 有三种Message，同步消息、异步消息(Message 中 setAsynchronous(true) 了)、消息屏障消息                   </p>
-</li>
-<li><p>消息屏障，MessageQueue.postSyncBarrier 可以发送消息屏障，不过这是私有方法，需要反射(新的api貌似提供了puglic的的调用了)。其实就与普通的post一样，只是它的Message的target 为空，没有handler引用。当处理到这个屏障时，会一直查找是否有异步消息，先处理异步消息，这个过程持续到手动移除消息屏障为止(MessageQueue.removeSyncBarrier)             </p>
-</li>
-<li><p>IdleHandler ：在没有Messager 需要处理的时候，就调用IdleHandler 来处理了                       </p>
-</li>
-<li><p>BlockCanary 原理：在主线程loop中，在处理msg 之前，会调用Printer类型的mLogging 来打印一下，然后处理完了也打印一下，所以通过设置我们自定义的Printer就能监听到处理msg的耗时                   </p>
-</li>
-<li><p>图片巨大，可以使用 BitmapRegionDecoder 来每次加载一部分          </p>
-</li>
-<li><p>Android 16ms 时间是包括 layout、measure、、和draw 三个部分的，cpu执行计算任务将ui计算成多边图形，在交给gpu栅格化，最后gpu绘制到屏幕上                       </p>
-</li>
-<li><p>避免丢帧：避免cpu任务过重，减少layout，measure，onDraw 工作量、避免GPU 任务过重，避免无谓的invalidate、减少过度绘制            </p>
-</li>
-<li><p>像素密度：以160dpi 作为密度基准的，1dp = 1px            </p>
-</li>
-<li><p>无响应：input： 5s、service：前台20s，后台200s、广播：前台：10s，后台：60s、provider：10s、Activity 退出时等待 sp 的写入完成                 </p>
-</li>
-<li><p>哪些产生ANR： 理论上执行业务时，handler post 这个anr msg之后的任何步骤都可能ANR，因为执行完成之后才会remove 这个 anr 的 msg                    </p>
-</li>
-<li><p>为什么用Binder：安全、性能、c/s架构容易管理                </p>
-</li>
-<li><p>动画：帧动画、补间动画、属性动画                </p>
-</li>
-<li><p>签名：v1和v2                     </p>
-</li>
-<li><p>TouchDelegate 用来扩大点击区域，如果要设置多个，就建立TouchDelegate 的 list，在onTouchEvent 的时候遍历执行               </p>
-</li>
-<li><p>bitmap内存优化，2.3.3及以下，记得recycle，3.0及以上，可以使用 imBitmap 字段，复用bitmap 内存(当bitmap从Lrucache删除时，其软引用会放在HashSet中，之后通过inBitmap 复用)                </p>
-</li>
-</ul>
-<h3 id="Java-基础"><a href="#Java-基础" class="headerlink" title="Java 基础"></a>Java 基础</h3><h3 id="基本查找"><a href="#基本查找" class="headerlink" title="基本查找"></a>基本查找</h3><h3 id="基本排序"><a href="#基本排序" class="headerlink" title="基本排序"></a>基本排序</h3><p>插入排序：O(n^2)复杂度，稳定的排序<br>选择排序： 复杂度总是 O(n^2)，每次挑最大最小的，因此不稳定                    </p>
-<p>shell 排序： 最差的时候：O(n^2)   平均复杂度 ： nlogn，不稳定<br>冒泡：有序的情况，一趟完成，OO(n)，平均复杂度O(n^2)，稳定的排序<br>快排序： 分治思想，平均 nlogn ，最坏 O(n^2)，交换数据啊，不稳定<br>堆排序：最坏最好和平均都是   nlogn  ，不稳定<br>归并排序： 分治思想，时间复杂度  nlogn ，稳定，主要用于外部排序</p>
-<p>归并和快排的平均时间复杂度差不多，但是比快排最差情况要好。但是归并使用的空间比较多，因此一般情况下选择快排               </p>
-<p>不稳定的排序：希尔、堆、快排</p>
-</details>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -2061,7 +1978,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">153</span>
+          <span class="site-state-item-count">158</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2147,7 +2064,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共347.2k字</span>
+  <span class="post-count">博客全站共320.9k字</span>
 </div>
 
 
