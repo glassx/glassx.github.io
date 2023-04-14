@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">158</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">160</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,673 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/14/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC1%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/14/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC1%E7%AB%A0/" class="post-title-link" itemprop="url">第1章：多线程原理与实战</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-02-14 15:10:00 / 修改时间：21:52:21" itemprop="dateCreated datePublished" datetime="2023-02-14T15:10:00+08:00">2023-02-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="进程和线程"><a href="#进程和线程" class="headerlink" title="进程和线程"></a>进程和线程</h2><p>进程是操作系统资源分配的最小单位，线程是 CPU 调度的最小单位。</p>
+<p>一个标准的线程主要由<strong>3部分构成：线程描述信息(线程ID、线程名称、线程状态、线程优先级、其他)、程序计数器 和 栈内存。</strong>其中，程序计数器它记录着线程下一条指令的代码段内存地址；每个线程在创建的时候默认被分配 1M 大小的栈内存大小，<strong>和堆内存不同，栈内存不受垃圾回收器管理</strong>。</p>
+<p>当线程执行流程进入方法时，JVM 就会为方法分配一个对应的栈帧压入栈内存；当线程流程跳出方法时，JVM 就从栈内存弹出该方法的栈帧，此时方法帧的局部变量的内存空间就会被回收。</p>
+<h2 id="创建线程的4种方法"><a href="#创建线程的4种方法" class="headerlink" title="创建线程的4种方法"></a>创建线程的4种方法</h2><p>Thread 类中有个属性， private boolean deamon = false; 该属性保存 Thread 线程实例的守护状态，默认为false ，表示普通用户线程，而不是<strong>守护线程。</strong> 守护线程是在进程运行提供某种后台服务的线程，比如GC 线程。</p>
+<ul>
+<li><p>继承Thead 类创建线程类（Thread 本身就实现了 Runnable ）</p>
+</li>
+<li><p>实现 Runnable 接口创建线程目标类(传入 Thread 中时，Thread将其以 target 字段保存)</p>
+</li>
+<li><p>使用 Callable 和 FutureTask 创建线程</p>
+</li>
+<li><p>通过线程池创建</p>
+</li>
+</ul>
+<p>前面2种创建方法有一个共同的缺陷：不能获取异步执行的结果。在此基础上，才有了使用 Callable 和 FutureTask 创建线程的方法。</p>
+<h4 id="Callable-接口"><a href="#Callable-接口" class="headerlink" title="Callable 接口"></a>Callable 接口</h4><p>Callable 是个泛型接口，它的源码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Callable</span>&lt;<span class="title">V</span>&gt; </span>{</span><br><span class="line">    <span class="function">V <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>Callable 接口类似与 Runnable ，不同的是 Runnable 的run 方法没有返回值，也没有接收异常的异常声明，因此，感觉 Callable 更强大一些，只是 Callable 暂时还没能和 Thread 产生关系。不过，一个在 Callable 接口与 Thread 线程之间搭桥的重要接口 RunnableFuture 接口就要登场了。 </p>
+<h4 id="RunnableFuture-接口"><a href="#RunnableFuture-接口" class="headerlink" title="RunnableFuture 接口"></a>RunnableFuture 接口</h4><p>RunnableFuture 接口与 Runnable 接口、Thread 类紧密相关，源码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">RunnableFuture</span>&lt;<span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">Runnable</span>, <span class="title">Future</span>&lt;<span class="title">V</span>&gt; </span>{</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看出，它继承了 Runnable 接口，从而可以作为 Thread 的 target ，同时还继承了 Future 接口，保证了可以获取未来的异步执行结果。</p>
+<h4 id="Future-接口"><a href="#Future-接口" class="headerlink" title="Future 接口"></a>Future 接口</h4><p>Future 接口至少提供了三大功能：</p>
+<ul>
+<li><p>能够取消异步执行中的任务</p>
+</li>
+<li><p>判断异步任务是否执行完成</p>
+</li>
+<li><p>获取有任务完成后的执行结果</p>
+</li>
+</ul>
+<p>它的源码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Future</span>&lt;<span class="title">V</span>&gt; </span>{</span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">isCancelled</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">isDone</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function">V <span class="title">get</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function">V <span class="title">get</span><span class="params">(<span class="keyword">long</span> timeout, TimeUnit unit)</span> <span class="keyword">throws</span> InterruptedException</span></span><br><span class="line"><span class="function">}</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>虽然它提供了这么多功能，但它终归只是个接口，通过它没法直接完成对异步任务的操作，为此，JDK 提供了一个默认实现类： FutureTask 。</p>
+<h4 id="FutureTask-类"><a href="#FutureTask-类" class="headerlink" title="FutureTask 类"></a>FutureTask 类</h4><p>FutureTask类实现了RunnableFuture接口，相当于既实现了 Runnable 接口，又实现了 Future 接口。所以FutureTask既能作为一个 Runnable 类型的 target 被Thread执行，又能作为Future异步任务来获取Callable的计算结果。</p>
+<h4 id="使用Callable和FutureTask创建线程的步骤"><a href="#使用Callable和FutureTask创建线程的步骤" class="headerlink" title="使用Callable和FutureTask创建线程的步骤"></a>使用Callable和FutureTask创建线程的步骤</h4><figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span> <span class="keyword">throws</span> InterruptedException, ExecutionException </span>{</span><br><span class="line">    FutureTask&lt;Long&gt; futureTask = <span class="keyword">new</span> FutureTask&lt;Long&gt;(<span class="keyword">new</span> Callable&lt;Long&gt;() {</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Long <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">            <span class="keyword">long</span> startTime = System.currentTimeMillis();</span><br><span class="line">            Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">            <span class="keyword">return</span> System.currentTimeMillis() - startTime;</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">    Thread thread = <span class="keyword">new</span> Thread(futureTask, <span class="string">"returnableThread"</span>);</span><br><span class="line">    thread.start();</span><br><span class="line"></span><br><span class="line">    System.out.println(thread.getName() + <span class="string">"线程占用时间："</span> + futureTask.get());</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>returnableThread线程首先执行 thread.run() 方法，然后在其中执行其target（futureTask任务）的run()方法；接着在futureTask.run()方法中会执行 callable 成员的 call()方法。Callable的call()方法执行完成后，会将结果保存在FutureTask内部的outcome实例属性中。这里有两种情况：</p>
+<ul>
+<li><p>futureTask的结果outcome不为空，callable.call()执行完成，futureTast.get会直接取回outcome结果返回给结果获取线程。</p>
+</li>
+<li><p>futureTask的结果outcome为空，callable.call()还没有执行完。则结果获取线程会被<strong>阻塞</strong>住直到callable.call()执行完成。当执行完后，最终结果会保存到outcome中，futureTask会唤醒结果获取线程。</p>
+</li>
+</ul>
+<h2 id="1-4-线程的核心原理"><a href="#1-4-线程的核心原理" class="headerlink" title="1.4 线程的核心原理"></a>1.4 线程的核心原理</h2><h3 id="1-4-1-线程的调度与时间片"><a href="#1-4-1-线程的调度与时间片" class="headerlink" title="1.4.1 线程的调度与时间片"></a>1.4.1 线程的调度与时间片</h3><p>在不同的操作系统、不同的CPU上，线程的 CPU 时间片长度都不同，windows xp 的时间片长度为 20 毫秒，线程调度模型主要分为 2 种：</p>
+<ul>
+<li><p>分时调度。系统平均分配 CPU 的时间片，人人平等</p>
+</li>
+<li><p>抢占式调度。按照线程的优先级分配时间片，如果大家优先级都相同，就随机选择一个，目前大部分操作系统选择的是这种调度方式</p>
+</li>
+</ul>
+<h3 id="1-4-2-线程优先级"><a href="#1-4-2-线程优先级" class="headerlink" title="1.4.2 线程优先级"></a>1.4.2 线程优先级</h3><p>对于优先级，有以下结论：</p>
+<ul>
+<li><p>整体而言，高优先级的线程获得的执行机会更多</p>
+</li>
+<li><p>执行机会的获取具有随机性，优先级高的不一定获得机会多（文中的例子10级的优先级比9级的优先级获得的机会还少，个人认为可能的一个因素是：Java的线程映射到系统线程时，10级与 9 级并没有区分）</p>
+</li>
+</ul>
+<h3 id="1-4-3-线程的生命周期"><a href="#1-4-3-线程的生命周期" class="headerlink" title="1.4.3 线程的生命周期"></a>1.4.3 线程的生命周期</h3><p>Java 的线程有6种状态：</p>
+<ul>
+<li><p>NEW： 新建，创建成功，但是没有调用 start() 方法</p>
+</li>
+<li><p>RUNNABLE：可执行，包含操作系统的就绪、运行2种状态</p>
+</li>
+<li><p>BLOCKED：阻塞</p>
+</li>
+<li><p>WAITTING：等待</p>
+</li>
+<li><p>TIMED_WAITTING：限时等待，包括Thread.sleep(n)、Object.wait(n)、Thread.join(n)、LockSupport.parkNanos(n)、LockSupport.parkUntil(n) 等</p>
+</li>
+<li><p>TERMINATED：终止。线程的 run 方法执行完毕（或者执行run方法被异常终止）</p>
+</li>
+</ul>
+<h3 id="1-4-5-使用-Jstack-工具查看线程状态"><a href="#1-4-5-使用-Jstack-工具查看线程状态" class="headerlink" title="1.4.5 使用 Jstack 工具查看线程状态"></a>1.4.5 使用 Jstack 工具查看线程状态</h3><p>Jstack 是Java 虚拟机自带的 <strong>堆栈跟踪工具</strong>，用于生成或者导出（Dump）JVM 运行实例当前时刻的线程快照。命令的语法格式如下：</p>
+<blockquote>
+<p>jstack <pid>   //pid表示 Java 进程的 id，可以用 jps 命令查看</pid></p>
+</blockquote>
+<h2 id="1-5-线程的基本操作"><a href="#1-5-线程的基本操作" class="headerlink" title="1.5 线程的基本操作"></a>1.5 线程的基本操作</h2><h3 id="1-5-2-线程的sleep-操作"><a href="#1-5-2-线程的sleep-操作" class="headerlink" title="1.5.2 线程的sleep 操作"></a>1.5.2 线程的sleep 操作</h3><p>sleep 的作用是让线程休眠，让 CPU 执行其他的任务，从状态来讲就是<strong>从执行状态变成限时阻塞状态</strong>。当睡眠时间满后，线程不一定立即得到执行，因为此时CPU可能正在执行其他任务，所以还需要等待分配时间片。</p>
+<h3 id="1-5-3-线程的-interrupt-操作"><a href="#1-5-3-线程的-interrupt-操作" class="headerlink" title="1.5.3 线程的 interrupt 操作"></a>1.5.3 线程的 interrupt 操作</h3><p>Java 语言提供了 stop()  方法终止正在运行的方法，但后来不建议使用了，因为这像突然关闭计算机电源一样，无法知道这个线程在处于什么状态，它可能持有某把锁，强行停止可能会导致锁无法释放；或者可能正在操作数据库，强行停止导致数据不一致。</p>
+<p>一个线程什么时候可以退出只有线程自己直到，所以，<strong>这里介绍的 interrupt 方法本质不是用来中断一个线程，而是将线程设置为中断状态。</strong>当我们调用线程的 interrupt 方法时，它有2个作用：</p>
+<ul>
+<li><p>如果此线程处于阻塞状态，就会立马退出阻塞，并抛出 InterruptedException 异常，线程可以通过捕获 InterruptedException 异常来做一定处理，从而提早终结被阻塞状态。</p>
+</li>
+<li><p>如果线程正在运行，就不受任何影响，仅仅只是中断标记被置为 true 了。</p>
+</li>
+</ul>
+<blockquote>
+<p>如果 interrupt()方法先被调用，然后线程开始调用阻塞方</p>
+<p>法进入阻塞状态，InterruptedException异常依旧会抛出；如果线程</p>
+<p>捕获InterruptedException异常后，继续调用阻塞方法，将不再触发</p>
+<p>InterruptedException异常。</p>
+</blockquote>
+<h3 id="1-5-4-线程的join操作"><a href="#1-5-4-线程的join操作" class="headerlink" title="1.5.4 线程的join操作"></a>1.5.4 线程的join操作</h3><p>也就是线程的合并操作，可以用一个例子来说明： 假设线程 A 和 B，现在 A 执行过程中对 B 的执行有依赖：A 需要将 B 的执行流程合并到自己执行的流程中，这就是线程合并，伪代码大概如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ThreadA</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        Thread threadb = <span class="keyword">new</span> Thread(<span class="string">"thread-b"</span>);</span><br><span class="line">        threadb.join();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码中，执行 threadb.join() 这行代码的当前线程为合并线程（线程 A）会进入 TIMED_WAITING 等待状态，让出 CPU。所以上述过程应该是<strong>等 B线程执行完成之后，A 线程再继续执行</strong></p>
+<h3 id="1-5-5-线程的-yield-操作"><a href="#1-5-5-线程的-yield-操作" class="headerlink" title="1.5.5 线程的 yield 操作"></a>1.5.5 线程的 yield 操作</h3><p>线程的 yield（让步）操作的作用是让目前正在执行的线程放弃当前的执行，让出 CPU执行权限，之后变为 RUNNABLE 状态，从操作系统层面来讲就是进入了就绪状态（而不是阻塞）。在线程 yield 时，线程放弃和重占 CPU 的时间是不确定的，可能刚放弃了 CPU ，马上又获得了 CPU 的执行权限，接着开始执行了。</p>
+<h3 id="1-5-6-线程的daemon操作"><a href="#1-5-6-线程的daemon操作" class="headerlink" title="1.5.6 线程的daemon操作"></a>1.5.6 线程的daemon操作</h3><p>守护线程也称为后台线程，专门指在程序进程运行过程中，在后台提供某种通用服务的线程。比如，每启动一个JVM进程，都会在后台运行一系列的 GC 线程，这些 GC 线程就是守护线程。</p>
+<p>只要 JVM 中尚存任何一个用户线程没有结束，守护线程就能执行自己的工作，只有当最后一个用户线程结束，守护线程随同 JVM 一同结束工作。</p>
+<h4 id="守护线程的要点"><a href="#守护线程的要点" class="headerlink" title="守护线程的要点"></a>守护线程的要点</h4><p>使用守护线程时，有几点需要特别注意：</p>
+<ul>
+<li><p>线程必须在start() 方法调用前设置其为守护线程(即调用setDaemon(true)方法) ，否则会抛出 InterruptedException异常</p>
+</li>
+<li><p>在守护线程中创建的线程，新的线程都是守护线程。如果要创建用户线程，需要显式调用 setDaemon(false)</p>
+</li>
+</ul>
+<h2 id="1-6-线程池原理与实战"><a href="#1-6-线程池原理与实战" class="headerlink" title="1.6 线程池原理与实战"></a>1.6 线程池原理与实战</h2><p>Java 线程的创建非常昂贵，需要 JVM 和 OS 配合完成大量工作：</p>
+<ul>
+<li>为线程堆栈分配大量内存快，包括至少 1M 的栈内存</li>
+<li>需要进行系统调用，以便在OS中创建和注册本地线程</li>
+</ul>
+<p>而线程池的出现主要解决了以下问题：</p>
+<ul>
+<li><p>提升性能：最大限度地复用已经创建的线程，避免创建和销毁，提升性能</p>
+</li>
+<li><p>线程管理：线程池可以保持对线程的统计信息，例如完成任务数量、空闲时间等，能对异步任务进行高效调度（<strong>我个人觉得还有可能根据cpu的核心数之类的确定线程数量</strong>）。</p>
+</li>
+</ul>
+<h3 id="1-6-1-JUC-的线程池架构"><a href="#1-6-1-JUC-的线程池架构" class="headerlink" title="1.6.1 JUC 的线程池架构"></a>1.6.1 JUC 的线程池架构</h3><p>JUC 是 java.util.concrrent 工具包的简称，是用于完成高并发、处理多线程的一个工具包。其中的线程池类与接口的架构图大致如下：</p>
+<p><img src="/assets/Book-Notes/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E5%8D%B72/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B-%E5%8D%B72-%E7%AC%AC1%E7%AB%A0-JUC%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%9E%B6%E6%9E%84%E5%9B%BE.jpg" alt="线程池类与接口的架构图"></p>
+<h3 id="1-6-2-Executors-的4种快捷创建线程池的方法"><a href="#1-6-2-Executors-的4种快捷创建线程池的方法" class="headerlink" title="1.6.2 Executors 的4种快捷创建线程池的方法"></a>1.6.2 Executors 的4种快捷创建线程池的方法</h3><p>Java 通过 Excutors 工厂类提供了4种快捷创建线程池的方法，如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th>方法名</th>
+<th>功能简介</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>newSingleThreadExcutor</td>
+<td>创建只有一个线程的线程池</td>
+</tr>
+<tr>
+<td>newFixedThreadPool</td>
+<td>创建固定大小的线程池</td>
+</tr>
+<tr>
+<td>newCachedThreadPool</td>
+<td>创建一个不限制线程数量的线程池，任何提交的任务都立即执行，但是空闲线程会得到及时回收</td>
+</tr>
+<tr>
+<td>newScheduledThreadPool</td>
+<td>创建一个可定期或者延时执行的任务的线程池</td>
+</tr>
+</tbody></table>
+<p>总的来说，newSingleThreadExcutor 线程池有以下特点：</p>
+<ul>
+<li><p>线程池中的任务是按照提交的顺序执行的</p>
+</li>
+<li><p>池中的唯一线程的存活时间是无限的</p>
+</li>
+<li><p>当池中唯一线程繁忙时，<strong>新提交的任务会进入内部的阻塞队列，这个队列是无界队列</strong></p>
+</li>
+</ul>
+<p>线程池使用完后，要调用 shutDown 来关闭线程池，此时线程池将变为 SHUTDOWN 状态，将拒绝新任务，添加新任务会抛出 RejectedExecutionException 异常，此时，线程池不会立刻退出，直到线程池中的任务都执行完成。还有另一个方法 shutdownNow ，执行之后线程状态会立刻变成 STOP ，并且不再处理了还在阻塞队列中等待的任务，会返回哪些未执行的任务。</p>
+<p>newFixedThreadPool用于创建一个“固定数量的线程池”，它的特点如下：</p>
+<ul>
+<li>提交任务时，如果显成熟没有达到固定数量，线程池内就会创建一个新线程，直到达到固定数量</li>
+<li>提交新任务时，如果所有的线程都在繁忙，则新任务会进入阻塞队列，该队列是<strong>无界的阻塞队列</strong></li>
+</ul>
+<p>“固定数量的线程池”适合场景： 需要任务长期执行的场景，比如处理CPU密集型任务。线程数能够比较稳定地维持在某个数量，避免频繁回收和创建线程。</p>
+<p>newCachedThreadPool 创建“可缓存线程池”，如果线程池内某些线程成为空闲线程，“可缓存线程池”能灵活回收这些线程。它的特点大致如下：</p>
+<ul>
+<li>接收新任务时，如果池内所有线程繁忙，则添加新线程来处理</li>
+<li>对线程池大小没有限制，完全依赖于JVM能够创建的最大线程大小</li>
+<li>如果线程空闲（60s不执行任务），就会回收</li>
+</ul>
+<p>它的适合场景：需要快速处理突发性强，耗时短的任务场景，如 Netty 的 NIO 处理场景、REST API 接口瞬时削峰场景。</p>
+<p>newScheduledThreadPool 创建“可调度线程池”，它提供一个“延时”和“周期性”任务调度功能的ScheduledExecutorService类型的线程池。使用方法如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(<span class="number">2</span>);</span><br><span class="line"><span class="comment">// 参数中：0表示首次执行任务的延迟时间，500表示每次执行任务的间隔时间</span></span><br><span class="line">scheduled.scheduleAtFixedRate(<span class="keyword">new</span> TargetTask(), <span class="number">0</span>, <span class="number">500</span>, TimeUnit.MILLISECONDS);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>“可调度线程池”的适用场景：周期性地执行任务的场景。</p>
+<h3 id="1-6-3-线程池的标准创建方式"><a href="#1-6-3-线程池的标准创建方式" class="headerlink" title="1.6.3 线程池的标准创建方式"></a>1.6.3 线程池的标准创建方式</h3><p>大部分企业的开发规范会禁止时候用上述Java 提供的4种创建线程池的方式。，要求通过标准创建方式自行创建。标准创建的一个构造方法如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 使用标准构造器构造一个普通的线程池</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolExecutor</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function"> <span class="keyword">int</span> corePoolSize, // 核心线程数，即使线程空闲（Idle），也不会回收</span></span></span><br><span class="line"><span class="params"><span class="function"> <span class="keyword">int</span> maximumPoolSize, // 线程数的上限</span></span></span><br><span class="line"><span class="params"><span class="function"> <span class="keyword">long</span> keepAliveTime, TimeUnit unit, // 线程最大空闲（Idle）时长</span></span></span><br><span class="line"><span class="params"><span class="function"> BlockingQueue&lt;Runnable&gt; workQueue, // 任务的排队队列</span></span></span><br><span class="line"><span class="params"><span class="function"> ThreadFactory threadFactory, // 新线程的产生方式</span></span></span><br><span class="line"><span class="params"><span class="function"> RejectedExecutionHandler handler)</span> <span class="comment">// 拒绝策略</span></span></span><br></pre></td></tr></tbody></table></figure>
+
+<h5 id="corePoolSize-与-maximumPoolSize"><a href="#corePoolSize-与-maximumPoolSize" class="headerlink" title="corePoolSize 与 maximumPoolSize"></a>corePoolSize 与 maximumPoolSize</h5><p>corePoolSize 与 maximumPoolSize 自动维护线程池中的工作线程，规则如下：</p>
+<ul>
+<li>收到新任务，并且当前线程数少于 corePoolSize，即使其他线程处于空闲状态，也会创建新线程来处理该请求</li>
+<li>核心线程不会被回收，但是如果设置了 allowCoreThreadTimeOut 的话，则会例外，这时候是可以被回收的</li>
+<li>如果当前线程数大于 corePoolSize ，但是小于 maximumPoolSize ，那么仅当任务排队队列已满才会创建新线程。</li>
+<li>当 maximumPoolSize 被设置为无界值（如Integer.MAX_VALUE，因为这是int的最大值了）时，线程池可以接受任意数量的并发任务</li>
+<li>corePoolSize 与 maximumPoolSize 的值可以动态更改</li>
+</ul>
+<blockquote>
+<p>根据上述规则可知，<strong>给 corePoolSize 和 maximumPoolSize 设置相同的值可以创建一个固定大小的线程池。</strong></p>
+</blockquote>
+<h5 id="BlockingQueue"><a href="#BlockingQueue" class="headerlink" title="BlockingQueue"></a>BlockingQueue</h5><p>BlockingQueue 也就是阻塞队列，如果线程池的核心线程都在忙，则收到的任务都缓存在阻塞队列中</p>
+<h5 id="keepAliveTime"><a href="#keepAliveTime" class="headerlink" title="keepAliveTime"></a>keepAliveTime</h5><p>用于设置线程的最大 Idle 市场，如果非 Core 线程（默认情况下只针对非Core线程，但如果allowCoreThreadTimeOut 设置为true，则也会应用于Core线程）空闲超过这个时常，就会被回收。<strong>如果要防止 Idle 线程被回收，可以将 keepAliveTime 设置为 Long.MAX_VALUE</strong>。当然，这个值也是能动态调整的。</p>
+<h3 id="1-6-4-向线程池提交任务的2种方式"><a href="#1-6-4-向线程池提交任务的2种方式" class="headerlink" title="1.6.4 向线程池提交任务的2种方式"></a>1.6.4 向线程池提交任务的2种方式</h3><p>有 submit 和 execute 两种方式，这二者的区别：</p>
+<ul>
+<li>submit 有返回值 Future ，execute 没有</li>
+<li>由于 submit 有返回值Future ，所以可以方便对当前任务处理 Exception</li>
+<li>入参不同，submit 可以接收 Callable、Runnable 两种，execute 只能接收 Runnable</li>
+</ul>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//submit 结果获取和异常处理</span></span><br><span class="line"><span class="keyword">try</span>{</span><br><span class="line">    Future&lt;Integer&gt; future = pool.submit(callable);</span><br><span class="line">    Interger result = future.get();</span><br><span class="line">} <span class="keyword">catch</span>(Exception e) {</span><br><span class="line">    e.printStack();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="1-6-5-线程池任务调度流程"><a href="#1-6-5-线程池任务调度流程" class="headerlink" title="1.6.5 线程池任务调度流程"></a>1.6.5 线程池任务调度流程</h3><p>任务调度流程大致如下：</p>
+<ol>
+<li>接收任务时，如果当前线程数量小于核心线程数，则创建线程（哪怕其他线程空闲），然后执行任务</li>
+<li>如果线程池中的线程大于核心线程数量，新任务将被加入阻塞队列，直到阻塞队列满了</li>
+<li>完成一个任务后，优先从阻塞队列中获取下一个任务，直到阻塞队列为空</li>
+<li>当核心线程繁忙，并且阻塞队列也已经满了，如果再接收到新任务，将会为新任务创建一个（非核心）线程，并立即开始执行<strong>新任务</strong>。</li>
+<li>当核心线程繁忙，阻塞队列满的情况下，来新任务会一直创建线程，当线程总数超过 maximumPoolSize 时就会执行拒绝策略。</li>
+</ol>
+<h3 id="1-6-6-ThreadFactory-（线程工厂）"><a href="#1-6-6-ThreadFactory-（线程工厂）" class="headerlink" title="1.6.6 ThreadFactory （线程工厂）"></a>1.6.6 ThreadFactory （线程工厂）</h3><p>略</p>
+<h3 id="1-6-7-BlockingQueue（任务阻塞队列）"><a href="#1-6-7-BlockingQueue（任务阻塞队列）" class="headerlink" title="1.6.7 BlockingQueue（任务阻塞队列）"></a>1.6.7 BlockingQueue（任务阻塞队列）</h3><p>阻塞队列与普通队列相比有一个重要的特点: <strong>一个线程从一个空的阻塞队列获取元素时会被阻塞(怎么实现的？)，直到队列中有了元素；当队列中有了元素，被阻塞的线程会被自动唤醒。</strong>比较常用的实现类有以下几种：</p>
+<ul>
+<li>ArrayBlockingQueue：数组实现的<strong>有界阻塞队列</strong>，队列中元素按照 FIFO 排序。</li>
+<li>LinkedBlockingQueue：基于链表实现的阻塞队列，按照 FIFO 排序，<strong>可以设置容量(有界队列)，不设置容量则默认使用 Integer.Max_VALUE 作为容量（即无界队列）</strong>。</li>
+<li>PriorityBlockingQueue： 具有优先级的<strong>无界队列</strong></li>
+<li>DelayQueue：<strong>无界阻塞延迟队列</strong>，底层基于 PriorityBlockingQueue，队列中每个元素都有过期时间，当从队列获取元素时，<strong>只有已经过期的元素才会出队，队列头部是做早过期的元素</strong></li>
+<li>SynchronousQueue ：同步队列，不存储元素的阻塞队列，<strong>每个插入操作必须等到另一个线程的调用移除操作，否则插入一直处于阻塞状态。</strong></li>
+</ul>
+<blockquote>
+<p>Excutors.newScheduledThreadPool所创建的线程池就是使用 DelayQueue<br>而，Executors.newCachedThreadPool 所创建的线程池使用的是 SynchronousQueue</p>
+</blockquote>
+<h3 id="1-6-8-调度器钩子方法"><a href="#1-6-8-调度器钩子方法" class="headerlink" title="1.6.8 调度器钩子方法"></a>1.6.8 调度器钩子方法</h3><ul>
+<li>beforeExecute： 执行目标实例前在工作线程异步执行该方法</li>
+<li>afterExecute： 执行目标实例后在工作线程异步执行该方法</li>
+<li>terminated： 线程池终止时的钩子方法</li>
+</ul>
+<h3 id="1-6-9-线程池的拒绝策略"><a href="#1-6-9-线程池的拒绝策略" class="headerlink" title="1.6.9 线程池的拒绝策略"></a>1.6.9 线程池的拒绝策略</h3><p>当出现如下情况时，新提交的任务会被拒绝：</p>
+<ol>
+<li>线程池已经被关闭</li>
+<li>所有线程繁忙，并且线程数已经达到了 maximunPoolSize</li>
+</ol>
+<p>当拒绝的时候，会调用 RejectedExecutionHandler 实例的 rejectedExecution 方法，JUC 提供了以下几种实现：</p>
+<ul>
+<li>AbortPolicy ： 新任务丢掉同时抛出 RejectedExecutionException 异常，这是线程池默认策略</li>
+<li>DiscardPolicy： 新任务直接丢掉，并且不会抛出异常</li>
+<li>DiscardOldestPolicy： 抛弃最早的任务，然后让新任务入队</li>
+<li>CallerRunsPolicy： 调用者执行策略，提交任务线程会自己执行该任务</li>
+<li>自定义策略</li>
+</ul>
+<h3 id="1-6-10-线程池的优雅关闭"><a href="#1-6-10-线程池的优雅关闭" class="headerlink" title="1.6.10 线程池的优雅关闭"></a>1.6.10 线程池的优雅关闭</h3><p>优雅地关闭线程池主要涉及的方法有 3 个：</p>
+<ul>
+<li>shutDown： 这是有序关闭线程池的方法，调用之后当前线程会立即返回，不会等待线程池关闭完成。<strong>会等待当前工作队列中剩余的任务全部执行完毕，才关闭线程池</strong>。只要调用了这个方法，线程池会转为 SHUTDOWN 状态，不会再接收任务</li>
+<li>shutDownNow ：立即关闭线程池，调用之后当前线程会立即返回，不会等待线程池关闭完成。</li>
+<li>awaitTermination： shutDown与shutDownNow调用后会立即返回，不管线程池的关闭。而这个方法就是用于等待线程池完成关闭。</li>
+</ul>
+<p>优雅关闭线程池的方法：</p>
+<ol>
+<li>调用 shutDown 方法，拒绝新任务提交</li>
+<li>调用 awaitTermination(long timeOut) 指定超时时间，判断是否已经关闭</li>
+<li>如果 awaitTermination 超时，就可以进入循环关闭，循环一定次数(比如1000次)，不断关闭线程池，直到关闭或者结束</li>
+<li>如果 awaitTermination 返回false 或者 被中断，调用 shutDownNow 立即关闭</li>
+</ol>
+<h3 id="1-6-11-Executors-快捷创建线程池的潜在问题-系统默认提供的4种方法"><a href="#1-6-11-Executors-快捷创建线程池的潜在问题-系统默认提供的4种方法" class="headerlink" title="1.6.11 Executors 快捷创建线程池的潜在问题(系统默认提供的4种方法)"></a>1.6.11 Executors 快捷创建线程池的潜在问题(系统默认提供的4种方法)</h3><ul>
+<li>newFixedThreadPool创建的固定大小线程池：它的阻塞队列是 LinkedBlockingQueue 类型的无界队列，可能导致大量的任务等待，队列太大还可能导致 OOM </li>
+<li>单线程的线程池也是无界队列，可能导致OOM</li>
+<li>newCachedThreadPool 创建可缓存线程池：因为核心线程数 0 ，最大线程数为 Integer.MAX_VALUE，阻塞队列为 SynchronousQueue<runnable> 同步队列，不缓存任务，所以理论上任务数量不受限制，相当于来一个任务首先寻找可用线程，没有的话，就创建一个新的。会导致创建的线程过多，可能造成 OOM ，甚至把 CPU资源耗尽</runnable></li>
+<li>newScheduledThreadPool 创建可调度线程池，其最大问题是线程数量不设上限，可能导致CPU资源耗尽</li>
+</ul>
+<h2 id="1-7-确定线程池的线程数"><a href="#1-7-确定线程池的线程数" class="headerlink" title="1.7 确定线程池的线程数"></a>1.7 确定线程池的线程数</h2><h3 id="1-7-1-按照任务类型分类"><a href="#1-7-1-按照任务类型分类" class="headerlink" title="1.7.1 按照任务类型分类"></a>1.7.1 按照任务类型分类</h3><ul>
+<li>IO 密集型： IO任务操作时间长，导致 CPU 利用率不高，常处于空闲状态。线程数确定：设置allowCoreThreadTimeOut为true、使用有界队列、corePollSize 和 maximunPoolSize 保持一致，使得接收新任务而没有空闲线程时，直接创建新线程执行，而不是在阻塞队列中等待。</li>
+<li>CPU 密集型： 主要是计算任务，CPU一直在运行，利用率很高。线程数确定：CPU密集型任务虽然可以并行完成，但是并行任务越多，花在任务切换的时间也越多，效率也就越低。<strong>CPU密集型任务并行执行的数量应当等于CPU的核心数</strong>。</li>
+<li>混合性任务：既要逻辑计算，又要IO。线程数确定：业界有一个公式</li>
+</ul>
+<h2 id="1-8-ThreadLocal-原理与实战"><a href="#1-8-ThreadLocal-原理与实战" class="headerlink" title="1.8 ThreadLocal 原理与实战"></a>1.8 ThreadLocal 原理与实战</h2><p>ThreadLoacal 的应用场景大致有 2 类：</p>
+<ul>
+<li>线程隔离</li>
+<li>跨函数传递数据</li>
+</ul>
+<p>原理：每一个线程在获取本地值时，都会将 ThreadLocal 实例作为 Key 从自己拥有的 ThreadLocalMap 中获取值，别的线程无法访问自己的 ThreadLocalMap ，自己也无法访问别人的。并且，由于 ThreadLocalMap 是线程私有的，当线程销毁时 ThreadLocalMap 也随之销毁，在一定程度上减少内存的消耗。</p>
+<h3 id="1-8-8-ThreadLocal-综合使用案例"><a href="#1-8-8-ThreadLocal-综合使用案例" class="headerlink" title="1.8.8 ThreadLocal 综合使用案例"></a>1.8.8 ThreadLocal 综合使用案例</h3><p>ThreadLocal 使用不当会造成严重的内存泄露，为了避免这种情况，使用时应遵守以下原则：</p>
+<ul>
+<li>尽量使用 private static final 修饰ThreadLocal ，final为了避免他人修改、变更 ThreadLocal 变量的引用，使用static 为了确保全局唯一</li>
+<li>ThreadLocal 使用完后务必调用 remove 方法，这是简单有效避免引发内存泄露问题的方法</li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/06/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC6%E7%AB%A0-%E5%85%B6%E4%BB%96%E4%BC%98%E7%A7%80%E7%9A%84%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%96%B9%E6%A1%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/06/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC6%E7%AB%A0-%E5%85%B6%E4%BB%96%E4%BC%98%E7%A7%80%E7%9A%84%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%96%B9%E6%A1%88/" class="post-title-link" itemprop="url">第6章-其他优秀的热修复方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-06 18:30:00" itemprop="dateCreated datePublished" datetime="2023-02-06T18:30:00+08:00">2023-02-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-05 22:01:57" itemprop="dateModified" datetime="2023-02-05T22:01:57+08:00">2023-02-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Dexposed浅析"><a href="#Dexposed浅析" class="headerlink" title="Dexposed浅析"></a>Dexposed浅析</h2><p>Dexposed 对于某个函数而言，有3个hook点可供选择：函数执行前注入（before），函数执行后注入（after），替换函数执行的代码段（replace），由此衍生了很多典型应用场景：</p>
+<ul>
+<li><p>AOP 编程</p>
+</li>
+<li><p>插桩（例如测试，性能监控等）</p>
+</li>
+<li><p>在线热更新</p>
+</li>
+<li><p>SDK hooking 以提供更好的开发体验</p>
+</li>
+</ul>
+<h3 id="AndFix"><a href="#AndFix" class="headerlink" title="AndFix"></a>AndFix</h3><p>略</p>
+<h3 id="腾讯系热修复方案简介"><a href="#腾讯系热修复方案简介" class="headerlink" title="腾讯系热修复方案简介"></a>腾讯系热修复方案简介</h3><p>略</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC5%E7%AB%A0-so%E5%BA%93%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC5%E7%AB%A0-so%E5%BA%93%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/" class="post-title-link" itemprop="url">第5章-so库热修复技术</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-02-05 21:30:00 / 修改时间：21:53:09" itemprop="dateCreated datePublished" datetime="2023-02-05T21:30:00+08:00">2023-02-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="so库加载原理"><a href="#so库加载原理" class="headerlink" title="so库加载原理"></a>so库加载原理</h2><p>Java API 提供 2 个接口加载一个 so 库：</p>
+<ul>
+<li><p>System.loadLibrary(String libName): 传进去 so 库名称，位于APK压缩文件的 libs 目录，最后复制到 APK 安装目录下</p>
+</li>
+<li><p>System.load(String pathName)：传进去的是so库在磁盘的完整路径，加载自定义的外部so</p>
+</li>
+</ul>
+<p>以上2中方式最后都调用到 nativeLoad 这个 Native 方法。</p>
+<p><strong>so 库实时生效方案，对于静态注册的 native 方法有一定的局限性，不能满足一般的通用性，所以放弃了 so 库实时生效需求，转而求其次，实现 so 库修复的冷部署重启生效方案。</strong></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/04/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC4%E7%AB%A0-%E8%B5%84%E6%BA%90%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/04/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC4%E7%AB%A0-%E8%B5%84%E6%BA%90%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF/" class="post-title-link" itemprop="url">第4章-资源热修复技术</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-04 17:00:00" itemprop="dateCreated datePublished" datetime="2023-02-04T17:00:00+08:00">2023-02-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-05 21:43:28" itemprop="dateModified" datetime="2023-02-05T21:43:28+08:00">2023-02-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="普遍的实现方式"><a href="#普遍的实现方式" class="headerlink" title="普遍的实现方式"></a>普遍的实现方式</h2><p>目前市面上很多资源热修复都参考了 Instant Run 的实现，首先看下 Instant Run 是怎么做到资源热修复的：</p>
+<ol>
+<li><p>创建一个新的 AssetManager (AssetManager.class.getConstructor().newInstance())，并通过反射调用 addAssetPath 添加 sdcard 上的新资源包</p>
+</li>
+<li><p>反射所有 Activity 中 AssetManager 的引用处，全部换成刚才新建的 newAssetManager</p>
+</li>
+<li><p>得到 Resource 的弱引用集合，把它们的 AssetManager 成员替换成 newAssetManager</p>
+</li>
+</ol>
+<p>总体来说就是2步：构造一个新的 AssetManager ，并通过反射调用 addAssetPath ，这样就得到一个含有所有新资源的 AssetManager；找到所有引用到原有 AssetManager 的地方，通过反射把引用处替换成 newAssetManager 。</p>
+<h3 id="资源文件的格式"><a href="#资源文件的格式" class="headerlink" title="资源文件的格式"></a>资源文件的格式</h3><p>我们随便找个带资源的APK，用 AAPT 解析以下，可以看到内容大概是这样的：</p>
+<blockquote>
+<p>aapt d resources App-debug.apk</p>
+<p>…</p>
+<p>spec resource 0x7f040019 com.taobao.demo:layout/activity_main:flags=0x00000000</p>
+</blockquote>
+<p>这就表示，activity_main.xml 这个资源编号是 0x7f040019， 其中packageid 是 0x7f ， 资源类型id 是 0x04 ，在Type String Pool 中对应的正是 layout 类型，而 0x04 类型的 第 0x0019 个资源就是 activity_main 这个资源。</p>
+<h3 id="运行时资源的解析"><a href="#运行时资源的解析" class="headerlink" title="运行时资源的解析"></a>运行时资源的解析</h3><p>默认由 Android SDK 编出来的 APK 是由 AAPT 工具打包的，其资源包的 package id 就是 0x7f 。<strong>在走到 App第一行代码之前，系统就已经帮我们构建好一个已经添加了安装包资源的 AssetManager 了，即包含了 package id 为0x01 的 framework-res.jar 中资源和 package id 为 0x7f 的 App 安装包资源</strong>。</p>
+<p>如果补丁包中资源的 package id 也是 0x7f ，就会使得同一个 package id 的包被加载2次，怎么解决呢？</p>
+<blockquote>
+<p>在Android L 之后这是没问题的，因为它会默默把后来的包添加到之前的包的同一个 PackageGroup 下面，仍旧会加入到该类型的 TypeList 中，只是会打出一个 warning log。但是，使用时获取某个 Type 资源时，会从前往后遍历，也就是说先得到原有安装包里的资源，补丁包中的资源永远无法生效了。<strong>所以，在Android L 以上的版本，在原有的 AssetManager 上加入补丁包，是没有任何作用的。</strong></p>
+<p>而在 Android 4.4 以下版本，addAssetPath 只是把补丁包的路径添加到了 mAssetPath 中，这时候早已经错过真正解析资源包时间了。</p>
+</blockquote>
+<p><strong>以上解释了为什么像 Instant Run 这种方案，一定需要一个全新的 AssetManager ，然后再加入完整的新资源包，替换原有的 AssetManager。</strong></p>
+<h4 id="另辟蹊径的资源修复方案"><a href="#另辟蹊径的资源修复方案" class="headerlink" title="另辟蹊径的资源修复方案"></a>另辟蹊径的资源修复方案</h4><p>一个好的资源修复方案，首先补丁包要足够小，直接下发完整的补丁包肯定是不行的。目前主要有以下方案：</p>
+<ul>
+<li><p>对资源包做差量处理，在运行时合成完整包，虽然减少了包体积，但是运行时的合成操作耗费了运行事件和内存。</p>
+</li>
+<li><p>自己修改 AAPT ，在打补丁包时对资源重新编号，这样会涉及修改 Android SDK 工具包，不利于集成，也无法很好地对将来的 AAPT 升级。</p>
+</li>
+</ul>
+<p>我们的方案：构造一个package id 为 id 0x66 的资源包，它只包含改变了的资源项，直接在原有 AssetManager 中 addAssetPath 这个包即可。补丁包的资源，只包含原有包没有而新报里面有的<strong>新增资源</strong>，以及<strong>发生了改变的资源</strong>。对于增加、减少、修改这3种情况，我们要如何处理呢？</p>
+<ul>
+<li><p>新增资源直接假如补丁包</p>
+</li>
+<li><p>减少资源，只要不使用这个资源就好了</p>
+</li>
+<li><p>修改资源，比如替换了一张图片，那么将其视为新增资源，在打入补丁包的时候，代码引用处也做相应修改，把原来使用的旧资源id的地方变为新的 id</p>
+</li>
+</ul>
+<p>一张图说明下这些情况(绿线表示新增资源，红线表示发生修改的资源，黑线表示内容没有变化，但是id发生了变化的，x表示删除了的资源)：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-%E8%B5%84%E6%BA%90%E8%A1%A5%E4%B8%81%E5%8C%85%E6%9E%84%E5%BB%BA.png" alt="资源补丁包构建"></p>
+<h4 id="新增的资源及其导致的id偏移"><a href="#新增的资源及其导致的id偏移" class="headerlink" title="新增的资源及其导致的id偏移"></a>新增的资源及其导致的id偏移</h4><p><strong>新资源插入的位置是随机的，这与每次 AAPT 打包时解析 XML 的顺序有关。</strong></p>
+<p>所以，新增的资源导致它们所属的 type 中跟在它们之后的资源 id 发生了位移，<strong>发生位移的资源不会加入补丁包中，但是在补丁包的代码中会调整 id 的引用处，</strong>如下所示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(R.drawable.holo)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>R.drawable.holo 是一个int 值，它的值是 AAPT 指定的，可以用反编译工具可以看到它的真实值：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(<span class="number">0x7f020002</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>打出一个新包时，对于开发者而言，holo 的图片内容没变，代码引用处也没变，但是在新包里面，同样这句话，由于新资源插入导致 id 改变，所以引用实际变成了：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(<span class="number">0x7f020003</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但这种情况不属于资源改变，更不属于代码改变，所以，我们在对比新旧代码之前，会把新包里面的这行代码修正为原来的id：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">imageView.setImageResource(<span class="number">0x7f020002</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="内容发生改变的资源"><a href="#内容发生改变的资源" class="headerlink" title="内容发生改变的资源"></a>内容发生改变的资源</h4><p>内容发生改变，比如 activity_main.xml 文件内容改变了，也可能我们修改了string 类型的值，他们都会加入到补丁包中，并重新编号，相应代码也会改变：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setContentView(R.layout.activity_main)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>实际上就是：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setContentView(<span class="number">0x7f030000</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在生成新旧代码对比之前，我们会把新包里面的这行代码改为：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setContentView(<span class="number">0x66020000</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>这样，新旧代码对比时，会检测到这行代码发生了改变，于是相应的代码修复会在运行时发生，这样就得到了正确的新内容资源。</strong></p>
+<h4 id="删除了的资源"><a href="#删除了的资源" class="headerlink" title="删除了的资源"></a>删除了的资源</h4><p>不影响补丁包，就不多言</p>
+<h4 id="对于type的影响"><a href="#对于type的影响" class="headerlink" title="对于type的影响"></a>对于type的影响</h4><p>上面说的所谓简单，值得是运行时应用补丁变得简单了。真正复杂的地方在于构造补丁。</p>
+<h3 id="更优雅地替换-AssetManager"><a href="#更优雅地替换-AssetManager" class="headerlink" title="更优雅地替换 AssetManager"></a>更优雅地替换 AssetManager</h3><p>分2种情况：</p>
+<ul>
+<li><p>对于 Android L 以后的版本，直接在原有 AssetManager 上应用补丁就行了，并且由于是应用原来的 AssetManager ，与 Instant Run 方案比，省略了大量的反射和替换操作，提升了加载补丁的效率</p>
+</li>
+<li><p>之前提过，在Android KK 和以下版本，addAssetPath 是不会加载资源的。<strong>我们对原有的 AssetManager 先进行析构，再重构的时候将补丁包资源也加入，用的还是原来的 AssetManager，同样避免了反射和替换操作</strong>（Instant Run  方案还是必须重新构造一个新的 AssetManager 并加入补丁包，再替换原来的）</p>
+</li>
+</ul>
+<h3 id="意料之外的资源问题"><a href="#意料之外的资源问题" class="headerlink" title="意料之外的资源问题"></a>意料之外的资源问题</h3><p>在加载完补丁之后，如果做了 new WebView() 操作，就会发现找不到新资源的问题，这是因为 WebView 初始化时可能会构造新的 ResourceImpl ，替换掉了原先的 ResourceImpl ，从而把补丁资源给一起丢掉了。其他的就不展开。</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>对比市面上的方案，我们的方案优势：</p>
+<ul>
+<li><p>不侵入打包，直接对比新旧资源即可产生补丁资源（对比修改 AAPT）</p>
+</li>
+<li><p>不必下发完整包，补丁中只有变动的资源（对比 Instant Run、Amigo等方式）</p>
+</li>
+<li><p>不需要在运行时合成完整包，不占用运行时的计算和内存资源（对比Tinker）</p>
+</li>
+</ul>
+<p>唯一需要注意的是，<strong>因为对新资源的引用是在新代码中，所有资源修复需要代码修复的支持的</strong></p>
+<p>可能的问题：查找旧 id 的时候，是直接对 int 值替换，所以会找到 0x7f?????? ，如果开发者也使用了 0x7f?????? 这样的数字，就会导致数字会被错误地转换。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -932,511 +1599,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2022/02/25/Systrace%E4%BD%BF%E7%94%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/02/25/Systrace%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">面试题-Android显示机制以及 Systrace 的使用</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2022-02-25 10:50:00 / 修改时间：10:58:24" itemprop="dateCreated datePublished" datetime="2022-02-25T10:50:00+08:00">2022-02-25</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="一、屏幕刷新机制"><a href="#一、屏幕刷新机制" class="headerlink" title="一、屏幕刷新机制"></a>一、屏幕刷新机制</h2><p>简单来说，屏幕刷新包括三个步骤：CPU计算、GPU进一步处理和缓存、最后display 再将缓存（buffer）中的数据显示出来</p>
-<h3 id="Screen-Tearing（撕裂）"><a href="#Screen-Tearing（撕裂）" class="headerlink" title="Screen Tearing（撕裂）"></a>Screen Tearing（撕裂）</h3><p>在早期设备上，采用单缓冲模式，由于 display 的处理频率是固定的，而CPU/GPU 处理数据的时间不确定，因此，会有屏幕撕裂的情况：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E5%B1%8F%E5%B9%95%E6%92%95%E8%A3%82.png" alt="屏幕撕裂"></p>
-<p>从上图可看出，由于 CPU/GPU 仅完成部分工作，因此，在 0.015s 时，屏幕上部分显示的是2画面，下部分显示的是 1 画面的撕裂画面。</p>
-<h3 id="Double-buffer"><a href="#Double-buffer" class="headerlink" title="Double-buffer"></a>Double-buffer</h3><p>双缓冲技术，原理就是采用2个 buffer，一块 back buffer 用于 CPU/GPU 后台绘制，另一块 framebuffer 则用于显示，当 back buffer 准备就绪之后，才进行交换，这样就避免了屏幕撕裂。</p>
-<h3 id="VSync"><a href="#VSync" class="headerlink" title="VSync"></a>VSync</h3><p>在 Android 4.1 之前，没有采用 VSync 信号，此时 CPU 或 GPU 往 buffer 中写数据比较随意，因此会造成丢帧：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E6%97%A0VSync%E9%80%A0%E6%88%90%E4%B8%A2%E5%B8%A7.png" alt="无VSync造成丢帧"></p>
-<p>当扫描完一个屏幕后，设备需要重新回到第一行以进入下一次循环，此时有一段时间空隙，这个时间点就是我们进行缓冲区交换的最佳时间。</p>
-<p>在 Android 4.1 之后，Android display 系统进行了重构（黄油计划：Project Butter），引入三个核心元素： VSync、Triple Buffer 以及 Choreographer，它规定一旦收到 VSync 通知（约16ms触发一次），CPU 和 GPU 就立刻开始工作把显示数据写入 buffer。根据 VSync 新来来同步处理数据，让 CPU/GPU 有完整的 16ms 时间来处理数据，减少 jank。</p>
-<h3 id="Triple-Buffer"><a href="#Triple-Buffer" class="headerlink" title="Triple Buffer"></a>Triple Buffer</h3><p>双缓存机制并不完美，当 CPU/GPU 工作时间较长时，会出现如下情况：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E5%8F%8C%E7%BC%93%E5%86%B2%E4%B8%8B%E7%9A%84jank.png" alt="双缓冲下的jank"></p>
-<p>从图可以看出，当 CPU/GPU 的处理时间超过 16ms 时，第一个 VSync 信号来了，缓冲区 B 还没准备好，于是只能继续显示 A 缓冲区的内容，<strong>而在 B 完成后又因为第2个 VSync 信号还没来，不能及时展示，只能等待下一个 VSync 信号到来，在这一过程中，有一大段时间是被浪费的</strong>。</p>
-<p>三缓冲虽然不能解决双缓冲第一次 jank 问题，但是当第一次 VSync 发生后，CPU 不用再等待了，它会使用第三个buffer C 来进行下一帧的准备工作。虽然对缓冲区 C 的处理所需时间也超狗 16ms ，但并不影响显示屏——第2次 VSync 到来时，会选择 buffer B 进行展示，而第 3 次 VSync 时，会接着采用 C ，而不是像 double buffer 时只能再显示一遍 B ，这样就有效地减低了 jank，如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/%E4%B8%89%E7%BC%93%E5%86%B2%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="三缓冲示意图"></p>
-<h2 id="App-相关的屏幕绘制"><a href="#App-相关的屏幕绘制" class="headerlink" title="App 相关的屏幕绘制"></a>App 相关的屏幕绘制</h2><p>总的来说，当有屏幕刷新操作时（是否时invalidate ？），系统会将 View 树的测量、布局和绘制等封装到一个 Runnable（当然，会过滤掉同一帧内的重复调用） ，然后监听 VSync 信号，待信号来时再触发此 Runnable。</p>
-<h2 id="卡顿分析利器——Systrace-工具"><a href="#卡顿分析利器——Systrace-工具" class="headerlink" title="卡顿分析利器——Systrace 工具"></a>卡顿分析利器——Systrace 工具</h2><h3 id="systrace-的使用"><a href="#systrace-的使用" class="headerlink" title="systrace 的使用"></a>systrace 的使用</h3><p>一般来说，系统很多关键地方都添加了 trace ，可以看到很多关键代码耗时，当然，我们自己也可以自定义（叫做添加自己的 Label）：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Trace.beginSection(<span class="string">"名称"</span>):</span><br><span class="line"><span class="comment">//doSomething</span></span><br><span class="line"></span><br><span class="line">Trace.endSection():</span><br></pre></td></tr></tbody></table></figure>
-
-<p>一般来说，添加自己的 Label 需要注意以下几点：</p>
-<ul>
-<li>begin 和 end 必须成对出现</li>
-<li>Label 支持嵌套，但是 begin 会找最近的 end</li>
-<li>begin 和 end 必须在同一线程</li>
-<li>抓取 systrace 时，必须指定包名</li>
-</ul>
-<p>但是，还有一种情况，那就是 <strong>异步trace</strong>，使用方法如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Trace.asyncTraceBegin(Trace.TRACE_TAG_WINDOW_MANAGER, <span class="string">"Stop bootanim"</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//dosomeThing</span></span><br><span class="line"></span><br><span class="line">Trace.asyncTraceEnd(Trace.TRACE_TAG_WINDOW_MANAGER, <span class="string">"Stop bootanim"</span>, <span class="number">0</span>);</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-
-<h3 id="Systrace-文件获取"><a href="#Systrace-文件获取" class="headerlink" title="Systrace 文件获取"></a>Systrace 文件获取</h3><p>Android 在 platform-tools 中提供了 systrace 文件获取的工具，这是一个 python 脚本，用命令行就能够获取：</p>
-<blockquote>
-<p>python systrace.py –help</p>
-</blockquote>
-<p>一般来说，我们只需要使用 -o ，-b， -t，-a 对应输出文件路径，buffersize，time，需要分析的应用程序包名。</p>
-<h3 id="查看trace-文件"><a href="#查看trace-文件" class="headerlink" title="查看trace 文件"></a>查看trace 文件</h3><p>使用 chrome 打开导出的 trace 文件，大概如下图所示：</p>
-<p><img src="/assets/%E9%9D%A2%E8%AF%95/Android%E5%9F%BA%E7%A1%80/trace%E6%96%87%E4%BB%B6%E5%88%86%E6%9E%90.png" alt="trace文件分析"></p>
-<p>重点关注带 F 的原点，表示一帧，只有圆点为绿色时才表示这一帧没有超过 16ms ，其他颜色都是大于 16ms ，红色表示严重超时。</p>
-<h3 id="异步-trace"><a href="#异步-trace" class="headerlink" title="异步 trace"></a>异步 trace</h3><blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://blog.csdn.net/vicwudi/article/details/100191529">CSDN上的博客</a>、<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/f83d84dcd0b8">简书上的博客</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/28/%E5%9C%A8%E7%BA%BF%E7%9B%91%E6%8E%A7/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/28/%E5%9C%A8%E7%BA%BF%E7%9B%91%E6%8E%A7/" class="post-title-link" itemprop="url">面试题-线上监控的功能</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-09-28 17:14:00" itemprop="dateCreated datePublished" datetime="2021-09-28T17:14:00+08:00">2021-09-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-12-12 12:42:05" itemprop="dateModified" datetime="2021-12-12T12:42:05+08:00">2021-12-12</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="页面整体"><a href="#页面整体" class="headerlink" title="页面整体"></a>页面整体</h2><ul>
-<li>App选择（Android、iOS）</li>
-<li>版本选择（生产版本、测试版本）</li>
-<li>时间段（1天、1周、1个月，最多支持3个月）</li>
-</ul>
-<h2 id="对于选中的"><a href="#对于选中的" class="headerlink" title="对于选中的"></a>对于选中的</h2><ul>
-<li>App启动次数、网络请求次数（地域分布）</li>
-<li>App崩溃次数，崩溃率（可选时间段）</li>
-<li>ANR分析、卡顿分析</li>
-<li>http请求错误率、CDN性能</li>
-<li>服务响应时间（平均0.4s 的水平）</li>
-<li>Webview（响应最差的接口、http错误率最高的接口）</li>
-<li>js错误类型</li>
-<li>交互信息：设备型号分布、操作系统版本、App版本（各个版本占比多少）</li>
-</ul>
-<blockquote>
-<p>以上内容对照现有的APM系统界面编写</p>
-</blockquote>
-<h2 id="360开源的-ArgusAPM-线上监控"><a href="#360开源的-ArgusAPM-线上监控" class="headerlink" title="360开源的 ArgusAPM 线上监控"></a>360开源的 ArgusAPM 线上监控</h2><h3 id="主要功能"><a href="#主要功能" class="headerlink" title="主要功能"></a>主要功能</h3><p>ArgusAPM 主要支持如下性能指标：</p>
-<ul>
-<li>交互分析：分析 Activity 生命周期耗时</li>
-<li>网络请求分析：监控流量使用情况，发现并定位各种网络问题</li>
-<li>内存分析：全面监控内存的使用</li>
-<li>进程监控：针对多进程应用，统计进程启动情况，发现启动异常（耗电、存活率等）</li>
-<li>文件监控： 监控 App 私有文件大小/变化，避免私有文件过大导致的卡顿</li>
-<li>卡顿分析：监控并发现卡顿原因</li>
-<li>ANR 分析： 捕获 ANR 异常</li>
-</ul>
-<h3 id="结构"><a href="#结构" class="headerlink" title="结构"></a>结构</h3><p>主要注意有一个 </p>
-<h3 id="数据采集"><a href="#数据采集" class="headerlink" title="数据采集"></a>数据采集</h3><h4 id="1、卡顿（block）-信息"><a href="#1、卡顿（block）-信息" class="headerlink" title="1、卡顿（block） 信息"></a>1、卡顿（block） 信息</h4><p>通过使用 ：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Looper.getMainLooper().setMessageLogging()</span><br></pre></td></tr></tbody></table></figure>
-
-<p>方法设置自定义的 Printer，监听消息的开始和消息的结束。</p>
-<h4 id="2、FPS"><a href="#2、FPS" class="headerlink" title="2、FPS"></a>2、FPS</h4><p>主要通过监听系统执行下一帧的回调来做到：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这个方法的使用方式</span></span><br><span class="line">Choreographer.getInstance().postFrameCallback(<span class="keyword">new</span> Choreographer.FrameCallback(){</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doFrame</span><span class="params">(<span class="keyword">long</span> frameTimeNanos)</span> </span>{</span><br><span class="line"></span><br><span class="line">            }</span><br><span class="line">        });</span><br><span class="line"></span><br><span class="line"><span class="comment">//在 ArgusAPM 中的使用：</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doFrame</span><span class="params">(<span class="keyword">long</span> frameTimeNanos)</span> </span>{</span><br><span class="line">  mFpsCount ++;</span><br><span class="line">  mFrameTimeNanos = frameTimeNanos;</span><br><span class="line">  <span class="keyword">if</span>(isCanWork()) {</span><br><span class="line">    Choreographer.getInstance().postFrameCallback(<span class="keyword">this</span>);</span><br><span class="line">  } <span class="keyword">else</span> {</span><br><span class="line">    mFpsCount = <span class="number">0</span>;</span><br><span class="line">  }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>在 doFrame 回调里面，每次都重新注册这个监听，当到了定时任务，就计算当前 mFpsCount 数量（总帧数），我们直到 FPS 无非就是每秒绘制的帧数，所以，我们可以计算出 FPS 的值：总帧数/时间。</p>
-<h4 id="3、Memory"><a href="#3、Memory" class="headerlink" title="3、Memory"></a>3、Memory</h4><p>内存收集，在 ArgusAPM 中是通过 getMemoryInfo 方法来获得的：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> MemoryInfo <span class="title">getMemoryInfo</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="comment">// 注意：这里是耗时和耗CPU的操作，一定要谨慎调用</span></span><br><span class="line">    Debug.MemoryInfo info = <span class="keyword">new</span> Debug.MemoryInfo();</span><br><span class="line">    Debug.getMemoryInfo(info);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MemoryInfo(ProcessUtils.getCurrentProcessName(), info.getTotalPss(), info.dalvikPss, info.nativePss, info.otherPss);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>通过 Debug 类的相关功能，最后在Native层面实现。 Debug 这个类很有用，我们可以看下主要的方法，会有意想不到的收获。比如启动时等待调试就是调用的 waitForDebugger 方法；获取当前的虚拟机信息可以通过 getVmFeatureList 方法。此外，这个比较耗时和cpu，所以谨慎调用，需要合理降低采集的次数。</p>
-<h4 id="4、watchdog"><a href="#4、watchdog" class="headerlink" title="4、watchdog"></a>4、watchdog</h4><p>WatchDogTask 做的事情和 blockTask 类似，都是卡顿检测，不过采用另外的思路，代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Runnable runnable = <span class="keyword">new</span> Runnable() {</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == mHandler) {</span><br><span class="line">                Log.e(TAG, <span class="string">"handler is null"</span>);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            mHandler.post(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    mTick++;</span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                Thread.sleep(DELAY_TIME);</span><br><span class="line">            } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (TICK_INIT_VALUE == mTick) {</span><br><span class="line">                String stack = captureStacktrace();</span><br><span class="line">                saveWatchdogInfo(stack);</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                mTick = TICK_INIT_VALUE;</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            AsyncThreadTask.getInstance().executeDelayed(runnable, ArgusApmConfigManager.getInstance().getArgusApmConfigData().funcControl.getWatchDogIntervalTime());</span><br><span class="line">        }</span><br><span class="line">    };</span><br></pre></td></tr></tbody></table></figure>
-
-<p>主要思路是：<strong>往主线程post 一个任务，对一个变量 mTick 执行 ++ 操作，然后再当前线程中 sleep 一段时间，然后再去检测 mTick，假如主线程没有卡顿的话，那么 ++ 操作肯定会得到执行，这时候 mTick 就不会与初始值相等。如果相等就可以认为这个等待时间里面，主线程发生了卡顿，这个时候就采集数据，采集的主要是堆栈</strong>。</p>
-<h4 id="5、ANR"><a href="#5、ANR" class="headerlink" title="5、ANR"></a>5、ANR</h4><p>发生 ANR 时都会在 <strong>data/anr</strong> 下产生 trace 文件，因此 anr 就是以 trace 文件为核心。ArgusAPM 提供了两种思路： 1）通过Fileobserver 的方式监听 data/anr 这个目录；2）定时采样方式（隔一段时间就保存一下现场）。</p>
-<p>但是这里需要注意，如果没有权限就拿不到 trace 文件，这里并没有解决方案。</p>
-<h4 id="6、Net"><a href="#6、Net" class="headerlink" title="6、Net"></a>6、Net</h4><p>有个 gradle 的 plugin，通过这个 gradle ，在编译 APK 的时候，读取所有的 class 文件，如果发现 Class  文件是 Okhttp 的时候，在方法里面，拿到 interceptors 字段，添加自己的 Interceptor ，这样就完成了 用 ASM 写入一段字节码，这样就可以采集 Okhttp 信息。</p>
-<h4 id="7、Activity"><a href="#7、Activity" class="headerlink" title="7、Activity"></a>7、Activity</h4><p>Activity 的启动常规方式不好采集，ArgusAPM 采用 Hook 的方式，这里采用的是 Hook Instrumentation 这个类：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">hookInstrumentation</span><span class="params">()</span> <span class="keyword">throws</span> ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException </span>{</span><br><span class="line">        Log.e(TAG, <span class="string">"  hookInstrumentation: "</span>);</span><br><span class="line">        Class&lt;?&gt; c = Class.forName(<span class="string">"android.app.ActivityThread"</span>);</span><br><span class="line">        Method currentActivityThread = c.getDeclaredMethod(<span class="string">"currentActivityThread"</span>);</span><br><span class="line">        <span class="keyword">boolean</span> acc = currentActivityThread.isAccessible();</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            currentActivityThread.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        }</span><br><span class="line">        Object o = currentActivityThread.invoke(<span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            currentActivityThread.setAccessible(acc);</span><br><span class="line">        }</span><br><span class="line">        Field f = c.getDeclaredField(<span class="string">"mInstrumentation"</span>);</span><br><span class="line">        acc = f.isAccessible();</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            f.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        }</span><br><span class="line">        Instrumentation currentInstrumentation = (Instrumentation) f.get(o);</span><br><span class="line">        Instrumentation ins = <span class="keyword">new</span> ApmInstrumentation(currentInstrumentation);</span><br><span class="line">        f.set(o, ins);</span><br><span class="line">        <span class="keyword">if</span> (!acc) {</span><br><span class="line">            f.setAccessible(acc);</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>hook 当前currentActivityThread 的 mInstrumentation。每次执行 Activity 的任何生命周期都会先调用到 Instrumentation 。在后续可以通过 Hook 方式将自定义的 Instrumentation 代理系统原来的 Instrumentation，这样，就能统计 Activity  中的每个 onXXX 方法执行的耗时，而没有嵌入任何代码。</p>
-<h4 id="8、Appstart"><a href="#8、Appstart" class="headerlink" title="8、Appstart"></a>8、Appstart</h4><p>ArgusAPM 中采用的是 application 的启动到第一个 Activity 的创建结束，因为已经 Hook 了 Instrumentation ，因此在 Instrumentation 的 callApplicationOnCreate 方法执行时，就记录下 Application 启动的时间，然后 callActivityOnCreate 记录下第一个 Activity 的启动即可获得冷启动的启动时间。</p>
-<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>除了net 和 Activity 之外，其他的采集并不难，只是细节会非常多，所以需要很精细化的控制，降低对 App 的影响。</p>
-<blockquote>
-<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/025f61a99534">简书上的博客</a>、<a target="_blank" rel="noopener" href="https://blog.csdn.net/u013270444/article/details/90182469">csdn上的博客</a></p>
-</blockquote>
-<p>关于线上监控，还可以参考爱奇艺的 xCrash框架，介绍如下：</p>
-<h2 id="xCarash源码解析"><a href="#xCarash源码解析" class="headerlink" title="xCarash源码解析"></a>xCarash源码解析</h2><p>xCrash 整体分为两部分： <strong>运行于崩溃的App进程楼内的部分、以及独立进程的部分（称为dumper）</strong></p>
-<ul>
-<li>App 进程内的部分分为 <strong>Java 部分 和 Native 部分</strong>，前者主要用于 Java 层的崩溃捕捉，后者用于在Native 负责信号捕捉</li>
-<li>Dumper 独立进程是纯 Native 实现，主要用于负责凤奎进程中线程相关数据的收集和控制。</li>
-</ul>
-<h3 id="Java层的-Exception-捕捉"><a href="#Java层的-Exception-捕捉" class="headerlink" title="Java层的 Exception 捕捉"></a>Java层的 Exception 捕捉</h3><p>在 Java 层主要是还是通过 Java 自身提供的方法来捕捉，只需要自己自定义 UncaughtExceptionHandler 即可，在 xCrash 中定义了一个 JavaCrashHandler 类专门用来干这个事情，之后，在里面实现了注册捕捉：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Thread.setDefaultUncaughtExceptionHandler(<span class="keyword">this</span>);</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h3 id="针对-ANR-的捕捉"><a href="#针对-ANR-的捕捉" class="headerlink" title="针对 ANR 的捕捉"></a>针对 ANR 的捕捉</h3><p>ANR 捕捉主要是用 AnrHandler 实现，主要就是针对 /data/anr  路径的监听，但是，这只适合低版本的手机，在高版本（Android 版本 5.0 以上）的手机上，应用已经访问不到 /data/anr 目录了。xCrash 是怎么实现呢？实际上它捕获了 SIGQUIT 信号，其原理是：<strong>Android App 发生 ANR 时， AMS 会向 App 发送 SIGQUIT 信号！</strong></p>
-<p>当接在 Native 层收到 SIGQUIT 信号时，就开始 dump 现场信息。</p>
-<h3 id="Native-层的-Exception-捕捉"><a href="#Native-层的-Exception-捕捉" class="headerlink" title="Native 层的 Exception 捕捉"></a>Native 层的 Exception 捕捉</h3><p>在Native 崩溃发生时，生成 tombstone 文件（与官方的格式兼容），方便查看</p>
-<blockquote>
-<p> 以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/aed1da70c974">简书的博客</a>、以及<a target="_blank" rel="noopener" href="http://www.itpub.net/2020/02/07/5193/">爱奇艺技术产品团队</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/28/%E9%9D%A2-%E7%9F%A5%E8%AF%86/ViewPager2%E6%BB%91%E5%8A%A8%E5%86%B2%E7%AA%81%E8%A7%A3%E5%86%B3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/28/%E9%9D%A2-%E7%9F%A5%E8%AF%86/ViewPager2%E6%BB%91%E5%8A%A8%E5%86%B2%E7%AA%81%E8%A7%A3%E5%86%B3/" class="post-title-link" itemprop="url">Android基础-ViewPager2滑动冲突处理</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-09-28 16:18:00 / 修改时间：16:18:59" itemprop="dateCreated datePublished" datetime="2021-09-28T16:18:00+08:00">2021-09-28</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="为什么-ViewPager-没有滑动冲突"><a href="#为什么-ViewPager-没有滑动冲突" class="headerlink" title="为什么 ViewPager 没有滑动冲突"></a>为什么 ViewPager 没有滑动冲突</h2><p>可能你会有疑问，在 ViewPager 时代，ViewPager 嵌套 ViewPager 并没有出现过滑动冲突。但为什么在升级了 ViewPager2 之后就出现了滑动冲突呢？</p>
-<p>既然如此，我们看下 ViewPager 的 onInterceptTouchEvent 方法（为了方便阅读，代码做了删减）：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">      <span class="meta">@Override</span></span><br><span class="line"> <span class="number">2</span>    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>{</span><br><span class="line"> <span class="number">3</span></span><br><span class="line"> <span class="number">4</span>        <span class="keyword">final</span> <span class="keyword">int</span> action = ev.getAction() &amp; MotionEvent.ACTION_MASK;</span><br><span class="line"> <span class="number">5</span>        <span class="keyword">if</span> (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {</span><br><span class="line"> <span class="number">6</span>            <span class="comment">// 在事件取消或者抬起手指后重置状态</span></span><br><span class="line"> <span class="number">7</span>            resetTouch();</span><br><span class="line"> <span class="number">8</span>            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">9</span>        }</span><br><span class="line"><span class="number">10</span></span><br><span class="line"><span class="number">11</span>        <span class="keyword">switch</span> (action) {</span><br><span class="line"><span class="number">12</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">13</span>                <span class="comment">// 这里判断在水平方向上的滑动距离大于竖直方向的2倍，则认为是有效的切换页面的滑动</span></span><br><span class="line"><span class="number">14</span>                <span class="keyword">if</span> (xDiff &gt; mTouchSlop &amp;&amp; xDiff * <span class="number">0.5f</span> &gt; yDiff) { </span><br><span class="line"><span class="number">15</span>                    mIsBeingDragged = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">16</span>                    <span class="comment">// 禁止Parent View拦截事件，即事件要能够传递到ViewPager</span></span><br><span class="line"><span class="number">17</span>                    requestParentDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"><span class="number">18</span>                    setScrollState(SCROLL_STATE_DRAGGING);</span><br><span class="line"><span class="number">19</span>                } <span class="keyword">else</span> <span class="keyword">if</span> (yDiff &gt; mTouchSlop) {</span><br><span class="line"><span class="number">20</span>                    mIsUnableToDrag = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">21</span>                }</span><br><span class="line"><span class="number">22</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">23</span>            }</span><br><span class="line"><span class="number">24</span></span><br><span class="line"><span class="number">25</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {     </span><br><span class="line"><span class="number">26</span>                <span class="keyword">if</span> (mScrollState == SCROLL_STATE_SETTLING</span><br><span class="line"><span class="number">27</span>                        &amp;&amp; Math.abs(mScroller.getFinalX() - mScroller.getCurrX()) &gt; mCloseEnough) {</span><br><span class="line"><span class="number">28</span>                       <span class="comment">// 在Down事件中禁止Parent View拦截事件，是为了事件序列能够传递到ViewPager</span></span><br><span class="line"><span class="number">29</span>                    requestParentDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"><span class="number">30</span>                    setScrollState(SCROLL_STATE_DRAGGING);</span><br><span class="line"><span class="number">31</span>                } <span class="keyword">else</span> {</span><br><span class="line"><span class="number">32</span>                    completeScroll(<span class="keyword">false</span>);</span><br><span class="line"><span class="number">33</span>                    mIsBeingDragged = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">34</span>                }</span><br><span class="line"><span class="number">35</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">36</span>            }</span><br><span class="line"><span class="number">37</span></span><br><span class="line"><span class="number">38</span>            <span class="keyword">case</span> MotionEvent.ACTION_POINTER_UP:</span><br><span class="line"><span class="number">39</span>                onSecondaryPointerUp(ev);</span><br><span class="line"><span class="number">40</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">41</span>        }</span><br><span class="line"><span class="number">42</span>        <span class="keyword">return</span> mIsBeingDragged;</span><br><span class="line"><span class="number">43</span>    }</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以看到，首先在 ACTION_DOWN 的时候通过 requestParentDisallowInterceptTouchEvent(true) 禁止 Parent View 拦截事件，以便后续的事件还能传到 ViewPager 中来；在 ACTION_MOVE 的时候也会有 <strong>水平方向上的滑动距离大于竖直方向的2倍</strong> 条件来判断是否需要禁止 Parent View 拦截事件。</p>
-<p>所以 ViewPager 时我们只管用，无需担心滑动冲突的问题。再看下 ViewPager2 的 onInterceptTouchEvent 方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span>    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">RecyclerViewImpl</span> <span class="keyword">extends</span> <span class="title">RecyclerView</span> </span>{</span><br><span class="line"><span class="number">2</span></span><br><span class="line"><span class="number">3</span>        .... <span class="comment">// 省略部分代码</span></span><br><span class="line"><span class="number">4</span></span><br><span class="line"><span class="number">5</span>        <span class="meta">@Override</span></span><br><span class="line"><span class="number">6</span>        <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>{</span><br><span class="line"><span class="number">7</span>            <span class="keyword">return</span> isUserInputEnabled() &amp;&amp; <span class="keyword">super</span>.onInterceptTouchEvent(ev);</span><br><span class="line"><span class="number">8</span>        }</span><br><span class="line"><span class="number">9</span>    }</span><br></pre></td></tr></tbody></table></figure>
-
-<p>它并没有为我们做冲突处理！为什么呢？<strong>因为 ViewPager2 被声明成 final 的，并不能继承，</strong>假如它像 ViewPager 一样官方给处理了滑动冲突，那么如果有特殊要求的情况下，官方的冲突处理可能会妨碍我们自己写的冲突处理，所以全权交给开发者自己处理了。</p>
-<h2 id="滑动冲突的处理方案"><a href="#滑动冲突的处理方案" class="headerlink" title="滑动冲突的处理方案"></a>滑动冲突的处理方案</h2><p>在处理滑动冲突之前先了解处理滑动冲突的两种方案。</p>
-<h3 id="外部拦截法"><a href="#外部拦截法" class="headerlink" title="外部拦截法"></a>外部拦截法</h3><p>所谓的 “外部拦截法” 这个 “外部” 是指 出现滑动冲突的这两个布局的外层。因为，一个事件序列是由 Parent View 先获取的，如果 Parent View 不拦截事件才会交给子 View 去处理，既然外部先获知事件，那外层 View 根据情况来决定是否要拦截事件就行了。大概思路如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"> <span class="number">1</span>     <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onInterceptTouchEvent</span><span class="params">(MotionEvent event)</span> </span>{</span><br><span class="line"> <span class="number">2</span>        <span class="keyword">boolean</span> intercepted = <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">3</span>        <span class="keyword">int</span> x = (<span class="keyword">int</span>) event.getX();</span><br><span class="line"> <span class="number">4</span>        <span class="keyword">int</span> y = (<span class="keyword">int</span>) event.getY();</span><br><span class="line"> <span class="number">5</span>        <span class="keyword">switch</span> (event.getAction()) {</span><br><span class="line"> <span class="number">6</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {</span><br><span class="line"> <span class="number">7</span>                intercepted = <span class="keyword">false</span>;</span><br><span class="line"> <span class="number">8</span>                <span class="keyword">break</span>;</span><br><span class="line"> <span class="number">9</span>            }</span><br><span class="line"><span class="number">10</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">11</span>                <span class="keyword">if</span> (needIntercept) { <span class="comment">// 这里根据需求判断是否需要拦截</span></span><br><span class="line"><span class="number">12</span>                    intercepted = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">13</span>                } <span class="keyword">else</span> {</span><br><span class="line"><span class="number">14</span>                    intercepted = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">15</span>                }</span><br><span class="line"><span class="number">16</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">17</span>            }</span><br><span class="line"><span class="number">18</span>            <span class="keyword">case</span> MotionEvent.ACTION_UP: {</span><br><span class="line"><span class="number">19</span>                intercepted = <span class="keyword">false</span>;</span><br><span class="line"><span class="number">20</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">21</span>            }</span><br><span class="line"><span class="number">22</span>            <span class="keyword">default</span>:</span><br><span class="line"><span class="number">23</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">24</span>        }</span><br><span class="line"><span class="number">25</span>        mLastXIntercept = x;</span><br><span class="line"><span class="number">26</span>        mLastYIntercept = y;</span><br><span class="line"><span class="number">27</span>        <span class="keyword">return</span> intercepted;</span><br><span class="line"><span class="number">28</span>    }</span><br></pre></td></tr></tbody></table></figure>
-
-<p>首先也是在 ACTION_DOWN 中不做拦截，其次是在 ACTION_MOVE 中根据需要拦截。</p>
-<h2 id="内部拦截法"><a href="#内部拦截法" class="headerlink" title="内部拦截法"></a>内部拦截法</h2><p>所谓“内部拦截法”指的是对内部的View 做文章，<strong>让内部 View 决定是不是拦截事件</strong>。因为 Google 官方提供了 requestDisallowInterceptTouchEvent 方法，它接收一个 Boolean 值，意思是是否要禁止父 ViewGroup 拦截当前事件，如果是 true 的话，父 ViewGroup 就无法对事件进行拦截，看下具体实现：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"> <span class="number">1</span>     <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">dispatchTouchEvent</span><span class="params">(MotionEvent event)</span> </span>{</span><br><span class="line"> <span class="number">2</span>        <span class="keyword">int</span> x = (<span class="keyword">int</span>) event.getX();</span><br><span class="line"> <span class="number">3</span>        <span class="keyword">int</span> y = (<span class="keyword">int</span>) event.getY();</span><br><span class="line"> <span class="number">4</span></span><br><span class="line"> <span class="number">5</span>        <span class="keyword">switch</span> (event.getAction()) {</span><br><span class="line"> <span class="number">6</span>            <span class="keyword">case</span> MotionEvent.ACTION_DOWN: {</span><br><span class="line"> <span class="number">7</span>                <span class="comment">// 禁止parent拦截down事件</span></span><br><span class="line"> <span class="number">8</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">true</span>);</span><br><span class="line"> <span class="number">9</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">10</span>            }</span><br><span class="line"><span class="number">11</span>            <span class="keyword">case</span> MotionEvent.ACTION_MOVE: {</span><br><span class="line"><span class="number">12</span>                <span class="keyword">int</span> deltaX = x - mLastX;</span><br><span class="line"><span class="number">13</span>                <span class="keyword">int</span> deltaY = y - mLastY;</span><br><span class="line"><span class="number">14</span>                <span class="keyword">if</span> (disallowParentInterceptTouchEvent) { <span class="comment">// 根据需求条件来决定是否让Parent View拦截事件。</span></span><br><span class="line"><span class="number">15</span>                    parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>);</span><br><span class="line"><span class="number">16</span>                }</span><br><span class="line"><span class="number">17</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">18</span>            }</span><br><span class="line"><span class="number">19</span>            <span class="keyword">case</span> MotionEvent.ACTION_UP: {</span><br><span class="line"><span class="number">20</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">21</span>            }</span><br><span class="line"><span class="number">22</span>            <span class="keyword">default</span>:</span><br><span class="line"><span class="number">23</span>                <span class="keyword">break</span>;</span><br><span class="line"><span class="number">24</span>        }</span><br><span class="line"><span class="number">25</span></span><br><span class="line"><span class="number">26</span>        mLastX = x;</span><br><span class="line"><span class="number">27</span>        mLastY = y;</span><br><span class="line"><span class="number">28</span>        <span class="keyword">return</span> <span class="keyword">super</span>.dispatchTouchEvent(event);</span><br><span class="line"><span class="number">29</span>    }</span><br></pre></td></tr></tbody></table></figure>
-
-<p>在 dispatchTouchEvent 的 ACTION_DOWN 和 ACTION_MOVE 行为中，分别执行相应动作来判断是否允许 Parent View 拦截自己的事件。</p>
-<h2 id="处理-ViewPager2-的滑动冲突"><a href="#处理-ViewPager2-的滑动冲突" class="headerlink" title="处理 ViewPager2 的滑动冲突"></a>处理 ViewPager2 的滑动冲突</h2><p>在解决冲突之前，我们首先要确定下存在哪些需要拦截哪些不需要拦截的边界条件，来分析下：</p>
-<ul>
-<li>如果设置了 userInputEnable=false ，那么ViewPager2不应该拦截任何事件；</li>
-<li>如果只有一个Item，那么ViewPager2也不应该拦截事件；</li>
-<li>如果是多个Item，且当前是第一个页面，那么只能拦截向左的滑动事件，向右的滑动事件就不应该由ViewPager2拦截了；</li>
-<li>如果是多个Item，且当前是最后一个页面，那么只能拦截向右的滑动事件，向左的滑动事件不应该由当前的ViewPager2拦截；</li>
-<li>如果是多个Item，且是中间页面，那么无论向左还是向右的事件都应该由ViewPager2拦截；</li>
-<li>最后，由于ViewPager2是支持竖直滑动的，那么竖直滑动也应该考虑以上条件。</li>
-</ul>
-<p>分析完成后，我们看下应该使用哪种方案来处理滑动冲突，很明显，我们应该使用 <strong>内部拦截法</strong>，但是，由于 ViewPager2 被设置为了 final ，我们无法通过继承方式来处理。</p>
-<p>所以，<strong>我们需要在 ViewPager2 外部包裹一层自定义的 Layout，在它里面实现事件拦截逻辑，用它来实现内部拦截！</strong>看代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line">  1class ViewPager2Container <span class="meta">@JvmOverloads</span> constructor(context: Context, attrs: AttributeSet? = <span class="keyword">null</span>, defStyleAttr: Int = <span class="number">0</span>) : RelativeLayout(context, attrs, defStyleAttr) {</span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span>    <span class="keyword">private</span> <span class="keyword">var</span> mViewPager2: ViewPager2? = <span class="keyword">null</span></span><br><span class="line">  <span class="number">4</span>    <span class="keyword">private</span> <span class="keyword">var</span> disallowParentInterceptDownEvent = <span class="keyword">true</span></span><br><span class="line">  <span class="number">5</span>    <span class="keyword">private</span> <span class="keyword">var</span> startX = <span class="number">0</span></span><br><span class="line">  <span class="number">6</span>    <span class="keyword">private</span> <span class="keyword">var</span> startY = <span class="number">0</span></span><br><span class="line">  <span class="number">7</span></span><br><span class="line">  <span class="number">8</span>    <span class="function">override fun <span class="title">onFinishInflate</span><span class="params">()</span> </span>{</span><br><span class="line">  <span class="number">9</span>        <span class="keyword">super</span>.onFinishInflate()</span><br><span class="line"> <span class="number">10</span>        <span class="keyword">for</span> (i in <span class="number">0</span> until childCount) {</span><br><span class="line"> <span class="number">11</span>            val childView = getChildAt(i)</span><br><span class="line"> <span class="number">12</span>            <span class="keyword">if</span> (childView is ViewPager2) {</span><br><span class="line"> <span class="number">13</span>                mViewPager2 = childView</span><br><span class="line"> <span class="number">14</span>                <span class="keyword">break</span></span><br><span class="line"> <span class="number">15</span>            }</span><br><span class="line"> <span class="number">16</span>        }</span><br><span class="line"> <span class="number">17</span>        <span class="keyword">if</span> (mViewPager2 == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">18</span>            <span class="keyword">throw</span> IllegalStateException(<span class="string">"The root child of ViewPager2Container must contains a ViewPager2"</span>)</span><br><span class="line"> <span class="number">19</span>        }</span><br><span class="line"> <span class="number">20</span>    }</span><br><span class="line"> <span class="number">21</span></span><br><span class="line"> <span class="number">22</span>    <span class="function">override fun <span class="title">onInterceptTouchEvent</span><span class="params">(ev: MotionEvent)</span>: Boolean </span>{</span><br><span class="line"> <span class="number">23</span>        val doNotNeedIntercept = (!mViewPager2!!.isUserInputEnabled</span><br><span class="line"> <span class="number">24</span>                || (mViewPager2?.adapter != <span class="keyword">null</span></span><br><span class="line"> <span class="number">25</span>                &amp;&amp; mViewPager2?.adapter!!.itemCount &lt;= <span class="number">1</span>))</span><br><span class="line"> <span class="number">26</span>        <span class="keyword">if</span> (doNotNeedIntercept) {</span><br><span class="line"> <span class="number">27</span>            <span class="keyword">return</span> <span class="keyword">super</span>.onInterceptTouchEvent(ev)</span><br><span class="line"> <span class="number">28</span>        }</span><br><span class="line"> <span class="number">29</span>        when (ev.action) {</span><br><span class="line"> <span class="number">30</span>            MotionEvent.ACTION_DOWN -&gt; {</span><br><span class="line"> <span class="number">31</span>                startX = ev.x.toInt()</span><br><span class="line"> <span class="number">32</span>                startY = ev.y.toInt()</span><br><span class="line"> <span class="number">33</span>                parent.requestDisallowInterceptTouchEvent(!disallowParentInterceptDownEvent)</span><br><span class="line"> <span class="number">34</span>            }</span><br><span class="line"> <span class="number">35</span>            MotionEvent.ACTION_MOVE -&gt; {</span><br><span class="line"> <span class="number">36</span>                val endX = ev.x.toInt()</span><br><span class="line"> <span class="number">37</span>                val endY = ev.y.toInt()</span><br><span class="line"> <span class="number">38</span>                val disX = abs(endX - startX)</span><br><span class="line"> <span class="number">39</span>                val disY = abs(endY - startY)</span><br><span class="line"> <span class="number">40</span>                <span class="keyword">if</span> (mViewPager2!!.orientation == ViewPager2.ORIENTATION_VERTICAL) {</span><br><span class="line"> <span class="number">41</span>                    onVerticalActionMove(endY, disX, disY)</span><br><span class="line"> <span class="number">42</span>                } <span class="keyword">else</span> <span class="keyword">if</span> (mViewPager2!!.orientation == ViewPager2.ORIENTATION_HORIZONTAL) {</span><br><span class="line"> <span class="number">43</span>                    onHorizontalActionMove(endX, disX, disY)</span><br><span class="line"> <span class="number">44</span>                }</span><br><span class="line"> <span class="number">45</span>            }</span><br><span class="line"> <span class="number">46</span>            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -&gt; parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">47</span>        }</span><br><span class="line"> <span class="number">48</span>        <span class="keyword">return</span> <span class="keyword">super</span>.onInterceptTouchEvent(ev)</span><br><span class="line"> <span class="number">49</span>    }</span><br><span class="line"> <span class="number">50</span></span><br><span class="line"> <span class="number">51</span>    <span class="function"><span class="keyword">private</span> fun <span class="title">onHorizontalActionMove</span><span class="params">(endX: Int, disX: Int, disY: Int)</span> </span>{</span><br><span class="line"> <span class="number">52</span>        <span class="keyword">if</span> (mViewPager2?.adapter == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">53</span>            <span class="keyword">return</span></span><br><span class="line"> <span class="number">54</span>        }</span><br><span class="line"> <span class="number">55</span>        <span class="keyword">if</span> (disX &gt; disY) {</span><br><span class="line"> <span class="number">56</span>            val currentItem = mViewPager2?.currentItem</span><br><span class="line"> <span class="number">57</span>            val itemCount = mViewPager2?.adapter!!.itemCount</span><br><span class="line"> <span class="number">58</span>            <span class="keyword">if</span> (currentItem == <span class="number">0</span> &amp;&amp; endX - startX &gt; <span class="number">0</span>) {</span><br><span class="line"> <span class="number">59</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">60</span>            } <span class="keyword">else</span> {</span><br><span class="line"> <span class="number">61</span>                parent.requestDisallowInterceptTouchEvent(currentItem != itemCount - <span class="number">1</span></span><br><span class="line"> <span class="number">62</span>                        || endX - startX &gt;= <span class="number">0</span>)</span><br><span class="line"> <span class="number">63</span>            }</span><br><span class="line"> <span class="number">64</span>        } <span class="keyword">else</span> <span class="keyword">if</span> (disY &gt; disX) {</span><br><span class="line"> <span class="number">65</span>            parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">66</span>        }</span><br><span class="line"> <span class="number">67</span>    }</span><br><span class="line"> <span class="number">68</span></span><br><span class="line"> <span class="number">69</span>    <span class="function"><span class="keyword">private</span> fun <span class="title">onVerticalActionMove</span><span class="params">(endY: Int, disX: Int, disY: Int)</span> </span>{</span><br><span class="line"> <span class="number">70</span>        <span class="keyword">if</span> (mViewPager2?.adapter == <span class="keyword">null</span>) {</span><br><span class="line"> <span class="number">71</span>            <span class="keyword">return</span></span><br><span class="line"> <span class="number">72</span>        }</span><br><span class="line"> <span class="number">73</span>        val currentItem = mViewPager2?.currentItem</span><br><span class="line"> <span class="number">74</span>        val itemCount = mViewPager2?.adapter!!.itemCount</span><br><span class="line"> <span class="number">75</span>        <span class="keyword">if</span> (disY &gt; disX) {</span><br><span class="line"> <span class="number">76</span>            <span class="keyword">if</span> (currentItem == <span class="number">0</span> &amp;&amp; endY - startY &gt; <span class="number">0</span>) {</span><br><span class="line"> <span class="number">77</span>                parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">78</span>            } <span class="keyword">else</span> {</span><br><span class="line"> <span class="number">79</span>                parent.requestDisallowInterceptTouchEvent(currentItem != itemCount - <span class="number">1</span></span><br><span class="line"> <span class="number">80</span>                        || endY - startY &gt;= <span class="number">0</span>)</span><br><span class="line"> <span class="number">81</span>            }</span><br><span class="line"> <span class="number">82</span>        } <span class="keyword">else</span> <span class="keyword">if</span> (disX &gt; disY) {</span><br><span class="line"> <span class="number">83</span>            parent.requestDisallowInterceptTouchEvent(<span class="keyword">false</span>)</span><br><span class="line"> <span class="number">84</span>        }</span><br><span class="line"> <span class="number">85</span>    }</span><br><span class="line"> <span class="number">86</span></span><br><span class="line"> <span class="number">87</span>    <span class="comment">/**</span></span><br><span class="line"><span class="comment"> 88     * 设置是否允许在当前View的{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View对事件的拦截，该方法</span></span><br><span class="line"><span class="comment"> 89     * 用于解决CoordinatorLayout+CollapsingToolbarLayout在嵌套ViewPager2Container时引起的滑动冲突问题。</span></span><br><span class="line"><span class="comment"> 90     *</span></span><br><span class="line"><span class="comment"> 91     * 设置是否允许在ViewPager2Container的{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View对事件的拦截，该方法</span></span><br><span class="line"><span class="comment"> 92     * 用于解决CoordinatorLayout+CollapsingToolbarLayout在嵌套ViewPager2Container时引起的滑动冲突问题。</span></span><br><span class="line"><span class="comment"> 93     *</span></span><br><span class="line"><span class="comment"> 94     * <span class="doctag">@param</span> disallowParentInterceptDownEvent 是否允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}事件中禁止父View拦截事件，默认值为false</span></span><br><span class="line"><span class="comment"> 95     *                          true 不允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}时间中禁止父View的时间拦截，</span></span><br><span class="line"><span class="comment"> 96     *                          设置disallowIntercept为true可以解决CoordinatorLayout+CollapsingToolbarLayout的滑动冲突</span></span><br><span class="line"><span class="comment"> 97     *                          false 允许ViewPager2Container在{<span class="doctag">@link</span> MotionEvent#ACTION_DOWN}时间中禁止父View的时间拦截，</span></span><br><span class="line"><span class="comment"> 98     */</span></span><br><span class="line"> <span class="number">99</span>    <span class="function">fun <span class="title">disallowParentInterceptDownEvent</span><span class="params">(disallowParentInterceptDownEvent: Boolean)</span> </span>{</span><br><span class="line"><span class="number">100</span>        <span class="keyword">this</span>.disallowParentInterceptDownEvent = disallowParentInterceptDownEvent</span><br><span class="line"><span class="number">101</span>    }</span><br><span class="line"><span class="number">102</span>}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>代码已经很清楚了，但是主要注意一下： <strong>在onFinishInflate中我们通过循环，遍历自定义 Layout 的所有子 View ，如果没有找到 ViewPager2 就抛出异常</strong>。</p>
-<blockquote>
-<p> 以上内容参考自<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/7iqXs2z3z20dQR7Ocv_qiQ">刘望舒的公众号</a>，如果链接失效，可以查看原文<a target="_blank" rel="noopener" href="https://juejin.cn/post/6911456860533063688">赌一包辣条的博客</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/09/27/%E9%9D%A2-%E7%9F%A5%E8%AF%86/EventBus%E5%8E%9F%E7%90%86/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/27/%E9%9D%A2-%E7%9F%A5%E8%AF%86/EventBus%E5%8E%9F%E7%90%86/" class="post-title-link" itemprop="url">系统源码理解-EventBus原理</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-09-27 11:13:00" itemprop="dateCreated datePublished" datetime="2021-09-27T11:13:00+08:00">2021-09-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-09-28 16:36:15" itemprop="dateModified" datetime="2021-09-28T16:36:15+08:00">2021-09-28</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><blockquote>
-<p>注： 本文的EventBus版本为 3.0</p>
-</blockquote>
-<h2 id="Subscrib-注解"><a href="#Subscrib-注解" class="headerlink" title="Subscrib 注解"></a>Subscrib 注解</h2><p>自 3.0 以来，EventBus 使用 @Subscrib 注解来标记订阅事件的方法，方法命名随意。并不用像以前那样指定方法的命名：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Subscribe</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testEventBus</span><span class="params">(Object obj)</span></span>{ }</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这个注解的定义很有个性，可以看下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span> <span class="comment">// 注解不仅被保存到class文件中，jvm加载class文件之后，仍然存在</span></span><br><span class="line"><span class="meta">@Target({ElementType.METHOD})</span>  <span class="comment">// 作用在方法上</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Subscribe {</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 指定事件订阅方法所在的线程模式，也就是决定订阅方法是在哪个线程，默认是POSTING模式</span></span><br><span class="line">    <span class="function">ThreadMode <span class="title">threadMode</span><span class="params">()</span> <span class="keyword">default</span> ThreadMode.POSTING</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 是否支持粘性事件</span></span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">sticky</span><span class="params">()</span> <span class="keyword">default</span> <span class="keyword">false</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 优先级，如果指定了优先级，则若干方法接收同一事件时，优先级高的方法会先接收到。</span></span><br><span class="line">    <span class="function"><span class="keyword">int</span> <span class="title">priority</span><span class="params">()</span> <span class="keyword">default</span> 0</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其中有几种线程模式，有以下几种：</p>
-<ul>
-<li><p><strong>ThreadMode.MAIN：</strong>如在主线程（UI线程）发送事件，则直接在主线程处理事件；如果在子线程发送事件，则先将事件入队列，然后通过 Handler 切换到主线程，依次处理事件。</p>
-</li>
-<li><p><strong>ThreadMode.ASYNC：</strong>与ThreadMode.MAIN_ORDERED相反，无论在哪个线程发送事件，都将事件加入到队列中，然后通过线程池执行事件</p>
-</li>
-<li><p><strong>ThreadMode.POSTING：</strong>默认的线程模式，在哪个线程发送事件就在对应线程处理事件，避免了线程切换，效率高。</p>
-</li>
-<li><p><strong>ThreadMode.MAIN_ORDERED：</strong>无论在哪个线程发送事件，都将事件加入到队列中，然后通过Handler切换到主线程，依次处理事件。</p>
-</li>
-<li><p><strong>ThreadMode.BACKGROUND：</strong>与ThreadMode.MAIN相反，如果在子线程发送事件，则直接在子线程处理事件；如果在主线程上发送事件，则先将事件入队列，然后通过线程池处理事件。</p>
-</li>
-</ul>
-<h2 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h2><p>注册过程很简单：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().register(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//注册源码</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">register</span><span class="params">(Object subscriber)</span> </span>{</span><br><span class="line">     Class&lt;?&gt; subscriberClass = subscriber.getClass(); <span class="comment">// 获取传入的要注册类的字节码文件</span></span><br><span class="line">     List&lt;SubscriberMethod&gt; subscriberMethods = </span><br><span class="line">     subscriberMethodFinder.findSubscriberMethods(subscriberClass); </span><br><span class="line">     </span><br><span class="line">     <span class="keyword">synchronized</span> (<span class="keyword">this</span>) {</span><br><span class="line"></span><br><span class="line">         <span class="comment">// 遍历订阅方法封装类的集合</span></span><br><span class="line">         <span class="keyword">for</span> (SubscriberMethod subscriberMethod : subscriberMethods) {</span><br><span class="line">              subscribe(subscriber, subscriberMethod); </span><br><span class="line">         }</span><br><span class="line">     }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>根据源码可以直到，这个方法就做了两件事情：</p>
-<ul>
-<li>根据传入的参数object ，获取其 Class ，然后通过这个 Class 获取所有的方法（当然，首先看有没有缓存），查看经过 @Subscrib 修饰的方法，即这个类中所有的订阅方法（会做封装），生成一个list</li>
-<li>遍历上述生成的 list ，给 2 个 Map 填充数据：<strong>subscriptionsByEventType</strong>以 event （订阅方法的参数）的类型（Class）为key，value 为订阅方法list（CopyOnWriteArrayList）；<strong>typesBySubscriber</strong> 以register时传入的对象为key ，value 为 这个对象所有订阅方法所订阅的事件。</li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//EventBus中变量的声明</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//可以根据event（订阅方法中的参数）类型 获取所有订阅方法</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Class&lt;?&gt;, CopyOnWriteArrayList&lt;Subscription&gt;&gt; subscriptionsByEventType;</span><br><span class="line"><span class="comment">//根据注册对象，获取这个对象上所有的订阅方法</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;Object, List&lt;Class&lt;?&gt;&gt;&gt; typesBySubscriber;</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h2 id="反注册"><a href="#反注册" class="headerlink" title="反注册"></a>反注册</h2><p>反注册也很简单：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().unregister(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unregister</span><span class="params">(Object subscriber)</span> </span>{</span><br><span class="line"></span><br><span class="line">    List&lt;Class&lt;?&gt;&gt; subscribedTypes = typesBySubscriber.get(subscriber);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 如果集合不为null    </span></span><br><span class="line">    <span class="keyword">if</span> (subscribedTypes != <span class="keyword">null</span>) {</span><br><span class="line">            </span><br><span class="line">         <span class="comment">// 遍历集合，获取订阅事件的类型</span></span><br><span class="line">         <span class="keyword">for</span> (Class&lt;?&gt; eventType : subscribedTypes) {</span><br><span class="line"></span><br><span class="line">              unsubscribeByEventType(subscriber, eventType);</span><br><span class="line">         }</span><br><span class="line">         typesBySubscriber.remove(subscriber);</span><br><span class="line">     } <span class="keyword">else</span> {</span><br><span class="line">          logger.log(Level.WARNING, <span class="string">"Subscriber to unregister was not registered before: "</span> + subscriber.getClass());</span><br><span class="line">     }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>刚才在注册时候，说了其中一个 map 为 typesBySubscriber，它以注册对象为 key ，value 为这个对象中所有注册方法所注册的event 类型的列表。所以在反注册的时候，</p>
-<ol>
-<li>首先通过传入的对象，获取 注册的 event 的列表 </li>
-<li>遍历这个列表，获取 event 的类型，然后通过这个类型在 subscriptionsByEventType 查找（经过封装的）订阅方法，根据封装在里面的 注册对象 是否是当前 unregister 传入的对象来判断，如果是当前传入的对象，就移除这个经过封装的订阅方法   </li>
-</ol>
-<h2 id="post-发布事件"><a href="#post-发布事件" class="headerlink" title="post 发布事件"></a>post 发布事件</h2><p>post的使用也很简单：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">EventBus.getDefault().post(<span class="keyword">new</span> Object());</span><br></pre></td></tr></tbody></table></figure>
-
-<p>注册的时候，说了有一个map 为 subscriptionsByEventType ，以 event 的类型为key ，存储了所有订阅了这中 event 的（经过封装的）方法。post 的时候，根据post发送的事件类型（post方法的参数的 Class ）从 subscriptionsByEventType 这个集合中获取到所有的订阅方法。之后依次通过反射调用这些方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">invokeSubscriber</span><span class="params">(Subscription subscription, Object event)</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        subscription.subscriberMethod.method.invoke(subscription.subscriber, event);</span><br><span class="line">    } <span class="keyword">catch</span> (InvocationTargetException e) {</span><br><span class="line">        handleSubscriberException(subscription, event, e.getCause());</span><br><span class="line">    } <span class="keyword">catch</span> (IllegalAccessException e) {</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unexpected exception"</span>, e);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>其中， subscription.subscriberMethod.method 是 Method 类型的，用过反射的话，就知道它可以直接 invoke ，它的定义是这样的：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">native</span> Object <span class="title">invoke</span><span class="params">(Object obj, Object... args)</span></span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>第一个参数 obj 指的是用 obj 这个实例来调用这个方法（因为一个类可能会有多个实例，非静态方法需要指定一个实例来调用这个方法），后面的 args 就是方法需要传入的参数。</p>
-<p>所以，在 invoke 的时候，subscription.subscriber 我们应该很容易知道是 register 时传入的那个 Object ！由此，我们一个消息就形成了闭环。</p>
-<h3 id="最后问题，支持跨进程吗？"><a href="#最后问题，支持跨进程吗？" class="headerlink" title="最后问题，支持跨进程吗？"></a>最后问题，支持跨进程吗？</h3><p>不支持跨进程，因为单例。经过上述分析，我们知道 EventBus 的注册、反注册、post 都是通过：EventBus.getDefault() 实现，我们看下它的代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EventBus</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">volatile</span> EventBus defaultInstance;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** Convenience singleton for apps using a process-wide EventBus instance. */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> EventBus <span class="title">getDefault</span><span class="params">()</span> </span>{</span><br><span class="line">        EventBus instance = defaultInstance;</span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">synchronized</span> (EventBus.class) {</span><br><span class="line">                instance = EventBus.defaultInstance;</span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="keyword">null</span>) {</span><br><span class="line">                    instance = EventBus.defaultInstance = <span class="keyword">new</span> EventBus();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p> 所以我们都是基于一个 <strong>static 类型的 defaultInstance</strong>去做一系列操作，由于跨进程后，静态会失效，所以，<strong>EventBus 并不能跨进程</strong>。</p>
-<p>以上参考自掘金<a target="_blank" rel="noopener" href="https://juejin.cn/post/6844903969517469709#heading-7">刘洋巴金的博客</a>，如果链接变得不可访问，可以参看这篇文章的<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/a2f14b0cb217">Copy</a></p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1487,7 +1649,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">158</span>
+          <span class="site-state-item-count">160</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1573,7 +1735,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共320.9k字</span>
+  <span class="post-count">博客全站共315k字</span>
 </div>
 
 

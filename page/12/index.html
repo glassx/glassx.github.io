@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">158</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">160</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,591 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/10/09/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/10/09/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：Android启动过程简析</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-10-09 22:00:00" itemprop="dateCreated datePublished" datetime="2019-10-09T22:00:00+08:00">2019-10-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:48:59" itemprop="dateModified" datetime="2019-11-17T21:48:59+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="第一个系统进程-init"><a href="#第一个系统进程-init" class="headerlink" title="第一个系统进程(init)"></a>第一个系统进程(init)</h2><p>Android设备的启动必须经历3个阶段： Boot Loader、Linux Kernel 以及 Android 系统服务，默认情况下它们都有各自的启动画面。作为Android 中第一个被启动的进程，init的 PID 的值为 0，它通过解析 init.rc 脚本来构建出系统的初始运行形态——其中最重要的就是启动 ServiceManager、Zygote 和 SystemServer。</p>
+<h3 id="Android-的“DNS服务器”——ServiceManager"><a href="#Android-的“DNS服务器”——ServiceManager" class="headerlink" title="Android 的“DNS服务器”——ServiceManager"></a>Android 的“DNS服务器”——ServiceManager</h3><p>ServiceManager 是Binder 机制中的“DNS服务器”，负责域名(某Binder服务在 ServiceManager 注册时提供的名称) 到IP地址(由底层Binder驱动分配的值)的解析。</p>
+<p>ServiceManager 所属class 是core ，并且带有 critical 选项，说明它是系统的关键进程——意味着如果进程不幸在4分钟内异常退出4次，则设备将重启并进入还原模式。当 ServiceManager 重启时，zygote、media、surfaceflinger 等都会被重启。</p>
+<h3 id="“孕育”-新的线程和进程——Zygote"><a href="#“孕育”-新的线程和进程——Zygote" class="headerlink" title="“孕育” 新的线程和进程——Zygote"></a>“孕育” 新的线程和进程——Zygote</h3><p>这个单词是”受精卵”的意思，正如其名所示，Android 中大多数的应用进程和系统进程都是通过 Zygote 来生成的。它所在的程序名叫做”app_process” ，而不像 ServiceManager 一样在一个独立的进程中。在init 进程的帮助下，通过zygote 逐步建立起 SystemServer 的运行环境。</p>
+<h3 id="Android的“系统服务”——SystemServer"><a href="#Android的“系统服务”——SystemServer" class="headerlink" title="Android的“系统服务”——SystemServer"></a>Android的“系统服务”——SystemServer</h3><p>SystemServer 是 Android 进入 Launcher 前的最后准备。ZygoteInit 通过 Zygote.forkSystemServer 来生成一个新的进程，用于承载各系统服务。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/26/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：进程间通信——Binder</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-26 21:36:00" itemprop="dateCreated datePublished" datetime="2019-09-26T21:36:00+08:00">2019-09-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:48:53" itemprop="dateModified" datetime="2019-11-17T21:48:53+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>我们知道，同一个程序中两个函数之间能够直接调用的根本原因是他们处于相同的内存区域中，因为在同一个内存区域中，虚拟地址的映射规则完全一致，所以A函数和B函数的调用关系很简单，但两个不同进程，他们是没有办法直接通过内存地址来访问到对方内部的函数或者变量的。</p>
+<p>既然无法直接访问，那间接的方法就是Binder。如果通观Binder的各个元素，就会惊奇地发现它和 TCP/IP 网络有很多相似之处：</p>
+<ul>
+<li>Binder 驱动 -&gt; 路由器</li>
+<li>Service Manager（本质也是个服务器） -&gt; DNS（本质也是个服务器）</li>
+<li>Binder Client -&gt; 客户端</li>
+<li>Binder Server -&gt; 服务器</li>
+</ul>
+<p>TCP/IP中一个典型的服务连接过程如下图所示：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/binder-tcpip.png" alt="TCP/IP连接"></p>
+<p>这个简化的流程图有以下几个步骤：</p>
+<ul>
+<li><p>Client 向dns 查询 google.com 的ip地址。<br>显然，Client 一定得先知道DNS 的 IP地址，才能向它发起查询，DNS 服务器的ip设置是在接入网络前就已经设置完成的。当然，client向DNS 查询 ip地址不一定需要，因为如果已经知晓server的ip，就无需这一步，从而加快访问速度；</p>
+</li>
+<li><p>DNS 将查询结果返回 Client。<br>Client的Ip地址对于 DNS 是必须的，不过这些信息会封装在 TCP/IP 包中。</p>
+</li>
+<li><p>Client 发起连接。这里我们没有提及Router的作用，因为它所负担的责任是将数据包投递到用户设定的目标IP中，它是整个通信结构中的基础。</p>
+</li>
+</ul>
+<p>而对于Binder来说，Binder的 DNS (Service Manager)也不是必须的——前提是客户端能记住它要访问的进程的 Binder 标志（IP地址），<strong>尤其要注意的是，这个标志是个“动态IP”，意味着即使客户端记住了本次通信过程中目标进程的唯一标志，下一次访问仍然需要重新获取</strong>。因此，Service Manager 这个 DNS 的还是挺有必要的。</p>
+<blockquote>
+<p>既然Service Manager是 DNS 服务器，那么它的 IP 地址是多少呢？Binder 机制对此作了特别规定，Service Manager在Binder通信中唯一标志用于都是0。</p>
+</blockquote>
+<h2 id="智能指针"><a href="#智能指针" class="headerlink" title="智能指针"></a>智能指针</h2><p>略</p>
+<h2 id="进程间的数据传递载体——Parcel"><a href="#进程间的数据传递载体——Parcel" class="headerlink" title="进程间的数据传递载体——Parcel"></a>进程间的数据传递载体——Parcel</h2><p>关于进程间如何传递，我们可以使用2个生活例子来类比：</p>
+<ul>
+<li>用快递寄衣服：虽然快递种类比较多，但是无论用哪个快递，用哪种运输方式，“衣服”本身始终是没有变过的，接收人拿到的还是原来那件衣服。    </li>
+<li>通过电子邮件发送图片：在接收人看到邮件中的图片时，我们无法确认这张图片在传输过程中被复制了多少次，但是可以肯定的是，对方看到的图片和原始图片是一样的。</li>
+</ul>
+<p>进程间通信的数据传递类似于第2种情况，如果只是一个int型数值，不断复制直到目标进程即可；如果是一个对象呢？我们直到，同一个进程中对象的传递实质上是传递了一个内存地址，但是在跨进程的情况下就无能为力了，因为采用了虚拟内存机制，两个进程都有自己独立的内存地址空间，所以跨进程传递的地址空间是无效的。</p>
+<p>进程间的数据传递是Binder 机制中的重要环节，而担负这一重任的就是Parcel。 Parcel 的直译是 “打包” ，上面提到，进程间数据传递直接传送对象的地址是行不通的，那把对象在进程 A 中占据的内存相关数据打包起来，然后寄送到内存 B 中，由 B 在自己的进程空间中“复现”这个对象，是否可行？ Parcel 就具有这种打包能力。</p>
+<p>Parcel 提供了很多接口方便程序使用，他可以存储多种类型的数据：</p>
+<ul>
+<li>原始数据类型 以及 原始数据类型数组     </li>
+<li>Parcelable    </li>
+<li>Bundle    </li>
+<li>Active Objects    </li>
+</ul>
+<blockquote>
+<p>通常我们存入Parcel 的是对象的内容，而 Active Objects 写入的则是他们的特殊标志引用。所以从 Parcel 中读取这些对象时，大家看到的并不是重新创建的对象实例，而是原来那个被写入的实例，能够以这种方式传递的对象目前主要有两类： Binder 以及 FileDescriptor (Linux 中的文件描述符)。</p>
+</blockquote>
+<ul>
+<li>Untyped Containers    </li>
+</ul>
+<blockquote>
+<p>它是用于读写标准的任意类型的 Java 容器，包括 ： writeArray(Object[])/readArray(ClassLoader)、writeList(list)/readList(list)</p>
+</blockquote>
+<p>Parcel 可以用集装箱来类比，理由如下：</p>
+<ul>
+<li>货物无关性： 不排斥运输的货物种类，电子产品、汽车等都可以    </li>
+<li>不同的货物需要不同的打包和卸货方案： 比如运载易碎物品和坚硬物品的装箱和卸货方式就有很大的不同。</li>
+</ul>
+<blockquote>
+<p>值得注意的是，Parcel 存/取 数据的方式都是一一对应的，如 writeByte(byte)/readByte() </p>
+</blockquote>
+<ul>
+<li>远程运输和组装： 集装箱的货物一般需要跨洋，这类似于 Parcel 的跨进程。不过集装箱运输公司本身并不负责所运输货物的组装，而 Parcel 会依据协议为接收方提供还原冤死数据对象的业务。   </li>
+</ul>
+<h3 id="Parcel-的工作方式（书上没有，自己添加）"><a href="#Parcel-的工作方式（书上没有，自己添加）" class="headerlink" title="Parcel 的工作方式（书上没有，自己添加）"></a>Parcel 的工作方式（书上没有，自己添加）</h3><p> Parcel 的 Parcel.obtain() 方法可以获取一个Parcel 对象，系统预先产生了一个大小为6的 Parcel 池 sOwnedPool，在obtain 操作时，如果 sOwnedPool 中还有现成的 Parcel 对象，则直接利用，否则通过 new Parcel(0) 创建 Parcel 对象。</p>
+<p> Parcel.java 实际上只是一个简单的中介，它的主要内容都是 JNI 层的 Parcel 实现的。Parcel 对象的初始化过程只是简单地给各个变量赋初始值，并没有设想中的内存分配动作，因为 Parcel 遵循的是“动态扩展”的内存申请原则，只有在需要时才申请内存，避免资源浪费。</p>
+<blockquote>
+<p>Parcel 提供数据当前位置的值 dataPosition，类似于游标。每当存储新数据时，都是从 dataPosition 位置接着往后存储，存储新数据时，会判断当前空间是否足够，如果不足，则申请新的空间（个人根据文中内容理解的，不太确定是否正确）。</p>
+</blockquote>
+<h2 id="Binder驱动与协议"><a href="#Binder驱动与协议" class="headerlink" title="Binder驱动与协议"></a>Binder驱动与协议</h2><p>Android 是 linux 内核的，因而 Binder 驱动也是标准的 linux 驱动，具体而言，Binder驱动会把自己注册成一个 misc device，并向上层提供 /dev/binder节点——但是它并不对应真实的硬件设备。Binder 驱动运行于内核态，可提供 open()、ioctl()、mmap() 等常用文件操作。</p>
+<blockquote>
+<p>Android 系统为什么把 Binder 注册成 misc device 类型的驱动呢？因为 linux 字符设备通常要通过 alloc_chrdev_region()、cdev_init() 等操作才能在内核中注册自己；而 misc 类型驱动相对简单，只需要 misc_register() 就可轻松解决。</p>
+</blockquote>
+<p>Binder 驱动为上层提供了6个接口，但一般文件操作用到的 read() 和 write() 则没有出现，这是因为它们的功能完全可以用 ioctl() 和 mmap() 来代替，并且会更灵活。这6个接口中使用得最多的是 binder_ioctl,binder_mmap 和 binder_open，，以下分别介绍这三种接口。</p>
+<h3 id="打开Binder驱动——binder-open"><a href="#打开Binder驱动——binder-open" class="headerlink" title="打开Binder驱动——binder_open"></a>打开Binder驱动——binder_open</h3><p>上层进程在访问 Binder 驱动时，首先需要打开 /dev/binder 节点，这个操作最终的实现是在 binder_open() 中，在这个方法中，会创建一个 binder_proc 实体，这个实体用于记录各种管理数据(Binder 驱动会在 /proc 系统目录下生成各种管理信息)，并且，每个进程都有独立的记录。</p>
+<p>在完成proc 的初始化之后，就会把这个 proc 加入到 Binder 的全局管理中，这个过程涉及资源互斥，因而需要使用保护机制。到目前为止，Binder 驱动已经为用户创建了一个它自己的 binder_proc 实体，之后用户对Binder 设备的操作都以这个对象为基础。</p>
+<h3 id="binder-mmap"><a href="#binder-mmap" class="headerlink" title="binder_mmap"></a>binder_mmap</h3><p>对于 Binder 驱动来说，上层用户调用的 mmap() 最终对应了 binder_mmap()操作(<strong>应用程序最多只能申请 4M 的空间，如果超出这个大小，不会退出或者报异常，而只会满足用户 4M 的请求</strong>)，那么Binder 采用 mmap 的目的是什么呢？我们知道，mmap() 可以把设备指定的内存块直接映射到应用程序的内存空间中，但Binder 本身并不是硬件设备，而是基于内存的“伪硬件”，那么它映射了什么内存块到应用程序中呢？</p>
+<p>假设有连个进程A和B，其中进程B通过 open() 和 mmap() 与Binder驱动建立了联系，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/B-mmap.png" alt="进程B连接Binder"></p>
+<blockquote>
+<p>可以看到 ：</p>
+</blockquote>
+<blockquote>
+<ol>
+<li>对于进程B而言，通过mmap()返回值得到一个内存地址（当然是虚拟地址），这个地址最终会指向物理内存的某个位置（通过虚拟内存转换）。</li>
+</ol>
+</blockquote>
+<blockquote>
+<ol start="2">
+<li>对于Binder驱动而言，它也有个指针（binder_proc-&gt;buffer）指向某个虚拟内存地址，这个地址转换后，与进程B指向的物理内存地址位于同一个位置。</li>
+</ol>
+</blockquote>
+<p><strong>个人理解：进程B执行 mmap() ，最终是通过 Binder 的 binder_mmap() 来实现，在 B 拿到这块内存后(当然是经过虚拟内存转换后的虚拟内存地址)，Binder 驱动同时将这块内存赋值给了 binder_proc-&gt;buffer</strong>。这样，Binder和应用程序就拥有了<strong>若干公用的物理内存块</strong>，它们对着各自内存地址的操作，实际是在同一块内存中执行，这时候我们再把A进程加入进来，如下图：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3/%E7%AC%AC6%E7%AB%A0/A%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE.png" alt="进程A复制数据"></p>
+<p>这时候，左半部分没有变化，右半部分Binder驱动通过copy_from_user()，把A进程中某段数据复制到其binder_proc-&gt;buffer所指向的内存空间，这时候我们惊喜发现，binder_proc-&gt;buffer在物理内存中的位置和进程B是共享的，进而，B进程可以直接访问到这段数据，<strong>也就是说，Binder驱动只用了一次复制，就实现了进程A和B之间的数据共享。</strong></p>
+<blockquote>
+<p>以上通过 mmap 映射的映射区是 <strong>只读</strong>的。</p>
+</blockquote>
+<h3 id="binder-ioctl"><a href="#binder-ioctl" class="headerlink" title="binder_ioctl"></a>binder_ioctl</h3><p>这是 Binder 接口函数中工作量最大的一个。前面提到过，Binder 并不提供 read() 和 write() 等常规文件操作，因为 ioctl 完全可以替代它们。它主要提供了以下命令：</p>
+<ul>
+<li>BINDER_WRITER_READ: 读写操作，可以用此命令向 Binder 读取或写入数据    </li>
+<li>BINDER_SET_MAX_THREAD: 设置支持的最大线程数，因为客户端可以并发向服务器端发送请求，如果Binder 驱动发现当前的线程数量已经超过设定值，就会告知 Binder server 停止启动新的线程。     </li>
+<li>BINDER_SET_CONTEXT_MGR: Service Manager 专用，让它把自己设置为“Binder”大管家。系统中只有一个 Service Manager。</li>
+</ul>
+<h3 id="Service-Manager"><a href="#Service-Manager" class="headerlink" title="Service Manager"></a>Service Manager</h3><p>Service Manager(后面简称 SM) 也就是Binder 中的 “DNS服务器”，既然是DNS，那么在用户可以浏览网页之前就必须就位，因此SM在有人使用Binder之前就处于正常工作状态。SM 的主要工作：</p>
+<ul>
+<li>从Binder驱动读取消息</li>
+<li>调用binder_parse 处理解析消息</li>
+<li>不断循环，而且永远不会主动退出，除非出现致命错误</li>
+</ul>
+<p>它提供的服务应该至少包括以下几种：</p>
+<ul>
+<li>注册——当一个Binder Server 创建后，它们要将自己的相关信息告知 SM 备案</li>
+<li>查询——应用程序可以向 SM 发起查询请求，已获知某个 Binder Server 对应的句柄。</li>
+</ul>
+<blockquote>
+<p>SM 的查询过程很简单，主要是调用 do_find_server 遍历内部列表，并返回目标 Server；注册 Binder server 也很简单，首先在 SM 维护的数据列表中查找是否已经有对应的节点存在，，如果没有，就创建一个新的节点记录这个 Server。</p>
+</blockquote>
+<p>实际上，我们获取 SM 也很简单，只需要以下几步：</p>
+<ol>
+<li>打开Binder设备</li>
+<li>执行mmap</li>
+<li>通过Binder驱动向 SM 发送请求（SM 的 handle是 0）</li>
+<li>获得结果</li>
+</ol>
+<h3 id="Binder-客户端"><a href="#Binder-客户端" class="headerlink" title="Binder 客户端"></a>Binder 客户端</h3><p>Binder 的最大消费者是Java层的应用程序，但是在各种上层的应用场景中切换“过于丝滑”，因此我们很少能感觉到Binder的存在，但是我们能够通过Android的四大组件的行为看出蛛丝马迹：</p>
+<ul>
+<li>Activity：通过 startActivity 可以启动目标进程，不论它是不是属于这个应用。</li>
+<li>Service：任何应用程序都可以通过startService 或者 bindService 来启动特定的服务，而不论后者是不是跨进程的。</li>
+<li>BroadCast：任何应用都可以通过 sendBroadcast 来发送一个广播，且无论广播接收者是不是在同一个进程中。</li>
+</ul>
+<p>组件的上述操作中，多数并不会特别指明要由哪个目标应用程序来响应请求，它们只需要通过Intent表达意愿，然后由系统找出最匹配的应用进程完成工作。为了更明确地说明个中的进程间通信，这里以binderService举例说明：</p>
+<ol>
+<li>首先Application1 填写Intent，调用 bindService 发出请求</li>
+<li>在Application1的运行空间中收到 bindService 请求，这时候会与 ActivityManagerService(AMS)，这就需要得到AMS的Binder句柄，就涉及到进程间通信了（需要ServiceManage.getService）,拿到句柄后，程序才能真正向它发起请求。</li>
+<li>AMS基于“最优匹配策略”，从其存储的所有服务组件中找到最符合Intent的一个，然后向它发送Service绑定请求（这也是进程间通信），如果目标进程还不存在的话，AMS还要负责将其启动</li>
+<li>“被绑定”的服务进程需要响应绑定，并在完成任务后通知AMS，然后由后者回调发起请求的Application1（回调接口是ServiceConnection）。</li>
+</ol>
+<h3 id="Server-服务端"><a href="#Server-服务端" class="headerlink" title="Server 服务端"></a>Server 服务端</h3><p>在建立服务之后，可以有两种方式向外面提供服务：</p>
+<ul>
+<li>Server在ServiceManager中注册，这样，调用者只需要通过 ServiceManager.getService(NAME)就可以获得句柄，随后与之通信。</li>
+<li>所谓的“匿名Server”，并不需要在ServiceManager中注册，那么Client是如何访问的呢？其实它通过其他Server作为中介，没错，就是通过一个“第三方”实名的Server，调用者首先通过ServiceManager获取这个实名的server，在由它提供匿名者的 Binder 句柄。</li>
+</ul>
+<h3 id="Binder-优点"><a href="#Binder-优点" class="headerlink" title="Binder 优点"></a>Binder 优点</h3><p>基于自己的理解而言，Binder具有以下优点：</p>
+<ul>
+<li>性能较好</li>
+</ul>
+<blockquote>
+<p>Binder只需要拷贝一次数据，仅次于共享内存（一次都不要），消息队列和管道采用存储-转发方式，即数据先从发送方缓存区拷贝到内核开辟的缓存区中，然后再从内核缓存区拷贝到接收方缓存区，至少有两次拷贝过程。</p>
+</blockquote>
+<ul>
+<li>稳定性好</li>
+</ul>
+<blockquote>
+<p>基于C/S架构在逻辑上更清晰，client有需求，Server完成。共享内存实现起来复杂，各方没有客户端与服务端之别，要考虑并发问题以及可能出现的死锁。</p>
+</blockquote>
+<ul>
+<li>安全性好</li>
+</ul>
+<blockquote>
+<p>传统 Linux IPC 的接收方要么无法获得对方进程可靠的 UID/PID ，从而无法鉴别对方身份；要么只能由用户在数据包里填入UID/PID。Android 为每个应用分配了自己的UID，前面提到 C/S 架构，Server 会根据权限控制策略判断 Client 的请求是否满足权限。并且Binder机制还有匿名 Binder ，压根无法直接获取句柄，安全性更好。</p>
+</blockquote>
+<ul>
+<li>使用简单。</li>
+</ul>
+<blockquote>
+<p>获得句柄之后，就像调用本地方法一样方便。并且Linux的IPC方式使用C语言，而Android应用层主要使用Java，这可能也是个因素。</p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/23/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/23/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0/" class="post-title-link" itemprop="url">第12章: Java内存模型与线程</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-23 07:46:00" itemprop="dateCreated datePublished" datetime="2019-09-23T07:46:00+08:00">2019-09-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-03-03 22:53:46" itemprop="dateModified" datetime="2020-03-03T22:53:46+08:00">2020-03-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在许多情况下，让计算机同事去做几件事情，不仅是因为计算机的运算能力强大了，还有一个很重要的原因是计算机的运算速度与它的存储和通信子系统的差距太大，大量的时间都花费在磁盘I/O 、网络通信或者数据库访问上。</p>
+<h2 id="硬件的效率与一致性"><a href="#硬件的效率与一致性" class="headerlink" title="硬件的效率与一致性"></a>硬件的效率与一致性</h2><p>高速缓存的存储交互很好地解决了处理器与内存的速度矛盾，但也为系统引入了一个新问题：缓存一致性(Cache coherence)。在多处理器系统中，每个处理器都有自己的高速缓存，而它们又共享同一主存(Main memory)，当多个处理器的运算任务都涉及同一块主内存区域时，可能导致各自的缓存数据不一致，此时，同步回到主存时以谁的缓存数据为准呢？</p>
+<p>除高速缓存外，为了使处理器内部运算单元尽量被充分利用，处理器可能会对输入代码进行乱序执行(Out-Of-Execution)优化，处理器会在计算之后将乱序执行的结果重组，保证该结果与顺序执行的结果是一致的，但是并不保证程序中各个语句计算的先后顺序与输入代码中的顺序一致。因此，如果某个计算任务依赖另一个计算任务的中间结果，那么其顺序性不能依靠代码的先后顺序来保证。</p>
+<h2 id="Java-内存模型"><a href="#Java-内存模型" class="headerlink" title="Java 内存模型"></a>Java 内存模型</h2><p>Java 内存模型(Java Memory Model, JMM) 是用来屏蔽各种硬件和操作系统的内存访问差异。</p>
+<h3 id="主内存与工作内存"><a href="#主内存与工作内存" class="headerlink" title="主内存与工作内存"></a>主内存与工作内存</h3><p>Java 内存模型的主要目标是定义程序中各个变量的访问规则，此处的变量(Variables) 包括 <strong>实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不存在竞争。</strong></p>
+<blockquote>
+<p>注意区别：如果局部变量是个refrence类型，它引用的对象在Java堆中可能被各个线程共享，但refrence本身在Java栈的局部变量表中，是线程私有的。</p>
+</blockquote>
+<p>Java内存模型规定所有的变量都存储在主内存(Main Memory)，每条线程还有自己的工作内存(Working Memory)，这两个分别可以类比物理模型中的主内存以及处理器的高速缓存。线程的工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作（读取、赋值等）都必须在工作内存中进行，而不能直接读写主内存中的变量。</p>
+<blockquote>
+<p>关于副本拷贝，假设线程访问一个10MB 的对象，那会不会也拷贝出来呢？虚拟机基本上不会这么实现，只有对象的引用、对象中某个在线程中访问到的字段是可能存在拷贝的。还有，<strong>这里所讲的主内存、工作内存 与 前面讲的Java堆、栈、方法区等并不是同一个层次的内存划分，二者并没有关系。</strong></p>
+</blockquote>
+<h3 id="内存间交互操作"><a href="#内存间交互操作" class="headerlink" title="内存间交互操作"></a>内存间交互操作</h3><p>Java 内存模型中定义了以下8种操作来完成从主内存拷贝到工作内存，以及从工作内存同步回主内存：</p>
+<ul>
+<li>lock（锁定）：对主内存变量标识为某一条线程独占。    </li>
+<li>unlock（锁定）：对主内存变量标识为解锁。    </li>
+<li>read（读取）：作用于主内存变量，把一个变量值从主内存传输到线程的工作内存，以便后面的load操作。    </li>
+<li>load（载入）：作用于工作内存变量，把read操作从主内存得到的变量值放入工作内存的变量拷贝中。    </li>
+<li>use（使用）：作用于工作内存变量。把工作内存中一个变量的值传递给执行引擎。当虚拟机遇到一个需要使用到变量的值的字节码指令时执行这个操作。    </li>
+<li>assign（赋值）：作用于工作内存变量。把一个从执行引擎接收到的值赋值给工作内存的变量。当虚拟机遇到一个给变量赋值的字节码指令时执行这个操作。    </li>
+<li>store（存储）：作用于工作内存变量。把工作内存中一个变量的值传送到主内存中，以便随后的write操作。    </li>
+<li>write（写入）：作用于主内存变量。把store操作从工作内存中得到的变量的值放入主内存的变量中。    </li>
+</ul>
+<p>如果要把一个变量从主内存复制到工作内存，那就要顺序地执行 read 和 load 操作（<strong>只是顺序地执行，不保证连续执行，中间是可以插入其他指令的</strong>），如果要把变量从工作内存同步回主内存，就要顺序地执行 store 和 write 操作。并且，Java 内存模型要求执行上述操作必须满足下列条件：</p>
+<ul>
+<li>read 和 load、store 和 write  必须成对出现，不许单独出现。    </li>
+<li>变量在工作内存中改变了之后，必须要同步回主内存，即不允许丢弃它最近的 assign 操作；并且如果没有发生assign，则不允许同步回主内存。     </li>
+<li>对一个变量 use、store 之前，必须先执行过了 assign 和 load 。     </li>
+<li>一个变量在同一时刻只允许一条线程执行 lock 操作，但 lock 操作可以被同一条线程重复执行多次，多次 lock 后，只有执行相同次数的 unlock 操作后变量才能被解锁。     </li>
+<li>如果对一个变量执行 lock 操作，那会清空工作内存中此变量的值，在执行引擎使用这个变量前，需要重新执行 load 或 assign 操作初始化变量值。     </li>
+<li>如果变量没有被 lock 锁定，那就不允许对它执行 unlock ，也不允许 unlock 一个被其他线程 lock 住的变量。     </li>
+<li>对变量执行 unlock 之前，必须把此变量同步回主内存中（执行 store、write 操作）。    </li>
+</ul>
+<h3 id="对于-volatile-型变量的特殊规则"><a href="#对于-volatile-型变量的特殊规则" class="headerlink" title="对于 volatile 型变量的特殊规则"></a>对于 volatile 型变量的特殊规则</h3><p>volatile 可以说是Java虚拟机提供的最轻量级的同步机制。这里首先以不正式但通俗易懂的语言来介绍这个关键字的作用，当一个变量定义为 volatile 后，它将具备两种特性：</p>
+<ul>
+<li>第一是保证此变量对所有线程的可见性，这里的“可见性”是指当一条线程修改了这个变量的值，新值对其他线程来说是可以立即得知的。而普通变量是做不到这一点的。     </li>
+<li>第二个语义是禁止指令重排序优化。    </li>
+</ul>
+<p>关于volatile 变量的可见性，经常会有开发人员误解，认为 “volatile 变量在各个线程中是一致的，所以基于 volatile 变量的运算在并发下是安全的”，<strong>因为事实上我们不能得出“基于 volatile 变量的运算在并发下是安全的” 这样的结论，因为虽然volatile变量在各个线程的工作内存中不存在一致性问题(由于每次使用之前都要先刷新，所以执行引擎看不到一致的情况，所以可以认为不存在一致性问题)，但Java里面的运算并非原子操作，所以导致 volatile 变量的运算在并发下一样是不安全的。</strong>通过以下简单代码可以演示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">volatile</span> <span class="keyword">int</span> race = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> THREADS_COUNT = <span class="number">20</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span> </span>{</span><br><span class="line">        race++;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line"></span><br><span class="line">        Thread[] threads = <span class="keyword">new</span> Thread[THREADS_COUNT];</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; THREADS_COUNT; i++) {</span><br><span class="line">            threads[i] = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() {</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10000</span>; i++) {</span><br><span class="line">                        increase();</span><br><span class="line">                        <span class="comment">//System.out.println(race);</span></span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            });</span><br><span class="line"></span><br><span class="line">            threads[i].start();</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="comment">//等待所有累加线程都结束</span></span><br><span class="line">        <span class="keyword">while</span> (Thread.activeCount() &gt; <span class="number">1</span>) {</span><br><span class="line">            Thread.yield();</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        System.out.println(race);</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>注意：我个人运行这段代码的时候，并不能正常打印，因为while循环中的 Thread.activeCount()  一直是2，只有把 for 循环中的 System.out.println(race) 放开才能打印，我的环境是： Android Studio 3.5 + jre1.8 。</strong>,如果并发正确的话，最终输出结果应该是 200000，但实际运行的结果大概率会是一个小于 200000 的数字。为什么呢？问题出在 increase() 方法中的 race++ 操作上，我们可以<strong>使用javap命令反编译</strong>这个函数的代码得到如下的字节码：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC12%E7%AB%A0/increase%E5%AD%97%E8%8A%82%E7%A0%81.png" alt="increase方法字节码"></p>
+<p>发现只有一行代码的increase方法在class文件中是由4条字节码指令构成的(return 不是由 race++ 产生的)，所以很容易分析出并发失败的原因了：当getstatic 指令把 race 的值取到操作栈顶时，volatile 可以保证 race 的值是正确的、最新的，但在执行 iconst_1、iadd 这些指令的时候，其他线程可能已经把 race 的值增大了，所以最后执行 putstatic 指令后可能把较小的 race 值同步回了主内存中。</p>
+<blockquote>
+<p>客观地说，此处用字节码来分析问题仍然是不严谨的，因为即使编译出来只有一条字节码指令，也并不意味着这条指令就是一个原子操作，一条字节码在执行时，解释器往往要运行多行代码才能实现它的语义。如果是编译执行，一条字节码可能会转化成若干条本地机器码指令。但考虑阅读方便，并且字节码已经够说明问题，所以此处选用字节码分析。</p>
+</blockquote>
+<p>以上代码说明volatile 在并发运行中可能出现的问题，但是如下代码场景就很适合使用 volatile 变量来控制并发，当shutdown 方法调用时，能保证所有线程中执行的 doWork() 方法都能停下来：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">volatile</span> <span class="keyword">boolean</span> stopThread;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">shutdown</span><span class="params">()</span></span>{</span><br><span class="line">    stopThread = <span class="keyword">true</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doWork</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">while</span>(!stopThread){</span><br><span class="line">        <span class="comment">//do stuff</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>volatile 禁止指令重排序优化仍然不太容易理解，通过以下伪代码来看看为何指令重排序会干扰程序的并发执行：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">Map configOptions;</span><br><span class="line"><span class="keyword">char</span>[] configText;</span><br><span class="line"><span class="comment">//此变量必须定义为 volatile</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//假设以下代码在线程 A 中执行，模拟读取配置信息，读取</span></span><br><span class="line"><span class="comment">//完成后，将 initialized 设置为 true 以通知其他线程</span></span><br><span class="line">configOptions = <span class="keyword">new</span> HashMap();</span><br><span class="line">configText = readConfigFile(fileName);</span><br><span class="line">processConfigOptions(configText,configOptions);</span><br><span class="line">initialized = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//假设以下代码在线程 B 中执行，等待 initialized 为 true ，</span></span><br><span class="line"><span class="comment">//代表线程 A 已经把配置信息初始化完成</span></span><br><span class="line"><span class="keyword">while</span>(!initialized){</span><br><span class="line">    sleep();</span><br><span class="line">}</span><br><span class="line"><span class="comment">//使用线程 A 中初始化好的配置信息</span></span><br><span class="line">doSomethingWithConfig();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个场景十分常见，只是我们在处理配置文件时一般不会出现并发而已。如果 initialized 没有使用 volatile 修饰，就可能由于指令重排序优化，导致 initialized = true 被提前执行(指令重排序优化是机器级的优化操作，这里说的提前执行是指对应的汇编代码提前执行)，这样线程 B 中使用配置信息的代码就可能出现错误，而volatile 可以避免此类情况发生。以下再举个例子来说明 volatile 关键字是如何禁止指令重排序优化的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> SingleTon instance;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="keyword">if</span>(instance == <span class="keyword">null</span>){</span><br><span class="line">            <span class="keyword">synchronized</span>(Singleton.class){</span><br><span class="line">                <span class="keyword">if</span>(instance == <span class="keyword">null</span>){</span><br><span class="line">                    instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span>{</span><br><span class="line">        Singleton.getInstance();</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>编译后，这段代码对instance变量赋值部分如下代码所示：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC12%E7%AB%A0/%E5%8D%95%E4%BE%8B%E7%BC%96%E8%AF%91%E5%90%8E%E7%9A%84%E5%AD%97%E8%8A%82%E7%A0%81.png" alt="单例编译后代码清单"></p>
+<p>可以对比 instance 有被volatile修饰和没有被修饰的编译后的代码，会发现，关键变化在于有 volatile 修饰的变量，在赋值(mov %eax,0x150(%esi) 这句就是赋值操作)，之后<strong>会多执行一个 lock 操作，这个操作是一个内存屏障，令重排序时不能把后面的指令重排序到内存屏障之前的位置</strong>。只有一个cpu访问内存时，并不需要内存屏障；但如果有两个或更多cpu访问同一块内存，且其中有一个在观测另一个，就需要内存屏障来保证一致性。这操作也相当于做了一次 store 和 write 操作，引起其他cpu（或内核）对于这个变量的无效化，因此保证了 volatile 变量的修改对其他cpu立即可见。</p>
+<blockquote>
+<p>在某些情况下，volatile 的同步机制的性能确实要优于锁，但是虚拟机对锁实行许多消除和优化，所以我们很难量化地认为 volatile 的同步机制比锁快多少。但是可以肯定的是：volatile 变量的读操作与普通变量几乎没差别，但写操作可能会慢一些，因为它需要需要在本地代码中插入内存屏障保证处理器不乱序执行。</p>
+</blockquote>
+<h3 id="long-和-double-型变量的特殊规则"><a href="#long-和-double-型变量的特殊规则" class="headerlink" title="long 和 double 型变量的特殊规则"></a>long 和 double 型变量的特殊规则</h3><p>long 和double 都是64位数据类型，内存模型允许虚拟机将没有被 volatile 修饰的64位数据类型的读写操作分为两次32位操作来进行，可能会导致某些线程读到”半个变量”的数据，不过这种情况十分罕见(目前商用Java虚拟机不会出现)，所以了解这回事即可。</p>
+<h3 id="原子性、可见性-与-有序性"><a href="#原子性、可见性-与-有序性" class="headerlink" title="原子性、可见性 与 有序性"></a>原子性、可见性 与 有序性</h3><p>整体回顾一下Java内存模型，Java内存模型是围绕着在并发过程中如何处理原子性、可见性和有序性3个特征来建立的。</p>
+<ul>
+<li><p>原子性(Atomicity)：read、load、assign、use、store 和 write 操作是保证原子性的，基本数据类型的访问读写也是具有原子性的。如果要保证更大范围的原子性，Java 内存模型还提供了 lock 和 unlock 来满足这种需求。</p>
+</li>
+<li><p>可见性。可见性指一个线程修改了共享变量的值，其他线程能立即得知这个修改。除了volatile 之外，Java还有两个关键字能实现可见性，即 synchronize 和 final 。同步块的可见性是由 “对一个变量执行unlock操作前，必须把此变量同步回主内存中” 获得的。<strong>而final修饰的字段在构造器中一旦初始化完成，并且构造器没有把 “this”的引用传递出去(this引用逃逸是很危险的，其他线程可能通过这个引用访问到”初始化了一半”的对象)，那在其他线程中就能看到 final 字段的值。</strong></p>
+</li>
+<li><p>有序性。Java 程序中有序性可以总结为：如果在本线程内观察，所有操作都是有序的；如果从一个线程观察另一个线程，所有操作都是无序的。前者指“线程内表现为串行语义” ，后者指“指令重排序”和“工作内存与主内存同步延迟” 现象。Java 语言提供了 volatile 和 synchronized 来保证线程之间操作的有序性，前者本身包含了指令重排序的语义；后者通过 “一个变量在同一个时刻只允许一条线成对其进行lock操作”决定了持有同一个锁的两个同步块只能串行进入。</p>
+</li>
+</ul>
+<h3 id="先行发生原则"><a href="#先行发生原则" class="headerlink" title="先行发生原则"></a>先行发生原则</h3><p>这块理论性的总结性的内容，个人觉得就先不写了。</p>
+<h2 id="Java-线程"><a href="#Java-线程" class="headerlink" title="Java 线程"></a>Java 线程</h2><h3 id="线程的实现"><a href="#线程的实现" class="headerlink" title="线程的实现"></a>线程的实现</h3><p>这块的内容在<a href="https://glassx.github.io/2018/05/29/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC2%E7%AB%A0/">操作系统的内容</a>中有描述：</p>
+<ol>
+<li>使用内核线程实现（每个内核线程对应一个轻量级进程）；    </li>
+<li>使用用户线程实现（创建销毁开销小，没有内核支援，处理诸如阻塞等问题异常困难）；    </li>
+<li>使用用户线程+轻量级进程混合实现（即内核线程和用户线程一起使用，n: m 的关系）。    </li>
+</ol>
+<h3 id="Java-线程调度"><a href="#Java-线程调度" class="headerlink" title="Java 线程调度"></a>Java 线程调度</h3><p>线程调度的方式主要有两种： 协同式线程调度(Cooperative Threads-Scheduling) 和 抢占式线程调度(Preemptive Threads-Scheduling)。前者靠线程自觉，线程执行时间由线程自己控制，后者每个线程由系统分配时间，Java 使用后者。</p>
+<p>虽然Java线程调度是系统自动完成的，但是我们可以给线程设置优先级来“建议”系统给某些线程多一些时间。但给线程设置优先级还是不靠谱的，原因如下：</p>
+<ol>
+<li><p>Java 线程是通过映射到系统的原生线程上来实现的，不同的系统上的优先级与Java的线程优先级等级基本上对应不上。可能你在Java中指定的2个优先级，在某操作系统上映射成同一个优先级。</p>
+</li>
+<li><p>优先级可能会被系统自行改变。</p>
+</li>
+</ol>
+<h3 id="状态转换"><a href="#状态转换" class="headerlink" title="状态转换"></a>状态转换</h3><p>Java 语言定义了5种线程状态，在任一时间点，一个线程只能有且只有其中的一种状态：</p>
+<ul>
+<li>新建(New)：创建后尚未启动。    </li>
+<li>运行(Runnable)：可能在执行，也有可能在等待 CPU 分配时间。    </li>
+<li>无限期等待(Waiting)：这种状态下不会被 CPU 分配时间，要等其他线程显式地唤醒。     </li>
+</ul>
+<blockquote>
+<p>以下方法会让线程陷入无限期等待：<br>没有设置 Timeout 参数的 Object.wait() 方法。<br>没有设置 Timeout 参数的 Thread.join() 方法。<br>LockSupport.park() 方法。     </p>
+</blockquote>
+<ul>
+<li>限期等待(Timed Waiting)：这种状态下不会被 CPU 分配时间，不过无需等待其他线程显式唤醒，在一定时间后由系统自动唤醒。</li>
+</ul>
+<blockquote>
+<p>以下方法会让线程进入限期等待：<br>Thread.sleep() 方法。<br>设置了 Timeout 参数的 Object.wait() 方法。<br>设置了 Timeout 参数的 Thread.join() 方法。<br>LockSupport.parkNanos() 方法。<br>LockSupport.parkUtil() 方法。     </p>
+</blockquote>
+<ul>
+<li><p>阻塞(Blocked)：阻塞状态是在等待获取一个排他锁。</p>
+</li>
+<li><p>结束(Terminated)：线程已经执行结束。</p>
+</li>
+</ul>
+<p>线程状态转换图如下：</p>
+<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC12%E7%AB%A0/%E7%BA%BF%E7%A8%8B%E7%8A%B6%E6%80%81%E8%BD%AC%E6%8D%A2%E5%9B%BE.png" alt="线程状态转换图"></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/09/15/%E4%B9%A6-Android%E7%B3%BB%E7%BB%9F%E6%BA%90%E4%BB%A3%E7%A0%81%E6%83%85%E6%99%AF%E5%88%86%E6%9E%90/Android%E7%B3%BB%E7%BB%9F%E6%BA%90%E4%BB%A3%E7%A0%81%E6%83%85%E6%99%AF%E5%88%86%E6%9E%90-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/09/15/%E4%B9%A6-Android%E7%B3%BB%E7%BB%9F%E6%BA%90%E4%BB%A3%E7%A0%81%E6%83%85%E6%99%AF%E5%88%86%E6%9E%90/Android%E7%B3%BB%E7%BB%9F%E6%BA%90%E4%BB%A3%E7%A0%81%E6%83%85%E6%99%AF%E5%88%86%E6%9E%90-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：Binder进程间通信系统</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-09-15 15:48:00" itemprop="dateCreated datePublished" datetime="2019-09-15T15:48:00+08:00">2019-09-15</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-11-17 21:44:12" itemprop="dateModified" datetime="2019-11-17T21:44:12+08:00">2019-11-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Android 应用程序由 Activity、Service、Broadcast Receiver 和 Content Provider 四中组件构成，它们可能运行在不同的进程中。此外，各种系统组件也运行在独立的进程中，如 Activity 管理服务 ActivityManagerService 和 package 管理服务 PackageManagerService 都运行在系统进程 System 中。</p>
+<p>Android 是基于 Linux 内核开发的，Linux 内核提供了丰富的进程间通信机制：管道(Pipe)、信号(Signal)、消息队列(Message)、共享内存(Share Memory) 和 套接字(Socket) 等。但Android 系统并没有采用这些传统的进程间通信机制，而是使用了新的机制——Binder。与传统的进程间通信机制相比，<strong>Binder 进程间通信机制在进程间传输数据时，只需要执行一次复制操作，不仅提高了效率，并且节省了内存空间。</strong></p>
+<blockquote>
+<p>使用共享内存在进程间传输数据的时候，虽然也只需要进行一次复制操作，但是它一般要结合其他的进程间通信机制来同步信息。</p>
+</blockquote>
+<p>Binder 进程间通信机制采用 C/S 通信方式，提供服务的进程称为 Server 进程，而访问服务的进程称为 Client 进程，同一个 Server 进程可以同时运行多个组件来向 Client 提供服务；而同一个 Client 进程也可以同时向多个 Service 组件请求服务。Service 组件启动时，会将自己注册到一个 Service Manager 组件中，以便 Client 组件可以通过 Service Manager 组件找到它。Binder 进程间通信机制中涉及了 Client、Service、Service Manager 和 Binder 驱动程序四个角色的关系如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E7%B3%BB%E7%BB%9F%E6%BA%90%E4%BB%A3%E7%A0%81%E6%83%85%E6%99%AF%E5%88%86%E6%9E%90(%E7%AC%AC%E4%B8%89%E7%89%88)/%E7%AC%AC5%E7%AB%A0/Binder%E9%80%9A%E4%BF%A1%E6%9C%BA%E5%88%B6.png" alt="Binder通信机制"></p>
+<p>Client、Service 和 Service Manager 都运行在用户控件，而Binder 驱动程序运行在内核控件。Client、Service 和 Service Manager 均是通过系统调用 open(打开)、mmap(内存映射)、ioctl(在用户空间，使用ioctl系统调用来控制设备) 来访问设备文件 /dev/binder ，从而实现与Binder驱动的程序的交互，而交互的目的就是为了能够间接执行进程间通信。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1191,743 +1776,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/07/28/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC7%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/28/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章: 虚拟机类加载机制</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-28 11:00:00" itemprop="dateCreated datePublished" datetime="2019-07-28T11:00:00+08:00">2019-07-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:49:31" itemprop="dateModified" datetime="2019-11-17T21:49:31+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>上一章了解了Class文件存储格式，在Class文件中描述的各种信息，最终都需要加载到虚拟机中之后才能运行和使用，那么，虚拟机如何加载这些文件？</p>
-<p>虚拟机把描述类的数据从Class文件加载到内存，<strong>并对数据进行校验、转换解析和初始化</strong>，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。在Java语言中，类型的加载、连接和初始化都是在程序运行期间完成的，这令类加载时稍微增加一些性能开销，但是会为Java应用程序提供高度的灵活性。</p>
-<blockquote>
-<p>例如，可以等到运行时再指定其实际的实现类：用户可以通过Java预定义和自定义的类加载器，让一个本地的应用程序可以在运行时从网络或者其他地方加载一个二进制流作为程序代码的一部分。</p>
-</blockquote>
-<h2 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h2><p>类从被加载到虚拟机内存中开始，到卸载出内存为止，整个生命周期如下图所示：</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC7%E7%AB%A0/%E7%B1%BB%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png" alt="类的生命周期"></p>
-<p>总共有7个阶段，其中验证、准备、解析 这3个部分统称为<strong>连接(Linking)</strong>，并且加载、验证、准备、初始化和卸载这5个阶段的顺序是确定的，类的加载按照上述顺序按部就班地开始（不是“进行”，也不是“完成”，只是按部就班地“开始”，因为这些阶段通常都是相互交叉地混合式进行）。</p>
-<p>虚拟机规范中<strong>严格规定</strong>了<strong>有且只有5种</strong>情况必须立即对类进行初始化（而加载、验证、准备自然需要在此之前开始）：</p>
-<ol>
-<li>遇到new、getstatic、putstatic或invokestatic这4条字节码指令时，如果类没有进行过初始化，则需要先触发其初始化。</li>
-</ol>
-<blockquote>
-<p>这4条指令的最常见的Java代码中的场景是：使用new关键字实例化对象、读取或者设置一个类的静态字段（被final修饰、已在编译器把结果放入常量池的静态字段除外）、以及调用一个类的静态方法。</p>
-</blockquote>
-<ol start="2">
-<li>使用java.lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则先触发其初始化。</li>
-<li>当初始化一个类，如果发现其父类还没有进行过初始化，则需要先触发其父类初始化。</li>
-<li>虚拟机启动时，虚拟机会先初始化用户指定的主类（包含main()方法的那个类）</li>
-<li>当使用JDK 1.7的动态语言支持时，如果一个java.lang.invoke.MethodHandle实例最后的解析结果REF_getStatic、REF_putStatic、REF_invokeStatic 的方法句柄，并且这个方法句柄所对应的类没有进行过初始化，则需要先触发其初始化。</li>
-</ol>
-<p>以上5种场景中的行为称为对一个类进行主动引用，<strong>除此之外，所有引用类的方式都不会触发初始化，称为被动引用</strong>。以下举3个例子来说明何为被动引用。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示一：</span></span><br><span class="line"><span class="comment">//通过子类引用父类的静态字段，不会导致子类初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SuperClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.printlin(<span class="string">"SuperClass init!"</span>);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> value = <span class="number">123</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SubClass</span> <span class="keyword">extends</span> <span class="title">SuperClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.printlin(<span class="string">"SubClass init!"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//非主动使用类字段演示</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        System.out.printlin(Subclass.value);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码运行后，只会输出 “SuperClass init!” ，对于静态字段，只有直接定义这个字段的类才会被初始化，因此通过其子类来引用父类中定义的静态字段，只会触发父类的初始化而不会触发子类的初始化。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示二：</span></span><br><span class="line"><span class="comment">//通过数组定义来引用类，不会触发此类的初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        SuperClass[] sca = <span class="keyword">new</span> SuperClass[<span class="number">10</span>];</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这里复用了上面的 SuperClass ，运行之后，发现没有输出 “SuperClass init!” ，说明没有触发 SuperClass 的初始化阶段。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//被动使用类字段演示二：</span></span><br><span class="line"><span class="comment">//常量在便一阶段会存入调用类的常量池中，本质上并没有直接引用到定义常量的类，因此不会触发定义常量的类的初始化</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConstClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.printlin(<span class="string">"ConstClass init!"</span>);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String HELLOWORLD = <span class="string">"hello world"</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NotInitialization</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        Systemt.out.printlin(ConstClass. HELLOWORLD);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码运行之后，也没有输出 “ConstClass init!” ，虽然在 Java 源码中引用了 ConstClass 中的常量 HELLOWORLD ，但其实在编译阶段通过常量传播优化，已经将此常量值 “hello world” 存储到了 NotInitialization 类的常量池中，以后 NotInitialization 对常量 ConstClass. HELLOWORLD 的引用时机都被转化为 NotInitialization 对自身常量池的引用了。也就是说，实际上 NotInitialization 的 Class 文件之中并没有 ConstClass 类的符号引用入口，这两个类在编译成 Class 之后就不存在任何联系了。</p>
-<p>接口的加载过程与类加载过程稍有一些不同，接口与类真正有所区别的是前面讲述的5种“有且仅有”需要开始初始化场景中的第3种：当一个类在初始化时，要求其父类全部都已经初始化过了，但是一个接口在初始化时，并不要求其父接口全部都完成了初始化，只有在真正使用到父接口的时候（如引用接口中定义的常量）才会初始化。</p>
-<blockquote>
-<p>顺带说明一下，上面的代码都是用静态语句块 “static{}”来输出初始化信息的，但接口中不能使用 “static{}”语句块。</p>
-</blockquote>
-<h2 id="类加载过程"><a href="#类加载过程" class="headerlink" title="类加载过程"></a>类加载过程</h2><h3 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h3><p>“加载”是“类加载(Class Loading)”过程的一部分，不要混淆。在加载阶段，虚拟机需要完成以下3件事情：</p>
-<ol>
-<li>通过类的全限定名获取类的二进制字节流</li>
-<li>将字节流所代表的静态存储结构转化为方法区的运行时数据结构</li>
-<li>在内存中生成一个代表这个类的 java.lang.Class 对象，作为方法区这个类的各种数据的访问入口。</li>
-</ol>
-<p>这3点规范并不算具体，例如第一条，并没有指明要从哪里获取，怎么获取，因此充满创造力的开发人员玩出了各种花样：</p>
-<ul>
-<li>从 zip 包中读取，最终成为日后 jar、ear、war 格式的基础</li>
-<li>从网络中获取，比如Applet</li>
-<li>运行时计算生成，这种场景用得最多的就是动态代理技术。</li>
-</ul>
-<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>验证是连接阶段的第一步，这个阶段是否严谨，直接决定了Java虚拟机是否能承受恶意代码的攻击。从整体来看，验证阶段大致上会完成下面4个阶段的检验动作：</p>
-<p><strong>文件格式验证</strong>  </p>
-<blockquote>
-<p>魔数0xCAFEBABE开头、主次版本是否在虚拟机处理范围内等。</p>
-</blockquote>
-<p><strong>元数据验证</strong>  </p>
-<blockquote>
-<p>是否有父类-除Object外，所有类都有父类、父类是否继承了不允许被继承的类-final修饰，是否实现了父类或者接口要求实现的所有方法。</p>
-</blockquote>
-<p><strong>字节码验证</strong>  </p>
-<blockquote>
-<p>通过数据流和控制流分析，确定程序语义是否合法、符合逻辑的。如果一个类方法体的字节码没有通过字节码验证，那肯定是有问题的；如果一个方法体通过了字节码验证，也不能说明其一定就是安全的。</p>
-</blockquote>
-<p><strong>符号引用验证</strong>  </p>
-<blockquote>
-<p>这个校验发生在虚拟机将符号引用转化为直接引用的时候，这个转化动作将在解析阶段发生。通常校验：通过全限定名是否能找到对应的类、符号引用中的类、字段、方法的访问性(private、protected、public、default)是否可以被当前类访问 等等。</p>
-</blockquote>
-<h3 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h3><p>准备阶段正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。</p>
-<p>这里两个容易产生的混淆的概念强调一下：首先，这时候进行内存分配的仅仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时一起分配在java堆中。其次，这里说的初始值“通常情况”下是数据类型的零值，假设一个类变量定义为： </p>
-<blockquote>
-<p>public static int value = 123;</p>
-</blockquote>
-<p>那变量value在准备阶段过后的初始值为 0 而不是 123。<strong>把value赋值为123的动作将在初始化阶段才会执行</strong>。</p>
-<h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>解析阶段是虚拟机将常量池内的符号引用替换成直接引用的过程。</p>
-<p><strong>符号引用(Symbolic References)：</strong>符号引用以一组符号来描述所引用的目标，符号可以是任何形式的字面量，只要使用时能无歧义地定位到目标即可。</p>
-<p><strong>直接引用(Symbolic References)：</strong>直接引用可以是直接指向目标的指针、相对偏移量或是一个能间接定位到目标的句柄。</p>
-<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>到了初始化阶段，才真正开始执行类中定义的Java程序代码(或者说是字节码)。在准备阶段，变量已经赋过一次系统要求的初始值，而在初始化阶段，则根据程序员通过程序自定的主观计划去初始化类变量和其他资源。换一个角度来表达就是：<strong>初始化阶段是执行类构造器<clinit>()方法的过程</clinit></strong>。以下介绍下<clinit>()方法执行过程中一些可能会影响程序运行行为的特点和细节：</clinit></p>
-<ul>
-<li><clinit>()方法由编译器自动收集类中的所有类变量的赋值动作和静态语句块(static{}块)中的语句合并产生的，编译器收集的顺序是由语句<strong>在源文件中出现的顺序决定</strong>的，静态语句块中<strong>只能访问到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但不能访问</strong>。一个例子说明：</clinit></li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span></span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i =<span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        Systemt.out.print(i);<span class="comment">//正常使用</span></span><br><span class="line">        </span><br><span class="line">        j = <span class="number">0</span>;<span class="comment">//给变量赋值可以正常编译</span></span><br><span class="line">        Systemt.out.print(j);<span class="comment">//这句提示“非法向前引用”</span></span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> j =<span class="number">1</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li><clinit>()方法与类的构造函数（实例构造器<init>()）不同,它不需要显式地调用父类构造器，虚拟机会保证在子类的 <clinit>() 执行之前，父类的<clinit>()已经执行完毕。因此，在虚拟机中第一个被执行<clinit>()方法的类肯定是 java.lang.Object。<strong>这其实也意味着，父类定义的静态语句块要优先于子类变量赋值操作</strong>。一个例子说明：</clinit></clinit></clinit></init></clinit></li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Parent</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> A = <span class="number">1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        A = <span class="number">2</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sub</span> <span class="title">extentds</span> <span class="title">Parent</span></span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> B = A;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span></span>{</span><br><span class="line">    Systemt.out.println(Sub.B)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>以上代码将打印出 2 而不是 1。</p>
-<ul>
-<li><p><clinit>()方法对于类或者接口不是必需的，如果类中没有静态语句块，也没有对变量的赋值，那么编译器可以不为这个类生成<clinit>()方法。</clinit></clinit></p>
-</li>
-<li><p>接口中不能使用静态语句块，但是可以有变量初始化的赋值操作，因此接口与类一样都会生成 <clinit>()方法 。但接口的 <clinit>()方法 无须先执行父接口的<clinit>()方法，只有父接口中定义的变量使用时，父接口才会初始化（接口的实现类在初始化时也不会执行接口的<clinit>()方法）。</clinit></clinit></clinit></clinit></p>
-</li>
-<li><p>虚拟机会保证一个类的 <clinit>()方法 在多线程环境中会被正确地加锁、同步，所以，多线程同时去初始化一个类，那么只会有一个县城执行这个类的&lt;clinit&gt;()方法，其他的线程都会阻塞等待。举个例子：</clinit></p>
-</li>
-</ul>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">DeadLoopClass</span></span>{</span><br><span class="line">    <span class="keyword">static</span>{</span><br><span class="line">        <span class="comment">//如果不加上这个if语句，编译器将报错，并拒绝编译</span></span><br><span class="line">        <span class="keyword">if</span>(<span class="keyword">true</span>){</span><br><span class="line">            System.out.println(Thread.currentThread() + <span class="string">"init DeadLoopClass"</span>);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>){</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        Runnable script = <span class="keyword">new</span> Runnable(){</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>{</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"start"</span>);</span><br><span class="line">                DeadLoopClass dlc = <span class="keyword">new</span> DeadLoopClass();</span><br><span class="line">                Systemt.out.println(Thread.currentThread() + <span class="string">"run over"</span>);</span><br><span class="line">            }</span><br><span class="line">           </span><br><span class="line">        };</span><br><span class="line">        </span><br><span class="line">        Thread thread1 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        Thread thread2 = <span class="keyword">new</span> Thread(script);</span><br><span class="line">        thread1.start();</span><br><span class="line">        thread2.start();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>上述代码在死循环以模拟长时间操作，另外一条线程在阻塞等待，将打印以下结果：</p>
-<blockquote>
-<p>Thread[Thread-0,5,main]start<br>Thread[Thread-1,5,main]start<br>Thread[Thread-0,5,main]init DeadLoopClass</p>
-</blockquote>
-<h2 id="类加载器"><a href="#类加载器" class="headerlink" title="类加载器"></a>类加载器</h2><p>虚拟机设计团队把类加载阶段中的“通过一个类的全限定名来获取描述此类的二进制字节流”这个动作放到Java虚拟机外部去实现，以便让应用程序自己决定如何去获取所需要的类。</p>
-<h3 id="类与类加载器"><a href="#类与类加载器" class="headerlink" title="类与类加载器"></a>类与类加载器</h3><p>对于任意一个类，都需要由加载它的类加载器和这个类本身一同确立其在Java虚拟机中的唯一性，每一个类加载器，都拥有一个独立的类名称空间。通俗地说，比较两个类是否“相等”，只有在这两个类都是由同一个类加载器加载的前提下才有意义，否则，即使这两个类来源于同一个Class文件，都被同一个虚拟机加载，只要加载它们的类加载器不同，那这两个类就必定不相等。</p>
-<p>这里的“相等”，包括代表类的Class对象的 equals() 、isAssignableFrom()、isInstance() 方法返回的结果，也包括使用 instanceof 关键字做对象所属关系判定等情况。以下代码演示了不同类加载器对instanceof关键字运算的结果的影响：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClassLoaderTest</span></span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">        ClassLoader myLoader = <span class="keyword">new</span> ClassLoader(){</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException{</span><br><span class="line">                <span class="keyword">try</span>{</span><br><span class="line">                    String fileName = name.substring(name.lastIndexOf(<span class="string">"."</span>) + <span class="number">1</span>);</span><br><span class="line">                    InputStream is = getClass().getResourceAsStream(fileName);</span><br><span class="line">                    <span class="keyword">if</span>(is == <span class="keyword">null</span>){</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">super</span>.loadClass(name);</span><br><span class="line">                    }</span><br><span class="line">                    <span class="keyword">byte</span>[] b = <span class="keyword">new</span> <span class="keyword">byte</span>[is.available()];</span><br><span class="line">                    is.read(b);</span><br><span class="line">                    <span class="keyword">return</span> defineClass(name,b,<span class="number">0</span>,b.length);</span><br><span class="line">                }<span class="keyword">catch</span>(){</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ClassNotFoundException();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        </span><br><span class="line">        Object obj = myLoader.loadClass(<span class="string">"org.example.classloading. ClassLoaderTest"</span>);</span><br><span class="line">        </span><br><span class="line">        Systemt.out.println(obj.getClass());</span><br><span class="line">        System.out.println(obj <span class="keyword">instanceof</span> org.example.classloading. ClassLoaderTest);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>返回结果：   </p>
-<blockquote>
-<p>class org.example.classloading. ClassLoaderTest<br>false </p>
-</blockquote>
-<p>从结果可以看出，对象确实是类 “org.example.classloading. ClassLoaderTest” 的类，并实例化了这个类的对象。但这个对象与类 org.example.classloading. ClassLoaderTest 做所属类型检查的时候却返回了false，这是因为虚拟机中存在了两个 ClassLoaderTest 类，一个由系统应用程序类加载器加载的，另外一个是由我们自定义的类加载器加载的，虽然都来自同一个Class文件，但依然是两个独立的类。</p>
-<h3 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h3><p>从java虚拟机角度来讲，只存在两种类加载器：一种是启动类加载器(Bootstrap ClassLoader)，是虚拟机自身的一部分；另一种就是所有其他的类加载器，这些类加载器都由Java语言实现，独立于虚拟机外部，并且全部继承自抽象类 java.lang.ClassLoader。</p>
-<p>如下图所示的类加载器之间的这种层次关系，称为双亲委派模型(Parent Delegation Model)。</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC7%E7%AB%A0/%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%A8%A1%E5%9E%8B.png" alt="类的生命周期"></p>
-<p>双亲委派模型要求除了顶层的启动类加载器外，其余的类加载器都应当有自己的父类加载器，这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合(Composition)关系来复用父加载器的代码。</p>
-<p>双亲委派模型的工作过程是：<strong>如果一个类加载器收到了类加载请求，它首先不会自己去尝试加载这个类，而是把请求委派给父类加载器去完成，因此所有的加载请求最终都应该传送到顶层的启动类加载器中。只有当父加载器反馈自己无法完成这个加载请求（它的搜索范围中没有找到所需的类）时，子加载器才会尝试自己去加载。</strong></p>
-<p>双亲委派模型一个显而易见的好处就是：<strong>Java 类随着它的类加载器一起具备了一种带有优先级的层次关系。</strong></p>
-<blockquote>
-<p>例如类 java.lang.Object ，无论哪一个类加载器都要加载这个类（因为所有的类都直接或间接地继承了它），最终都是委派给处于模型最顶端的启动类加载器进行加载，因此，Object 类在程序中的各种类加载器环境中都是同一个类。相反，如果不使用双亲委派模型，由各个类加载器自行去加载的话，如果用户自己编写了一个称为 java.lang.Object 的类，并放在 ClassPath 中，那系统中将将会出现多个不同的Object 类，Java类型体系中最基础的行为也就无法保证。</p>
-</blockquote>
-<h3 id="破坏双亲委派模型"><a href="#破坏双亲委派模型" class="headerlink" title="破坏双亲委派模型"></a>破坏双亲委派模型</h3><p>略</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/07/27/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/27/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章: 类文件结构</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-27 14:56:00" itemprop="dateCreated datePublished" datetime="2019-07-27T14:56:00+08:00">2019-07-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-17 21:49:25" itemprop="dateModified" datetime="2019-11-17T21:49:25+08:00">2019-11-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>计算机只认识0和1，但是最近10年虚拟机以及大量建立在虚拟上的语言的发展，将我们编写的程序编译成二进制本地机器码（Native Code）已不再是唯一的选择，越来越多的程序语言选择了与操作系统和机器指令集无关的、平台中立的格式作为程序编译后的存储格式。</p>
-<h2 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h2><p>Sun公司及其他虚拟机提供商发布了许多可以运行在各种不同平台上的虚拟机，这些虚拟机都可以载入和执行同一种平台无关的字节码，从而实现程序的“一次编写，到处运行”。而各种不同平台的虚拟机以及平台无关的字节码（ByteCode）是构成平台无关性的基石。  </p>
-<p>到目前为止，或许大部分程序员都还认为Java虚拟机执行Java程序是一件理所当然的事情，但在Java发展之初，Java的规范就分为Java语言规范以及Java虚拟机规范，时至今日，Java语言之外已经有一大批语言运行在Java虚拟机之上，如 Groovy、JRuby、Jython等。  </p>
-<p>Java 虚拟机不和包括Java在内的任何语言绑定，它只与“Class 文件”这种特定的二进制文件格式所关联，任一门功能性语言都可以表示为一个能被Java虚拟机所接受的有效的Class文件。</p>
-<h2 id="Class-类文件的结构"><a href="#Class-类文件的结构" class="headerlink" title="Class 类文件的结构"></a>Class 类文件的结构</h2><p>Class 文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑地排列在Class文件中，中间没有任何分隔符。遇到需要占用8位字节以上空间的数据项时，会按照高位在前的方式分割成若干个8位字节进行存储。</p>
-<p>Class 文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构只有两种数据类型： 无符号数和表。</p>
-<p>无符号数属于基本的数据类型，以u1、u2、u4、u8分别代表1、2、4、8个字节的无符号数，无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8 编码构成的字符串值。</p>
-<p>表示由多个无符号数或者其他表作为数据项的复合数据类型，表用于描述有层次关系的复合结构的数据，整个Class文件本质就是一张表。</p>
-<h3 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h3><p>Class文件的头4个字节称为魔数（Magic Number），它的唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件。Class 文件的魔数值为 0xCAFEBABE (咖啡宝贝？)，很有浪漫气息。紧接着魔数的4个字节存储着Class文件的版本号，高版本的JDK能乡下兼容以前版本的Class文件，但不能运行以后版本的Class文件。</p>
-<blockquote>
-<p>很多文件存储标准中都使用魔数来进行身份识别，如gif和jpeg等在文件头中都存有魔数。使用魔数而不是扩展名来识别主要是基于安全考虑： 文件扩展可以随意改动。</p>
-</blockquote>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%89%88/%E7%AC%AC6%E7%AB%A0/%E9%AD%94%E6%95%B0.png" alt="魔数示意图"></p>
-<h3 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h3><p>版本号之后是常量池入口，该区域可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，由于常量池中常量的数量是不固定的，所以在常量池的入口需要放置一项u2类型的数据，代表常量池容量计数值。</p>
-<p>常量池中主要存放两大类常量：字面量（Literal） 和 符号引用（Symbolic References）。<strong>字面量比较接近于Java语言层面的常量概念，如 文本字符串、声明为final的常量值等</strong>，而符号引用则属于编译原理方面的概念，包括了下面三类常量：</p>
-<ul>
-<li>类和接口的全限定名(Fully Qualified Name)</li>
-<li>字段的名称和描述符(Descriptor)</li>
-<li>方法的名称和描述符</li>
-</ul>
-<p>Java代码在javac编译的时候，并不像c和c++那样有“连接”这一步骤，而是在虚拟机加载 Class 文件的时候进行动态连接，也就是说，在Class文件中不会保存各个方法、字段的最终内存布局信息。虚拟机运行时，需要从常量池获得对应的符号引用，再在类创建时解析、翻译到具体的内存地址中。</p>
-<h3 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h3><p>常量池结束后，紧接着2个字节代表访问标志（access_flags<br>），这个标志用于识别一些类或者接口层次的访问信息，包括： 这个Class 是类还是接口；是否定义为public类型；是否定义为abstract类型；如果是类的话，是否被声明为final等等。</p>
-<h3 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h3><p>类索引（this_class） 和父类索引(super_class)都是一个u2类型的数据，而接口索引集合(interfaces)是一组u2类型的数据的集合，class 文件中由这三项数据来确定这个类的继承关系。</p>
-<p>其中，类索引用于确定这个类的全限定名，父类索引用于确定这个类的父类的全限定名，由于Java不允许多重继承，所以父类索引只有一个，除了java.lang.Object之外，所有的Java类都有父类，因此，父类索引都不为0。接口索引集合用来描述这个类实现了哪些接口，按照implement语句后的接口顺序从左到右排列在接口索引集合中。</p>
-<h3 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h3><p>字段表(field_info)用于描述接口或者类中声明的变量，包括类级变量和实例级变量，不包括方法内的局部变量。这个描述可以包括的信息有： 字段的作用域(public、private、protected修饰符)、实例变量还是类变量(static修饰符)、可变性(final)、并发可见性(volatile 修饰符，是否强制从主内存读写)、可否被序列化(transient修饰符) 等等。</p>
-<h3 id="方法表集合"><a href="#方法表集合" class="headerlink" title="方法表集合"></a>方法表集合</h3><p>Class 文件存储格式中对方法的描述与对字段的描述几乎采用了完全一致的方式，方法表的结构如同字段表一样，只是些微的区别，比如volatile关键字和transient关键字不能修饰方法 。</p>
-<h3 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h3><p>在Class文件、字段表、方法表都可以携带自己的属性表集合，以用于描述某些场景专有的信息(这一块内容也没耐心看下去，下次看明白再补)。</p>
-<h2 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h2><p>这章离App开发比较远，因此第一遍的时候先略过。</p>
-<h2 id="公有设计和私有实现"><a href="#公有设计和私有实现" class="headerlink" title="公有设计和私有实现"></a>公有设计和私有实现</h2><p>理解公有设计与私有实现之间的分界线是非常有必要的，Java虚拟机实现必须能够读取Class文件并精确实现包含在其中的Java虚拟机代码的语义。按照Java虚拟机规范一成不变地逐字实现其中要求的内容是一种可行的途径，但是一个优秀的虚拟机实现，在满足虚拟机规范的约束下对具体实现做出修改和优化也是完全可行的。虚拟机实现的方式主要有以下两种：</p>
-<ul>
-<li>将输入的Java虚拟机代码在加载或执行时翻译成另外一种虚拟机的指令集。</li>
-<li>将输入的Java虚拟机代码在加载或执行翻译成宿主机CPU的本地指令集（即 JIT 代码生成技术）</li>
-</ul>
-<h2 id="Class-文件结构的发展"><a href="#Class-文件结构的发展" class="headerlink" title="Class 文件结构的发展"></a>Class 文件结构的发展</h2><p>略。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/07/10/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E6%80%BB%E7%BB%93-%E6%96%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/10/%E9%9D%A2-%E6%80%BB%E7%BB%93/%E6%80%BB%E7%BB%93-%E6%96%B0/" class="post-title-link" itemprop="url">总结-新</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-10 22:50:00" itemprop="dateCreated datePublished" datetime="2019-07-10T22:50:00+08:00">2019-07-10</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-25 17:35:42" itemprop="dateModified" datetime="2020-07-25T17:35:42+08:00">2020-07-25</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%98%B6%E6%AE%B5/" itemprop="url" rel="index">
-                    <span itemprop="name">阶段</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="书籍笔记"><a href="#书籍笔记" class="headerlink" title="书籍笔记"></a>书籍笔记</h2><ol>
-<li>开启多进程的方式，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">看这里</a>           </li>
-<li>多进程缺陷(Application多次启动，静态成员失效，单例失效，sp的可靠性下降，断点调试会麻烦)，解决办法(判断主进程，aidl，断点调试先去掉多进程)    </li>
-<li>Android中的IPC方式，总共7种(别漏了广播)，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">看这里</a>               </li>
-<li>Activity 的启动模式，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC1%E7%AB%A0/">看这里</a>                </li>
-<li>standard模式的Activity 默认会进入启动它的Activity所属的任务栈中，由于非Activity类型的Context 没有所谓的任务栈，所以会报错。解决这个问题的方法是为待启动的Activity指定 FLAG_ACTIVITY_NEW_TASK 标记             </li>
-<li>卡顿优化的步骤，各项指标过高代表啥(cpu、内存) ，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/">看这里</a>      </li>
-<li>Bitmap 内存分配的变化过程 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">看这里</a>       </li>
-<li>如何做启动优化(预览窗口、闪屏、懒加载防止集中、业务优先级-第三方框架、线程管理-数量-线程池,启动过程勿出现io-负载高的时候，io性能下降很快、启动时只读很小的sp文件)，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/">看这里</a>          </li>
-<li>启动耗时的监控方式(录屏、线上监控-talkingdata)              </li>
-<li>ppi、dpi 概念，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/">看这里</a>                       </li>
-<li>软件绘制和硬件绘制的区别，硬件加速快的原理是啥，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/">看这里</a>                  </li>
-<li>SurfaceFlinger 管理Graphic Buffer (比如三缓冲就有三个 buffer)，通过<strong>匿名共享内存</strong>与App应用层交互                     </li>
-<li>ui优化手段(尽量硬件加速、view创建优化-不用xml-提前-异步-重用、measure与layout优化-ui层次-constranLayout-无用背景)，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/">看这里</a>                          </li>
-<li>网络优化之网络请求过程是啥，网络怎么监控？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/06/26/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-16,17%E8%AF%BE/">看这里</a>             </li>
-<li>SELinux 进一步定义沙盒边界，即使应用进程有root权限也不能为所欲为(还得在安全策略配置文件中赋予权限)                  </li>
-<li>sp的缺点(跨进程不安全、加载慢-让主线程等待、全量写入-mommit和apply都这样、卡顿-onPause强制把sp写入磁盘、json复杂格式会有转义开销)，可以使用mmkv 代替，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/06/28/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/">看这里</a>            </li>
-<li>ContentProvider 的onCreate 在 Application 的 attachBaseContext 之后，在Application 的onCreate 之前，并且还是在主线程，因此在provider的构造函数、静态代码块、onCreate中不要耗时操作                       </li>
-<li>ContentProvider 跨进程传递的原理：<strong>利用 Android 的 Binder 和 匿名共享内存机制。</strong>即通过Binder 传递 CursorWindow 对象内部的匿名共享内存的文件描述符，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/06/28/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/">看这里</a>                 </li>
-<li>Serializable 的原理，效率低的原因，反序列的时候会执行构造函数吗？，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/07/04/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">看这里</a>              </li>
-<li>Parcelable 可以永久存储吗？原理是啥？，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/07/04/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">看这里</a>              </li>
-<li>Android 事件分发，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/02/25/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/">看这里</a>                </li>
-<li>让一个View 滑动起来，有几种方法？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/07/06/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89-%E7%AC%AC3%E7%AB%A0/">看这里</a>                  </li>
-<li>init 进程做了哪些事情？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/22/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC2%E7%AB%A0/">看这里</a>                  </li>
-<li>Zygote 进程做了哪些事情？(创建了虚拟机，创建systemServer进程、fork应用程序、创建server类型的socket)           </li>
-<li>SystemServer 的主要作用？ (创建系统服务AMS、WMS、PMS)                  </li>
-<li>Android 系统启动流程，   <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/22/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC2%E7%AB%A0/">看这里</a>               </li>
-<li>Zogote 进程 fork 自身创建应用进程的时候，会为应用进程创建Binder线程池和消息循环，会通过检查，确保Binder 进程只启动一次， <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/24/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC3%E7%AB%A0/">看这里</a>                   </li>
-<li>应用进程创建完毕，通过反射调用 ActivityThread 的main方法，在main方法里面prepareMainLooper、创建了  ActivityThread 对象，再从这个ActivityThread 对象中获取 handler 作为成员变量保存，之后再loop，不允许退出             </li>
-<li>Instrumentation 主要用于监控应用程序和系统的交互                  </li>
-<li>AMS 与 应用进程通信时，是与 ApplicationThread 打交道的，而不是直接与 ActivityThread ，ApplicationThread 是 ActivityThread 的内部类                 </li>
-<li>点击桌面图标，App的启动过程，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/25/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC4%E7%AB%A0/">看这里</a>                 </li>
-<li>获取 Application Context时，首先从 LoadApk 类型的 mPackageinfo 中获取，如果为null ，则从 ActivityThread 类型的 mMainThread 中获取                    </li>
-<li>Dalvik 与 ART 的区别，art 有dalvik 堆空间划分区别？<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/23/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC11%E7%AB%A0/">看这里</a>              </li>
-<li>热修复原理之Instant Run，自己创建一个AssetManager ，反射调用其addAssetPath 加载外部的resource。反射每个Activity 的AssetManager字段 mAsset，并将 mAsset 的值改成新建的 AssetManager即可。<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/01/15/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC13%E7%AB%A0/">看这里</a>                     </li>
-<li>linux中常见的进程间通信有哪些？  （管道、信号、socket、消息队列-Message、共享内存等） <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/15/Android%E7%B3%BB%E7%BB%9F%E6%BA%90%E4%BB%A3%E7%A0%81%E6%83%85%E6%99%AF%E5%88%86%E6%9E%90-%E7%AC%AC5%E7%AB%A0/">看这里</a>     </li>
-<li>描述下 Binder 的工作流程，为什么是一次复制           </li>
-<li>mmap(memory map，内存映射)将某个设备或者文件映射到应用进程的内存空间，这样，访问这块内存就相当于对设备/文件进行读写。这种基于内存共享的方式如果用于进程间通信，则需要注意实现同步，因为这个过程并没有同步机制，而Binder中是 c/s 模式，因此不存在同步问题         </li>
-<li>Ashmem(Anony Shared Memory，匿名共享内存)的原理也是将指定的物理内存分别映射到各个进程的地址空间，从而实现内存共享。Ashmem 也是一个 misc 设备，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/03/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC4%E7%AB%A0/">看这里</a>                         </li>
-<li>主线程的 prepareMainLooper 和 普通线程的 prepare 方法的区别是啥？   <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/08/06/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0/">看这里</a>            </li>
-<li>飞快拉动进度条或者音量SeekBar，如何保证界面流畅又要听到实时声音？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/08/06/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0/">看这里</a>         </li>
-<li>ActivityThread 启动并做好相应的初始化工作后，需要调用 attachApplication 来通知 AMS ，后者才能继续执行未完成的 startActivity 流程,<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/08/06/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC5%E7%AB%A0/">看这里</a>                  </li>
-<li>系统对 Parcel 是有缓存的，系统预先产生一个大小为6的parcel 池，所以我们可以通过 Parcel.obtain() 方法获取一个 Parcel 对象，如果还有现成Parcel 对象，则直接使用，否则new一个。<strong>并且，Parcel存储数据时，会提供数据当前位置dataPosition，类似游标，每当存储新数据时，从这个位置接着往后存，空间不够再申请</strong> <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/26/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">看这里</a>                 </li>
-<li>binder 主要提供open、mmap、ioctl 三个接口，接口的作用是啥？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/26/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">看这里</a>        </li>
-<li>用户申请binder 服务的流程（A、B进程间数据传递），： open-&gt;mmap-&gt;ioctl，应用程序申请binder 的空间大小？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/26/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">看这里</a>                 </li>
-<li>Binder 的优点：性能、稳定、安全、使用简单， <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/26/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Android%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1%E6%80%9D%E6%83%B3-%E7%AC%AC6%E7%AB%A0/">看这里</a>                </li>
-<li>Java 内存区域划分及可能存在的异常，啥是直接内存？ 啥叫运行时常量池，这个常量池在哪？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/04/02/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%AB%A0/">看这里</a>                </li>
-<li>如何产生各种异常，oom，stackoverflow ？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/04/02/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC2%E7%AB%A0/">看这里</a>                </li>
-<li>哪些对象可以做 GCRoot ？ 谈谈引用？ 不可达非死不可吗，流程咋样？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">看这里</a>                          </li>
-<li>垃圾收集算法，并发收集的缺点？ 内存分配策略？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">看这里</a>                         </li>
-<li>类加载过程如何？ 各个过程做啥？ 类啥时候会初始化？特殊情形-获取父类静态值、作为数组类型-static final 字符串入常量池了、<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/07/28/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC7%E7%AB%A0/">看这里</a>               </li>
-<li>虚拟机执行非静态方法时，通过局部变量表完成参数值到参数变量列表的传递，第0位索引默认用于传递方法所属实例，这样，在方法中可以使用this 关键字来访问这个实例了，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/08/01/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC8%E7%AB%A0/">看这里</a>          </li>
-<li>在有继承关系存在的情况下，虚拟机如何做到 方法调用分派？ 根据各个类的虚方法表中方法的指向，  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/08/01/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC8%E7%AB%A0/">看这里</a>          </li>
-<li>静态变量和静态方法的重写，只跟声明的类型有关， <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/08/01/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC8%E7%AB%A0/">看这里</a>          </li>
-<li>volatile 禁止指令重排的原理？ (赋值后lock,相当于store 和 write操作) ，volatile、synchronize、final 都能保证可见性 ，volatile、synchronize、锁 可以保证有序性  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/23/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0/">看这里</a>                 </li>
-<li>线程状态转换？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/23/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC12%E7%AB%A0/">看这里</a>                 </li>
-<li>实现线程安全的方法？(互斥同步、非阻塞同步-CAS操作、无同步-无共享)  synchronized 关键字原理？     <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/14/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/">看这里</a>           </li>
-<li>锁优化方式？(自旋、消除、粗化、轻量级、偏向)  ，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/09/14/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC13%E7%AB%A0/">看这里</a>          </li>
-<li>为什么不是总选择tcp，而要在有时候udp呢？ udp 首部应该包括什么呢？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/01/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC3%E7%AB%A0/">看这里</a>                </li>
-<li>快重传、流量控制、拥塞控制 分别是啥？拥塞控制 的确定？ 拥塞控制的算法？-慢启动、拥塞避免、快速恢复      ，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/01/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC3%E7%AB%A0/">看这里</a>                 </li>
-<li>ssl握手流程？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/01/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC8%E7%AB%A0/">看这里</a>                 </li>
-<li>TCP的时延有哪些？(握手、慢启动的拥塞控制、捎带确认)，http性能提升手段？(并行连接-发起多条tcp连接、持久连接、管道化发送-同一条tcp连接连续发送多条，无需等回复)， <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2018/05/21/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC4%E7%AB%A0/">看这里</a>             </li>
-<li>签名是加了密的校验和。<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2018/05/25/HTTP%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97-%E7%AC%AC14%E7%AB%A0/">看这里</a>               </li>
-<li>死锁条件？(互斥条件、不可剥夺、保持等待、环路等待)，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2018/05/30/%E7%8E%B0%E4%BB%A3%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E7%AC%AC%E4%B8%89%E7%89%88%EF%BC%89-%E7%AC%AC6%E7%AB%A0/">看这里</a>          </li>
-<li>第一次启动Service 会执行 onCreate，多次启动则 onStartCommand 多次启动   ，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2018/07/09/%E7%AC%AC%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%EF%BC%88%E7%AC%AC%E4%BA%8C%E7%89%88%EF%BC%89-%E7%AC%AC%E5%8D%81%E7%AB%A0/">看这里</a>      </li>
-<li>debug 包获取cookies： adb shell ，run-as ，再cd 到目录即可，  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/02/27/Android%E8%8E%B7%E5%8F%96debug%E5%8C%85%E7%9A%84cookies%E7%9A%84db%E6%96%87%E4%BB%B6/">看这里</a>       </li>
-<li>Toast显示流程 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>             </li>
-</ol>
-<h2 id="Android开发高手课"><a href="#Android开发高手课" class="headerlink" title="Android开发高手课"></a>Android开发高手课</h2><ol>
-<li>Android 的bitmap 内存分配随着 Android 版本的变化过程？NativeAllocationRegistry? <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">看这里</a>             </li>
-<li>卡顿考虑cpu，怎么看？ 用户时间过多或者 系统调用时间过多？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/">看这里</a>                  </li>
-<li>启动优化方式？(闪屏-当做view浮、业务优先级梳理、线程优化-线程池控制总量)，监控指标？  ，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/">看这里</a>           </li>
-<li>ppi、dpi、density？ dp * density = px ，软件绘制/硬件绘制流程 ，硬件绘制为啥快， surface 与window 关系，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-20%E8%AF%BE/">看这里</a>            </li>
-<li>ui优化方式？(硬件加速、view创建-不用xml-提前创建/异步创建-重用、measure/layout优化-减少层次-constranlayout-背景优化)  ，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-21%E8%AF%BE/">看这里</a>                  </li>
-<li>完整的网络请求？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/06/26/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-16,17%E8%AF%BE/">看这里</a>               </li>
-<li>sp 缺点？替代方式？ContentProvider注意事项？    <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/06/28/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-12%E8%AF%BE/">看这里</a>               </li>
-<li>Serializable 的原理？Parcelable 的永久存储？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/07/04/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">看这里</a>              </li>
-</ol>
-<h2 id="高级进阶课"><a href="#高级进阶课" class="headerlink" title="高级进阶课"></a>高级进阶课</h2><p><a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/04/19/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/">全部链接</a>        </p>
-<ol>
-<li>如何停止线程？为什么stop和suspend会有问题？               </li>
-<li>ThreadLocal 使用建议          </li>
-<li>禁止指令重排的方法？可见性方法？保证原子性方法？              </li>
-<li>HashTable问题？ConcurrentHashMap？ ConcurrentHashMap的解决方案？所以，如何进行锁优化？         </li>
-<li>Rxjava 存在的问题？         </li>
-<li>cpu 架构适配优化方案？？</li>
-<li>Activity 是通过反射创建出来的，所以不要去写它的构造函数。同理，Fragment 也不要去写，因为恢复Fragment的时候，也是反射的，这也是为什么我们推荐使用argument 传递参数的原因              </li>
-<li>在 resume 回调之后，才调用 makeVisible 将 DecorView 展示出来(layout,draw)，所以在resume之前我们是无法准确获得view的高度的                   </li>
-<li>如何启动外部应用的Activity？ (uid、exported-且全路径，action和category)，为了避免别的应用乱启动 exported 的Acivity，可以给Activity 添加权限，没有在Manifest中声明就启动不了                </li>
-<li>别人如何攻击暴露的Activity产生异常？            </li>
-<li>如何在任意位置为当前Activity 添加View ？           </li>
-<li>为什么不能在非主线程更新ui？一定不能吗？               </li>
-<li>ANR 怎么产生的，Looper 为什么不会cpu占用过高？             </li>
-<li>内存越大越好吗？不，导致gc时间长，避免oom？bitmap选择合适分辨率，不要使用帧动画，bitmap重采样，Native Heap 优雅避免堆限制  谨慎多进程？新进程会有一些公共资源，也是会消耗内存的                  </li>
-<li>如何对图片进行缓存？           </li>
-<li>如何计算图片大小？                 </li>
-<li>图片体积优化？ 图片格式无关跟argb_8888或者565有关、裁剪合适尺寸、采样、矩阵变换来放大图片、.9             </li>
-<li>如何开展优化工作？ 目标-找原因-优化           </li>
-<li>如何设计短视频？视频处理、来源、分享、打赏、社交、聊天、耗电问题、防止视频泄露、防止广告劫持                </li>
-<li>如何设计网络框架？  http和websocket、异步、可移植性、缓存策略、拦截器、日志、重试机制-重试多少次-间隔、结果组装            </li>
-</ol>
-<h2 id="题目"><a href="#题目" class="headerlink" title="题目"></a>题目</h2><ol>
-<li>mvc、mvp、mvvm 设计模式区别？ mvc中view可以直接改数据         <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">看这里</a>                  </li>
-<li>Android中内存分配的执行流程？ Android GC 过程？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/">看这里</a>                 </li>
-<li>三次握手？为毛3次能2次吗？ 序列号为什么随机？握手会有什么安全问题？三次握手可以携带数据吗？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">看这里</a>            </li>
-<li>TCP与udp 区别 ？ 不用维护连接， <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">看这里</a>            </li>
-<li>啥是中间人攻击？  http1与http2的区别？    <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">看这里</a>          </li>
-<li>RxJava 线程切换原理？<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/">看这里</a>       </li>
-<li>为什么使用fresco？ThreadLocal 原理？LocalBroadcastManager 原理？<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/">看这里</a>           </li>
-<li>ThreadPoolExecutor 原理？线程池异常处理？AsyncTask 源码解析？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/">看这里</a>      </li>
-<li>Synchronized 与 Lock 的区别？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">看这里</a>        </li>
-<li>wait、notify、notifyAll 方法在object 类中，而sleep 在Thread 类中? notify/wait 方法为什么一定要放在同步块中？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">看这里</a>      </li>
-<li>synchronized原理？单例中，volatile 的作用？如何停止一个线程 ？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">看这里</a>     </li>
-<li>写个死锁程序？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">看这里</a>     </li>
-<li>synchronized 锁持有的object 是Thread 对象的情况?同理，Java 中的 join原理？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/11/%E9%9D%A2%E8%AF%95%E9%A2%98-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9F%A5%E8%AF%86/">看这里</a>     </li>
-<li>集合-ArrayList、LinkedList、HashMap、HashTable、ConcurrentHashMap、LinkedHashMap、WeakHashMap、TreeMap <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>    </li>
-<li>泛型信息不会进入到运行时阶段，由于系统中并不会真正生成泛型类，因此，instanceof运算符后不能使用泛型类          </li>
-<li>抽象类和接口的区别，<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>transient 关键字， <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>        </li>
-<li>Java 的finally 与 return 的执行顺序 ？system.exit(0)、正常情况return语句先返回，但没有真正返回值，等finally执行完后真正返回、finally中有return则会覆盖try中的return、finally没有return，则看情况，如果是简单类型，则在finally中改没关系，如果是复杂类型，改了就会影响最终值 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>              </li>
-<li>Java 中HashCode 与 equals 方法理解，HashCode 生成注意事项？同一个对象多次调用hashcode都是一致的、两个对象相等，则hashcode要相等、两个对象不相等，尽量hashcode不相等，避免Hashmap等冲突、int型防止溢出 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>类的初始化步骤是啥？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>         </li>
-<li>String、StringBuilder、StringBuffer、CharSequence 区别？本质都是通过字符数组实现的，StringBuilder 和StringBuffer 初始空间都是16，如果超过，就申请新的空间，并把老数组赋值过去。 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>     </li>
-<li>String 为毛设计成不可变？字符串常量需要、String的HashCode被频繁使用，会缓存HashCode、为了安全：用在url之类的场合。 一定不可变吗？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>        </li>
-<li>成员内部类、静态内部类、局部内部类和匿名内部类的理解。内部类的优势：方便组织类关系、完善的Java的多继承机制、方便实现事件驱动程序(如点击事件)<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">看这里</a>       </li>
-<li>是否可以在子线程更新UI？首先settext了，然后执行ViewGroup的invalidateChild，最后在ViewRootImpl中检测线程，而在onCreate中，由于attachInfo 还是空的，所以走不到ViewRootImpl，走不了检查线程，所以可以设置。 可以参考<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">这里</a>、<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/04/19/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/">以及这里</a>     </li>
-<li>LruCache原理。<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>Handler 机制？如何保证一个线程一个Looper？postDelay 怎么实现？ nativePollOnce 和 nativeWake 分别来阻塞和唤起线程。  Android 的消息屏障？Handler三种消息：同步消息、异步消息、消息屏障。  通过MessageQueue.postSyncBarrier 来发送屏障，消息屏障就是没有target字段的Message，需要手动移除，屏障在就会执行查询异步消息，知道移除屏障。   IdelHandler？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>       </li>
-<li>RecyclerView 的优化方式？ 如何保存嵌套 RecyclerView 的滑动装填？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>     </li>
-<li>Activity 生命周期几种普通情况。  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>谈谈对Application 的理解？即有啥特性、有什么坑？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>Binder 理解？ 为什么要使用Binder 机制进程间通信？-五个维度 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>    </li>
-<li>Android 为什么用Bundle 而不是使用HashMap 来传递数据？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>       </li>
-<li>SharedPreference 的理解 ？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>常见内存泄漏场景 ？如何监测？LeakCanary 的原理是啥？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>     </li>
-<li>APK 安装步骤。 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>ListView 原理？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>     </li>
-<li>Android 5.0, 6.0, 7.0, 8.0新特性 ？   <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>        </li>
-<li>UI卡顿之BlockCanary？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>       </li>
-<li>Android 中大图加载 ？如果不需要展示，则BitmapFactory.option设置inJustDecodeBounds即可、图片非常多，可以使用LruCache、 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>     </li>
-<li>彻底理解android 应用无响应机制？<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>      </li>
-<li>理解Android签名？<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>       </li>
-<li>为什么 epoll 快？   <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>        </li>
-<li>BroadCastReceiver 怎么执行耗时操作(异步)？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里</a>       </li>
-</ol>
-<h2 id="他山之石"><a href="#他山之石" class="headerlink" title="他山之石"></a>他山之石</h2><ol>
-<li>HashMap 为毛链表转成红黑树？红黑树特点？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>      </li>
-<li>一个无序，实际上是逆序的数组排序用什么算法好？  <a target="_blank" rel="noopener" href="https://blog.csdn.net/hongtaya/article/details/105548059?utm_medium=distribute.pc_relevant_t0.none-task-blog-BlogCommendFromMachineLearnPai2-1.nonecase&amp;depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-BlogCommendFromMachineLearnPai2-1.nonecase">看这里-参考别人的博客</a>            </li>
-<li>Android heap 的结构？主要用来分配对象的堆空间 Zygote Space 和 Allocation Space 的底层都是匿名共享内存，使用C库的 malloc 和 free 来进行管理，<strong>通过 dlmalloc 技术来尽量解决碎片</strong>问题。 <a target="_blank" rel="noopener" href="https://blog.csdn.net/luoshengyang/article/details/42492621">看这里</a>      </li>
-<li>多个Fragment 销毁后重建之后重叠？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>      </li>
-<li>Bitmap 能否复用？怎么复用？  <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/27/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">看这里</a>       </li>
-<li>TreeMap 如何对两个元素比较？HashMap 转红黑树的时候，怎么比较？ 非compareble对象如何比较？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>      </li>
-<li>object 有哪些方法？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>        </li>
-<li>Android系统中存在的代理模式？理解动态代理和静态代理？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>         </li>
-<li>SharedPreference 是线程/进程 安全的吗？apply和commit 有什么区别(提交到哪？内存还是本地xml)？有什么坑？<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>      </li>
-<li>Handler 中我想指定某个消息先执行，可以吗？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>         </li>
-<li>http与http2的区别？http与https区别？https怎么做到安全的？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/02/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">看这里</a>           </li>
-<li>java中this编译时的原理？<strong>构造方法(对，构造方法也是)</strong>、实例方法第一个参数就是this，它的类型为Base，这是编译器自动添加的。 <a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_41920291/article/details/98118035">可以看别人的博客了解</a>              </li>
-<li>Android 自定义控件方式？———————</li>
-<li>fresco加载图片原理？ 优势是什么？ ashmem 减少gc，webp            </li>
-<li>事件分发 cancel事件一般在什么时候被触发？ 某个子View处理了Down事件之后，那么接下来的 Move 和 Up 事件也会交给他处理，但在交给他处理前，父view还是可以拦截事件的，如果拦截了事件，子View就会收到一个Cancel事件，并且不会收到后续的Move 和Up事件。 <a target="_blank" rel="noopener" href="https://blog.csdn.net/cufelsd/article/details/89471402">看这里</a>       </li>
-<li>onSaveInstanceState 调用时机。onSaveInstanceState是Activity的生命周期方法，主要用于在Activity 销毁时保存信息，Activity 只执行opause时(打开的另一个Activity透明)，在 Android 3.0 及以上不会执行 onSaveInstanceState，以下就会执行。当Activity 执行 onStop 时，就都会执行 onSaveInstanceState。 <a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_23547831/article/details/51464535">看这里</a>        </li>
-<li>Fragment View区别？ Fragment复用粒度更大、从代码设计上Fragment可以提高代码内聚、Fragment完整的生命周期、Fragment更复杂，消耗资源大。<a target="_blank" rel="noopener" href="https://blog.csdn.net/mba16c35/java/article/details/44408623">看这里</a>        </li>
-<li>notifyAll方法唤醒的线程，怎么决定哪一个线程得到运行?</li>
-<li>handler的sendMessage方法和postRunable方法区别?</li>
-</ol>
-<h2 id="针对xx的问题"><a href="#针对xx的问题" class="headerlink" title="针对xx的问题"></a>针对xx的问题</h2><p><a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/03/08/%E9%9D%A2%E8%AF%95%E9%A2%98-%E9%92%88%E5%AF%B9%E7%AE%80%E5%8E%86%E7%9A%84%E9%97%AE%E9%A2%98/">统一的链接看这里</a></p>
-<ol>
-<li>聊聊kotlin的协程？优缺点？适用场景？kotlin 如何实现空安全？       </li>
-<li>MeasureSpec 的理解？            </li>
-<li>如何处理手势冲突？内部法和外部法            </li>
-<li>如何优化App的性能？具体指标变化如何？               </li>
-<li>ArrayMap 与 SparseArray 的原理？         </li>
-<li>三次握手和四次挥手？           </li>
-<li>锁的种类？       </li>
-<li>HandlerThread?run的时候prepare() 了，退出的时候需要执行 handlerThread.quit() 以便退出loop        </li>
-<li>IntentService 原理？多次调用Service 会咋样？为毛 onHandleIntent 之后，执行的是 stopSelf(int) ？           </li>
-<li>什么是大接口？为毛要用大接口？如何实现？            </li>
-<li>怎样防止劫持？             </li>
-<li>聊聊内部sdk的设计？有什么收获？           </li>
-<li>最有成就感的？最棘手的？          </li>
-<li>为了安全，做了哪些努力？ apk签名校验、https证书校验、本地广播、sp加密             </li>
-<li>平时逛论坛？关注的技术？  </li>
-<li>如何做的证书校验？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里Android基础</a>     </li>
-<li>如何移除Handler的Message？有啥坑吗？ <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">看这里Android基础</a>       </li>
-<li>如何性能优化？lint无用资源、Application减轻负担(主进程，小sp，框架减少人为)、ui绘制优化(硬件加速、view创建优化-代码创建-提前-异步-View重用、measure/layout-布局层次-ConstranLayout减少layout开销-去除无用背景-shapelayout代替xml的shape)、启动优化（flash页面、减少cpu集中）、内存(泄漏、容器避免自动装箱、正确使用引用)、cpu(解析放在子线程、sp存储json、避开高峰-IdelHandler、线程管理-数量-线程池,启动过程勿出现io-负载高的时候，io性能下降很快)、网络优化(dns加速)、结构(mvp)、尽量不要有io操作   <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/03/08/%E9%9D%A2%E8%AF%95%E9%A2%98-%E9%92%88%E5%AF%B9%E7%AE%80%E5%8E%86%E7%9A%84%E9%97%AE%E9%A2%98/">看这里</a>、<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2020/05/30/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/">以及Android开发高手课</a></li>
-</ol>
-<p>ANR 定位？tcp与udp</p>
-<h2 id="基本排序"><a href="#基本排序" class="headerlink" title="基本排序"></a>基本排序</h2><p>插入排序：O(n^2)复杂度，稳定的排序<br>选择排序： 复杂度总是 O(n^2)，每次挑最大最小的，因此不稳定                    </p>
-<p>shell 排序： 最差的时候：O(n^2)   平均复杂度 ： nlogn，不稳定<br>冒泡：有序的情况，一趟完成，OO(n)，平均复杂度O(n^2)，稳定的排序<br>快排序： 分治思想，平均 nlogn ，最坏 O(n^2)，交换数据啊，不稳定<br>堆排序：最坏最好和平均都是   nlogn  ，不稳定<br>归并排序： 分治思想，时间复杂度  nlogn ，稳定，主要用于外部排序</p>
-<p>归并和快排的平均时间复杂度差不多，但是比快排最差情况要好。但是归并使用的空间比较多，因此一般情况下选择快排               </p>
-<p>不稳定的排序：希尔、堆、快排</p>
-<p>初始化顺序？</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/07/06/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89-%E7%AC%AC3%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2019/07/06/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章：View体系与自定义View《一》</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2019-07-06 21:00:00" itemprop="dateCreated datePublished" datetime="2019-07-06T21:00:00+08:00">2019-07-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2019-11-18 20:55:29" itemprop="dateModified" datetime="2019-11-18T20:55:29+08:00">2019-11-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="坐标系"><a href="#坐标系" class="headerlink" title="坐标系"></a>坐标系</h2><p>Android 系统中有两种坐标系：Android 坐标系和 View 坐标系，了解这两种坐标系能够帮助我们实现View的各种操作。</p>
-<h3 id="Android坐标系"><a href="#Android坐标系" class="headerlink" title="Android坐标系"></a>Android坐标系</h3><p>Android坐标系中， 将屏幕左上角的顶点作为原点， 这个原点向右是X轴正方向， 向下是Y轴正方向， 如下图所示。</p>
-<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89/Android%E5%9D%90%E6%A0%87.png" alt="Android坐标系"></p>
-<h3 id="View坐标系"><a href="#View坐标系" class="headerlink" title="View坐标系"></a>View坐标系</h3><p>View坐标系与Android坐标系并不冲突，两者是共同存在的，一起来帮助开发者更好地控制View。对于View坐标系，搞明白下图的信息即可：</p>
-<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89/View%E5%9D%90%E6%A0%87.png" alt="View坐标系"></p>
-<p><strong>MotionEvent提供的方法：</strong>假设上图中间的那个圆点就是我们触摸点，无论是View还是ViewGroup，最终的点击事件都会由onTouchEvent(MotionEvent event)方法来处理。MotionEvent提供了获取焦点坐标的各种方法：</p>
-<blockquote>
-<ul>
-<li>getX()：获取点击事件距离控件左边的距离，即视图坐标。  </li>
-</ul>
-</blockquote>
-<ul>
-<li>getY()：获取点击事件距离控件顶边的距离，即视图坐标。  </li>
-<li>getRawX()：获取点击事件距离整个屏幕左边的距离，即绝对坐标。  </li>
-<li>getRawY()：获取点击事件距离整个屏幕顶边的距离，即绝对坐标。  </li>
-</ul>
-<h2 id="View的滑动"><a href="#View的滑动" class="headerlink" title="View的滑动"></a>View的滑动</h2><p>View的滑动基本思想：当点击事件传到View时，系统记下触摸点的坐标，手指移动时系统记下移动后触摸的坐标并算出偏移量，并通过偏移量来修改View的坐标。 实现View滑动有很多种方法， 在这里主要讲解6种滑动方法， 分别是layout()、offsetLeftAndRight() 与 offsetTopAndBottom()、LayoutParams、动画、scollTo 与 scollBy ，以及Scroller。</p>
-<h3 id="layout方法"><a href="#layout方法" class="headerlink" title="layout方法"></a>layout方法</h3><p>View进行绘制的时候会调用onLayout()方法来设置显示的位置， 因此我们同样也可以通过修改View的left、 top、 right、 bottom属性来控制View的坐标。以下是实现一个随手指滑动的自定义view的步骤：</p>
-<ol>
-<li>首先获取触摸点的坐标</li>
-</ol>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onTouchEvent</span><span class="params">(MotionEvent event)</span></span>{</span><br><span class="line">    <span class="comment">//获取手指触摸点的横坐标和纵坐标</span></span><br><span class="line">    <span class="keyword">int</span> x = (<span class="keyword">int</span>) event.getX();</span><br><span class="line">    <span class="keyword">int</span> y = (<span class="keyword">int</span>) event.getY();</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">switch</span> (event.getAction()){</span><br><span class="line">        <span class="keyword">case</span> MotionEvent.ACTION_DOWN:</span><br><span class="line">            lastX = x;</span><br><span class="line">            lastY = y;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<ol start="2">
-<li>在ACTION_MOVE事件中计算偏移量,再调用layout（ ） 方法重新放置这个自定义View的位置即可:</li>
-</ol>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">case</span> MotionEvent.ACTION_MOVE:</span><br><span class="line">    <span class="comment">//计算移动距离</span></span><br><span class="line">     <span class="keyword">int</span> offsetX = x - lastX;</span><br><span class="line">     <span class="keyword">int</span> offsetY = y - lastY;</span><br><span class="line">     <span class="comment">//调用layout方法来重新确定它的位置</span></span><br><span class="line">     layout(getLeft() + offsetX,getTop()+offsetY,</span><br><span class="line">     getRight()+offsetX,getBottom()+offsetY)</span><br><span class="line">     </span><br><span class="line">     <span class="keyword">break</span>  </span><br></pre></td></tr></tbody></table></figure>
-
-<p>在每次移动时都会触发layout()方法对屏幕重新布局，从而达到移动View的效果。</p>
-<h3 id="offsetLeftAndRight-与offsetTopAndBottom"><a href="#offsetLeftAndRight-与offsetTopAndBottom" class="headerlink" title="offsetLeftAndRight() 与offsetTopAndBottom()"></a>offsetLeftAndRight() 与offsetTopAndBottom()</h3><p>这两种方法和layout()方法的效果以及使用方式都差不多，只需要将上面ACTION_MOVE中的代码替换为以下代码即可：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">case</span> MotionEvent.ACTION_MOVE:</span><br><span class="line">    <span class="comment">//计算移动距离</span></span><br><span class="line">     <span class="keyword">int</span> offsetX = x - lastX;</span><br><span class="line">     <span class="keyword">int</span> offsetY = y - lastY;</span><br><span class="line">     <span class="comment">//对left 及 right 进行偏移</span></span><br><span class="line">     offsetLeftAndRight(offsetX);</span><br><span class="line">     <span class="comment">//对top及bottom进行偏移</span></span><br><span class="line">     offsetTopAndBottom(offsetY);</span><br><span class="line">     <span class="keyword">break</span>;</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="LayoutParams（-改变布局参数）"><a href="#LayoutParams（-改变布局参数）" class="headerlink" title="LayoutParams（ 改变布局参数）"></a>LayoutParams（ 改变布局参数）</h3><p>LayoutParams主要保存了View的布局参数， 因此可以通过改变它来达到改变View位置的效果。 我们只需将 ACTION_MOVE 中的代码替换成如下代码即可(<strong>注意是：MarginLayoutParams</strong>)：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">case</span> MotionEvent.ACTION_MOVE:</span><br><span class="line">    <span class="comment">//计算移动距离</span></span><br><span class="line">     <span class="keyword">int</span> offsetX = x - lastX;</span><br><span class="line">     <span class="keyword">int</span> offsetY = y - lastY;</span><br><span class="line">     ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)getLayoutParams();</span><br><span class="line">     </span><br><span class="line">     params.leftMargin = getLeft() + offsetX;</span><br><span class="line">     params.topMargin = getTop() + offsetY;</span><br><span class="line">     setLayoutParams(params)</span><br><span class="line">     <span class="keyword">break</span>;</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="动画"><a href="#动画" class="headerlink" title="动画"></a>动画</h3><p>采用动画来移动，在res目录新建anim文件夹并创建如下translate.xml文件:</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">set</span> <span class="attr">xmlns:android</span>=<span class="string">"http://schemas.android.com/apk/res/android"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:fillAfter</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">translate</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:duration</span>=<span class="string">"1000"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:fromXDelta</span>=<span class="string">"0"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:toXDelta</span>=<span class="string">"300"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">set</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>在Java中调用：</p>
-<blockquote>
-<p>view.setAnimation(AnimationUtils.loadAnimation(this,R.anim.translate))</p>
-</blockquote>
-<p>需要注意的是，如果动画文件中没有添加 <strong>android:fillAfter=”true”</strong> ，则方块向右平移300像素后，又返回原来的位置。并且，View动画不能改变View的位置参数，如果对一个Button加上如上的平移动画，当Button平移300像素停留在当前位置时，我们点击这个Button并不会触发点击事件，但是点击原始位置却触发了点击事件，这是因为对于系统来说，Button并没有改变原来位置。</p>
-<p>在Android 3.0出现的属性动画解决了上述问题，它不仅可以执行动画，还能改变View的位置参数，其操作如下：</p>
-<blockquote>
-<p>ObjectAnimator.ofFloat(view,”translationX”，0，300).setDuration(1000).start()</p>
-</blockquote>
-<h3 id="scrollTo-与-scrollBy"><a href="#scrollTo-与-scrollBy" class="headerlink" title="scrollTo 与 scrollBy"></a>scrollTo 与 scrollBy</h3><p>scollTo、scollBy移动的是<strong>View的内容</strong>，如果在ViewGroup中使用， 则是移动<strong>其所有的子View</strong>。scrollTo(x，y)表示移动到一个具体的坐标点，而scrollBy(dx，dy)则表示移动的增量为dx、dy。 其中， scollBy最终也是要调用scollTo的。二者的源码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">scrollTo</span><span class="params">(<span class="keyword">int</span> x,<span class="keyword">int</span> y)</span></span>{</span><br><span class="line">    <span class="keyword">if</span>(mScrollX != x || mScrollY != y){</span><br><span class="line">        <span class="keyword">int</span> oldX = mScrollX;</span><br><span class="line">        <span class="keyword">int</span> oldY = mScrollY;</span><br><span class="line">        mScrollX = x;</span><br><span class="line">        mScrollY = y;</span><br><span class="line">        </span><br><span class="line">        invalidateParentCaches();</span><br><span class="line">        onScrollChanged(mScrollX, mScrollY, oldX, oldY);</span><br><span class="line">        <span class="keyword">if</span>(!awakenScrollBars()){</span><br><span class="line">            postInvalidateOnAnimation();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">scrollBy</span><span class="params">(<span class="keyword">int</span> x,<span class="keyword">int</span> y)</span></span>{</span><br><span class="line">    scrollTo(mScrollX + x, mScrollY + y)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果要实现上面view随手指滑动的效果，就需要将ACTION_MOVE中的代码替换成如下代码：</p>
-<blockquote>
-<p>((View)getParent()).scrollBy(-offsetX,-offsetY);</p>
-</blockquote>
-<p>请注意，这里是对view的parent进行scroll，这是因为如果对view本身scroll的话，就是对自己的内容进行移动，而不是整个view。并且注意，这里设置的偏移量值都为负值，以下具体讲解一下。</p>
-<p><strong>假设我们正用放大镜来看报纸，放大镜用来显示字的内容。同样我们可以把放大镜看作我们的手机屏幕，它们都是负责显示内容的；而报纸则可以被看作屏幕下的画布，它们都是用来提供内容的。放大镜外的内容，也就是报纸的内容不会随着放大镜的移动而消失，它一直存在。同样，我们的手机屏幕看不到的视图并不代表其不存在。过程的示意图如下：</strong></p>
-<p>scrollBy之前：</p>
-<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89/scrollTo%E5%88%9D%E5%A7%8B.png" alt="scrollBy初始状态"></p>
-<p>调用scrollBy(50,50)之后：</p>
-<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89/scrollBy%E4%B9%8B%E5%90%8E.png" alt="scrollBy之后"></p>
-<h3 id="Scroller"><a href="#Scroller" class="headerlink" title="Scroller"></a>Scroller</h3><p>我们在用scollTo/scollBy方法进行滑动时，这个过程是瞬间完成的，所以用户体验不大好。这里我们可以使用 Scroller 来实现有过渡效果的滑动，这个过程不是瞬间完成的，而是在一定的时间间隔内完成的。Scroller本身是不能实现View的滑动的，它需要与View的computeScroll() 方法配合才能实现弹性滑动的效果。具体代码如下示意：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">CustomView</span><span class="params">(Context context,AttributeSet attrs)</span></span>{</span><br><span class="line">    <span class="keyword">private</span> Scroller mScroller;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">super</span>(context,attrs);</span><br><span class="line">    <span class="comment">//初始化mScroller</span></span><br><span class="line">    mScroller = <span class="keyword">new</span> Scroller(conetxt);</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">computeScroll</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="keyword">super</span>.computeScroll();</span><br><span class="line">        <span class="keyword">if</span>(mScroller.computeScrollOffset()){</span><br><span class="line">            ((View)getParent()).scrollTo(mScroller.getCurrentX(),mScroller.getCurrentY());</span><br><span class="line">            invalidate();</span><br><span class="line">        }</span><br><span class="line">       </span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="comment">//提供调用的方法</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">smoothScrollTo</span><span class="params">(<span class="keyword">int</span> destX,<span class="keyword">int</span> destY)</span></span>{</span><br><span class="line">        <span class="keyword">int</span> scrollX = getScrollX();</span><br><span class="line">        <span class="keyword">int</span> scrollY = getScrollY();</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">int</span> deltaX = destX - scrollX;</span><br><span class="line">        <span class="keyword">int</span> deltaY = destY - scrollY;</span><br><span class="line">        mScroller.startScroll(scrollX, scrollY, deltaX, deltaY);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>我们首先初始化Scroller，之后重写computeScroll方法，系统会在绘制View的时候在 draw 方法中调用该方法。在computeScroll方法中， 我们调用父类的scrollTo() 方法并通过Scroller来不断获取当前的滚动值， 每滑动一小段距离我们就调用invalidate() 方法不断地进行重绘，重绘就会调用computeScroll()方法， 这样我们通过不断地移动一个小的距离并连贯起来就实现了平滑移动的效果。这里我们设定CustomView沿着X轴向右平移400像素(至于为什么是负数，上面已经解释过了):</p>
-<blockquote>
-<p>mCustomView.smoothScrollTo(-400,0);</p>
-</blockquote>
-<h2 id="属性动画"><a href="#属性动画" class="headerlink" title="属性动画"></a>属性动画</h2><p>在属性动画出现之前，Android系统提供的动画只有帧动画和 View 动画。View 动画我们都了解，它提供了AlphaAnimation、 RotateAnimation、 TranslateAnimation、 ScaleAnimation这4种动画方式，并提供了AnimationSet动画集合来混合使用多种动画。 随着Android 3.0属性动画的推出， View动画不再风光。 相比属性动画， View动画一个非常大的缺陷突显， 其不具有交互性。 当某个元素发生View动画后，其响应事件的位置依然在动画进行前的地方， 所以View动画只能做普通的动画效果， 要避免涉及交互操作。 但是它的优点也非常明显： 效率比较高， 使用也方便。 </p>
-<p>在属性动画中使用最多的就是AnimatorSet和ObjectAnimator配合： 使用 ObjectAnimator 进行更精细化的控制， 控制一个对象和一个属性值， 而使用多个ObjectAnimator组合到AnimatorSet形成一个动画。 属性动画通<br>过调用属性get、 set方法来真实地控制一个View的属性值， 因此， 强大的属性动画框架基本可以实现所有的动画效果。</p>
-<h3 id="ObjectAnimator"><a href="#ObjectAnimator" class="headerlink" title="ObjectAnimator"></a>ObjectAnimator</h3><p>ObjectAnimator 是属性动画最重要的类， 创建一个 ObjectAnimator 只需通过其静态工厂类直接返还一个ObjectAnimator对象。 参数包括一个对象和对象的属性名字， 但这个属性必须有get和set方法， 其内部会通<br>过Java反射机制来调用set方法修改对象的属性值。 一般使用方式如下：</p>
-<blockquote>
-<p>ObjectAnimator.ofFloat(view,”translationX”,200,0).start()</p>
-</blockquote>
-<p>ObjectAnimator的使用方法就不介绍了，需要注意的是， 在使用ObjectAnimator的时候， 要操作的属性必须要有get和set方法， 不然ObjectAnimator 就无法生效。 如果一个属性没有get、 set方法， 也可以通过自定义一个属性类或包装类来间接地给这个属性增加get和set方法。 如以下示例这种情况：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">MyView</span></span>{</span><br><span class="line">    <span class="keyword">private</span> View mTarget;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">MyView</span><span class="params">(View target)</span></span>{</span><br><span class="line">        <span class="keyword">this</span>.mTarget = target;</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getWidth</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="keyword">return</span> mTarget.getLayoutParams().widht</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setWidth</span><span class="params">(<span class="keyword">int</span> width)</span></span>{</span><br><span class="line">        mTarget.getLayoutParams().width = width;</span><br><span class="line">        mTarget.requestLayout();</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>使用时只需要操作包类就可以调用get、 set方法了：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">MyView mMyView = <span class="keyword">new</span> MyView(mButton);</span><br><span class="line">ObjectAnimator.ofInt(mMyView,<span class="string">"width,500).setDuration(500).start()</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="ValueAnimator"><a href="#ValueAnimator" class="headerlink" title="ValueAnimator"></a>ValueAnimator</h3><p>ValueAnimator不提供任何动画效果， 它更像一个数值发生器， 用来产生有一定规律的数字， 从而让调用者控制动画的实现过程。 通常情况下， 在ValueAnimator的AnimatorUpdateListener中监听数值的变化， 从而完成动画的变换。</p>
-<h3 id="AnimatorSet"><a href="#AnimatorSet" class="headerlink" title="AnimatorSet"></a>AnimatorSet</h3><p>略</p>
-<h3 id="在XML中使用属性动画"><a href="#在XML中使用属性动画" class="headerlink" title="在XML中使用属性动画"></a>在XML中使用属性动画</h3><figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">objectAnimator</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:duration</span>=<span class="string">"3000"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:propertyName</span>=<span class="string">"scaleX"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:valueFrom</span>=<span class="string">"1.0"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:valueTo</span>=<span class="string">"2.0"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:valueType</span>=<span class="string">"floatType"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>在代码中引用xml属性动画也很简单：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Animator animator = AnimatorInflater.loadAnimator(<span class="keyword">this</span>,R.anim.scale);</span><br><span class="line">animator.setTarget(view);</span><br><span class="line">animator.start();</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="解析Scroller"><a href="#解析Scroller" class="headerlink" title="解析Scroller"></a>解析Scroller</h2><p>略，去看源码，看不懂再来添加这块内容</p>
-<h2 id="View-事件分发机制"><a href="#View-事件分发机制" class="headerlink" title="View 事件分发机制"></a>View 事件分发机制</h2><p>这里了解Activity的构成就好了，如下图：</p>
-<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E4%B9%8B%E5%85%89/Activity%E6%9E%84%E6%88%90.png" alt="Activity构成"></p>
-<p>事件分发机制则看<a href="https://glassx.github.io/2019/02/25/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/">之前写的文章</a>还容易理解一些，这里就略过了。</p>
-<h2 id="View的工作流程"><a href="#View的工作流程" class="headerlink" title="View的工作流程"></a>View的工作流程</h2><p>这一章太长，作为第二部分内容。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1978,7 +1826,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">158</span>
+          <span class="site-state-item-count">160</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -2064,7 +1912,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共320.9k字</span>
+  <span class="post-count">博客全站共315k字</span>
 </div>
 
 

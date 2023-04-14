@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、背景自己编译的模拟器，它可以在源码上打log，做到可控。并且，所有的行为都会经过模拟器，比如后面你的url请求 二、常用的思路加固思路有以下几种：  反模拟器，一旦发现模拟器，就停止核心代码运行  代码虚拟化，自己写的代码先运行在自己写的虚拟机上，后续再运行到系统的虚拟机上加密，核心代码是以压缩或者加密形式存在的，被分割成一段一段的，需要的时候，再把目标段加载到内存。  加壳方案，分为壳dex">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java筑基-：(08)FileIO项目实战—dex文件改造">
+<meta property="og:url" content="https://glassx.github.io/2023/04/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(08)FileIO%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98%E2%80%94dex%E6%96%87%E4%BB%B6%E6%94%B9%E9%80%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、背景自己编译的模拟器，它可以在源码上打log，做到可控。并且，所有的行为都会经过模拟器，比如后面你的url请求 二、常用的思路加固思路有以下几种：  反模拟器，一旦发现模拟器，就停止核心代码运行  代码虚拟化，自己写的代码先运行在自己写的虚拟机上，后续再运行到系统的虚拟机上加密，核心代码是以压缩或者加密形式存在的，被分割成一段一段的，需要的时候，再把目标段加载到内存。  加壳方案，分为壳dex">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="d:%5C%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E4%BA%AB%E5%AD%A6vip%E4%B8%89%E6%9C%9F%5C%E5%9B%BE%E7%89%87%5C%E5%8A%A0%E5%9B%BA%E6%96%B9%E6%A1%88%E6%A6%82%E8%A7%88.png">
+<meta property="article:published_time" content="2023-04-10T11:29:00.000Z">
+<meta property="article:modified_time" content="2023-04-14T14:17:37.347Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="d:%5C%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E4%BA%AB%E5%AD%A6vip%E4%B8%89%E6%9C%9F%5C%E5%9B%BE%E7%89%87%5C%E5%8A%A0%E5%9B%BA%E6%96%B9%E6%A1%88%E6%A6%82%E8%A7%88.png">
+
+<link rel="canonical" href="https://glassx.github.io/2023/04/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(08)FileIO%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98%E2%80%94dex%E6%96%87%E4%BB%B6%E6%94%B9%E9%80%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Java筑基-：(08)FileIO项目实战—dex文件改造 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">160</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/04/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(08)FileIO%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98%E2%80%94dex%E6%96%87%E4%BB%B6%E6%94%B9%E9%80%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java筑基-：(08)FileIO项目实战—dex文件改造
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-04-10 19:29:00" itemprop="dateCreated datePublished" datetime="2023-04-10T19:29:00+08:00">2023-04-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-14 22:17:37" itemprop="dateModified" datetime="2023-04-14T22:17:37+08:00">2023-04-14</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>自己编译的模拟器，它可以在源码上打log，做到可控。并且，所有的行为都会经过模拟器，比如后面你的url请求</p>
+<h2 id="二、常用的思路"><a href="#二、常用的思路" class="headerlink" title="二、常用的思路"></a>二、常用的思路</h2><p>加固思路有以下几种：</p>
+<ul>
+<li><p>反模拟器，一旦发现模拟器，就停止核心代码运行</p>
+</li>
+<li><p>代码虚拟化，自己写的代码先运行在自己写的虚拟机上，后续再运行到系统的虚拟机上<br>加密，核心代码是以压缩或者加密形式存在的，被分割成一段一段的，需要的时候，再把目标段加载到内存。</p>
+</li>
+<li><p>加壳方案，分为壳dex和源dex，壳不加密，源加密</p>
+</li>
+</ul>
+<p>关于第 3 种加固方案的总体示意图如下：</p>
+<p><img src="D:%5C%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E4%BA%AB%E5%AD%A6vip%E4%B8%89%E6%9C%9F%5C%E5%9B%BE%E7%89%87%5C%E5%8A%A0%E5%9B%BA%E6%96%B9%E6%A1%88%E6%A6%82%E8%A7%88.png" alt="加固方案概览"></p>
+<p>最后为什么有个签名，因为加固过程会修改 APK，必然破坏了 APK ，因此需要重新签名。以上方案值得我们的思考的有几点：</p>
+<ul>
+<li><p>壳dex 与 源 dex 可以随意拼凑吗？</p>
+</li>
+<li><p>壳 dex 怎么生成？</p>
+</li>
+<li><p>如何签名？</p>
+</li>
+<li><p>如果运行新的 apk（如何脱壳）？</p>
+</li>
+</ul>
+<h2 id="四、Apk打包过程"><a href="#四、Apk打包过程" class="headerlink" title="四、Apk打包过程"></a>四、Apk打包过程</h2><p>简单说一下 APK 的打包过程，整体流程如下图所示：</p>
+<p><img src="" alt="Android打包流程"></p>
+<p>几个重要的过程：</p>
+<ol>
+<li><p>首先 aapt 工具将资源文件生成 R.java 文件</p>
+</li>
+<li><p>aidl 工具将 aidl 文件生成 Java 文件</p>
+</li>
+<li><p>将上述的 java 文件、项目自己的 java 文件，通过 Java compiler 一起生成 .class 文件</p>
+</li>
+<li><p>.class 文件通过 dx 工具生成 dex 文件</p>
+</li>
+<li><p>将 dex 文件和那些资源文件一起压缩生成 apk</p>
+</li>
+<li><p>签名</p>
+</li>
+</ol>
+<h2 id="加壳"><a href="#加壳" class="headerlink" title="加壳"></a>加壳</h2><p>生成原始 apk ，然后解压到目录 unzip 中文件夹中，当然，要把之前的签名文件给剔除；之后，找到所 unzip 中所有的 dex 文件，进行加密。</p>
+<p>接下来，将项目中的一个 lib 生成的 aar 转成 dex 文件， dx 工具可以将 jar 转成 dex，当然，这个 lib 有自己的 Application ，在正式使用的时候，上述 原始 apk 中的 Application 在最开始的时候要通过反射的方式调用这个 lib 的 Application ，让其形式上作为 App 的默认 Application ，以便后续的解密。</p>
+<p>将加密的 dex 和 aar 转成的 dex 一起放入 unzip 中，这样 ，unzip 文件夹中有了 加密的 dex 和 lib 的dex ，以及原始 apk 中所有的 资源，这时候通过 zip 压缩，就能将 unzip 中所有的内容压缩起来，改名 apk （这个打包apk 的过程需要确认）</p>
+<p>最后，对这个 apk 进行签名，就形成了正式的apk 。</p>
+<h2 id="脱壳"><a href="#脱壳" class="headerlink" title="脱壳"></a>脱壳</h2><p>上述打包的 APK 最终需要安装使用，安装成功后，</p>
+<p>我们的安装包都会安装在 </p>
+<blockquote>
+<p>/data/data/包名/files/fake_apk/  </p>
+</blockquote>
+<p>这种目录下，在壳的 Application （那个lib 中的 Application）的 attachBaseContext 的时候，我们可以将这个apk加载进来，然后过滤出所有加密的 dex 文件，之后解密，然后将这些解密后的文件存入到指定的目录，后续就使用这些已经解密的dex 。当然，我们不需要每次都去解密这个 dex ，将其存起来就好了，下次直接使用。</p>
+<h2 id="对称加密、非对称加密"><a href="#对称加密、非对称加密" class="headerlink" title="对称加密、非对称加密"></a>对称加密、非对称加密</h2><p>看了，但是笔记略</p>
+<blockquote>
+<p>后续要根据视频内容自己写一下整个的加壳、脱壳的过程</p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F/" rel="tag"># 享学Android三期</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/04/08/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(07)Java%20IO%E5%9C%A8Android%E4%B8%AD%E5%BA%94%E7%94%A8%E5%9F%BA%E7%A1%80%E7%AF%87/" rel="next" title="Java筑基-：(07)Java IO在Android中应用基础篇">
+                  <i class="fa fa-chevron-left"></i> Java筑基-：(07)Java IO在Android中应用基础篇
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/04/12/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(09)%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%90%86%E8%AE%BA%E7%9F%A5%E8%AF%86%E5%85%A5%E9%97%A8/" rel="prev" title="Java筑基-：(09)线程与进程理论知识入门">
+                  Java筑基-：(09)线程与进程理论知识入门 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">一、背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%B8%B8%E7%94%A8%E7%9A%84%E6%80%9D%E8%B7%AF"><span class="nav-number">2.</span> <span class="nav-text">二、常用的思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Apk%E6%89%93%E5%8C%85%E8%BF%87%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">四、Apk打包过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A0%E5%A3%B3"><span class="nav-number">4.</span> <span class="nav-text">加壳</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%84%B1%E5%A3%B3"><span class="nav-number">5.</span> <span class="nav-text">脱壳</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E3%80%81%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86"><span class="nav-number">6.</span> <span class="nav-text">对称加密、非对称加密</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">160</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共315k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '64e392f14cc7dba84b2ab09f84639b03',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
