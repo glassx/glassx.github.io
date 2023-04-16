@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、JVM 中常见的垃圾回收器一般来说的话，年轻代占整个堆空间的 1&#x2F;3 ，而老年代占整个堆空间的的 2&#x2F;3 。 但是对于 Parallel Scavenge&#x2F;Parallel Old 这对组合（这种组合目前的吞吐量最大，前者回收年轻代，后者回收老年代，从名字也能看出来）垃圾收集器而言，之前说的一些内容可能不适用了：  堆的大小是会动态变化的，不是一成不变的，比如最开始是 200 ，后来空间不够，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java筑基-：(04)JVM垃圾回收器及性能调优">
+<meta property="og:url" content="https://glassx.github.io/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(04)JVM%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%8F%8A%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、JVM 中常见的垃圾回收器一般来说的话，年轻代占整个堆空间的 1&#x2F;3 ，而老年代占整个堆空间的的 2&#x2F;3 。 但是对于 Parallel Scavenge&#x2F;Parallel Old 这对组合（这种组合目前的吞吐量最大，前者回收年轻代，后者回收老年代，从名字也能看出来）垃圾收集器而言，之前说的一些内容可能不适用了：  堆的大小是会动态变化的，不是一成不变的，比如最开始是 200 ，后来空间不够，">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-03-31T14:59:00.000Z">
+<meta property="article:modified_time" content="2023-04-08T14:56:06.346Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(04)JVM%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%8F%8A%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Java筑基-：(04)JVM垃圾回收器及性能调优 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">161</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(04)JVM%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%8F%8A%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java筑基-：(04)JVM垃圾回收器及性能调优
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-03-31 22:59:00" itemprop="dateCreated datePublished" datetime="2023-03-31T22:59:00+08:00">2023-03-31</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-08 22:56:06" itemprop="dateModified" datetime="2023-04-08T22:56:06+08:00">2023-04-08</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、JVM-中常见的垃圾回收器"><a href="#一、JVM-中常见的垃圾回收器" class="headerlink" title="一、JVM 中常见的垃圾回收器"></a>一、JVM 中常见的垃圾回收器</h2><p>一般来说的话，年轻代占整个堆空间的 1/3 ，而老年代占整个堆空间的的 2/3 。</p>
+<p>但是对于 Parallel Scavenge/Parallel Old 这对组合（这种组合目前的<strong>吞吐量</strong>最大，前者回收年轻代，后者回收老年代，从名字也能看出来）垃圾收集器而言，之前说的一些内容可能不适用了：</p>
+<ul>
+<li><p>堆的大小是会动态变化的，不是一成不变的，比如最开始是 200 ，后来空间不够，GC 过后被扩容到 300M ；如果发现空闲堆太多，可能就缩小到 100M 了； </p>
+</li>
+<li><p>年轻代不一定占堆空间的 1/3 了，年轻代和老年代的占比也可能变化</p>
+</li>
+<li><p>年轻代里面也可能不是 8:1:1 的结构了</p>
+</li>
+</ul>
+<p>一般来说，平时建议堆的最大大小和最小大小设置同一个值，不要让空间时不时变化。</p>
+<h2 id="二、响应优先的垃圾回收器"><a href="#二、响应优先的垃圾回收器" class="headerlink" title="二、响应优先的垃圾回收器"></a>二、响应优先的垃圾回收器</h2><p>后来，大家的需求变成<strong>响应优先</strong>， <strong>CMS （Concurrent Mark Sweep）</strong> 标记清除  垃圾回收器就是这个跨时代的垃圾回收器。 它是单独针对老年代的垃圾收集器。<strong>导致卡顿的一般是老年代的 GC 操作</strong>。它是怎么做到响应时间最短呢？步骤如下：</p>
+<ol>
+<li><p>初始标记——GC Roots 的数量是决定性因素</p>
+</li>
+<li><p>并发标记</p>
+</li>
+<li><p>重新标记</p>
+</li>
+<li><p>并发清除</p>
+</li>
+</ol>
+<p>为什么能响应时间最短，那是因为把耗时的标记和清除操作都能并发了！</p>
+<p>为什么能做到并发清理？因为标记-清除可以做到并发，因为我并不关心垃圾，我只关心与 GC Roots 有连接的部分。所以垃圾被覆盖啊之类的都是可以的，<strong>所以我能够不暂停而去做清理操作</strong>。</p>
+<h2 id="三、CMS-的预清理"><a href="#三、CMS-的预清理" class="headerlink" title="三、CMS 的预清理"></a>三、CMS 的预清理</h2><p>预清理主要往 2 个方面努力：</p>
+<ul>
+<li><p>在并发标记的阶段，如果 Eden 区有 A 对象引用到 老年代中与GC Roots没有连接的 B 对象（会被老年代里面视为垃圾），就要把 B 标记为GC Roots 可达的点。这个操作本来是放在重新标记阶段，现在放在并发标记阶段。这样，减少了重新标记 STW 的时间。</p>
+</li>
+<li><p>并发标记阶段，如果老年代内部引用发生变化（之前不可达的变为可达的了），建一个类似于卡表结构，后续的重新标记阶段就无需考虑这个区域了</p>
+</li>
+</ul>
+<p>处理 From 和 to 区（那 2 个survivor 区域的名字）的对象 ， 到老年代可达，导致老年代的并发标记中的引用变化。并发可中断预处理的过程就是 ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(xxx){</span><br><span class="line">    <span class="number">1</span>、处理 from 和 to 区的对象到老年代可达，导致的老年代并发标记中的引用变化</span><br><span class="line">    <span class="number">2</span>、老年代内部的引用变化，记录在一张表中</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这样，在重新标记就可能只需要扫描部分区域即可。</p>
+<p>退出循环的部分条件：</p>
+<ul>
+<li><p>时间控制，达到一个时间之后自动停止</p>
+</li>
+<li><p>Eden 区的内存使用达到设定的比例，如果比例太高的话，你这个并发预处理没什么作用</p>
+</li>
+</ul>
+<p>都是为了让一些在重新标记做的事情，可以放到并发标记阶段，减少停留时间</p>
+<blockquote>
+<p>预处理是做一次，扫到就扫到了，没扫到就算了；而 并发可中断预处理 会在 while 中一遍一遍地轮，多次扫描。</p>
+</blockquote>
+<p>CMS 中的问题：</p>
+<ul>
+<li><p>CPU 敏感：由于有多线程</p>
+</li>
+<li><p>浮动垃圾：由于是多线程，所以会有一些清理不到，比如你边扫地别人边丢垃圾</p>
+</li>
+<li><p>内存碎片：CMS 本质还是标记-清理算法</p>
+</li>
+</ul>
+<h2 id="四、JVM-的调优技巧"><a href="#四、JVM-的调优技巧" class="headerlink" title="四、JVM 的调优技巧"></a>四、JVM 的调优技巧</h2><p>如果需要确定总堆的大小，可以用堆空间的<strong>活跃数据</strong>来做，比如，JVM 运行了一个星期之后，一般就能得到其活跃区间的大小了，一般总堆以及 年轻代、老年代的设置规则如下：</p>
+<table>
+<thead>
+<tr>
+<th>空间</th>
+<th>倍数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>总堆大小</td>
+<td>3~4倍活跃数据大小</td>
+</tr>
+<tr>
+<td>年轻代</td>
+<td>1~1.5倍活跃数据大小</td>
+</tr>
+<tr>
+<td>老年代</td>
+<td>2~3倍活跃数据大小</td>
+</tr>
+<tr>
+<td>永久代/元空间</td>
+<td>1.2~1.5倍Full GC 后的永久代空间占用</td>
+</tr>
+</tbody></table>
+<h3 id="4-1-拓展-增大年轻代空间能不能提高-GC-效率？"><a href="#4-1-拓展-增大年轻代空间能不能提高-GC-效率？" class="headerlink" title="4.1 拓展-增大年轻代空间能不能提高 GC 效率？"></a>4.1 拓展-增大年轻代空间能不能提高 GC 效率？</h3><p>答案： <strong>可以</strong>。因为如下原因：</p>
+<ul>
+<li><p>GC 时间间隔会增大。扩容之后，一般扫描的时间间隔会增加，比如以前是 500ms ，后续会变为 1000ms。</p>
+</li>
+<li><p>放在年轻代回收比放在老年代回收好，因为新生代的复制算法效率比较高。未增大之前，可能过两轮对象就进入老年代了（大对象直接进入、或者说某一个年龄超过一半了，等等都是会进入老年代的，不一定得年龄到了）；但是增大之后，由于新生代对象的朝生夕死的特性，还没挨到下一次GC，对象就已经不可达了，进入不了老年代</p>
+</li>
+<li><p>扫描判断对象是否存活的耗时比复制存活对象的耗时少。年轻代 gc 消耗的时间是： 扫描对象（耗时 T1） 、复制存活的对象到幸存区（T2），那么总时间是 T1 + T2 。那么想想，当我们扩容成 2 倍的时候，是什么情况？扫描时间应该是变成了 2 * T2 了，但是存活对象的复制过程呢？由于GC间隔时间拉长，很多对象被回收了，复制存活对象的耗时一般会比 2 * T2 要小。</p>
+</li>
+</ul>
+<h3 id="4-2-JVM-如何如何避免-Minor-GC-时扫描全堆的？"><a href="#4-2-JVM-如何如何避免-Minor-GC-时扫描全堆的？" class="headerlink" title="4.2 JVM 如何如何避免 Minor GC 时扫描全堆的？"></a>4.2 JVM 如何如何避免 Minor GC 时扫描全堆的？</h3><p>前面我们说不同的代有不同的垃圾回收器，他们的算法是一样的，如下图所示：</p>
+<p>那么，当跨代引用的时候，是如何做到无需扫描全堆的呢？举个例子，假如<strong>你要回收年轻代</strong>，我们老年代里面有个对象 A，引用了年轻代中的一个对象 B，那么老年代的 A 会被作为 GC Roots ，那么你要确定这个根，你要在老年代里面去找根？</p>
+<p>所以如果有跨代，那么我们是否要进行全堆的扫描（不然没法知道GC Roots 啊，虽然你说上述情况可以作为 GC Roots）？答案是不用的，因为 JVM 可能会维护有<strong>卡表结构</strong>，它标记了所有的对象。未跨代的时候，是某个标记，假设说是 0 ；如果有跨代引用，在卡表里面就标记成另一个了，假设是 0 。</p>
+<h3 id="4-3-常量池（方法区）"><a href="#4-3-常量池（方法区）" class="headerlink" title="4.3 常量池（方法区）"></a>4.3 常量池（方法区）</h3><p>常量池一般有 3 种，分别如下：</p>
+<ul>
+<li><p>Class 常量池：.class 文件中带的，编译时的字面量、引用。</p>
+</li>
+<li><p>运行时常量池：运行时如果用到的某个类A ，如果 ClassLoader 还未加载这个类 A ，那么就会是一个符号引用，这是个常量，到运行时符号引用转为直接引用。</p>
+</li>
+<li><p>字符串常量池：规范里面是没有的。与 String 的设计思想有关系，String 对象不可变（类被final，value数组也是final）</p>
+</li>
+</ul>
+<p>new String(“abc”) ，已经有字面量 “abc” 了，在编译的 时候就会被放入常量池里面，并且在堆里面会创建一个 String 对象，值指向常量池的那个 “abc” 。</p>
+<p>“ab” + “cd” +”ef” 这种，编译器在编译的时候就会变成 “abcdef” 直接给优化了</p>
+<p>如果发现如下这种循环次数比较多的字符串相加，编译器也会优化:</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">String str = <span class="string">"ab"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i&lt;<span class="number">100</span>;i++) {</span><br><span class="line">   str += arr[i];</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>变为使用 StringBuilder 来实现。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F/" rel="tag"># 享学Android三期</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(05)%E5%AE%89%E5%8D%93%E8%99%9A%E6%8B%9F%E6%9C%BA%E4%B8%8E%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6-1/" rel="next" title="Java筑基-：(05)安卓虚拟机与类加载机制-1">
+                  <i class="fa fa-chevron-left"></i> Java筑基-：(05)安卓虚拟机与类加载机制-1
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/04/05/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(06)Java%E5%9F%BA%E7%A1%80%E8%BF%9B%E9%98%B6-%E5%BA%8F%E5%88%97%E5%8C%96/" rel="prev" title="Java筑基-：(06)Java基础进阶-序列化">
+                  Java筑基-：(06)Java基础进阶-序列化 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81JVM-%E4%B8%AD%E5%B8%B8%E8%A7%81%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8"><span class="nav-number">1.</span> <span class="nav-text">一、JVM 中常见的垃圾回收器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%93%8D%E5%BA%94%E4%BC%98%E5%85%88%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">二、响应优先的垃圾回收器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81CMS-%E7%9A%84%E9%A2%84%E6%B8%85%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">三、CMS 的预清理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81JVM-%E7%9A%84%E8%B0%83%E4%BC%98%E6%8A%80%E5%B7%A7"><span class="nav-number">4.</span> <span class="nav-text">四、JVM 的调优技巧</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%8B%93%E5%B1%95-%E5%A2%9E%E5%A4%A7%E5%B9%B4%E8%BD%BB%E4%BB%A3%E7%A9%BA%E9%97%B4%E8%83%BD%E4%B8%8D%E8%83%BD%E6%8F%90%E9%AB%98-GC-%E6%95%88%E7%8E%87%EF%BC%9F"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 拓展-增大年轻代空间能不能提高 GC 效率？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-JVM-%E5%A6%82%E4%BD%95%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D-Minor-GC-%E6%97%B6%E6%89%AB%E6%8F%8F%E5%85%A8%E5%A0%86%E7%9A%84%EF%BC%9F"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 JVM 如何如何避免 Minor GC 时扫描全堆的？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E5%B8%B8%E9%87%8F%E6%B1%A0%EF%BC%88%E6%96%B9%E6%B3%95%E5%8C%BA%EF%BC%89"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 常量池（方法区）</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">161</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共338k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '47adf9c7378f70f863de20e9c3d2a34d',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

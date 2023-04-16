@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、序列化与二进制串序列化其实就是将数据结构转换成二进制串的过程。这里的二进制串，在 Java 中很容易和 String 的概念混淆，实际上 String 也是一种特殊对象（Object），对于跨语言间的通信，序列化后的数据当然不能使某种语言的特殊数据类型。  二进制串在 Java 里面所指的应当是 byte[]   二、序列化&#x2F;反序列化的目的 数据的生命周期需要比 JVM 长。Java 允许我们">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java筑基-：(06)Java基础进阶-序列化">
+<meta property="og:url" content="https://glassx.github.io/2023/04/05/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(06)Java%E5%9F%BA%E7%A1%80%E8%BF%9B%E9%98%B6-%E5%BA%8F%E5%88%97%E5%8C%96/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、序列化与二进制串序列化其实就是将数据结构转换成二进制串的过程。这里的二进制串，在 Java 中很容易和 String 的概念混淆，实际上 String 也是一种特殊对象（Object），对于跨语言间的通信，序列化后的数据当然不能使某种语言的特殊数据类型。  二进制串在 Java 里面所指的应当是 byte[]   二、序列化&#x2F;反序列化的目的 数据的生命周期需要比 JVM 长。Java 允许我们">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-04-05T06:59:00.000Z">
+<meta property="article:modified_time" content="2023-04-08T15:15:56.025Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/04/05/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(06)Java%E5%9F%BA%E7%A1%80%E8%BF%9B%E9%98%B6-%E5%BA%8F%E5%88%97%E5%8C%96/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Java筑基-：(06)Java基础进阶-序列化 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">161</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/04/05/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(06)Java%E5%9F%BA%E7%A1%80%E8%BF%9B%E9%98%B6-%E5%BA%8F%E5%88%97%E5%8C%96/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java筑基-：(06)Java基础进阶-序列化
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-04-05 14:59:00" itemprop="dateCreated datePublished" datetime="2023-04-05T14:59:00+08:00">2023-04-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-08 23:15:56" itemprop="dateModified" datetime="2023-04-08T23:15:56+08:00">2023-04-08</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、序列化与二进制串"><a href="#一、序列化与二进制串" class="headerlink" title="一、序列化与二进制串"></a>一、序列化与二进制串</h2><p>序列化其实就是<strong>将数据结构转换成二进制串的过程</strong>。这里的二进制串，在 Java 中很容易和 String 的概念混淆，实际上 String 也是一种特殊对象（Object），对于跨语言间的通信，序列化后的数据当然不能使某种语言的特殊数据类型。</p>
+<blockquote>
+<p>二进制串在 Java 里面所指的应当是 byte[] </p>
+</blockquote>
+<h2 id="二、序列化-反序列化的目的"><a href="#二、序列化-反序列化的目的" class="headerlink" title="二、序列化/反序列化的目的"></a>二、序列化/反序列化的目的</h2><ul>
+<li><p>数据的生命周期需要比 JVM 长。Java 允许我们在内存中创建可复用的对象，但是一般只有 JVM 存在的时候，这些对象才能存在，即对象生命周期不能比 JVM 更长。所以，如果需要停止 JVM 后数据还存在，就要序列化保存这些数据。</p>
+</li>
+<li><p>序列化只是对变量而言。序列化对象的时候，<strong>只针对变量进行序列化</strong>，不针对方法进行序列化。</p>
+</li>
+<li><p>需要永久保存或者在网络上传输的时候，需要序列化之后才能进行。</p>
+</li>
+</ul>
+<h2 id="三、序列化常见的方案"><a href="#三、序列化常见的方案" class="headerlink" title="三、序列化常见的方案"></a>三、序列化常见的方案</h2><ul>
+<li><p>Java 中有 Serializable</p>
+</li>
+<li><p>Android 中有 Parcelable</p>
+</li>
+<li><p>还有 Json、xml 、Protocol Buffer 等</p>
+</li>
+</ul>
+<h2 id="四、选择合理的序列化方案"><a href="#四、选择合理的序列化方案" class="headerlink" title="四、选择合理的序列化方案"></a>四、选择合理的序列化方案</h2><ul>
+<li><p>性能</p>
+</li>
+<li><p>通用性</p>
+</li>
+<li><p>鲁棒性</p>
+</li>
+<li><p>可调式性/可读性</p>
+</li>
+<li><p>可扩展/兼容性</p>
+</li>
+<li><p>安全性/访问限制</p>
+</li>
+</ul>
+<h2 id="五、Serializable"><a href="#五、Serializable" class="headerlink" title="五、Serializable"></a>五、Serializable</h2><p>首先， Serializable 只是一个接口，为什么一个空的接口能够实现序列化？<strong>因为它只是一个标识、标记！</strong></p>
+<p>如果要保存到磁盘上，还需要使用 IO 流（ObjectInputStream/ObjectOutPutStream）来辅助，这个好理解。</p>
+<h2 id="六、Externalizable"><a href="#六、Externalizable" class="headerlink" title="六、Externalizable"></a>六、Externalizable</h2><p>要自己实现 writeExternal 和 readExternal 方法，但是使用的时候需要注意以下几点：</p>
+<ul>
+<li><p>write 和 read 方法二者要对应，比如，write 的阶段没有只写入了一个 String 类型，但是读的时候 读了 String 还要读 int ，这时候就会导致崩溃报错。</p>
+</li>
+<li><p>write 和 read 的顺序要保持一致，比如先 write 了String ，再 write  了int ，读的时候如果先读int ，后读String ，也会导致报错</p>
+</li>
+<li><p>要有默认无参的、public类型的构造函数，如果你自己写了有参数的构造函数，一定再加上无参的默认构造函数</p>
+</li>
+</ul>
+<blockquote>
+<p>为什么要有一个 public 无参的构造函数？</p>
+</blockquote>
+<h2 id="七、相关面试题"><a href="#七、相关面试题" class="headerlink" title="七、相关面试题"></a>七、相关面试题</h2><h3 id="7-1-什么是-serialVersionUID-？-如果不定义会发生什么？"><a href="#7-1-什么是-serialVersionUID-？-如果不定义会发生什么？" class="headerlink" title="7.1 什么是 serialVersionUID ？ 如果不定义会发生什么？"></a>7.1 什么是 serialVersionUID ？ 如果不定义会发生什么？</h3><ol>
+<li><p>serialVersionUID 是一个 private static final long 类型的 ID ，它<strong>通常是对象的 hashCode</strong></p>
+</li>
+<li><p>它用于对象的版本控制，我们可以在类文件中指定这个值</p>
+</li>
+<li><p>如果不指定它的值，当你序列化类 A.java 生成了文件 a.txt ，之后，在 A 类中添加了一个字段 sex ，则在反序列化的时候会报错，提示版本不一致</p>
+</li>
+<li><p>还有，如果指定serialVersionUID 为 1，序列化 A 的时候生成了 a.txt ，这时候添加了字段 sex ，如果此时不改 serialVersionUID 的值，反序列化的时候，能成功，只是 sex 字段为 null（这里说的是对象类型，如果是 int 等类型就会是 0 ，后面一样）而已</p>
+</li>
+<li><p>接着上面，如果序列化了 A ，添加了 sex 字段，此时还将 serialVersionUID 改为 2 ，此时反序列化就会报错，同样是版本不一致</p>
+</li>
+</ol>
+<h3 id="7-2-序列化的时候，如果某些成员不要序列化，该怎么实现？"><a href="#7-2-序列化的时候，如果某些成员不要序列化，该怎么实现？" class="headerlink" title="7.2 序列化的时候，如果某些成员不要序列化，该怎么实现？"></a>7.2 序列化的时候，如果某些成员不要序列化，该怎么实现？</h3><p>使用 transient 关键字。加了 这个关键字的对象 sex ，在反序列化的时候会为null（如果是int 等类型就会是 0） 。</p>
+<h3 id="7-3-如果类-A-中有成员未实现可序列化接口，会发生什么？"><a href="#7-3-如果类-A-中有成员未实现可序列化接口，会发生什么？" class="headerlink" title="7.3 如果类 A 中有成员未实现可序列化接口，会发生什么？"></a>7.3 如果类 A 中有成员未实现可序列化接口，会发生什么？</h3><p>如果 A 中有成员 User 对象没有实现可序列化接口，序列化的时候会报 “不可序列化”的异常。</p>
+<h3 id="7-4-如果类-A-是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？"><a href="#7-4-如果类-A-是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？" class="headerlink" title="7.4 如果类 A 是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？"></a>7.4 如果类 A 是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？</h3><p>假如 User 继承了 Person 类，并且实现了 Serializable 接口，但是 Person 类没有实现 Serializable 接口。</p>
+<p>即 父类的成员未默认值，Object 类型为 null ，int 等类型为  0。</p>
+<p>如果要想父类也实现，需要父类也实现 Serializable 接口，并且有默认的构造函数（无参的，public 的）。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F/" rel="tag"># 享学Android三期</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(04)JVM%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%8F%8A%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" rel="next" title="Java筑基-：(04)JVM垃圾回收器及性能调优">
+                  <i class="fa fa-chevron-left"></i> Java筑基-：(04)JVM垃圾回收器及性能调优
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/04/08/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(07)Java%20IO%E5%9C%A8Android%E4%B8%AD%E5%BA%94%E7%94%A8%E5%9F%BA%E7%A1%80%E7%AF%87/" rel="prev" title="Java筑基-：(07)Java IO在Android中应用基础篇">
+                  Java筑基-：(07)Java IO在Android中应用基础篇 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8E%E4%BA%8C%E8%BF%9B%E5%88%B6%E4%B8%B2"><span class="nav-number">1.</span> <span class="nav-text">一、序列化与二进制串</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%BA%8F%E5%88%97%E5%8C%96-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%E7%9B%AE%E7%9A%84"><span class="nav-number">2.</span> <span class="nav-text">二、序列化&#x2F;反序列化的目的</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%BA%8F%E5%88%97%E5%8C%96%E5%B8%B8%E8%A7%81%E7%9A%84%E6%96%B9%E6%A1%88"><span class="nav-number">3.</span> <span class="nav-text">三、序列化常见的方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%80%89%E6%8B%A9%E5%90%88%E7%90%86%E7%9A%84%E5%BA%8F%E5%88%97%E5%8C%96%E6%96%B9%E6%A1%88"><span class="nav-number">4.</span> <span class="nav-text">四、选择合理的序列化方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Serializable"><span class="nav-number">5.</span> <span class="nav-text">五、Serializable</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Externalizable"><span class="nav-number">6.</span> <span class="nav-text">六、Externalizable</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E7%9B%B8%E5%85%B3%E9%9D%A2%E8%AF%95%E9%A2%98"><span class="nav-number">7.</span> <span class="nav-text">七、相关面试题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E4%BB%80%E4%B9%88%E6%98%AF-serialVersionUID-%EF%BC%9F-%E5%A6%82%E6%9E%9C%E4%B8%8D%E5%AE%9A%E4%B9%89%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 什么是 serialVersionUID ？ 如果不定义会发生什么？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%E6%97%B6%E5%80%99%EF%BC%8C%E5%A6%82%E6%9E%9C%E6%9F%90%E4%BA%9B%E6%88%90%E5%91%98%E4%B8%8D%E8%A6%81%E5%BA%8F%E5%88%97%E5%8C%96%EF%BC%8C%E8%AF%A5%E6%80%8E%E4%B9%88%E5%AE%9E%E7%8E%B0%EF%BC%9F"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 序列化的时候，如果某些成员不要序列化，该怎么实现？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E5%A6%82%E6%9E%9C%E7%B1%BB-A-%E4%B8%AD%E6%9C%89%E6%88%90%E5%91%98%E6%9C%AA%E5%AE%9E%E7%8E%B0%E5%8F%AF%E5%BA%8F%E5%88%97%E5%8C%96%E6%8E%A5%E5%8F%A3%EF%BC%8C%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 如果类 A 中有成员未实现可序列化接口，会发生什么？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E5%A6%82%E6%9E%9C%E7%B1%BB-A-%E6%98%AF%E5%8F%AF%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%EF%BC%8C%E4%BD%86%E6%98%AF%E5%85%B6%E7%88%B6%E7%B1%BB%E4%B8%8D%E6%98%AF%EF%BC%8C%E5%88%99%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%90%8E%EF%BC%8C%E4%BB%8E%E7%88%B6%E7%B1%BB%E7%BB%A7%E6%89%BF%E8%BF%87%E6%9D%A5%E7%9A%84%E5%AE%9E%E4%BE%8B%E5%8F%98%E9%87%8F%E7%8A%B6%E6%80%81%E5%A6%82%E4%BD%95%EF%BC%9F"><span class="nav-number">7.4.</span> <span class="nav-text">7.4 如果类 A 是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">161</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共338k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '6239e35c1744f80be14d2c7921089877',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

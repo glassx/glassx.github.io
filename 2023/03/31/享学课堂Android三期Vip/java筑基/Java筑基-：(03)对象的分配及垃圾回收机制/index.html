@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、 JVM 中对象的创建过程对象的整体创建过程如下所示：  我们的常量池里面可能存在符号引用，什么是符号引用？我们引用了一个对象，但是不知道这个对象的真实地址。举个例子：你引用了  com.esun.B  ，如果是直接引用的话，那就是真实的地址。 如果你在 A 的常量池里面引用了 B ，但是 B 还没有加载进来，这时候你就只能用一个符号。 在检查加载的过程会去检验是否能正常将符号引用转换为直接引">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java筑基-：(03)对象的分配及垃圾回收机制">
+<meta property="og:url" content="https://glassx.github.io/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(03)%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%88%86%E9%85%8D%E5%8F%8A%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、 JVM 中对象的创建过程对象的整体创建过程如下所示：  我们的常量池里面可能存在符号引用，什么是符号引用？我们引用了一个对象，但是不知道这个对象的真实地址。举个例子：你引用了  com.esun.B  ，如果是直接引用的话，那就是真实的地址。 如果你在 A 的常量池里面引用了 B ，但是 B 还没有加载进来，这时候你就只能用一个符号。 在检查加载的过程会去检验是否能正常将符号引用转换为直接引">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA%E8%BF%87%E7%A8%8B.png">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/JVM%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B.jpg">
+<meta property="article:published_time" content="2023-03-31T09:12:00.000Z">
+<meta property="article:modified_time" content="2023-04-08T14:49:13.513Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA%E8%BF%87%E7%A8%8B.png">
+
+<link rel="canonical" href="https://glassx.github.io/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(03)%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%88%86%E9%85%8D%E5%8F%8A%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Java筑基-：(03)对象的分配及垃圾回收机制 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">161</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(03)%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%88%86%E9%85%8D%E5%8F%8A%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java筑基-：(03)对象的分配及垃圾回收机制
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-03-31 17:12:00" itemprop="dateCreated datePublished" datetime="2023-03-31T17:12:00+08:00">2023-03-31</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-08 22:49:13" itemprop="dateModified" datetime="2023-04-08T22:49:13+08:00">2023-04-08</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、-JVM-中对象的创建过程"><a href="#一、-JVM-中对象的创建过程" class="headerlink" title="一、 JVM 中对象的创建过程"></a>一、 JVM 中对象的创建过程</h2><p>对象的整体创建过程如下所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA%E8%BF%87%E7%A8%8B.png" alt="对象创建过程"></p>
+<p>我们的<strong>常量池</strong>里面可能存在符号引用，什么是符号引用？我们引用了一个对象，但是不知道这个对象的真实地址。举个例子：你引用了  com.esun.B  ，如果是<strong>直接引用的话，那就是真实的地址。</strong> 如果你在 A 的常量池里面引用了 B ，但是 B 还没有加载进来，这时候你就只能用一个符号。</p>
+<p>在检查加载的过程会去检验是否能正常将符号引用转换为直接引用。</p>
+<h3 id="1-1-内存分配"><a href="#1-1-内存分配" class="headerlink" title="1.1 内存分配"></a>1.1 内存分配</h3><p>内存分配一般有 2 种方式：</p>
+<ul>
+<li><p>指针碰撞。内存比较规整，前面内存已经分配到 7 了，那么这次分配从 8 开始</p>
+</li>
+<li><p>空闲列表。不在乎内存碎片，根据维护的空闲列表来分配</p>
+</li>
+</ul>
+<p>分配的时候需要注意多线程安全，主要有 2 种方式：</p>
+<ul>
+<li><p>CAS  + 失败重试操作</p>
+</li>
+<li><p>本地线程分配缓冲：给每个线程在 Eden 区默认划分一块空间，线程分配的时候，就在那块空间去操作，由于线程有自己专属的，所以并不会有线程安全问题</p>
+</li>
+</ul>
+<h3 id="1-2-对象内存布局"><a href="#1-2-对象内存布局" class="headerlink" title="1.2 对象内存布局"></a>1.2 对象内存布局</h3><p>一个对象会包括对象头、实例数据、以及对齐填充（不一定有）。其中对象头很重要，它主要包括：</p>
+<ul>
+<li><p>Markword</p>
+</li>
+<li><p>类型指针，指向方法区中的 Class ，标明它是哪个类型</p>
+</li>
+<li><p>记录数组长度（如果是数组对象才有）</p>
+</li>
+</ul>
+<h2 id="二、GC"><a href="#二、GC" class="headerlink" title="二、GC"></a>二、GC</h2><h3 id="2-1-判断对象存活"><a href="#2-1-判断对象存活" class="headerlink" title="2.1 判断对象存活"></a>2.1 判断对象存活</h3><p>有 2 种主流的方式：</p>
+<ul>
+<li><p>引用计数，不能解决循环引用——Python 就是用这种方案</p>
+</li>
+<li><p>可达性分析，也说 根可达方法</p>
+</li>
+</ul>
+<p>GCRoots 主要有4种，但是不止4种：</p>
+<ul>
+<li><p>静态变量</p>
+</li>
+<li><p>线程栈变量</p>
+</li>
+<li><p>常量池</p>
+</li>
+<li><p>JNI （指针）</p>
+</li>
+<li><p>如果还纠结，就有其他：Class对象、类加载器、</p>
+</li>
+</ul>
+<blockquote>
+<p>方法区中的 class 对象是否能被回收？肯定能被回收，有一个很重要的条件是 new 出的所有对象都被回收了。其他的还包括它的 ClassLoader 也被回收了等等。</p>
+</blockquote>
+<p>真正要宣布一个对象可回收需要 2 次标记，首先是不可达，其次就是 finalize ，所以不可达不是非死不可的条件。 finalize 里面可以让引用继续来。 DirectByteBuffer 直接内存分配，它里面也用了虚引用，是否用来协助内存回收？？待确认</p>
+<h3 id="2-2-对象分配策略"><a href="#2-2-对象分配策略" class="headerlink" title="2.2 对象分配策略"></a>2.2 对象分配策略</h3><p>对象的分配原则：</p>
+<ul>
+<li><p>对象优先在 Eden 分配</p>
+</li>
+<li><p>空间分配担保</p>
+</li>
+<li><p>大对象直接进入老年代</p>
+</li>
+<li><p>长期存活的对象进入老年代</p>
+</li>
+<li><p>动态年龄判定</p>
+</li>
+</ul>
+<p>我们说<strong>几乎所有的对象都在堆上分配</strong>，为什么是几乎？因为还有<strong>栈上分配</strong>这种方案：</p>
+<ul>
+<li>触发了 JIT （热点数据），逃逸分析的时候发现对象不会逃出当前方法和线程，的时候就可能触发栈上分配</li>
+</ul>
+<h3 id="2-3-GC-详情"><a href="#2-3-GC-详情" class="headerlink" title="2.3 GC 详情"></a>2.3 GC 详情</h3><p>堆分代：</p>
+<ul>
+<li><p>新生代： Eden区、s0、s1 区，三者大小 8:1:1 ？为什么，因为大多数对象都是朝生夕死的，存活时间很短</p>
+</li>
+<li><p>老年代，一般老年代 GC ，就会触发 Full  GC： 也就是年轻代、老年代、方法区都 GC</p>
+</li>
+</ul>
+<p>新生代一般是用复制算法，老年代是标记整理、标记清除算法</p>
+<p>标记整理算法都是怎么做呢？ 其实是： 标记——&gt;整理——&gt; 清除 ，为什么要这么做呢？（有些人会以为是：标记——&gt;清除——&gt; 整理 ），这是因为这里的时候，可以覆盖那些垃圾，等整理完了之后，垃圾可能会变少了，清除也快一些。</p>
+<blockquote>
+<p>这个过程会有STW 的，暂停所有线程，这是为什么？因为整理的时候，对象的位置会发生变化啊，整理之后，以前在位置 15 的时候变成 位置 6 了，所以要停止。</p>
+</blockquote>
+<h2 id="三、虚拟机的优化技术"><a href="#三、虚拟机的优化技术" class="headerlink" title="三、虚拟机的优化技术"></a>三、虚拟机的优化技术</h2><ul>
+<li><p>热点数据编译成本地代码</p>
+</li>
+<li><p>本地线程分配缓冲</p>
+</li>
+</ul>
+<p>最终， JVM 的学习一张图看了：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/JVM%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B.jpg" alt="JVM一张图"></p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F/" rel="tag"># 享学Android三期</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(02)JVM%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/" rel="next" title="Java筑基-：(02)JVM内存管理">
+                  <i class="fa fa-chevron-left"></i> Java筑基-：(02)JVM内存管理
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(05)%E5%AE%89%E5%8D%93%E8%99%9A%E6%8B%9F%E6%9C%BA%E4%B8%8E%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6-1/" rel="prev" title="Java筑基-：(05)安卓虚拟机与类加载机制-1">
+                  Java筑基-：(05)安卓虚拟机与类加载机制-1 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81-JVM-%E4%B8%AD%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%88%9B%E5%BB%BA%E8%BF%87%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">一、 JVM 中对象的创建过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 内存分配</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%AF%B9%E8%B1%A1%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 对象内存布局</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81GC"><span class="nav-number">2.</span> <span class="nav-text">二、GC</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E5%AD%98%E6%B4%BB"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 判断对象存活</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%AF%B9%E8%B1%A1%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 对象分配策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-GC-%E8%AF%A6%E6%83%85"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 GC 详情</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%9A%84%E4%BC%98%E5%8C%96%E6%8A%80%E6%9C%AF"><span class="nav-number">3.</span> <span class="nav-text">三、虚拟机的优化技术</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">161</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共338k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '98288a1860497b4fbadeed36ab68ac1a',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

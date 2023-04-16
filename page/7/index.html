@@ -154,17 +154,17 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">28</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">6</span></a>
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">128</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">161</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -220,7 +220,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC22%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -234,7 +234,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/" class="post-title-link" itemprop="url">第13讲-存储优化<中>-如何优化数据存储</a>
+            <a href="/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC22%E7%AB%A0/" class="post-title-link" itemprop="url">第22章：插件化技术总结</a>
         </h1>
 
         <div class="post-meta">
@@ -244,14 +244,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-06-25 11:36:00" itemprop="dateCreated datePublished" datetime="2020-06-25T11:36:00+08:00">2020-06-25</time>
+              <time title="创建时间：2021-04-06 21:52:00" itemprop="dateCreated datePublished" datetime="2021-04-06T21:52:00+08:00">2021-04-06</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 17:43:48" itemprop="dateModified" datetime="2021-05-05T17:43:48+08:00">2021-05-05</time>
+                <time title="修改时间：2022-06-08 10:13:41" itemprop="dateModified" datetime="2022-06-08T10:13:41+08:00">2022-06-08</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -276,25 +276,47 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <html><head></head><body></body></html><html><head></head><body><h3 id="Serializable-的原理"><a href="#Serializable-的原理" class="headerlink" title="Serializable 的原理"></a>Serializable 的原理</h3><p>Serializable 的原理是<strong>通过 ObjectInputStream 和 ObjectOutputStream 来实现的</strong>，通过 Android 6.0 的源码可以看到 ObjectOutPutStream 的部分源码实现：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeFieldValues</span><span class="params">(Object obj, ObjectStreamClass classDesc)</span>  </span>{</span><br><span class="line">    <span class="keyword">for</span> (ObjectStreamField fieldDesc : classDesc.fields()) {</span><br><span class="line">        ...</span><br><span class="line">        Field field = classDesc.checkAndGetReflectionField(fieldDesc);</span><br><span class="line">        ...</span><br></pre></td></tr></tbody></table></figure>
-
-<p>整个序列化过程使用了大量反射(比如说获取整个类的所有属性，反射意味着效率低)和临时变量(临时变量意味着GC)，并且，<strong>在序列化对象时，不仅会序列化当前对象本身，还需要地柜序列化对象引用的其他对象</strong>，可以参考<a target="_blank" rel="noopener" href="https://juejin.cn/post/6844904049997774856">别人的博客</a>。</p>
-<h3 id="Serializable-的进阶"><a href="#Serializable-的进阶" class="headerlink" title="Serializable 的进阶"></a>Serializable 的进阶</h3><p>Serializable 序列化支持使用自定义 writeObject和readObject，他会先反射判断是否存在我们自己实现的 序列化writeObject方法和反序列化readObject 方法。<strong>通过这两个方法，我们可以对某些字段做修改，也能实现序列化的加密功能。</strong></p>
-<p>还有，Serializable 的反序列默认是不会执行构造函数的</p>
-<h3 id="Parcelable-的永久存储"><a href="#Parcelable-的永久存储" class="headerlink" title="Parcelable 的永久存储"></a>Parcelable 的永久存储</h3><p>一般来说，我们使用 parcelable 只是会在内存中序列化操作，并不会存储到磁盘。其实，我们也可以存储到磁盘的：<strong>通过 Parcel.java 中的 marshall 接口获取byte 数组，然后存在文件中，从而实现 Parcelable 的永久存储。</strong></p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Returns the raw bytes of the parcel.</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] marshall() {</span><br><span class="line">    <span class="keyword">return</span> nativeMarshall(mNativePtr);</span><br><span class="line">}</span><br><span class="line"><span class="comment">// Set the bytes in data to be the raw bytes of this Parcel.</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">unmarshall</span><span class="params">(<span class="keyword">byte</span>[] data, <span class="keyword">int</span> offset, <span class="keyword">int</span> length)</span> </span>{</span><br><span class="line">    nativeUnmarshall(mNativePtr, data, offset, length);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>不过，一般不推荐这样做，因为可能会有系统版本兼容性问题，因为我们无法保证所有的 Android 版本的 Parcel.cpp 实现完全一致。还有就是数据前后的兼容性，这里并没有类似 Serializable 里面有个 serialVersionUID 来保证版本一致性。</p>
-<h2 id="14-数据库优化"><a href="#14-数据库优化" class="headerlink" title="14-数据库优化"></a>14-数据库优化</h2><p>SQLite 默认支持多进程并发操作，它通过文件锁来控制多进程的并发，但是SQLite 的锁粒度并没有非常细，针对的是整个DB文件，简单来说，多进程可以同事获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库</p>
-<p>数据库使用注意：</p>
+          <html><head></head><body></body></html><html><head></head><body><p>这章是重新梳理插件化技术的整体思路</p>
+<h2 id="插件的工程化"><a href="#插件的工程化" class="headerlink" title="插件的工程化"></a>插件的工程化</h2><p>插件化技术分为宿主App 和 插件Plugin1这两个 apk，有时候还有 MyPluginLibrary ，宿主和插件都要引用它。</p>
+<h2 id="加载插件中的类"><a href="#加载插件中的类" class="headerlink" title="加载插件中的类"></a>加载插件中的类</h2><p>宿主App 想要使用 Plugin1 中的类，还使用 宿主App 中的 ClassLoder 是不行的，由此缠身很多种解决方案：</p>
 <ul>
-<li>防止注入   </li>
-<li>防止窃取      </li>
-<li>小表无需维护索引，因为索引是需要一直维护的，有代价        </li>
-<li>慎用 “select * “ 需要多少列，就取多少列      </li>
-<li>定期删除无用数据             </li>
+<li>最直接的就是，在反射插件中的类时，使用 Plugin1.apk 对应的 ClassLoader (参考第6章)    </li>
+<li>无论是宿主还是插件，他们各自的 ClassLoader 都对应一个 dex 数组，把这些插件的dex数组都合并到宿主的 dex 数组中，那么，宿主App就可以加载任何类(参考9.3节)。     </li>
+<li>自定义一个ClassLoader，取代原先宿主的ClassLoader 。同时在自定义的 ClassLoader 中放一个集合，承载所有插件的 ClassLoader 。那么自定义的 ClassLoader 在加载任何一个类的时候，无论是插件还是宿主的类，都会现在宿主中找，如果没有，再遍历 ClassLoader 集合，看哪个 ClassLoader 能加载这个类(参考9.36节)。    </li>
 </ul>
+<h2 id="哪些地方可以Hook"><a href="#哪些地方可以Hook" class="headerlink" title="哪些地方可以Hook"></a>哪些地方可以Hook</h2><p>关于Hook 的技术可以参考第4章，Hook可以分为三类：</p>
+<ul>
+<li>在 App 中使用的类，可以Hook。Android 系统源码中被标记为hide的方法和类，<strong>我们可以通过反射使用它们，但是不能Hook</strong>。还有一些类，比如 Instrumentation 和 Callback ，在App中也能用，因此可以Hook替换。             </li>
+<li>实现了接口的类，可以Hook。虽然大部分类和方法都标记为hide，但是<strong>只要合格类实现了一个接口，我们就可以借助 Proxy.newProxyInstance 方法去截获它的方法</strong>，比较典型的是 IActivityManager 接口，以及实现这个接口的 AMN 。    </li>
+<li>集合。 没办法Hook一个标记为hide 的类，但是如果Android源码中某个类<strong>拥有集合变量的时候，我们可以反射构造出一个对象，然后还是通过反射添加到这个集合中</strong>。典型的是，穿件一个 LoadedApk ，把它事先放在 mPackages 缓存中，这样就能直接命中缓存(参考9.2节)。</li>
+</ul>
+<h2 id="Activity-的插件化解决方案"><a href="#Activity-的插件化解决方案" class="headerlink" title="Activity 的插件化解决方案"></a>Activity 的插件化解决方案</h2><p>从大方向来讲，分为动态替换和静态代理两种：</p>
+<ul>
+<li>动态替换：这是“占位”思想。宿主App中声明一个用于占位的 StubActivity ，启动插件中的ActivityA，但是告诉AMS启动的是 StubActivity ，欺骗成功之后，在即将启动Activity时，再把 StubActivity 换回 ActivityA(参考第9章)。      </li>
+<li>静态代理。这是一种牵线木偶的思想，在宿主App中设计一个 ProxyActivity ，由他来决定启动插件中的哪个 Activity。<strong>插件中的Activity都是没有生命的，得在ProxyActivity 生命周期中，调用插件Activity 的生命周期函数</strong>(参考9.5节)。</li>
+</ul>
+<p>此外，还需要解决 LaunchMode 问题，解决方案参考 9.5 节。</p>
+<h2 id="资源的解决方案"><a href="#资源的解决方案" class="headerlink" title="资源的解决方案"></a>资源的解决方案</h2><p>资源主要为Activity 服务。主要有两种解决方案：</p>
+<ul>
+<li>进入Plugin1 ，则加载Plugin1的资源，反射调用 AssetManager 的 addAssetPath 方法，参数是 Plugin1.apk 的路径。每次进入或者离开插件，都要切换资源。这是一件很繁琐的事情(参考第7章)。      </li>
+<li>事先把 宿主App的资源以及所有插件的资源都通过 AssetManager 的 addAssetPath 方法添加到一个全局变量中。这样，在插件 Activity 的基类中，重写 Activity 的 getResource 方法，从这个全局变量中提取资源。</li>
+</ul>
+<p>针对方案2，由于资源合并到一起，就可能发生资源id冲突，由此产生多种解决方案：</p>
+<ol>
+<li>修改aapt，更改id的前缀(参考15.2节)    </li>
+<li>修改resources.arsc，在 aapt 执行完成后，修改生成的文件(参考21章)    </li>
+<li>通过 public.xml 固定 plugin1 中所有的资源。这种方案不现实，针对固定一个资源的id还是很好的解决方案。</li>
+</ol>
+<h2 id="Fragment是哪个门派"><a href="#Fragment是哪个门派" class="headerlink" title="Fragment是哪个门派"></a>Fragment是哪个门派</h2><p>Fragment 与Activity 的最大区别，就是后者的一举一动需要和 AMS 交互，而Fragment不用。这种方案整个应用只有一个Activity ，Fragment 可以在 宿主App 中或者 插件中，只要使用合适的 ClassLoader 加载插件中的类，使用合适的 AssetManager 加载插件中的资源，就是一个完美的解决方案。可以参考 16 章。</p>
+<h2 id="Service、ContentProvider-和-BroadcastReceiver-插件化通用方案"><a href="#Service、ContentProvider-和-BroadcastReceiver-插件化通用方案" class="headerlink" title="Service、ContentProvider 和 BroadcastReceiver 插件化通用方案"></a>Service、ContentProvider 和 BroadcastReceiver 插件化通用方案</h2><p>因为这三者的数量并不多，插件化中也不会动态新增一个组件，所以最简单的方案是：在 宿主App 的 AndroidManifest 文件中事先声明这些组件。缺点是不能动态新增一个组件。参考 8.1节。</p>
+<h2 id="特定于Service-的插件化解决方案"><a href="#特定于Service-的插件化解决方案" class="headerlink" title="特定于Service 的插件化解决方案"></a>特定于Service 的插件化解决方案</h2><p>如果不事先在宿主App中声明插件的Service，那么Service 也有自己的解决方案：</p>
+<ul>
+<li>动态代理。也是欺上瞒下的思路。Service 不同于 Activity ，一个StubActivity 可以对应多个插件Activity，但是StubService 和插件Service 只能一一对应，所以应该在 宿主App 中声明多个 StubService。参考第10章。</li>
+<li>静态代理，牵线木偶思想。创建一个ProxyService，由 ProxyService 来启动插件中的Service，缺点是插件中有几个Service，宿主App 中就要有相同数量的 ProxyService。，参见 14.1和 14.2.</li>
+<li>结合前两种，能否在 宿主App中只声明一个Stubservice。参考 14.4</li>
+</ul>
+<h2 id="特定于BroadcastReceiver-的插件化解决方案"><a href="#特定于BroadcastReceiver-的插件化解决方案" class="headerlink" title="特定于BroadcastReceiver 的插件化解决方案"></a>特定于BroadcastReceiver 的插件化解决方案</h2><p>它的插件化解决方案是把静态的Receiver 转换为动态的Receiver。</p>
+<h2 id="特定于ContentProvider-的插件化解决方案"><a href="#特定于ContentProvider-的插件化解决方案" class="headerlink" title="特定于ContentProvider 的插件化解决方案"></a>特定于ContentProvider 的插件化解决方案</h2><p>占位思想。宿主App 中由 StubContentProvider 来欺骗 AMS，而实际执行的是 插件中的 ContentProvider 。</p>
 </body></html>
       
     </div>
@@ -314,7 +336,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/30/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -328,7 +350,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2020/05/30/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/" class="post-title-link" itemprop="url">第7、8课-启动优化</a>
+            <a href="/2021/04/06/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC15%E7%AB%A0/" class="post-title-link" itemprop="url">第15章：再谈资源</a>
         </h1>
 
         <div class="post-meta">
@@ -339,7 +361,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2020-05-30 10:00:00 / 修改时间：10:00:40" itemprop="dateCreated datePublished" datetime="2020-05-30T10:00:00+08:00">2020-05-30</time>
+              <time title="创建时间：2021-04-06 21:29:00 / 修改时间：22:05:51" itemprop="dateCreated datePublished" datetime="2021-04-06T21:29:00+08:00">2021-04-06</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -364,32 +386,65 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <html><head></head><body></body></html><html><head></head><body><h2 id="启动优化-lt-上-gt-第7讲"><a href="#启动优化-lt-上-gt-第7讲" class="headerlink" title="启动优化<上>-第7讲"></a>启动优化&lt;上&gt;-第7讲</h2><h3 id="启动分析"><a href="#启动分析" class="headerlink" title="启动分析"></a>启动分析</h3><p>着手优化之前，首先分析启动过程。</p>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Android-App-打包流程"><a href="#Android-App-打包流程" class="headerlink" title="Android App 打包流程"></a>Android App 打包流程</h2><p>早期Android打包都是基于Ant来做，为此我们需要熟悉Android App 打包的每一个过程。随着Gradle的问世，打包简化为几行配置代码。一套完整的Android App 打包流程如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC15%E7%AB%A0/Android%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.png" alt="Android打包流程图"></p>
+<p>介绍下各部分的作用：</p>
+<ul>
+<li>aapt： 为res目录下的资源生成 R.java 文件，<strong>同时为AndroidManifest生成Manifest.java文件</strong>     </li>
+<li>aidl： 把项目中自定义的aidl文件生成相应的java代码文件    </li>
+<li>javac： 把项目中所有的Java 代码编译成 class 文件。包括3部分： 自己写的代码；aapt生成的代码；aidl生成的Java文件    </li>
+<li>proguard： 混淆的同时生成proguardMapping.txt，这个步骤是可选的    </li>
+<li>dex： 把所有的class文件(包括第三方库的class 文件)转换为dex文件      </li>
+<li>aapt： 这里还是使用aapt，这里是它的另一个功能：打包。即将res目录下的资源、assets下的文件，打包成一个 .ap_ 文件     </li>
+<li>apkbuilder：将所有的dex、ap_文件、AndroidManifest.xml 打包为.apk文件，此时未签名       </li>
+<li>jarsigner： 签名    </li>
+<li>zipalign： 对齐，以便运行时节省内存           </li>
+</ul>
+<h2 id="资源冲突解决方案一：修改AAPT"><a href="#资源冲突解决方案一：修改AAPT" class="headerlink" title="资源冲突解决方案一：修改AAPT"></a>资源冲突解决方案一：修改AAPT</h2><p>插件中的资源id可能会和宿主资源id是同一个值，为了解决资源id冲突，有3中解决方案：</p>
+<ul>
+<li>修改打包流程中的aapt命令，为插件资源id指定 0x71 之类的前缀，就可以避免冲突     </li>
+<li>仍然是将插件资源的id前缀改为 0x71，但是在Android打包生成 resources.arsc 文件后，对这个文件进行修改(具体可见21.2节)       </li>
+<li>进入到哪个插件，就为这个插件生成新的 AssetManager 和 Resources 对象，使用这两个新对象加载资源，就只能是插件中的资源，永远不会和宿主中冲突(详见 7.2)</li>
+</ul>
+<h3 id="修改并生成新的aapt命令"><a href="#修改并生成新的aapt命令" class="headerlink" title="修改并生成新的aapt命令"></a>修改并生成新的aapt命令</h3><p>R文件中有十六进制整数变量，内容如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这些十六进制的变量，由三部分组成： packageId(apk包id，默认 0x7f) + typeId(资源类型，如attr=0x01，drawable=0x02，还有layout、string等) + entryId(typeId下的资源编码，从0开始递增)。以 0x7f0b006d 为例，packageId 为 0x7f，typeId为 0b，entryId 为 006d。</p>
+<p>插件中为防止资源冲突，会为每个插件设置不同的packageId，比如游戏大厅中，斗地主插件可能是 0x71开头，斗牛可能是 0x72。为asset 生成 R 文件 是通过 aapt 完成的，为了实现上述目的，我们要修改 aapt 源码，定位到 Android SDK，找到 aapt 目录，里面有一堆 C 代码， 命令行工具就是用这些代码编译成的，可以在这个目录直接搜索 0x7f，在 ResourcesTable.cpp 中可以找到如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 ResourcesTable 的构造函数中，有一个 Bundle 类型的参数，其次，判断 mPackageType 如果是 App，则都是 0x7f，此外 0x01 和 0x00 都被系统占用了，所以我们不要将这两个值设置为插件的 id前缀(事实上，有些手机厂商会占用其他的一些值，为了保险，我们一般只使用 0x71~0xff 作为插件的前缀)。修改 AAPT 的代码，基本思路如下：</p>
 <ol>
-<li>首先预览窗口，系统拉起App进程之前，会根据app的Theme属性创建预览窗口。当然，我们禁用预览窗口或者预览窗口为透明时，用户依然可以看到桌面。               </li>
-<li>进程和闪屏页创建完毕，可以看到广告图片界面                 </li>
-<li>主窗口创建完成可以看到首页了         </li>
-<li>首页加载完，才能操作起来            </li>
+<li>在 aapt 的命令行参数中传递打包时的前缀   </li>
+<li>把这个值设置给 Bundle 实体的 mApkModule 字段，作为 ResourcesTable 的构造函数参数传入        </li>
+<li>在 ResourcesTable 构造函数读取 mApkModule 值，也就是前缀值，设置给 packageId    </li>
 </ol>
-<h3 id="启动遇到的问题"><a href="#启动遇到的问题" class="headerlink" title="启动遇到的问题"></a>启动遇到的问题</h3><ul>
-<li>点击图标很久都不响应。可能是禁用了预览窗口或者透明皮肤           </li>
-<li>首页显示太慢。闪屏广告、其它准备工作都要在启动阶段完成，如果耗时太多就慢            </li>
-<li>首页显示后无法操作。工作异步延后之后，首页就会出现白屏，或者首页出来无法操作         </li>
+<p>实现代码： 略</p>
+<h3 id="在插件化项目中使用新的aapt命令"><a href="#在插件化项目中使用新的aapt命令" class="headerlink" title="在插件化项目中使用新的aapt命令"></a>在插件化项目中使用新的aapt命令</h3><p>现在，可以用我们修改的aapt文件替换sdk下的aapt 命令，但是如果这么做，每当Android系统更新，我们都要替换一次aapt命令。一种可行的做法是，我们把这个新的 aapt 工具命名为 aapt_mac ，放到项目的根目录下：</p>
+<p><img src="" alt="自定义的aapt放置"></p>
+<p>之后，修改项目中 gradle 文件：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述脚本通过反射，<strong>把aapt的路径临时修改为指向当前App根目录下的aapt_mac</strong>。此外，我们将App的资源前缀设置为 0x71 ，这样在打包后，R文件中的资源就以 0x71 作为前缀了。</p>
+<h2 id="public-xml-固定资源id值"><a href="#public-xml-固定资源id值" class="headerlink" title="public.xml 固定资源id值"></a>public.xml 固定资源id值</h2><p>如下场景：多个插件都需要<strong>同一个</strong>自定义控件，于是我们把这个自定义控件卸载宿主 App，插件调用宿主的Java 代码，使用宿主的资源(有控件肯定有资源)。考虑到App在每次打包后，随着资源的增减，同一个资源id的值可能会发生变化。为避免这种情况，我们可以<strong>把公用的资源id值固定写死</strong>，如下public.xml文件所示（注意，type和id后面的空格不可省略）：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8"&gt;</span></span><br><span class="line"><span class="meta">&lt;resources&gt;</span></span><br><span class="line"><span class="meta">    &lt;public type="string" name="string1" id="0x7f050024"/&gt;</span></span><br><span class="line"><span class="meta">&lt;/resources&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>之后，把public.xml放到 res/values 目录下，R.string.string1 这个资源就会固定成 0x7f050024。当然，还可以指定资源值的一个区间,将上述代码中间那行改成如下代码即可：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">public-padding</span> <span class="attr">name</span>=<span class="string">"my_"</span> <span class="attr">end</span>=<span class="string">"0x7f02000f"</span> <span class="attr">start</span>=<span class="string">"0x7f020001"</span> <span class="attr">type</span>=<span class="string">"drawable"</span>/&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是从gradle 1.3开始，就忽略 public.xml了，因此需要我们自己使用gradle 脚本来实现，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>之后，打包宿主 ActivityHost1 ，使用Jadx-GUI 查看资源id，可以看到 R.string.string1 的值永远是 2131034148(也即十六进制0x7f050024)。</p>
+<h2 id="插件使用宿主的资源"><a href="#插件使用宿主的资源" class="headerlink" title="插件使用宿主的资源"></a>插件使用宿主的资源</h2><p>宿主资源值固定了，但是插件怎么访问宿主中的资源呢？如果插件内部能保持一个对宿主项目的引用，那就可以随便访问宿主的任何资源了。<strong>我们需要编写gradle脚本，把宿主打包成 jar 包。之后设置插件的gradle文件，通过provided来引用这个jar包</strong>。之前介绍过，provided方式引用只在编码时候有用，正式打包的时候不会被引用进去。代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章给出插件化中资源id冲突的解决方案：</p>
+<ul>
+<li>把宿主和插件的资源都合并到一起，通过AssetManager的addAssetPath 来实现。只不过，<strong>这种方案会产生资源id冲突的问题</strong>      </li>
+<li>如果不事先合并资源，那就为每个插件创建一个 AssetManager，每个 AssetManager 都是通过反射调用 addAssetPath 方法，把插件资源加进去。当宿主进入一个插件时，就把 AssetManager 切换为 插件的AssetManager ；反之，当从插件回到宿主的时候，再把 AssetManager 切换回宿主的 AssetManager(详见第5章的loadResource方法)。</li>
 </ul>
-<h3 id="启动优化"><a href="#启动优化" class="headerlink" title="启动优化"></a>启动优化</h3><p>优化工具：综合看来，在卡顿优化中提到的 “systrace + 函数插桩” 是比较理想的方案，而且还能看到一些关键事件：GC、SystemServer 、CPU 调度等       </p>
-<p><strong>准确的评估之后，才能指引优化的方向</strong></p>
-<h4 id="优化方式"><a href="#优化方式" class="headerlink" title="优化方式"></a>优化方式</h4><ul>
-<li>闪屏优化。今日头条把预览窗口与是县城闪屏效果，用户在很短时间内看到“预览闪屏”，不过这种实现对于低端机型会把总的闪屏时间拉长。所以比较推荐在 6.0及以上的版本才采用“预览闪屏”      </li>
-<li>业务梳理。清楚启动过程中每一个运行的模块，哪些是一定需要的，哪些是可以砍掉，可以懒加载的。<strong>还有，懒加载要防止集中化，容易出现首页用户无法操作的情况</strong>。       </li>
-<li>线程优化。主要在于减少cpu调度带来的波动，让应用启动更加稳定。具体做法是，一方面控制县城的数量，要有线程池(我们是采用Rxjava，统一管理线程池)；还有一个就是管理线程的锁，比如业务有先后顺序，或者优先级不同，这一点可以采用第三方启动框架来解决，比如<a target="_blank" rel="noopener" href="https://github.com/alibaba/alpha">阿里开源的Alpha</a>、<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/6Q818XA5FaHd7jJMFBG60w?">微信内部使用的mmkernel</a>            </li>
-</ul>
-<h2 id="启动优化-lt-下-gt-第8讲"><a href="#启动优化-lt-下-gt-第8讲" class="headerlink" title="启动优化<下>-第8讲"></a>启动优化&lt;下&gt;-第8讲</h2><h3 id="启动进阶方法"><a href="#启动进阶方法" class="headerlink" title="启动进阶方法"></a>启动进阶方法</h3><p>启动过程不建议出现网络io</p>
-<p>还有，就是数据结构选择问题，在启动时，只需要读写很少量的 sp文件，如果与很大的sp文件一起解析，这个解析时间可能就要超过  100ms了(可以说我们的application中的sp解析是花了很长时间的)。</p>
-<h3 id="黑科技"><a href="#黑科技" class="headerlink" title="黑科技"></a>黑科技</h3><p>应用加固对启动速度来说是灾难</p>
-<h3 id="启动监控"><a href="#启动监控" class="headerlink" title="启动监控"></a>启动监控</h3><ul>
-<li>实验室监控，如果客观地反映启动耗时，视频录制是非常好的选择，尤其是我们拿不到竞品的数据(通过分析竞品，我们制定了秒开的标准，可以取平均值、最大值、最小值)              </li>
-<li>线上监控。我们使用talkingdata来监测。(但是我们要注意监测的耗时)，最终衡量指标呢，使用平均法容易忽略掉性能差的手机，可以使用快开慢开比：比如2秒快开比，5秒快开比；另一种就是 90% 用户启动时间，如果90%用户启动时间都小于5秒，那我们90%区间启动耗时就是5秒。                </li>
-</ul>
+<p>第一种方案，主要缺陷是资源冲突，并且资源id的前缀是有限的，也就256个值，如果超过256个插件，就要使用方案2了。</p>
 </body></html>
       
     </div>
@@ -409,7 +464,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/28/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC12%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -423,90 +478,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/" class="post-title-link" itemprop="url">第5、6课-卡顿优化</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-05-27 21:50:00" itemprop="dateCreated datePublished" datetime="2020-05-27T21:50:00+08:00">2020-05-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 16:58:02" itemprop="dateModified" datetime="2021-05-05T16:58:02+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化<上>"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
-<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/" class="post-title-link" itemprop="url">第3、4课-内存优化</a>
+            <a href="/2021/03/28/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC12%E7%AB%A0/" class="post-title-link" itemprop="url">第12章：ContentProvider的插件化解决方案</a>
         </h1>
 
         <div class="post-meta">
@@ -517,7 +489,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2020-05-27 21:43:00 / 修改时间：21:43:33" itemprop="dateCreated datePublished" datetime="2020-05-27T21:43:00+08:00">2020-05-27</time>
+              <time title="创建时间：2021-03-28 17:29:00 / 修改时间：17:43:57" itemprop="dateCreated datePublished" datetime="2021-03-28T17:29:00+08:00">2021-03-28</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -542,27 +514,23 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <html><head></head><body></body></html><html><head></head><body><h2 id="内存优化-lt-上-gt"><a href="#内存优化-lt-上-gt" class="headerlink" title="内存优化<上>"></a>内存优化&lt;上&gt;</h2><h3 id="Android中Bitmap-内存分配的变化过程"><a href="#Android中Bitmap-内存分配的变化过程" class="headerlink" title="Android中Bitmap 内存分配的变化过程"></a>Android中Bitmap 内存分配的变化过程</h3><ol>
-<li>3.0以前，Bitmap 对象放在Java堆，像素数据存放在 Native内存中，如果不手动调用 recycle ，那么Native内存中的像素数据完全依赖于 finalize 函数，而这个函数是不可靠的         </li>
-<li>3.0~7.0,Bitmap 对象和像素数据统一放到 Java 堆，这样就算不 recycle 操作，像素数据也会随着一起回收，不过，这导致大量内存占用，引起大量GC。一起放在内存也有可能即使系统有大量内存没利用，但是却会导致oom了(比如给分配的最大堆只到 300M，但是用得差不多了，此时系统却还空闲有3G内存，却要引起oom了)       </li>
-<li>Android 8.0 中，NativeAllocationRegistry 可以满足Bitmap 对象存放在Java 堆，像素数据在 Native 中，还能实现一并回收对象和像素数据。(8.0还提供硬件位图(Hardware Bitmap)，减少内存占用并提升绘制效率)        </li>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="ContentProvider基本概念"><a href="#ContentProvider基本概念" class="headerlink" title="ContentProvider基本概念"></a>ContentProvider基本概念</h2><p>ContentProvider 就是一个SQLite 数据库，数据提供方A和数据使用方B是通过<strong>匿名共享内存</strong>来传输数据的。B告诉A，“你把数据写在这个内存地址上”；B准备好数据，写到A要求的内存地址上，A就可以直接使用这些数据了。当数据量非常大的时候，这个数据传递速度是非常快的。</p>
+<p>并不是所有数据传递都需要ContentProvider，比如，Activity 跳转时，数据的传递就用的 Binder，一般来说，传输的数据量不超过 1 M 时，使用Binder；否则，此时需要ContentProvider 。</p>
+<h2 id="ContentProvider-插件化"><a href="#ContentProvider-插件化" class="headerlink" title="ContentProvider 插件化"></a>ContentProvider 插件化</h2><p>前面介绍了 BroadCastReceiver 的插件化解决方案，即把插件中的静态广播都转换为动态广播，然后手动注册到宿主App的广播中。</p>
+<p>其实，ContentProvider 也能这么做，这时候不叫“注册”，而叫“安装”。安装当前Apk中所有的ContentProvider 的方法位于 ActivityThread 的 installContentProviders方法中：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码略</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>我么你只需要手动执行这个方法，把插件中的ContentProvider 集合作为第二个参数填进去即可。如此一来，我们得到了ContentProvider 插件化的解决方案：</p>
+<ol>
+<li>沿用Activity插件化的第二种方案，将宿主App和插件App的dex合并到一起     </li>
+<li>借助PackageParse的parsePackage方法，读取插件中的ContentProvider信息，然后把得到的Package对象转换为我们需要的 ProviderInfo类型对象     </li>
+<li>将ContentProvider 的packageName 设置为当前apk的packageName，之后把插件中的 ContentProvider 放入宿主中     </li>
+<li>通过反射执行 ActivityThread 的 installContentProviders 方法，把ContentProvider 作为插件的参数，相当于把插件 ContentProvider “安装” 到宿主App中     </li>
 </ol>
-<h3 id="关于内存优化的两个误区"><a href="#关于内存优化的两个误区" class="headerlink" title="关于内存优化的两个误区"></a>关于内存优化的两个误区</h3><ul>
-<li>内存占用越小越好。不是这样的，更多的内存意味着更好的动画效果和更快的缓存命中，只需要做到系统内存充足时多用，系统内存紧张时少用(释放不是必须的内存)即可                </li>
-<li>Native 的内存不用管。其实，当系统内存不足的时候，就会开始依次清理 后台、桌面、服务、前台，一步步来，直到内存足够，最后直到重启手机                  </li>
-</ul>
-<h3 id="内存观测方法"><a href="#内存观测方法" class="headerlink" title="内存观测方法"></a>内存观测方法</h3><ol>
-<li>观察Log，查看GC 回收的原因            </li>
-<li>使用如下命令查看：         </li>
-</ol>
-<blockquote>
-<p>adb shell dumpsys meminfo &lt;package_name|pid&gt; [-d]</p>
-</blockquote>
-<h2 id="内存优化-lt-下-gt"><a href="#内存优化-lt-下-gt" class="headerlink" title="内存优化<下>"></a>内存优化&lt;下&gt;</h2><h3 id="内存优化探讨"><a href="#内存优化探讨" class="headerlink" title="内存优化探讨"></a>内存优化探讨</h3><p>Bigmap 优化、内存泄露优化、设备分级几个层次入手</p>
-<p>设备等级就是，在某些低性能的机器上，动画不要了，进程也不预先启动了。安装包大小也是有要求的，比如有很多app就有极速版这个概念，它们的apk很小，动画也不酷炫。apk大小跟内存的关系可以参考如下图：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png" alt="安装包大小和内存关系"></p>
-<p>Bitmap 可以用第三方框架来做，比如Fresco，实在要自己管理，可以向后台要求指定宽度，bitmap的inbitMap内存复用，inSample降低采样</p>
-<p>内存泄露：使用LeakCanary自动化检测方案，只可以做到Activity和Fragment的泄漏检测，如何检测其他的内存泄露呢？如何监测疑似的内存泄漏呢？</p>
+<h2 id="执行这段Hook代码的时机"><a href="#执行这段Hook代码的时机" class="headerlink" title="执行这段Hook代码的时机"></a>执行这段Hook代码的时机</h2><p>ContentProvider 这个组件，往往是提供给外界使用的，如果插件中的ContentProvider 还没安装到宿主App中，第三方就来调用了，那就要等很久了，所以安装插件 ContentProvider 的过程越早越好。<strong>App安装自身的 ContentProvider 是在ActivityThread 执行 installContentProviders 方法中，这个方法比Application 的onCreate 要早，但是会晚于 Application 的 attachBaseContent 方法，所以，我们可以在 attachBaseContent 方法中，手动执行 ActivityThread 的 installContentProviders</strong> 。</p>
+<h2 id="ContentProvider-的转发机制"><a href="#ContentProvider-的转发机制" class="headerlink" title="ContentProvider 的转发机制"></a>ContentProvider 的转发机制</h2><p>让外界App直接调用当前App的插件里定义的ContentProvider ，并不是理想的解决方案。最好的是在宿主App中定义一个 StubContentProvider 作为中转，让外界调用当前App的 StubContentProvider ，然后在 StubContentProvider 中再调用插件里的 ContentProvider：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC12%E7%AB%A0/ContentProvider%E6%8F%92%E4%BB%B6%E5%8C%96%E5%88%86%E5%8F%91%E6%80%9D%E6%83%B3.png" alt="ContentProvider插件化分发思想"></p>
+<p>ContentProvider 插件化的精髓在于分发，外界使用 App 提供的 ContentProviderA 时，只知道发送给一个宿主AndroidManifest 中声明锅的 ContentProviderA，而受到请求后，再做二次转发。</p>
 </body></html>
       
     </div>
@@ -582,7 +550,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC8%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/28/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -596,7 +564,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC8%E7%AB%A0/" class="post-title-link" itemprop="url">第8章：计算机网络中的安全</a>
+            <a href="/2021/03/28/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC11%E7%AB%A0/" class="post-title-link" itemprop="url">第11章：BroadcastReceiver的插件化解决方案</a>
         </h1>
 
         <div class="post-meta">
@@ -607,7 +575,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2020-05-01 08:56:00 / 修改时间：09:09:01" itemprop="dateCreated datePublished" datetime="2020-05-01T08:56:00+08:00">2020-05-01</time>
+              <time title="创建时间：2021-03-28 11:41:00 / 修改时间：17:03:38" itemprop="dateCreated datePublished" datetime="2021-03-28T11:41:00+08:00">2021-03-28</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -632,22 +600,33 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <html><head></head><body></body></html><html><head></head><body><p>8.6 使TCP 连接安全，SSL </p>
-<p>SSL （Secure Socket Layer ）安全套接字层， SSL 版本 3的一个稍加修改的版本被称为 TLS(Transport Layer Security)</p>
-<p>在 http 之下，tcp 之上，有 ssl 层。</p>
-<p>ssl 握手流程：</p>
-<p>总体来说，ssl 握手，首先要建立一个tcp 连接 ，其次在验证server 的真实性 ，最后 client 再将对称加密所需要的key通过公钥加密交给server。此后，两端通过对称加密来完成通信。整个过程如下图所示：</p>
-<p><img src="/assets/Book-Notes/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E7%AC%AC8%E7%AB%A0/ssl%E6%8F%A1%E6%89%8B.png" alt="ssl握手整体步骤"></p>
-<p>抛开tcp连接的建立，详细步骤如下：</p>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Receiver概述"><a href="#Receiver概述" class="headerlink" title="Receiver概述"></a>Receiver概述</h2><p>Receiver分为动态和静态两种，简单讨论下区别：</p>
+<ul>
+<li>静态广播在 AndroidManifest 中注册，因为Android系统重启时，PMS都会解析App中的AndroidManifest，所以<strong>静态广播都存在于 PMS 中</strong>      </li>
+<li>动态广播通过 Context 的registerReceiver 方法最终调用 AMN.getDefault().registerReceiver 方法，所以，<strong>动态广播的注册信息存在于 AMS 中</strong>       </li>
+</ul>
+<p>除了注册方式不一样，后续发送和接收的过程就一样了。整个过程简单如下：1、Context 发送广播，最终通过 AMN.getDefault().broadcastIntent，把要发送的广播告诉AMS。2、AMS收到消息后，根据intent-filter 筛选 PMS 和 AMS (即静态广播和动态广播)中符合条件的接收器，通知App进程启动这些广播(调用这些广播的 onReceive)。</p>
+<h2 id="动态广播的插件化解决方案"><a href="#动态广播的插件化解决方案" class="headerlink" title="动态广播的插件化解决方案"></a>动态广播的插件化解决方案</h2><p>对于动态广播，我们只需要确保宿主App能加载插件中的这个动态广播类就行(因为这里并不需要直接与AMS打交道，只是个类而已)。通过9.3节的dex合并技术，就能做到了。</p>
+<h2 id="静态广播解决方案"><a href="#静态广播解决方案" class="headerlink" title="静态广播解决方案"></a>静态广播解决方案</h2><p>静态广播无法像Activity那样，即使没在AndroidManifest 中注册也能生效，因为无论是注册还是发送广播，都必须有 IntentFilter，其中的action是可以随意设置的，所以我们对于 Receiver 压根就不能通过类似 Activity 的插桩方式。只有另辟蹊径。</p>
+<h3 id="静态广播当做动态广播处理"><a href="#静态广播当做动态广播处理" class="headerlink" title="静态广播当做动态广播处理"></a>静态广播当做动态广播处理</h3><p>具体分为两步：</p>
 <ol>
-<li>client发送支持的算法列表以及一个随机数 x      </li>
-<li>server 从接收的列表中选择一种对称算法、一种非对称算法 和 一种摘要算法，连同自己的证书 以及 随机数 y 一起返回      </li>
-<li>client 验证该证书，提取公钥，并生成一个<strong>前主密钥</strong>，并用服务器的公钥加密这个 前主密钥，之后发送给server      </li>
-<li>server 解密获得 主密钥    </li>
-<li>client 发送自己这边所有握手的报文的一个 摘要    </li>
-<li>server 端发送自己这边握手报文的一个 摘要    </li>
+<li>PMS 只能读取宿主 App 的AndroidManifest 文件，读取其中的静态广播并注册。我们可以反射，手动控制PMS读取插件AndroidManifest 中声明的静态广播列表。     </li>
+<li>遍历这个静态广播列表，使用 classLoader 加载列表中每个广播类，实例化成一个对象，<strong>然后作为动态广播注册到AMS中</strong>           </li>
 </ol>
-<p>最后两个步骤保证了握手免受篡改危害。比如，在观察第一步的时候，客户端提供的算法列表，有些算法强，有些弱，因为还未协商，所以这张列表是以明文发送的。如果中间攻击者从中删除了较强的算法，迫使server 最后只能选择较弱的算法。</p>
+<h3 id="静态广播的插件化终极解决方案"><a href="#静态广播的插件化终极解决方案" class="headerlink" title="静态广播的插件化终极解决方案"></a>静态广播的插件化终极解决方案</h3><p>上述静态广播当做动态广播的方案，这丧失了静态广播的特性——不需要启动App就可以启动一个静态广播。所以我们仍要探寻如何不启动App也能和插件中的静态广播通信。</p>
+<p>回忆一下前面介绍的Activity 和 Service 插件化的占位思想：</p>
+<ul>
+<li>Activity 只需要一个占位 StubActivity 就能面对大部分插件Activity了，对于LaunchMode 的其他三种形式，则需要更多的占位 StubActivity 应对     </li>
+<li>Service 也需要占位 StubService ，但是一个 StubService 只能对应一个插件中的Service，所以我们需要在宿主App中占位多个 StubService，通过json来配置映射关系。    </li>
+</ul>
+<p>如果也用占位的思想，每个静态广播需要携带一个或者多个Action，StubReceiver 也不例外，如果 StubReceiver 和插件中的静态广播是一对多的关系，那么从外界发送一个广播到App，<strong>就会触发插件中的所有静态广播</strong>。由此得出：<strong>StubReceiver 和插件中的广播只能是一对一的关系</strong>。</p>
+<p>不过，我们可以为一个广播设置多个Action，这样我们就不需要预先创建很多个StubReceiver用来面对插件中的静态广播了，只需要一个 StubReceiver ，为它配置很多个 action 即可。这样，插件中的静态广播就要和这些 action 建立一对一的关系，还是以前的思路，使用<strong>Json配置映射关系就行</strong>。</p>
+<p>还有，AndroidManifest 中<strong>支持为每个组件配置 metadata</strong>，利用这个特性，为插件中每个静态广播配置对应的 StubReceiver 中的 action ，如下所示：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">receiver</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">".MyReceiver"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span> &gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">baobao/</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span> <span class="attr">android:name</span>=<span class="string">"oldAction"</span> <span class="attr">android:value</span>=<span class="string">"jianqiang1"</span>&gt;</span><span class="tag">&lt;/<span class="name">meta-data</span>&gt;</span> </span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br><span class="line"> </span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">".MyReceiver2"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span> &gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"baobao2"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span> <span class="attr">android:name</span>=<span class="string">"oldAction"</span> <span class="attr">android:value</span>=<span class="string">"jianqiang2"</span>&gt;</span>&lt;/meta-data&gt; </span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>解析插件中的 AndroidManifest 文件，可以借助11.3章节介绍的ReceiverHelper 类的 preLoadReceiver 方法，在遍历插件中的每个静态的 Receiver 时，去除Receiver 的metadata 数据，根据oldAction值，对应到Receiver，比如 MyReceiver 对应 jianqiang1，MyReceiver2 对应 jianqiang2 。</p>
+<p>之后，把插件中的Receiver 手动注册为动态广播。宿主中定义的<strong>StubReceiver占位广播的作用是分发</strong>。</p>
+<p>这就解决了静态广播的问题，<strong>我们可以在App没启动的时候，就启动插件中的静态广播</strong>(我其实还是没看懂怎么在没有启动App的情况，就能启动这个静态广播，后续长丝下)。美中不足的是，这个StubReceiver 需要配置很多个 Action 。</p>
 </body></html>
       
     </div>
@@ -667,7 +646,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC3%E7%AB%A0/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -681,7 +660,450 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章：运输层</a>
+            <a href="/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC10%E7%AB%A0/" class="post-title-link" itemprop="url">第10章：Service的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-27 21:29:00" itemprop="dateCreated datePublished" datetime="2021-03-27T21:29:00+08:00">2021-03-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:16:28" itemprop="dateModified" datetime="2021-03-29T22:16:28+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Android界的荀彧和荀攸：Service和Activity"><a href="#Android界的荀彧和荀攸：Service和Activity" class="headerlink" title="Android界的荀彧和荀攸：Service和Activity"></a>Android界的荀彧和荀攸：Service和Activity</h2><p>根据Context的族谱，Service 是 Activity 的叔叔，结合作用来看，二者有太多相似，但是备份不同，类似三国时期的荀彧和荀攸。不过，二者的区别也挺明显：</p>
+<ul>
+<li>Activity 是面向用户的，有大量的用户交互的方法，而Service 是后台运行的，生命周期函数很少    </li>
+<li>Activity 中有LaunchMode 的概念，每个Activity启动时都会放在栈顶，根据不同的 LaunchMode 可能会有复用以前的实例或者不复用以前的实例。但是Service不同，<strong>同一个 Service 调用多次startService并不会启动多个实例，只会有一个实例</strong>，所以，只用一个StubActivity 是应付不了多个插件的Service 的     </li>
+<li>ActivityThread 最终通过Instrumentation 启动一个Activity。而ActivityThread 启动Service 并不借助于 Instrumentation ，而是直接把Service 反射出来就启动了    </li>
+</ul>
+<p>注意一点，Service 有两种形式： 由 startService 启动的服务；由 bindService 绑定的服务。二者的区别在于：startService 以及对应的 stopService ，就是简单地启动和停止 Service ；bindService 执行时会传递一个 ServiceConnection 对象给 AMS ，接下来 Service 在执行 onBind 时，可以把生成的 binder 对象返回给 App 调用端，这个值存于 ServiceConnection 对象的 onServiceConnected 回调函数的第二个参数中。       </p>
+<h2 id="预先占位"><a href="#预先占位" class="headerlink" title="预先占位"></a>预先占位</h2><p>前面说过，Service 与 Activity 不一样，它只会存在一个实例，所以只用一个StubService 是应付不了多个插件Service 的。考虑到在绝大部分App中Service 数据不会超过10个，所以我们完全可以在宿主App 中创建 10 个 StubService ，StubService1，StubService2…StubService10 ，每个 StubService 只对应插件中的一个Service，如下图：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/StubService%E5%8D%A0%E4%BD%8D%E7%A4%BA%E6%84%8F.png" alt="StubService占位示意"></p>
+<p>接下来就是让每个插件Service匹配一个宿主中的 StubService 了，有两种匹配方式：</p>
+<ul>
+<li>服务器下发一个 JSON 字符串，给出二者的一一对应关系     </li>
+<li>在每个插件 App 的 assets 目录中，创建一个 plugin_config 配置文件，把这个 JSON 字符串放进去</li>
+</ul>
+<p>第2种做法更自然，不需要和服务器交互，json文件解析类似如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">String strJson = Utils.readZipFileString(dexFile.getAbsolutePath(), <span class="string">"assets/plugin_config.json"</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (strJson == <span class="keyword">null</span> || TextUtils.isEmpty(strJson)) {</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">JSONObject jobject = <span class="keyword">new</span> JSONObject(strJson.replaceAll(<span class="string">"\r|\n"</span>, <span class="string">""</span>));</span><br><span class="line">JSONArray jsonArray = jobject.getJSONArray(<span class="string">"plugins"</span>);</span><br><span class="line"><span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i&lt; jsonArray.length(); i++) {</span><br><span class="line">    JSONObject jsonObject = (JSONObject) jsonArray.get(i);</span><br><span class="line">    UPFApplication.pluginServices.put(</span><br><span class="line">        jsonObject.optString(<span class="string">"PluginService"</span>),</span><br><span class="line">        jsonObject.optString(<span class="string">"StubService"</span>));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们将 JSON 转化为一个 HashMap ，<strong>以插件的类名作为key，以宿主的替身作为value</strong>，这个HashMap 存放在宿主App 的 UPFApplication 的 plutinServices 中，是一个全局变量。</p>
+<h2 id="startService-的解决方案"><a href="#startService-的解决方案" class="headerlink" title="startService 的解决方案"></a>startService 的解决方案</h2><p>Service 的插件化机制和Activity 很像，因为它们是亲戚。我们首先从简单的startService 和 stopService 的插件化做起。</p>
+<p>首先，把插件和宿主的dex合并，之前有封装过 BaseDexClassLoaderHookHelper 类，合并后才能随心所欲加载类；其次，采用“欺骗AMS”方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//即 Hook AMN 的 gDefault，它是一个Singleton 对象，之后创建它的代理对象 MockClass1 ，然后替换这个字段</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//之后，再Hook 到 Handler 类型的 H 类的 mCallback 字段，替换为 MockClass2</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>主要流程分析一下：</p>
+<ol>
+<li><p>Hook AMN，让 AMS 启动 StubService，这次要拦截的是 startServcie 和 stopService 这两个方法(也即在AMN中就拦截这两个方法，将要操作的目标Service替换成相应的StubService)。不过，这次不再需要把 Intent 缓存了，因为有了 UPFApplication 中的 plutinServices ，我们可以根据插件 Service 找到对应的 StubService，也可以根据 StubService 反向找到 Service</p>
+</li>
+<li><p>AMS 被“欺骗”之后，它原本会通知App启动StubService，而我们要Hook掉ActivityThread 的 mH 对象的 mCallback 对象，仍然截获它的 handleMessage 方法，只不过这次截获的是 “CREATE_SERVICE” 分支，这个分支执行 ActivityThread 的 handleCreateService 方法。在 handleCreateService 中，并不能获取到 App 发送给 AMS 的 Intent，AMS 要启动那个Service ，这个信息是存在 handleCreateService 方法的 dat 参数中，是 CreateServiceData 类型的。Android系统的实现如下：   </p>
+</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleCreateService</span> <span class="params">(CreateServiceData data)</span> </span>{ </span><br><span class="line">    LoadedApk packageinfo = getPackageinfoNoCheck(data.info.applicationinfo, data.compatInfo);</span><br><span class="line">    Service service = <span class="keyword">null</span>; </span><br><span class="line">    java.lang.ClassLoader cl= packageinfo.getClassLoader(); </span><br><span class="line">    service = (Service) cl.loadClass(data.info.name).newinstance(); </span><br><span class="line">    <span class="comment">//省略无关代码</span></span><br><span class="line">    service . onCreate ();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上面代码中，data.info.name 就是Service 的名称，<strong>所以我们只需要将这个值 Hook 为插件的Service即可</strong>。至此，一个支持 startService 的插件化框架就完成了。</p>
+<h2 id="bindService-的解决方案"><a href="#bindService-的解决方案" class="headerlink" title="bindService 的解决方案"></a>bindService 的解决方案</h2><p>有了前面的基础，Service 的 bind 与 unbind 就非常简单了，只要在 AMN 的Hook 中添加一个分支，在 “bindService” 的时候 “欺骗AMS” 就行：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (”bindService”.equals(method . getName())) { </span><br><span class="line">    <span class="comment">//找到参数里面的第一个 Intent 对象</span></span><br><span class="line">    <span class="keyword">int</span> index = <span class="number">0</span>; </span><br><span class="line">    <span class="keyword">for</span> (inti= <span class="number">0</span>; i &lt; args . length ; i++) { </span><br><span class="line">        <span class="keyword">if</span> (args [i) <span class="keyword">instanceof</span> Intent) { </span><br><span class="line">            index = i ; </span><br><span class="line">            <span class="keyword">break</span>; </span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    Intent rawintent = (Intent) args[index); </span><br><span class="line">    String rawServiceName = rawintent.getComponent().getClassName(); </span><br><span class="line">    String stubServiceName = UPFApplication.pluginServces.get(rawServiceName)</span><br><span class="line">    <span class="comment">//替换 Plugin Service of StubService </span></span><br><span class="line">    ComponentName componentName =<span class="keyword">new</span> ComponentName(stubPackage, stubServiceName); </span><br><span class="line">    Intent newintent = <span class="keyword">new</span> Intent(); </span><br><span class="line">    newintent.setComponet(componentName);</span><br><span class="line">    <span class="comment">//替换 Intent ，欺骗 AMS</span></span><br><span class="line">    args[index] = newintent ; </span><br><span class="line">    Log.d(TAG, ” hook success <span class="string">"); </span></span><br><span class="line"><span class="string">    return method.invoke(mBase , args);</span></span><br><span class="line"><span class="string">}</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个过程就完成了，接下来就是使用：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnBind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        <span class="keyword">final</span> Intent = <span class="keyword">new</span> Intent();</span><br><span class="line">        intent.setComponent(<span class="keyword">new</span> ComponentName(<span class="string">"jianqiang.com.testservice1"</span>), <span class="string">"jianqiang.com.testservice1.MyService2"</span>);</span><br><span class="line">        bindService(intent, conn, Service.BIND_AUTO_CREATE);</span><br><span class="line">    }</span><br><span class="line">});</span><br><span class="line"></span><br><span class="line"><span class="comment">//unbind</span></span><br><span class="line">btnUnbind.setOnClickListener(<span class="keyword">new</span> View.OnclickListener(){</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(View v)</span> </span>{</span><br><span class="line">        unbindService(conn);</span><br><span class="line">    }</span><br><span class="line">});</span><br></pre></td></tr></tbody></table></figure>
+<p>看了上面的使用方法，可能会有疑惑了：</p>
+<ul>
+<li>上半场，对于unbind行为，为什么不像bind一样在 unbind 的时候做“欺骗AMS”？    </li>
+<li>下半场，为什么不用在MockClass2中写代码，把StubService2 换回 MyService2？        </li>
+</ul>
+<p>关于第一个问题，因为我们 unbind 的语法是这样的 <em>unbindService(conn)</em> ，只需要一个 ServiceConnection 类型的参数 conn 即可，这个 conn 在前面的bindService 时用到了，<strong>AMS 会根据这个conn 来找到对应的Service，所以并不需要在unbind的时候去做欺骗</strong>。</p>
+<p>第二个问题，这要从Android 系统源码说起，bindService 过程在 AMS通知 App 下半场的流程图如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E6%8C%87%E5%8D%97/%E7%AC%AC10%E7%AB%A0/bindService%E8%BF%87%E7%A8%8BAMS%E9%80%9A%E7%9F%A5App%E8%BF%99%E4%B8%8B%E5%8D%8A%E5%9C%BA.png" alt="bindService过程AMS通知App这下半场"></p>
+<p>也就是说，bindService 先走114(handleCreateSrvice)分支，再走 121 (handleBindService) ，在 handleCreateSrvice 中已经把我们要启动的 MyService2 放到了 mService 这个集合中了，那么，在 handleBindService 和 handleUnbindService 中，都会从 mService 集合中找到 Service2 。在之前章节，为了解决 createService ，已经拦截了 114 分支把 StubService2 换回了 MyService2 了，所以我们不需要要拦截 121 和 122 了， 无需再MockClass2 添加额外代码。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这里给出Service第一种解决方案——预先占位，在宿主中预先声明若干个StubService。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/27/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC9%E7%AB%A0/" class="post-title-link" itemprop="url">第9章：Activity的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-27 20:05:00" itemprop="dateCreated datePublished" datetime="2021-03-27T20:05:00+08:00">2021-03-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:17:24" itemprop="dateModified" datetime="2021-03-29T22:17:24+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Activity的插件化需要解决3方面的技术问题：</p>
+<ul>
+<li>宿主App可以加载插件App中的类         </li>
+<li>宿主App可以加载插件中的App资源           </li>
+<li>宿主App可以加载插件中的Activity          </li>
+</ul>
+<h2 id="启动没有在AndroidManifest中声明的插件Activity"><a href="#启动没有在AndroidManifest中声明的插件Activity" class="headerlink" title="启动没有在AndroidManifest中声明的插件Activity"></a>启动没有在AndroidManifest中声明的插件Activity</h2><p>在5.4节介绍了启动没有在AndroidManifest 中声明的 Activity，借助宿主App中的StubActivity ，在 AMN 中欺骗，在ActivityThread 中欺骗。这种方式的代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参见： https://github.com/BaoBaoJianqiang/ActivityHook1</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="基于动态替换的Activity插件化解决方案"><a href="#基于动态替换的Activity插件化解决方案" class="headerlink" title="基于动态替换的Activity插件化解决方案"></a>基于动态替换的Activity插件化解决方案</h2><p>这章节好混乱，压根就没说这里解决的是什么问题</p>
+<h2 id="加载插件中类的方案2：-合并多个dex"><a href="#加载插件中类的方案2：-合并多个dex" class="headerlink" title="加载插件中类的方案2： 合并多个dex"></a>加载插件中类的方案2： 合并多个dex</h2><h2 id="对LaunchMode的支持"><a href="#对LaunchMode的支持" class="headerlink" title="对LaunchMode的支持"></a>对LaunchMode的支持</h2><p>前面介绍的 Activity 插件化技术，对于LaunchMode 都是standard的情况是完全适用的。对于 SingleTop、SingleTask 和 SingleInstance 需要重新考虑。</p>
+<p>解决LaunchMode 的问题，适用的还是 <strong>占位Activity</strong> 的思想，即实现为这3种 LaunchMode 创建很多StubActivity，如下图所示：</p>
+<p><img src="" alt="占位思想解决LaunchMode问题"></p>
+<p>我们可以从服务端下载一个Json，指定插件中的Activity 对应哪种 StubActivity ，写Demo的时候，可以直接在本地 Mock 这些数据，保存在 MyApplication 中，然后再 Mock1Class 接货 startActivity 的时候，如果发现要启动的Activity 在 MyApplication 的 pluginActivities 集合中，那就使用这个插件 Activity 对应的占位 StubActivity，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.3</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来可以测试下。这里有个小bug，无论singleTop还是singleTask，再回到这个Activity时，并不会触发它的onCreate，而是会触发它的onNewIntent(其实这里说的bug我并没有明白，等测试后再说)。为此，我们需要在MockClass2 中，拦截onNewIntent方法，把占位 StubActivity 替换回插件Activity，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参考上面的链接</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="加载插件中类的方案3：修改App原生的ClassLoader"><a href="#加载插件中类的方案3：修改App原生的ClassLoader" class="headerlink" title="加载插件中类的方案3：修改App原生的ClassLoader"></a>加载插件中类的方案3：修改App原生的ClassLoader</h2><p>..</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/26/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/26/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC8%E7%AB%A0/" class="post-title-link" itemprop="url">第8章：最简单的插件化解决方案</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-26 21:02:00" itemprop="dateCreated datePublished" datetime="2021-03-26T21:02:00+08:00">2021-03-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 22:03:10" itemprop="dateModified" datetime="2021-03-29T22:03:10+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>本章介绍一种最简单的插件化方案，适用于四大组件，技术涉及以下3个方面：</p>
+<ul>
+<li>合并所有的插件dex，用以解决插件类的加载问题             </li>
+<li>在宿主AndroidManifest中预先声明插件中的四大组件(插件中的Activity如果很多就很麻烦)      </li>
+<li>把插件中的所有资源一次性合并到宿主资源中(可能会导致资源id冲突)     </li>
+</ul>
+<h2 id="在AndroidManifest-中声明插件中的组件"><a href="#在AndroidManifest-中声明插件中的组件" class="headerlink" title="在AndroidManifest 中声明插件中的组件"></a>在AndroidManifest 中声明插件中的组件</h2><p>在插件中有啥，在宿主中声明啥就行     </p>
+<h2 id="宿主App加载插件中的类"><a href="#宿主App加载插件中的类" class="headerlink" title="宿主App加载插件中的类"></a>宿主App加载插件中的类</h2><p>把插件dex都合并到宿主的dex中，那么宿主App对应的ClassLoader 就可以加载插件中任意类：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考： https://github.com/BaoBaoJianqiang/ZeusStudy1.0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseDexClassLoaderHookHelper</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">patchClassLoder</span><span class="params">(ClassLoader cl,File apkFile,File optDexFile)</span></span>{</span><br><span class="line">        <span class="comment">//获取BaseDexClassLoder: pathList</span></span><br><span class="line">        Object pathListObj = RefInvoke.getFiledObject(DexClassLoader.class.getSuperclass(), cl, <span class="string">"pathList"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取PathList: Element[] dexElements</span></span><br><span class="line">        Object[] dexElements = (Object[])RefInvoke.getFieldObject(pathListObj.getClass(), pathListObj, <span class="string">"dexElements"</span>);</span><br><span class="line"></span><br><span class="line">        ...<span class="comment">//手敲太难了，到时候复制下</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="启动插件Service"><a href="#启动插件Service" class="headerlink" title="启动插件Service"></a>启动插件Service</h2><p>根据前面两章，素组App就能启动一个插件中的Service了，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">String serviceName = <span class="string">"jianqiang.com.plugin1.TestService1"</span>;</span><br><span class="line">intent.setClassName(<span class="keyword">this</span>, serviceName);</span><br><span class="line">startService(intent);</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="加载插件中的资源"><a href="#加载插件中的资源" class="headerlink" title="加载插件中的资源"></a>加载插件中的资源</h2><p>四大组件都可以这样实现插件化方案，Service 、ContentProvider 和 Receiver 都只要合并dex就够了，他们没有资源的概念。Activity严重依赖资源，所以必须解决插件中的资源问题。前面章节介绍了AssetManager 和 Resources ，AssetManager 有个 addAssetPath 方法，可以一次性把插件的路径都“灌进去”，然后根据这个“超级” AssetManager 生成一个“超级” Resources ，以后无论是查找插件还是宿主的资源，都能通过这个“超级”Resources 找到了。上述实现如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参考：  https://github.com/BaoBaoJianqiang/ZeusStudy1.1</span></span><br></pre></td></tr></tbody></table></figure>
+<p>至此，Activity 的“傻瓜式”插件化解决方案就完成了，我们甚至可以从插件Activity跳转到宿主中的Activity，但是这个方案有以下两个问题：</p>
+<ul>
+<li>插件的四大组件都必需先在宿主中声明，不能新增      </li>
+<li>插件和宿主的资源都合并到一起，资源id可能会有冲突     </li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/25/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/25/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC7%E7%AB%A0/" class="post-title-link" itemprop="url">第7章：资源初探</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-25 20:00:00" itemprop="dateCreated datePublished" datetime="2021-03-25T20:00:00+08:00">2021-03-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-29 21:54:18" itemprop="dateModified" datetime="2021-03-29T21:54:18+08:00">2021-03-29</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>Activity 与资源是一对孪生兄弟，想彻底解决Activity 插件化，就要面对如何使用插件中资源的问题。</p>
+<h2 id="资源加载机制"><a href="#资源加载机制" class="headerlink" title="资源加载机制"></a>资源加载机制</h2><h3 id="资源分类"><a href="#资源分类" class="headerlink" title="资源分类"></a>资源分类</h3><p>Android资源分为两类：</p>
+<ul>
+<li>第一类是res目录下存放的可编译资源文件，编译时，系统会自动在R.java中生成资源文件的十进制值，这种访问比较简单，只需要获取Resources对象，进而通过Resources的getxxx即可得到资源        </li>
+<li>第二类是assets目录下存放的原始资源文件，因为apk在编译的时候不会编译它们，所以我们也不能通过 R.xx 来访问，通过绝对路径呢？也不行，因为apk不会解压到本地，所以我们无法直接获取，只能通过AssetManager类的open方法去获取，类似如下代码：</li>
+</ul>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Resources resources = getResources();</span><br><span class="line">AssetManager am = getResources().getAssets();</span><br><span class="line">InputStream is = getResources().getAssets().open(<span class="string">"filename"</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由此可见啊，Resources 就能搞定一切！</p>
+<h3 id="剪不断理还乱：Resources-和-AssetManager"><a href="#剪不断理还乱：Resources-和-AssetManager" class="headerlink" title="剪不断理还乱：Resources 和 AssetManager"></a>剪不断理还乱：Resources 和 AssetManager</h3><p>AssetManager 中有一个 addAssetPath(String path) 方法，App启动时，会把当前的Apk路径穿进去，接下来AssetManager 和 Resources 就能访问当前apk的所有资源了。addAssetPath 方法是不对外的，不过我们可以通过反射的方式，把插件apk的路径传入这个方法，就把插件资源添加到一个资源池了，当然，当前App的资源早已经在这个池子中了。App有几个插件，就调用几次addAssetPath ，把插件资源都塞到池子里。</p>
+<blockquote>
+<p>apk打包时，每个资源都会在R文件中有一个十六进制值，并且会生成一个 resources.arsc 文件，它是一个 Hash 表，存放着每个十六进制值和资源的对应关系，这样在运行时，就能知道十六进制值对应res目录下哪个目录哪个资源。</p>
+</blockquote>
+<h2 id="资源插件化解决方案"><a href="#资源插件化解决方案" class="headerlink" title="资源插件化解决方案"></a>资源插件化解决方案</h2><p>以 在宿主App 中读取插件里面的字符串资源 为例，说明这个解决方案，总共会分为 4 个步骤：</p>
+<ol>
+<li>loadResources 。通过反射，创建 AssetManager 对象，调用 addAssetPath 方法，把插件 Plugin1 的路径添加到 AssetManager 对象中，从此，这个AssetManager 就只为这个插件 Plugin1 服务了。在这个 AssetManager 基础上，创建相应的 Resources 和 Theme 对象。    </li>
+<li>重写 Activity 的getAsset ，getResources 和 getTheme 方法，它们的思路都是一样的，如果插件的对象中相应的对象为空，则使用默认的，即类似： if(mAssetManager == null) { return super.getAssets(); }     </li>
+<li>加载外部的插件，生成这个插件的对应的 ClassLoader：</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">File extractFile = <span class="keyword">this</span>.getFileStreamPath(apkName);</span><br><span class="line">dexPath = extractFile.getPath();</span><br><span class="line"></span><br><span class="line">fileRelease = getDir(<span class="string">"dex"</span>, <span class="number">0</span>);<span class="comment">//0代表Context.MODE_PRIVATE</span></span><br><span class="line">classLoder = newDexClassLoader(dexPath, fileRelease.getAbsolutePath(), <span class="keyword">null</span>, getClassLoder());</span><br></pre></td></tr></tbody></table></figure>
+<ol start="4">
+<li>通过反射，获取插件中的类，构造出插件类的对象 dynamicObject ，然后就可以让插件中的类读取插件中的资源了。</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//整个章节的示例代码可以参考： https://github.com/BaoBaoJianqiang/Dynamic2</span></span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="换肤"><a href="#换肤" class="headerlink" title="换肤"></a>换肤</h2><p>在学习了插件化编程后，换肤其实是可以把图片放到插件App中，然后生成R文件来动态读取这些资源：</p>
+<p>因为前面已经讲过原理，所以这里暂且不表</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//示例代码可以参考： https://github.com/BaoBaoJianqiang/Dynamic3.2</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：插件化技术基础知识</a>
         </h1>
 
         <div class="post-meta">
@@ -692,7 +1114,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2020-05-01 08:50:00 / 修改时间：09:11:12" itemprop="dateCreated datePublished" datetime="2020-05-01T08:50:00+08:00">2020-05-01</time>
+              <time title="创建时间：2021-03-21 22:37:00 / 修改时间：22:37:56" itemprop="dateCreated datePublished" datetime="2021-03-21T22:37:00+08:00">2021-03-21</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -717,38 +1139,51 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <html><head></head><body></body></html><html><head></head><body><h2 id="3-2-因特网提供的运输服务"><a href="#3-2-因特网提供的运输服务" class="headerlink" title="3.2 因特网提供的运输服务"></a>3.2 因特网提供的运输服务</h2><p>TCP 协议提供的拥塞控制不一定能给通信进程带来直接好处，但能为因特网带来整体好处。</p>
-<h2 id="3-3-无连接运输：UDP"><a href="#3-3-无连接运输：UDP" class="headerlink" title="3.3 无连接运输：UDP"></a>3.3 无连接运输：UDP</h2><p>Dns 是一个通常使用 UDP 的应用层协议的例子。一台主机中的DNS应用程序想要进行一次查询时，它构造一个报文并将其交给UDP。如果没有查询到，要么告知应用程序不能响应，要么试图向另一个dns服务器发送查询。</p>
-<p>为什么不是总选择TCP这种可靠连接呢？有以下几个原因：</p>
-<ul>
-<li>速度快。无需建立连接，不用像TCP 哪样三次握手然后建立连接(想想如果dns运行在tcp上，则会慢很多)     </li>
-<li>更精细控制。使用UDP ，应用层可以更精细控制 何时、发送什么数据     </li>
-<li>UDP 无需维护连接状态。没有维护连接状态，也就不需要发送和跟踪 缓存、拥塞控制、序号确认  等工作，响应更快     </li>
-<li>分组的首部开销小，TCP 有20个字节，而UDP 仅仅 8个字节     </li>
-</ul>
-<p>首先要提一下，UDP 是可以实现可靠数据传输的，可以通过在应用程序中建立可靠性机制来保证。这样无需受制于TCP 拥塞控制机制限制传输速率。</p>
-<p>UDP 首部只有 源端口号，目的端口号，长度(首部+数据) 以及 校验和。校验和用于防止传输过程中引入的差错(路由器内存可能引入比特差错)</p>
-<p>3.4 可靠传输的原理</p>
-<p>TCP 是在不可靠的 IP 层之上实现可靠数据传输协议。</p>
-<p>需要三种协议来处理比特差错的情况：</p>
-<ul>
-<li>差错检测。要有检测手段      </li>
-<li>接收方反馈。     </li>
-<li>重传     </li>
-</ul>
-<p>回退N步：允许发送放发送多个分组，而不需要等待确认，但是也受到滑动窗口的限制，不能超过最大分组数。如果出现超时，发送方重传所有已发送但还未被确认过的分组。当接收到一个连续的ack时，窗口就向前滑动(因为接收方是要求按序接收的，比如n还没收到，但是来了n+1，将会把n+1丢掉的)。<br>选择重传：按照滑动窗口发送时，接收方将确认一个正确接收的分组而不管其是否按序，时序的分组将被缓存直到所有丢失分组都受到位置，这样才一并交给上一层。避免丢弃导致无谓的重传</p>
-<h2 id="3-5-面向连接的传输：TCP"><a href="#3-5-面向连接的传输：TCP" class="headerlink" title="3.5 面向连接的传输：TCP"></a>3.5 面向连接的传输：TCP</h2><p><strong>快速重传</strong>： 一旦收到3个冗余的ACK，TCP就会执行快速重传，即在该报文段的定时器过期之前重传丢失的报文段。      </p>
-<p>TCP让发送方维护一个接收窗口的变量来提供流量控制。</p>
-<p><strong>流量控制服务：</strong>限制发送速率，避免发送方使接收方缓存溢出的可能性。    </p>
-<p>如果客户端故意不发送ACK来完成第三次握手，那就是所谓的SYN洪范攻击。</p>
-<p><strong>拥塞控制：</strong>如果TCP发送方感知到网络没什么拥塞，则TCP发送方增加其发送速率；如果发送方感知有拥塞，则降低发送速率。</p>
-<p>确定拥塞： 超时或者 收到3个冗余的 ACk，就认为发生了拥塞<br>如何控制：可以使用拥塞窗口(congestion window，用cwnd 来表示) 去控制发送方向网络中发送流量的速率。    </p>
-<p>TCP拥塞控制算法：</p>
-<ul>
-<li>慢启动：TCP 连接开始时，cwnd 通常设置一个较小的值，之后，每发送成功一次，cwnd就翻番。因此，tpc开始时较慢，但在慢启动过程中以指数增长。    </li>
-<li>拥塞避免： 一旦进入拥塞避免状态，cwnd的值是上次遇到拥塞时的值的一半，即距离拥塞并不远。因此，tcp 每发送成功一次不再是翻番，而是增加一定的量，先行规律缓慢增长，比慢启动速率慢很多。</li>
-<li>快速恢复： 拥塞窗口减半cwnd=cwnd/2，之后执行拥塞避免算法，使拥塞窗口慢慢增大。</li>
-</ul>
+          <html><head></head><body></body></html><html><head></head><body><p>这是第二部分【解决方案】的第一章</p>
+<h2 id="加载外部dex"><a href="#加载外部dex" class="headerlink" title="加载外部dex"></a>加载外部dex</h2><p>加载外部dex主要有3个步骤：</p>
+<ol>
+<li>从服务器下载插件 apk到手机 sdcard(需要sdcard权限)    </li>
+<li>读取插件apk中的dex，生成对应的 DexClassLoader    </li>
+<li>使用DexClassLoader 的loadClass 方法读取插件 dex 中的任何一个类   </li>
+</ol>
+<p>在理解原理的时候，可以把插件App放在主App的 assets 目录中，用于替代从服务器下载插件。</p>
+<p>接下来的部分是例子演示，这里不表。</p>
+<h2 id="插件的瘦身"><a href="#插件的瘦身" class="headerlink" title="插件的瘦身"></a>插件的瘦身</h2><p>在插件化编程过程中会出现某个moudule在测试的时候需要，但是在正式环境中不需要，因此，可以把这个module打包成jar包，之后使用provided引用：</p>
+<blockquote>
+<p>provided files(“lib/classes.jar”)</p>
+</blockquote>
+<p>因为关键字provided只支持jar包，而不支持module</p>
+<h2 id="Application-的插件化解决方案"><a href="#Application-的插件化解决方案" class="headerlink" title="Application 的插件化解决方案"></a>Application 的插件化解决方案</h2><p>在插件中可能自定义Application，插件会在这个自定义的Application的onCreate中做一些初始化工作，但我们知道<strong>插件的Application是没机会执行的</strong>，此时，我们可以<strong>在宿主的自定义的Application的onCreate方法中，手动把这些插件Application都反射出来，执行他们的onCreate</strong>，不过这样一来，插件Application就是没有生命周期的，它彻底沦为一个普通类。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//示例代码参见： https://github.com/BaoBaoJianqiang/ZeusStudy1.8</span></span><br></pre></td></tr></tbody></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </body></html>
       
     </div>
@@ -768,7 +1203,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/04/19/%E8%AF%BE-%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.jpeg">
@@ -782,339 +1217,7 @@
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2020/04/19/%E8%AF%BE-%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/" class="post-title-link" itemprop="url">高级进阶课</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-04-19 22:16:00" itemprop="dateCreated datePublished" datetime="2020-04-19T22:16:00+08:00">2020-04-19</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-25 09:03:10" itemprop="dateModified" datetime="2020-07-25T09:03:10+08:00">2020-07-25</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E4%B8%8A%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">上课笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="4-1-停止线程"><a href="#4-1-停止线程" class="headerlink" title="4-1 停止线程"></a>4-1 停止线程</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>有两种方法：</p>
-<ul>
-<li>调用 interruput 方法，通过抛异常的方式触发</li>
-<li>使用boolean 标志位，注意，要使用volatile 标志位保证可见性；</li>
-</ul>
-<p>一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。</p>
-<p>建议转移到线程安全问题上去</p>
-<h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>suspend 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
-<p>为什么Thread 的run方法中执行 sleep 方法要try-catch 捕捉 InterruptedException ，这是因为在sleep 过程中，有可能这个thread 会被调用 thread.interrupt() ，此时就会触发 这个异常，我们应该在 catch 语句中 关闭打开的文件之类的。</p>
-</details>
-
-<h2 id="4-2、如何写出线程安全的代码"><a href="#4-2、如何写出线程安全的代码" class="headerlink" title="4-2、如何写出线程安全的代码"></a>4-2、如何写出线程安全的代码</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>每个线程都有一个自己的内存副本，这是java的内存模型。</p>
-<p>要么不共享，要么不可变。其次就是采取一定手段了</p>
-<p>final 其实还有一个功能就是禁止重排序。某些情况下，构造函数调用完了，非final的成员变量还没初始化完(final 是已经初始化完了)，这就会有问题了。</p>
-<p>为什么 a++ 不是原子性的，因为这个操作首先要将 a 赋值进来，int temp = a; 之后再对temp 操作：temp += 1; 最后再将 temp 的值赋回给a。</p>
-<h3 id="ThreadLocal-的使用建议"><a href="#ThreadLocal-的使用建议" class="headerlink" title="ThreadLocal 的使用建议"></a>ThreadLocal 的使用建议</h3><p>ThreadLocal 对对象也是弱引用</p>
-<ul>
-<li>声明为全局静态final 成员，避免初始化多个ThreadLocal 对象(因为设置value的时候是以ThreadLocal 为key的)        </li>
-<li>避免存储大量对象，因为hash冲突使用的是<strong>开放定址</strong> 法，这并不适合大量数据      </li>
-<li>用完后及时移除，因为它只能靠主动移除和线程退出时移除，否则线程声明周期长的时候，迟迟得不到释放。    </li>
-</ul>
-<p>禁止重排序的方法：</p>
-<ul>
-<li>final 关键字</li>
-<li>volatile关键字</li>
-<li>加锁(synchronized/Lock)</li>
-</ul>
-<p>保证可见性：</p>
-<ul>
-<li>final 关键字    </li>
-<li>volatile     </li>
-<li>加锁(释放锁之前强制刷新到主内存 )     </li>
-</ul>
-<p>保证原子性的方法：</p>
-<ul>
-<li>加锁    </li>
-<li>使用CAS 指令    </li>
-<li>使用原子类型 ，如 AtomicInteger       </li>
-<li>使用原子属性更新器    </li>
-</ul>
-</details>
-
-<blockquote>
-<p>还可以参考<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/95291228aff7">简书上的博客</a></p>
-</blockquote>
-<h2 id="4-3、ConcurrentHashMap"><a href="#4-3、ConcurrentHashMap" class="headerlink" title="4-3、ConcurrentHashMap"></a>4-3、ConcurrentHashMap</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>从1.5 到 1.8 一直在优化</p>
-<p>jdk5：诞生，分段锁(segment)，对段加锁，必要时加锁。它的hashCode 计算方法就是，对key 求hashCode ，之后对这个hashCode 再散列得到散列码 code，之后，根据这个code 的高位 来计算segment 的值，根据低位计算在segment 中的值。<br>1.6：二次hash算法。Integer 的hashCode() 函数返回的就是它的value值。3万多以下的整数高位都是15，于是都集中在一个segment中，退化成 HashTable 了(因为对这个segment 加锁也就相当于对整个ConcurrentHashMap加锁了)<br>1.7：段(segment)懒加载，volatile &amp; CAS 操作避免加锁。一开始并不会把segment 通通new出来，需要哪个。使用volatile  来修饰 segment[] 数组，防止可见性导致的问题，比如，在某个segment 创建后，另一个线程不能马上知道。<br>8、摒弃段(segment)，基于Hashmap 原理并发。  使用    </p>
-<h3 id="求和"><a href="#求和" class="headerlink" title="求和"></a>求和</h3><p>分段计数</p>
-<h3 id="CHM-是弱一致性"><a href="#CHM-是弱一致性" class="headerlink" title="CHM 是弱一致性"></a>CHM 是弱一致性</h3><ul>
-<li>添加元素不一定马上读到。你读过这个段，然后再往这个段添加数据，那么就遗漏了</li>
-<li>同以上的理，清空之后可能还有元素；</li>
-</ul>
-<h3 id="HashTable-的问题"><a href="#HashTable-的问题" class="headerlink" title="HashTable 的问题"></a>HashTable 的问题</h3><ul>
-<li>大锁，对整个HashTable 加锁    </li>
-<li>长锁，直接对方法加锁    </li>
-<li>读写公用一把锁，读写不能同时进行</li>
-</ul>
-<h3 id="CHM-解法"><a href="#CHM-解法" class="headerlink" title="CHM 解法"></a>CHM 解法</h3><p>小锁： 分段锁(1.5<del>1.7 版本使用segment)，后来(1.8版本)桶节点锁<br>短锁：先尝试获取，失败再加锁<br>分离读写锁：读写失败再加锁(1.5</del>1.7版本)，volatile读CAS写(1.7~1.8版本)     </p>
-<h3 id="总结：如何进行锁优化"><a href="#总结：如何进行锁优化" class="headerlink" title="总结：如何进行锁优化"></a>总结：如何进行锁优化</h3><p>长锁不如短缩：尽可能只锁必要的部分<br>大锁不如小锁：对加锁的对象拆分<br>分离读写锁，读写的频次是不一样的<br>消除无用锁，尽量不加锁，使用volatile 或者 CAS </p>
-</details>
-
-<h2 id="4-5-Android-中写出优雅的代码"><a href="#4-5-Android-中写出优雅的代码" class="headerlink" title="4-5 Android 中写出优雅的代码"></a>4-5 Android 中写出优雅的代码</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>异步，不一定涉及到多线程，比如你setOnclickListener，它不是马上执行，而是等点击再相响应。异步不一定快，如果你线程一直在做运算，其实就无需太多线程，如果有很多io，被阻塞在那，那多开线程是有用的。</p>
-<p>避免回调地狱。</p>
-<h3 id="Rxjava-要注意的问题："><a href="#Rxjava-要注意的问题：" class="headerlink" title="Rxjava 要注意的问题："></a>Rxjava 要注意的问题：</h3><ul>
-<li>很多时候Rxjava 请求完数据后，要更新UI，其实本质上这还是匿名内部类，会持有 Activity 引用。更新ui的时候，ui可能已经没有了，可能出现空指针；    </li>
-<li>声明将所有任务的句柄放在 List<disposable> 列表中，在需要停止的时候，遍历执行 Disposable.dispose();     </disposable></li>
-</ul>
-<h3 id="kotlin-协程"><a href="#kotlin-协程" class="headerlink" title="kotlin 协程"></a>kotlin 协程</h3><p>协程将异步逻辑同步化，取消协程，其实是跟 view 绑定，监听它的attach 状态，在dettach 的时候，取消协程。</p>
-</details>
-
-<h2 id="5-1-cpu-架构适配"><a href="#5-1-cpu-架构适配" class="headerlink" title="5-1 cpu 架构适配"></a>5-1 cpu 架构适配</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>注意问题：</p>
-<ul>
-<li>native 开发才关注cpu架构</li>
-<li>不同架构兼容性如何    </li>
-<li>so 库太多如何优化 apk 体积     </li>
-<li>sdk 开发者应该提供哪些so 库    </li>
-</ul>
-<p>armeabi 可以兼容x86 和 arm 架构，但是不兼容 mips(mips 目前已经被Android废弃了)。但是兼容方式无法获得最优性能，性能不敏感的话，可以这么干。有哪个架构的目录，那么所有so库就要有一份这个架构。</p>
-<p>目前用得最多的可能就是 armabi-v7a 了，考虑实际情况可能使用 armabi-v7a 就可以了。</p>
-<p>但是如果你有某个compute.so  针对计算比较多，那么你可以在 armeabi 目录下存在一个 compute.so  以及 compute_v8a.so  ，其他的abi 只要提供一份就可以了(其实，微信就是这么干的)。非启动加载的so可以云端加载，从后台拉取。</p>
-<p>在gradle 中指定需要的so类型，减小apk体积</p>
-<p>sdk 开发要提供完整abi  </p>
-</details>
-
-<h2 id="5-2-Java-native-方法怎么与Native-函数绑定"><a href="#5-2-Java-native-方法怎么与Native-函数绑定" class="headerlink" title="5-2 Java native 方法怎么与Native 函数绑定"></a>5-2 Java native 方法怎么与Native 函数绑定</h2><p>第5章的，都是jni，后面再看</p>
-<h2 id="6-1，Activity-启动流程"><a href="#6-1，Activity-启动流程" class="headerlink" title="6-1，Activity 启动流程"></a>6-1，Activity 启动流程</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="考察什么："><a href="#考察什么：" class="headerlink" title="考察什么："></a>考察什么：</h3><ul>
-<li>与ams 如何交互<br>参数结果如何展示</li>
-<li>Activity 如何实例化</li>
-<li>Activity 生命周期如何流转</li>
-<li>Activity 窗口如 何展示</li>
-<li>Activity转场动画实现机制</li>
-</ul>
-<h3 id="Activity-跨进程启动"><a href="#Activity-跨进程启动" class="headerlink" title="Activity 跨进程启动"></a>Activity 跨进程启动</h3><p>所有进程Zygote fork 出来，预加载到启动资源，加快速度。 </p>
-<p>插件化，要有占位Activity才能实现。只能Activity 在进程内启动另一个Activity 的时候可以，在请求ActivityManagerProxy 之前和在ActivityThread 中开始回调Activity生命周期之前进行相应处理。</p>
-<p>Activity 跨进程启动Activity ，会涉及到Binder 通信，这个Binder 缓冲区是有大小限制的(貌似是4M)，没办法传递的。如果要实现数据传递，如果在同一个进程，可以使用单例，否则呢，不在同一个进程中，可以使用Provider(而AIDL 使用的也是Binder ，同样有大小限制吧)。</p>
-<p>由于Activity 是通过反射构建出来的对象： (Activity)cl.loadClass(className).newInstance()  ，它是通过无参的构造器构造的，所以呢，我们不要去写Activity 的构造函数，这是不应该的；尤其不要只写有参数的构造函数，这样的话，就没法启动这个Activity 了，会崩溃的。</p>
-<p>Fragment 也不要自己写有参数的构造器，虽然我们自己可以把它new出来。但是当Activity 被回收，之后恢复Activity 的时候，会恢复Fragment ，当然，这个恢复也是通过反射的方式，通过无参的构造函数来构建Fragment实例的。如果你是通过有参数的构造函数自己启动Fragment的，那么在恢复的时候可能会丢失信息，<strong>这也是我们要求使用 arguments 方式而不是构造函数的参数给fragment传递数据的原因</strong>。个人猜测，这可能也是不让我们自己new Activity 的方式去构造它的原因吧。</p>
-<h3 id="Activity的窗口展示流程"><a href="#Activity的窗口展示流程" class="headerlink" title="Activity的窗口展示流程"></a>Activity的窗口展示流程</h3><p><img src="" alt="Activity的窗口展示流程"></p>
-<p>在Activity 启动过程中，ActivityThread 执行 handleLaunchActivity，在这个方法中，attach 的时候就会 createPhoneWindow，之后调用 create、start、restoreState、postCreate、resume 过程中，其实都在installDecor (个人觉得是初始化 DecorView)，在resume回调之后，马上调用 makeVisible 才将DecorView 展示出来(layout啊，绘制啊)，我们才能看到显示的内容。这也就是为什么在resume 之前我们无法准确地获取View 的高度的原因。</p>
-<h3 id="转场动画"><a href="#转场动画" class="headerlink" title="转场动画"></a>转场动画</h3><p>前一个页面调用 ExitTransiton，在新页面没打开之前，执行这个退出动画，进入新页面时，执行进入动画，这样就衔接上了。</p>
-</details>
-
-<h2 id="6-2-如何跨App-启动Activity？有哪些注意事项？"><a href="#6-2-如何跨App-启动Activity？有哪些注意事项？" class="headerlink" title="6-2 如何跨App 启动Activity？有哪些注意事项？"></a>6-2 如何跨App 启动Activity？有哪些注意事项？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="如何启动外部应用的-Activity"><a href="#如何启动外部应用的-Activity" class="headerlink" title="如何启动外部应用的 Activity"></a>如何启动外部应用的 Activity</h3><ul>
-<li>共享uid的app(即在App的AndroidManifest文件中都注明了 android:sharedUserId=”xxx”，这个xxx 在两个应用中都是相同的) ，给 Intent 设置包名和Activity的全路径名，即可启动。    </li>
-<li>目标Activity 在AndroidManifest.xml中 设置为 exported=true，之后给Intent 设置 包名 和Activity全路径名即可。     </li>
-<li>给目标Activity 设置 action 和 category ，使用 IntentFilter 隐式启动    </li>
-</ul>
-<h3 id="为允许外部启动的-Activity-添加权限"><a href="#为允许外部启动的-Activity-添加权限" class="headerlink" title="为允许外部启动的 Activity 添加权限"></a>为允许外部启动的 Activity 添加权限</h3><p>为目标Activity 添加权限，如：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">".MainActivity"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:permission</span>=<span class="string">"com.examle.permit"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"zzz"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"zzzzz"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>那么，如果外部app要启动这个Activity，它要在 AndroidManifest 文件中声明这个权限。之后，再通过 action 和 category 方式启动。不过，这个要求含有目标Activity 的app先行安装。      </p>
-<h3 id="拒绝服务漏洞"><a href="#拒绝服务漏洞" class="headerlink" title="拒绝服务漏洞"></a>拒绝服务漏洞</h3><p>如果你的Activity 暴露出去了，那么攻击者可以来攻击，让你的Activity 拒绝服务。具体的原理如下：</p>
-<ol>
-<li>我们知道，如果Activity A 启动另一个App 的 Activity B 的时候，往Intent 里面传入一个 实现了序列化接口的对象 serializableObject ，是可以传递过去的。    </li>
-<li>在 B 中，只要你去访问了 intent.getExtra() ，那bundle 就会把序列化的数据反序列化过来。     </li>
-<li>好了，如果serializableObject 对象对应的类只在 A 中有，但是在 B 应用中并没有，这时候反序列化就会产生异常(ClassNotFoundException，类找不到异常)。</li>
-</ol>
-<p>拒绝服务异常一般发生在 Activity 启动过程中 或者在 onNewIntent 回调过程中。解决方法包括： 1、使用try-catch   2、不要暴露Activity   </p>
-</details>
-
-
-<h2 id="6-4、在代码任意位置为当前-activity-添加-view"><a href="#6-4、在代码任意位置为当前-activity-添加-view" class="headerlink" title="6-4、在代码任意位置为当前 activity 添加 view"></a>6-4、在代码任意位置为当前 activity 添加 view</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="如何在任意位置获取当前Activity"><a href="#如何在任意位置获取当前Activity" class="headerlink" title="如何在任意位置获取当前Activity"></a>如何在任意位置获取当前Activity</h3></details>
-
-<h2 id="6-5、微信右滑返回效果"><a href="#6-5、微信右滑返回效果" class="headerlink" title="6-5、微信右滑返回效果"></a>6-5、微信右滑返回效果</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>Fragment中实现相对简单，Activity 实现起来复杂</p>
-<p>fragment实现： view 跟随手势移动的效果，不涉及window控制</p>
-<p>用Activity实现，前一个activity 要搞成透明的效果，windowIsTranslucent = true，window的background 设置为透明<br>多个Task情况，比如顺序启动 a、b、c 三个，a 和 c 在同一个栈，因此可以先获取b的照片放做背景<br>透明对Activity生命周期影响，设置透明的话，下面的Activity 只能是 onPause 状态，不可能stop<br>所以我们只有在滑动的时候，才要求透明，其他的时候不透明，因为透明会影响绘制效率啊。。。。    </p>
-</details>
-
-<h2 id="7-1、为什么不能在UI线程绘制"><a href="#7-1、为什么不能在UI线程绘制" class="headerlink" title="7-1、为什么不能在UI线程绘制"></a>7-1、为什么不能在UI线程绘制</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>ui线程是什么？ActivityThread 的main函数所运行的线程<br>为什么ui要设计成非线程安全的？因为加锁开销大，ui对时间敏感，ui具有高频可变性</p>
-<p>非ui线程一定不能更新吗？不是，还有surfaceView，它会对canvas 加锁 ： lockCanvas ，其次再draw ，最后 unLockCanvas，绘制放在子线程，效率提高。所以，可能app已经anr了，但是地图绘制界面还在绘制，很奇怪，这是因为地图绘制使用了 surfaceview。不过现在官方推荐使用TexutureView了，不推荐使用 SurfaceView。</p>
-</details>
-
-<h2 id="Handler-的delay-可靠吗？"><a href="#Handler-的delay-可靠吗？" class="headerlink" title="Handler 的delay 可靠吗？"></a>Handler 的delay 可靠吗？</h2><p>不可靠</p>
-<h2 id="7-3、ANR-类型"><a href="#7-3、ANR-类型" class="headerlink" title="7-3、ANR 类型"></a>7-3、ANR 类型</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>原理，就是处理事物之前 postDelay 一个事件，这个事件会导致anr窗口弹出，如果在delay的时间内完成事物，则会removeMessage ，把这个postDelay的message移除，就不会产生anr了。</p>
-<p>Looper为什么不会导致cpu占用过高？因为 epoll多路复用机制</p>
-</details>
-
-<h2 id="7-4、自己实现Handler"><a href="#7-4、自己实现Handler" class="headerlink" title="7-4、自己实现Handler"></a>7-4、自己实现Handler</h2><p>略</p>
-<h2 id="8-1、如何避免oom"><a href="#8-1、如何避免oom" class="headerlink" title="8-1、如何避免oom"></a>8-1、如何避免oom</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>native heap 在内存不够的时候，也会抛oom</p>
-<p>使用合适的数据结构<br>避免枚举-影响内存和编译出来的文件(都会增大)</p>
-<p>Bitmap： 选选择合适的分辨率，如果作为背景不要太清晰<br>不要使用帧动画<br>对Bitmap的重采样</p>
-<p>谨慎使用多进程，新进程会带有一些公共资源，是会消耗内存的。<br>谨慎使用largeHeap = true，不同的手机上不一定能实现，还有，内存太大了，gc会困难<br>使用NDK，Native Heap 优雅避免java 堆内存限制</p>
-</details>
-
-<h2 id="8-2、如何对图片缓存？"><a href="#8-2、如何对图片缓存？" class="headerlink" title="8-2、如何对图片缓存？"></a>8-2、如何对图片缓存？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>网络/磁盘/内存 进行缓存<br>缓存算法-LRU算法，或者最少使用频率的算法<br>如何验证算法的效果(命中率)</p>
-</details>
-
-<h2 id="如何计算图片占用内存的大小"><a href="#如何计算图片占用内存的大小" class="headerlink" title="如何计算图片占用内存的大小"></a>如何计算图片占用内存的大小</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>根据实图手动计算它在内存中占用的内存。</p>
-<p>首先了解dip，mdpi、hdpi、xhdpi、xxhdpi、xxxhdpi</p>
-<p>canvas 就相当于一个层，这个层根据不同手机进行缩放</p>
-<p>assets(sd卡上的文件也是一样的)：<br>如果png，采用ARGB_8888 的话呢，那就是 宽 × 高 × 4 ，因为每个像素要有4个字节，这里 4个8，每个8代表8个比特<br>如果是jpg，你没有指定加载格式，它默认还是使用 ARGB_8888，计算方式还是：宽 × 高 × 4。 其实jpg它没有透明度，那个A是没有用的，使用 RGB_565 即可，5 + 6 + 5 = 16 ，2个字节，所以就是  宽 × 高 × 2    </p>
-<p>从hdpi：</p>
-<p>假设图片的大小为 112px * 131px ,格式png，如果你图片在 hdpi 中，那么系统会认为你这个图片的密度本身就是1.5，如果你这时候有个2.75密度屏幕的手机，那么它就会换算，比如说宽度 ： 112 / 1.5 * 2.75 = 205.333…. ，系统会四舍五入取 205 ，同理高度会换算成： 131/1.5<em>2.75 = 240，所以如果使用 ARGB_8888 ，那占用内存就是  205</em>240 * 4。同理啊，如果手机屏幕大点，比如说是3，那就是 131/1.5*3  和 112 / 1.5 * 3 了。</p>
-<p>在把它放到xxhdpi，这时候密度是 3 了，这时候如果手机是 3，那就得是 131/3*3  和 112 / 3 * 3 了</p>
-<p>所以如果在 mdpi中，那默认图片密度是 1了，那么在 dpi 是 3的手机上，图片宽高应该是 131*3  和 112 * 3</p>
-<p>以此类推，其实在drawable，后面没有带dpi 的，那效果和 mdpi 一样，默认图片是 1</p>
-<p>如果是nodpi ，告诉系统不会缩放，就按照原始的像素，131 和 112 了</p>
-<p>所以宽高的计算方式 ：  图片/dpi * 屏幕dpi</p>
-<h3 id="图片体积优化"><a href="#图片体积优化" class="headerlink" title="图片体积优化"></a>图片体积优化</h3><p>跟图片存储格式无关。跟采用 ARGB_8888 或者 RGB_565<br>根据需要的尺寸<br>采样<br>使用矩阵变换来放大图片<br>不透明采用  RGB_565<br>.9 图片<br>使用VectorDrawable</p>
-</details>
-
-<h2 id="9-1、Android-p-规避访问私有api的限制"><a href="#9-1、Android-p-规避访问私有api的限制" class="headerlink" title="9-1、Android p 规避访问私有api的限制"></a>9-1、Android p 规避访问私有api的限制</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>访问私有api，我们使用的是 反射 方式</p>
-<p>反射时 setAccessible(true)  ,只是绕过语言层面，并不会更改它的 final 或者 private 属性，不会说把private 改成public。</p>
-<p>Android p中设置了 API 名单，有白名单、黑名单之类的，私有api在黑名单中，通过限制反射来限制访问 私有api</p>
-</details>
-
-<h2 id="9-2、换肤的原理"><a href="#9-2、换肤的原理" class="headerlink" title="9-2、换肤的原理"></a>9-2、换肤的原理</h2><p>略</p>
-<h2 id="9-3、virtualApk-插件化原理"><a href="#9-3、virtualApk-插件化原理" class="headerlink" title="9-3、virtualApk 插件化原理"></a>9-3、virtualApk 插件化原理</h2><p>略</p>
-<h2 id="Tinker-怎么实现热修复"><a href="#Tinker-怎么实现热修复" class="headerlink" title="Tinker 怎么实现热修复"></a>Tinker 怎么实现热修复</h2><p>略</p>
-<h2 id="10-1、如何开展优化工作"><a href="#10-1、如何开展优化工作" class="headerlink" title="10-1、如何开展优化工作"></a>10-1、如何开展优化工作</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>对整个目标是否有清晰认识</p>
-<p>重点问题拆解</p>
-<p>优化前期花 20% 的时间就能解决80%问题，剩下的 20%优化很难</p>
-<p>对比业内(tester 测试其他app的打开页面方式)</p>
-<p>指标监控，前后对比</p>
-</details>
-
-<h2 id="10-x"><a href="#10-x" class="headerlink" title="10-x"></a>10-x</h2><p>都略</p>
-<h2 id="11-1、如何设计一个系统"><a href="#11-1、如何设计一个系统" class="headerlink" title="11-1、如何设计一个系统"></a>11-1、如何设计一个系统</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>保持和面试官沟通，多确认</p>
-<p>需求-&gt; 关键流程 -&gt; 细节，明确边界</p>
-<p>细节和边界的通常问题：</p>
-<p>如何处理并发，是否有频繁io<br>网络怎么接入-短连接、长连接、连接池化，是否频繁与服务端交互(项目中的大接口)、是否有推送啊<br>保障安全性-数据是否需要加密、加密算法、</p>
-</details>
-
-<h2 id="11-2、插件化"><a href="#11-2、插件化" class="headerlink" title="11-2、插件化"></a>11-2、插件化</h2><p>略</p>
-<h2 id="11-3、设计一个短视频app"><a href="#11-3、设计一个短视频app" class="headerlink" title="11-3、设计一个短视频app"></a>11-3、设计一个短视频app</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>视频如何处理？<br>视频来源？自有还是第三方？<br>视频由用户上传还是专业供应平台<br>是否需要建立用户关系链<br>支持分享？<br>支付系统打赏啊？<br>社交。聊天<br>播放器比较耗电<br>视频防止对手获取<br>防止广告被劫持</p>
-</details>
-
-<h2 id="11-4、设计一个网络框架"><a href="#11-4、设计一个网络框架" class="headerlink" title="11-4、设计一个网络框架"></a>11-4、设计一个网络框架</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>不局限于http，还可以 websococket</p>
-<p>单向请求还是双向请求啊？</p>
-<p>支持异步请求？使用Rxjava 还是kotlin 协程？</p>
-<p>要考虑可移植性啊？</p>
-<p>缓存策略，多大啊？如何淘汰？ </p>
-<p>全局数据拦截器，对所有请求ip替换啊，对公共结果处理啊</p>
-<p>日志输出，json，pb 转换为可视化</p>
-<p>重试机制，3s、6s 之后再重试，最多重复多少次，防止死循环</p>
-<p>参数组装，bean？hashMap，或者类似Retrofit 使用注解配置</p>
-<p>协议体可以使用 Builder 模式</p>
-<p>数据传输与拦截使用责任链模式</p>
-<p>数据序列化</p>
-<p>DNS 增强-httpDnsServer ，比如google的，还有aliyun 和腾讯云有，可以默认支持几个</p>
-</details></body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/04/11/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E5%A4%9A%E7%BA%BF%E7%A8%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/04/11/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E5%A4%9A%E7%BA%BF%E7%A8%8B/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-多线程</a>
+            <a href="/2021/03/21/%E4%B9%A6-Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97/Android%E6%8F%92%E4%BB%B6%E5%8C%96%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：对startActivity 方法进行Hook</a>
         </h1>
 
         <div class="post-meta">
@@ -1125,7 +1228,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2020-04-11 20:43:00 / 修改时间：21:39:40" itemprop="dateCreated datePublished" datetime="2020-04-11T20:43:00+08:00">2020-04-11</time>
+              <time title="创建时间：2021-03-21 22:35:00 / 修改时间：22:36:12" itemprop="dateCreated datePublished" datetime="2021-03-21T22:35:00+08:00">2021-03-21</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -1133,8 +1236,8 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
                   </a>
                 </span>
             </span>
@@ -1150,594 +1253,56 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <html><head></head><body></body></html><html><head></head><body><h3 id="1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？"><a href="#1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？" class="headerlink" title="1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？"></a>1114、按序打印：类中的3个方法分别运行在3个线程中，如何保证它们按顺序执行？</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>没找到方便记忆的版本，自己写个。当然，链接中通过 AtomInteger 来实现自旋也是不错的。</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaMainClass</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">volatile</span> <span class="keyword">int</span> a = <span class="number">0</span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">test1</span><span class="params">()</span></span>{</span><br><span class="line">        System.out.println(<span class="string">"test1"</span>);</span><br><span class="line">        a = <span class="number">1</span>;</span><br><span class="line">    }</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">test2</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="keyword">while</span> (a != <span class="number">1</span>){</span><br><span class="line">            Thread.yield();</span><br><span class="line">        }</span><br><span class="line">        System.out.println(<span class="string">"test2"</span>);</span><br><span class="line">        a= <span class="number">2</span>;</span><br><span class="line">    }</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">test3</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="keyword">while</span> (a != <span class="number">2</span>){</span><br><span class="line">            Thread.yield();</span><br><span class="line">        }</span><br><span class="line">        System.out.println(<span class="string">"test3 \n"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>自己写的时候的问题：<strong>看懂题目，volatile 关键字使用即可</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/print-in-order/solution/an-xu-da-yin-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="1195、-交替打印字符串"><a href="#1195、-交替打印字符串" class="headerlink" title="1195、 交替打印字符串"></a>1195、 交替打印字符串</h3><p>编写一个可以从 1 到 n 输出代表这个数字的字符串的程序，但是：</p>
+          <html><head></head><body></body></html><html><head></head><body><h2 id="startActivity-的两种形式"><a href="#startActivity-的两种形式" class="headerlink" title="startActivity 的两种形式"></a>startActivity 的两种形式</h2><p>我们知道，最常见的启动Activity的方式：</p>
 <ul>
-<li>如果这个数字可以被 3 整除，输出 “fizz”。</li>
-<li>如果这个数字可以被 5 整除，输出 “buzz”。</li>
-<li>如果这个数字可以同时被 3 和 5 整除，输出 “fizzbuzz”。</li>
+<li>在Activity 中通过Activity 的startActivity 来启动    </li>
+<li>利用Context 的startActivity 方式</li>
 </ul>
-<p>假设有这么一个类：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FizzBuzz</span> </span>{</span><br><span class="line">&nbsp; <span class="function"><span class="keyword">public</span> <span class="title">FizzBuzz</span><span class="params">(<span class="keyword">int</span> n)</span> </span>{ ... }&nbsp;              <span class="comment">// constructor</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fizz</span><span class="params">(printFizz)</span> </span>{ ... }          <span class="comment">// only output "fizz"</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">buzz</span><span class="params">(printBuzz)</span> </span>{ ... }          <span class="comment">// only output "buzz"</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fizzbuzz</span><span class="params">(printFizzBuzz)</span> </span>{ ... }  <span class="comment">// only output "fizzbuzz"</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">number</span><span class="params">(printNumber)</span> </span>{ ... }      <span class="comment">// only output the numbers</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>看参考答案吧</p>
-<p>自己写的时候的问题：<strong>使用Semaphore 关键字会简单很多，使用volatile 关键字稍稍麻烦些。</strong></p>
-</details>
-
-<p>这个问题也可以关联到后续的 <a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/print-zero-even-odd/">打印零与奇偶数</a></p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/fizz-buzz-multithreaded/solution/1ge-reentrantlock-1ge-condition-1ge-volatilebian-l/">LeetCode</a></p>
-</blockquote>
-<h3 id="1115、-交替打印FooBar"><a href="#1115、-交替打印FooBar" class="headerlink" title="1115、 交替打印FooBar"></a>1115、 交替打印FooBar</h3><p>我们提供一个类：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FooBar</span> </span>{</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span> </span>{</span><br><span class="line">&nbsp; &nbsp; <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; n; i++) {</span><br><span class="line">&nbsp; &nbsp; &nbsp; print(<span class="string">"foo"</span>);</span><br><span class="line">&nbsp;   }</span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">bar</span><span class="params">()</span> </span>{</span><br><span class="line">&nbsp; &nbsp; <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; n; i++) {</span><br><span class="line">&nbsp; &nbsp; &nbsp; print(<span class="string">"bar"</span>);</span><br><span class="line">&nbsp; &nbsp; }</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>两个不同的线程将会共用一个 FooBar 实例。其中一个线程将会调用 foo() 方法，另一个线程将会调用 bar() 方法。请设计修改程序，以确保 “foobar” 被输出 n 次。</p>
-<details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>注意在空闲的时候Thread.yield()</p>
-<p>自己写的时候的问题：<strong>可以使用 volatile 关键字，不过在 while 自旋过程中，需要 Thread.yield(); 让出cpu，否则容易出现超时。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/print-foobar-alternately/solution/wu-suo-qie-zui-jian-dan-zui-rong-yi-li-jie-de-shi-/">LeetCode</a></p>
-</blockquote>
-<h3 id="1226、-哲学家进餐"><a href="#1226、-哲学家进餐" class="headerlink" title="1226、 哲学家进餐"></a>1226、 哲学家进餐</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>这个问题还没想通，后续再看</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/the-dining-philosophers/">LeetCode</a></p>
-</blockquote>
-<h3 id="H2O-生成"><a href="#H2O-生成" class="headerlink" title="H2O 生成"></a>H2O 生成</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>使用 Semaphore简单粗暴。这个问题还没想通，后续再看</p>
-<p>自己写的时候的问题：<strong>看别人的再自己写的，h的Semaphore(2),而 o 的 Semaphore(0) ，但是生成h 一个 就release一个 o (虽然o的permit 数量为 0 ，但是在另一个线程release 一个就相当于create 一个，所以并不矛盾，同理，在生成 o 的时候， o.acquire(2))</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/building-h2o/solution/yong-xin-hao-liang-jian-dan-cu-bao-by-hua-shang-1/">LeetCode</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/04/04/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E9%A2%98%E5%BA%93%E7%AE%80%E5%8D%95%E9%A2%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/04/04/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E9%A2%98%E5%BA%93%E7%AE%80%E5%8D%95%E9%A2%98/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-题库简单题</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-04-04 11:06:00" itemprop="dateCreated datePublished" datetime="2020-04-04T11:06:00+08:00">2020-04-04</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-24 23:12:33" itemprop="dateModified" datetime="2020-04-24T23:12:33+08:00">2020-04-24</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了"><a href="#注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了" class="headerlink" title="注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)"></a>注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)</h2><h2 id="704、二分查找，给定一个-n-个元素有序的（升序）整型数组-nums-和一个目标值-target-，写一个函数搜索-nums-中的-target，如果目标值存在返回下标，否则返回-1"><a href="#704、二分查找，给定一个-n-个元素有序的（升序）整型数组-nums-和一个目标值-target-，写一个函数搜索-nums-中的-target，如果目标值存在返回下标，否则返回-1" class="headerlink" title="704、二分查找，给定一个 n 个元素有序的（升序）整型数组 nums 和一个目标值 target  ，写一个函数搜索 nums 中的 target，如果目标值存在返回下标，否则返回 -1"></a>704、二分查找，给定一个 n 个元素有序的（升序）整型数组 nums 和一个目标值 target  ，写一个函数搜索 nums 中的 target，如果目标值存在返回下标，否则返回 -1</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>这题目自己写得还不错</p>
-<p>自己写的时候的问题：<strong>无</strong></p>
-</details>
-
-<blockquote>
-<p>参考链接：<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/binary-search/">LeetCode</a></p>
-</blockquote>
-<h2 id="最小k个数"><a href="#最小k个数" class="headerlink" title="最小k个数"></a>最小k个数</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>使用 PriorityQueue 代替自己建堆</p>
-<p>自己写的时候的问题：<strong>Comparator 单词没写对，还有 Comparator 应该是个泛型，后面要接上<integer></integer></strong></p>
-</details>
-
-<blockquote>
-<p>参考链接<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/zui-xiao-de-kge-shu-lcof/">LeetCode</a></p>
-</blockquote>
-<ol start="104">
-<li>二叉树的最大深度</li>
-</ol>
-<p>参考别人的思想</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/maximum-depth-of-binary-tree/">https://leetcode-cn.com/problems/maximum-depth-of-binary-tree/</a></p>
-</blockquote>
-<ol start="110">
-<li>平衡二叉树</li>
-</ol>
-<p>参考别人的思想</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/balanced-binary-tree/solution/balanced-binary-tree-di-gui-fang-fa-by-jin40789108/">https://leetcode-cn.com/problems/balanced-binary-tree/solution/balanced-binary-tree-di-gui-fang-fa-by-jin40789108/</a></p>
-</blockquote>
-<ol start="559">
-<li>N叉树的最大深度</li>
-</ol>
-<p>依葫芦画瓢</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/maximum-depth-of-n-ary-tree/">https://leetcode-cn.com/problems/maximum-depth-of-n-ary-tree/</a></p>
-</blockquote>
-<ol start="111">
-<li>二叉树的最小深度</li>
-</ol>
-<p>我去，审题啊，叶节点啊，[1,2]的时候，叶节点是2啊，1还不是叶节点。</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/minimum-depth-of-binary-tree/solution/li-jie-zhe-dao-ti-de-jie-shu-tiao-jian-by-user7208/">https://leetcode-cn.com/problems/minimum-depth-of-binary-tree/solution/li-jie-zhe-dao-ti-de-jie-shu-tiao-jian-by-user7208/</a></p>
-</blockquote>
-<ol start="226">
-<li>翻转二叉树</li>
-</ol>
-<p>我去，面试google的那个牛人都没能写出来，我写出来了，额。。其实不就是每个结点都在翻转么。估摸着是那个哥们紧张了吧。</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/invert-binary-tree/">https://leetcode-cn.com/problems/invert-binary-tree/</a></p>
-</blockquote>
-<ol start="101">
-<li>对称二叉树</li>
-</ol>
-<p>右边比左边，左边比右边</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/symmetric-tree/">https://leetcode-cn.com/problems/symmetric-tree/</a></p>
-</blockquote>
-<p>面试题 03.04. 化栈为队</p>
-<p>别人的想法太巧妙了，pop 或者 peek 的时候，只要辅助栈的元素不空，就可以出去。为空就将原本栈的元素倒入到辅助栈再pop或者peek。</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/implement-queue-using-stacks-lcci/solution/java-liang-ge-zhan-by-npe_tle/">https://leetcode-cn.com/problems/implement-queue-using-stacks-lcci/solution/java-liang-ge-zhan-by-npe_tle/</a></p>
-</blockquote>
-<ol start="771">
-<li>宝石与石头</li>
-</ol>
-<p>真心傻逼了，用 if(!set.add(charAt(i))) 去判断，应该只要 if(set.contains(charAt(i))) 即可。</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/jewels-and-stones/">https://leetcode-cn.com/problems/jewels-and-stones/</a></p>
-</blockquote>
-<ol start="1281">
-<li>整数的各位积和之差</li>
-</ol>
-<p>乘积的初始值应该为1啊，蛋疼，居然初始化为 0</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/subtract-the-product-and-sum-of-digits-of-an-integer/">https://leetcode-cn.com/problems/subtract-the-product-and-sum-of-digits-of-an-integer/</a></p>
-</blockquote>
-<ol start="1342">
-<li>将数字变成 0 的操作次数</li>
-</ol>
-<p>while循环到num == 0 为止</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/number-of-steps-to-reduce-a-number-to-zero/">https://leetcode-cn.com/problems/number-of-steps-to-reduce-a-number-to-zero/</a></p>
-</blockquote>
-<ol start="1295">
-<li>统计位数为偶数的数字</li>
-</ol>
-<p>转成字符串看length不就好了，还要想着去除，唉</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/find-numbers-with-even-number-of-digits/">https://leetcode-cn.com/problems/find-numbers-with-even-number-of-digits/</a></p>
-</blockquote>
-<ol start="1365">
-<li>有多少小于当前数字的数字</li>
-</ol>
-<p>1、快排的条件有点忘了，最开始的判断条件 front &gt; tail，while循环中要有 nums[j] &gt;= pvoit 、num[i] &lt;= pvoit   ,一轮while 之后，要执行 nums[start] = nums[front];  nums[front] = pvoit;<br>2、对于数组，int[] nums = {1,4,8,50,2,44,2};可以执行 nums.clone()  能将数组复制一份</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/how-many-numbers-are-smaller-than-the-current-number/">https://leetcode-cn.com/problems/how-many-numbers-are-smaller-than-the-current-number/</a></p>
-</blockquote>
-<p>面试题 02.03. 删除中间节点</p>
-<p>脑筋急转弯</p>
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/delete-middle-node-lcci/">https://leetcode-cn.com/problems/delete-middle-node-lcci/</a></p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/03/15/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E7%B2%BE%E9%80%89TOP%E9%9D%A2%E8%AF%95%E9%A2%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/03/15/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E7%B2%BE%E9%80%89TOP%E9%9D%A2%E8%AF%95%E9%A2%98/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-精选TOP面试题</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-03-15 10:15:00" itemprop="dateCreated datePublished" datetime="2020-03-15T10:15:00+08:00">2020-03-15</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-04-11 21:04:45" itemprop="dateModified" datetime="2020-04-11T21:04:45+08:00">2020-04-11</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
-                    <span itemprop="name">面试</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了"><a href="#注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了" class="headerlink" title="注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)"></a>注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)</h2><h3 id="350、两个数组的交集II"><a href="#350、两个数组的交集II" class="headerlink" title="350、两个数组的交集II"></a>350、两个数组的交集II</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ol>
-<li>hashmap 记录第一个数组每个元素出现次数，再遍历第二个数组    2. 先给两个数组排序，再遍历**</li>
-</ol>
-<p>自己写的时候的问题：<strong>Integer 写错、HashMap&lt;Integer,Integer&gt; 在 int times = get(key) 的时候，要注意判空</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/intersection-of-two-arrays-ii/solution/liang-ge-shu-zu-de-jiao-ji-ii-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="412、Fizz-Buzz，写一个程序，输出从-1-到-n-数字的字符串表示。1-如果-n-是3的倍数，输出“Fizz”；2-如果-n-是5的倍数，输出“Buzz”；3-如果-n-同时是3和5的倍数，输出-“FizzBuzz”。"><a href="#412、Fizz-Buzz，写一个程序，输出从-1-到-n-数字的字符串表示。1-如果-n-是3的倍数，输出“Fizz”；2-如果-n-是5的倍数，输出“Buzz”；3-如果-n-同时是3和5的倍数，输出-“FizzBuzz”。" class="headerlink" title="412、Fizz Buzz，写一个程序，输出从 1 到 n 数字的字符串表示。1. 如果 n 是3的倍数，输出“Fizz”；2. 如果 n 是5的倍数，输出“Buzz”；3.如果 n 同时是3和5的倍数，输出 “FizzBuzz”。"></a>412、Fizz Buzz，写一个程序，输出从 1 到 n 数字的字符串表示。1. 如果 n 是3的倍数，输出“Fizz”；2. 如果 n 是5的倍数，输出“Buzz”；3.如果 n 同时是3和5的倍数，输出 “FizzBuzz”。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>计算 n%3==0 及 n%5==0 的 boolean 值。之后分别输出</p>
-<p>自己写的时候的问题：<strong>canDivid3 的时候，应该使用遍历的下标i ，而不是传入的参数n %3 == 0</strong></p>
-</details>
-
-<blockquote>
-<p> <a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/fizz-buzz/solution/fizz-buzz-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="13、-罗马数字转整数"><a href="#13、-罗马数字转整数" class="headerlink" title="13、 罗马数字转整数"></a>13、 罗马数字转整数</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>前一个数比后一个数小</p>
-<p>自己写的时候的问题：<strong>map写成了 HashMap&lt;String,Integer&gt; ，应该是 HashMap&lt;Character,Integer&gt;，还有，throw 抛出异常的时候，应该要有new关键字，即 throw new IllegalArgumentException(“error input!”);</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/roman-to-integer/solution/yong-shi-9993nei-cun-9873jian-dan-jie-fa-by-donesp/">LeetCode</a></p>
-</blockquote>
-<h3 id="387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回-1"><a href="#387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回-1" class="headerlink" title="387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回 -1"></a>387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回 -1</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>第一次遍历，次数存放在HashMap中，第二次遍历，找到第一个不重复的。</p>
-<p>自己写的时候的问题：<strong>无</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/first-unique-character-in-a-string/solution/zi-fu-chuan-zhong-de-di-yi-ge-wei-yi-zi-fu-by-leet/">LeetCode</a></p>
-</blockquote>
-<h3 id="28、实现-strStr-，给定一个-haystack-字符串和一个-needle-字符串，在-haystack-字符串中找出-needle-字符串出现的第一个位置-从0开始-。如果不存在，则返回-1。"><a href="#28、实现-strStr-，给定一个-haystack-字符串和一个-needle-字符串，在-haystack-字符串中找出-needle-字符串出现的第一个位置-从0开始-。如果不存在，则返回-1。" class="headerlink" title="28、实现 strStr()，给定一个 haystack 字符串和一个 needle 字符串，在 haystack 字符串中找出 needle 字符串出现的第一个位置 (从0开始)。如果不存在，则返回  -1。"></a>28、实现 strStr()，给定一个 haystack 字符串和一个 needle 字符串，在 haystack 字符串中找出 needle 字符串出现的第一个位置 (从0开始)。如果不存在，则返回  -1。</h3><p>示例：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">输入: haystack = <span class="string">"hello"</span>, needle = <span class="string">"ll"</span></span><br><span class="line">输出: <span class="number">2</span></span><br></pre></td></tr></tbody></table></figure>
-<details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>只有第一个字符匹配上才需要比较</p>
-<p>自己写的时候的问题：<strong>haystack = “” 且 needle = “” 时，我返回了 -1，应该是  0，还有计算String的长度应该是 str.length() ,而不是 str.leng ,不过数组倒是可以这样做 arr.length</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/implement-strstr/solution/shi-xian-strstr-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="38、外观数列"><a href="#38、外观数列" class="headerlink" title="38、外观数列"></a>38、外观数列</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>读懂题目很重要，递归</p>
-<p>自己写的时候的问题：<strong>throw 要 new ！</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/count-and-say/solution/di-gui-by-zhaowenhai/">LeetCode</a></p>
-</blockquote>
-<h3 id="69、x的平方根，计算并返回-x-的平方根，其中-x-是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是-2-28…，则结果取2即可"><a href="#69、x的平方根，计算并返回-x-的平方根，其中-x-是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是-2-28…，则结果取2即可" class="headerlink" title="69、x的平方根，计算并返回 x 的平方根，其中 x 是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是 2.28…，则结果取2即可"></a>69、x的平方根，计算并返回 x 的平方根，其中 x 是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是 2.28…，则结果取2即可</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>我自己的写法，没有考虑数字越界：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">mySqrt</span><span class="params">(<span class="keyword">int</span> x)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span>(x &lt; <span class="number">0</span>){</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"error input!"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(x == <span class="number">0</span> || x == <span class="number">1</span>){</span><br><span class="line">        <span class="keyword">return</span> x;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> result = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i * i &lt;= x; i++){</span><br><span class="line">        System.out.println(<span class="string">"i = "</span> + i);</span><br><span class="line">        result = i;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>其他数字都对，但是如果输入 2147395600 ，则在 i= 46340 时，i就已经是结果了，但是这里的循环条件还是会继续执行，这时候 i= 46341 时，就超出 int 的取值范围越界了，因此不对。<strong>如果非要用这种方法去实现，可以在 for 语句里面加个条件： i * i &gt; 0 。因为Java 中的int型数据是有符号数，最高位表示符号，越界的时候，最高位变成1了，也就是变成负数，所以这个条件在刚发生越界的时候就不满足了，就能得到正确的结果</strong>。</p>
-<p>使用二分查找法要注意几点：首先 (a/2)² &gt; a ，则可以解出来正整数解是 a &gt; 4，即在 a &gt; 4的情况下 a/2 &gt; 根号a 是必然的，再综合 1,2,3,4 这几个特殊数字，我们可以得出，a开根号的值在 [1,a/2] 这种闭合区间。还有，<strong>开根号这里可能会有小数，但是我们只要返回正数，所以可以要求 front == tail ，最后是返回tail的值，要注意</strong>。</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/sqrtx/solution/x-de-ping-fang-gen-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="371、两整数之和，不使用运算符-和-，计算两个整数-a、b之和"><a href="#371、两整数之和，不使用运算符-和-，计算两个整数-a、b之和" class="headerlink" title="371、两整数之和，不使用运算符 + 和 -，计算两个整数 a、b之和"></a>371、两整数之和，不使用运算符 + 和 -，计算两个整数 a、b之和</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>异或求出普通位相加，与操作求出进位</p>
-<p>自己写的时候的问题：<strong>a 要暂存 无进位结果，我写的时候忘了暂存了。因为无进位结果 + 进位 还有可能产生进位，所以要有 while 循环。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/sum-of-two-integers/solution/wei-yun-suan-xiang-jie-yi-ji-zai-python-zhong-xu-y/">LeetCode</a></p>
-</blockquote>
-<h3 id="283、移动零，给定一个数组-nums，编写一个函数将所有-0-移动到数组的末尾，同时保持非零元素的相对顺序"><a href="#283、移动零，给定一个数组-nums，编写一个函数将所有-0-移动到数组的末尾，同时保持非零元素的相对顺序" class="headerlink" title="283、移动零，给定一个数组 nums，编写一个函数将所有 0 移动到数组的末尾，同时保持非零元素的相对顺序"></a>283、移动零，给定一个数组 nums，编写一个函数将所有 0 移动到数组的末尾，同时保持非零元素的相对顺序</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>2个指针，1次遍历</p>
-<p>自己写的时候的问题：<strong>无</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/move-zeroes/solution/dong-hua-yan-shi-283yi-dong-ling-by-wang_ni_ma/">LeetCode</a></p>
-</blockquote>
-<h3 id="1、两数之和，给定一个整数数组-nums-和一个目标值-target，请你在该数组中找出和为目标值的那-两个-整数，并返回他们的数组下标。"><a href="#1、两数之和，给定一个整数数组-nums-和一个目标值-target，请你在该数组中找出和为目标值的那-两个-整数，并返回他们的数组下标。" class="headerlink" title="1、两数之和，给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。"></a>1、两数之和，给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>使用 HashMap 辅助</p>
-<p>自己写的时候的问题：<strong>无</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/two-sum/solution/jie-suan-fa-1-liang-shu-zhi-he-by-guanpengchn/">LeetCode</a></p>
-</blockquote>
-<h3 id="101、对称二叉树-给定一个二叉树，检查它是否是镜像对称的"><a href="#101、对称二叉树-给定一个二叉树，检查它是否是镜像对称的" class="headerlink" title="101、对称二叉树,给定一个二叉树，检查它是否是镜像对称的"></a>101、对称二叉树,给定一个二叉树，检查它是否是镜像对称的</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>递归判断</p>
-<p>自己写的时候的问题：<strong>要懂递归啊，这是乱写成功的。不会递归时，把条件列出来，估计就有思路了。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/symmetric-tree/solution/hua-jie-suan-fa-101-dui-cheng-er-cha-shu-by-guanpe/">LeetCode</a></p>
-</blockquote>
-<h3 id="108-还未写-、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树"><a href="#108-还未写-、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树" class="headerlink" title="108(还未写)、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树"></a><font color="#ff0000">108(还未写)、</font>将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>二叉树遍历</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/convert-sorted-array-to-binary-search-tree/solution/jiang-you-xu-shu-zu-zhuan-huan-wei-er-cha-sou-s-15/">LeetCode</a></p>
-</blockquote>
-<h3 id="118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行"><a href="#118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行" class="headerlink" title="118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行"></a>118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>按照描述的方法，暴力解就好</p>
-<p>自己写的时候的问题：<strong>自己想的 for语句，依次生成前面的行</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/pascals-triangle/solution/yang-hui-san-jiao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。"><a href="#125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。" class="headerlink" title="125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。"></a>125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>自己写的时候的问题：<strong>自己写的感受还是使用双指针，效率高，转小写，然后去掉无关的符号这种操作效率太低。注意Character的方法 toLowerCase()、 isDigit() 和 isLetter() 就可以了</strong>。</p>
-</details>
-
-<blockquote>
-<p>[LeetCode](<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-palindrome/solution/java-da-dao-zhi-jian-6xing-by-rabbitzhao/）">https://leetcode-cn.com/problems/valid-palindrome/solution/java-da-dao-zhi-jian-6xing-by-rabbitzhao/）</a></p>
-</blockquote>
-<h3 id="268、缺失数字，给定一个包含-0-1-2-…-n-中-n-个数的序列，找出-0-n-中没有出现在序列中的那个数。"><a href="#268、缺失数字，给定一个包含-0-1-2-…-n-中-n-个数的序列，找出-0-n-中没有出现在序列中的那个数。" class="headerlink" title="268、缺失数字，给定一个包含 0, 1, 2, …, n 中 n 个数的序列，找出 0 .. n 中没有出现在序列中的那个数。"></a>268、缺失数字，给定一个包含 0, 1, 2, …, n 中 n 个数的序列，找出 0 .. n 中没有出现在序列中的那个数。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<ol>
-<li>数组中所有数字异或，结果再与 0<del>n 异或，得到的结果就是缺失的那个数字(因为相同的数字异或结果为0)    2. 0</del>n 这些数字的和-数组所有数字的和 = 缺失的数字</li>
-</ol>
-<p>自己写的时候的问题：<strong>自己写的时候，感觉使用 异或 操作简单方便</strong>。</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/missing-number/solution/que-shi-shu-zi-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="171、Excel-表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A-gt-1，B-gt-2，Z-gt-26，AA-gt-27，AB-gt-28"><a href="#171、Excel-表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A-gt-1，B-gt-2，Z-gt-26，AA-gt-27，AB-gt-28" class="headerlink" title="171、Excel 表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A -> 1，B -> 2，Z -> 26，AA -> 27，AB -> 28"></a>171、Excel 表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A -&gt; 1，B -&gt; 2，Z -&gt; 26，AA -&gt; 27，AB -&gt; 28</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>我们常用的 10 进制数字，0~9 共 10 个数字。题目A-Z，26个字母，所以是26进制，故，AB= 26 + 2 = 28**</p>
-<p>自己写的时候的问题：<strong>看做26进制的数字，从字符串尾部开始遍历，计算每个char所在位的 base ，要注意输入小写字母，所以要统一转为小写去比较</strong>。</p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/excel-sheet-column-number/solution/hua-jie-suan-fa-171-excelbiao-lie-xu-hao-by-guanpe/">LeetCode</a></p>
-</blockquote>
-<h3 id="172、-阶乘后的零，给定一个整数-n，返回-n-结果尾数中零的数量，你算法的时间复杂度应为-O-log-n"><a href="#172、-阶乘后的零，给定一个整数-n，返回-n-结果尾数中零的数量，你算法的时间复杂度应为-O-log-n" class="headerlink" title="172、 阶乘后的零，给定一个整数 n，返回 n! 结果尾数中零的数量，你算法的时间复杂度应为 O(log n)"></a>172、 阶乘后的零，给定一个整数 n，返回 n! 结果尾数中零的数量，你算法的时间复杂度应为 O(log n)</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>可以转换为n的质因数中5的个数</p>
-<p>自己写的时候的问题：*<em>自己写的时候，使用for循环(从 5 到 n，每次进5) 的方式来计算5的个数，结果超时，虽然放在 IntelliJ 中运行结果是对的。因此，应该使用更高效的方式， n /= 5; result += n; *</em>。</p>
-</details>
-
-<blockquote>
-<p>[LeetCode](<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/factorial-trailing-zeroes/solution/xiang-xi-tong-su-de-si-lu-fen-xi-by-windliang-3/）">https://leetcode-cn.com/problems/factorial-trailing-zeroes/solution/xiang-xi-tong-su-de-si-lu-fen-xi-by-windliang-3/）</a></p>
-</blockquote>
-<h3 id="189、旋转数组，给定一个数组，将数组中的元素向右移动-k-个位置，其中-k-是非负数。"><a href="#189、旋转数组，给定一个数组，将数组中的元素向右移动-k-个位置，其中-k-是非负数。" class="headerlink" title="189、旋转数组，给定一个数组，将数组中的元素向右移动 k 个位置，其中 k 是非负数。"></a>189、旋转数组，给定一个数组，将数组中的元素向右移动 k 个位置，其中 k 是非负数。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>首先能想到的是：新建一个数组，然后将原数组中的数字按照旋转后的顺序放到新数组  ，其次就是：首先将整个数组旋转，再分别旋转前面部分和后面部分</p>
-<p>自己写的时候的问题：<strong>写了3次，旋转3次是没问题，关键是处理好 k &gt; nums.length 的情况。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/rotate-array/solution/xuan-zhuan-shu-zu-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="190、-还未写-颠倒二进制位-颠倒给定的-32-位无符号整数的二进制位。"><a href="#190、-还未写-颠倒二进制位-颠倒给定的-32-位无符号整数的二进制位。" class="headerlink" title="190、(还未写)颠倒二进制位,颠倒给定的 32 位无符号整数的二进制位。"></a>190、<font color="#ff0000">(还未写)</font>颠倒二进制位,颠倒给定的 32 位无符号整数的二进制位。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary><summary>
-
-<p>每次取1位反转</p>
-</summary></details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-bits/solution/yi-dong-zui-hou-yi-wei-dao-di-yi-wei-4-xing-dai-ma/">LeetCode</a></p>
-</blockquote>
-<h3 id="191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为-‘1’-的个数"><a href="#191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为-‘1’-的个数" class="headerlink" title="191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为 ‘1’ 的个数"></a>191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为 ‘1’ 的个数</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>n&amp;(n-1) 或者 一直往右移</p>
-<p>自己写的时候的问题：<strong>无符号数有点难，还么有完全理解。while 条件写成 n &gt; 0 ，应该要写成  n != 0。</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/number-of-1-bits/solution/wei-1de-ge-shu-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="198、打家劫舍-小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额"><a href="#198、打家劫舍-小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额" class="headerlink" title="198、打家劫舍,小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额"></a>198、打家劫舍,小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>奇偶，然后选较大</p>
-<p>自己写的时候的问题：<strong>求偶数和的时候，先计算当前偶数和，再与奇数和比较，计算当前偶数和的最终值</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/house-robber/solution/da-jia-jie-she-by-ikaruga/">LeetCode</a></p>
-</blockquote>
-<h3 id="202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为-1，也可能是无限循环但始终变不到-1。如果可以变为-1，那么这个数就是快乐数。"><a href="#202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为-1，也可能是无限循环但始终变不到-1。如果可以变为-1，那么这个数就是快乐数。" class="headerlink" title="202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为 1，也可能是无限循环但始终变不到 1。如果可以变为 1，那么这个数就是快乐数。"></a>202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为 1，也可能是无限循环但始终变不到 1。如果可以变为 1，那么这个数就是快乐数。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>快慢指针用来终止无限循环</p>
-<p>自己写的时候的问题：<strong>主要是要细心，自己写的时候写成 result = temp * temp ,应该是 result += temp * temp</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/happy-number/solution/shi-yong-kuai-man-zhi-zhen-si-xiang-zhao-chu-xun-h/">LeetCode</a></p>
-</blockquote>
-<h3 id="204、计数质数，统计所有小于非负整数-n-的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）"><a href="#204、计数质数，统计所有小于非负整数-n-的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）" class="headerlink" title="204、计数质数，统计所有小于非负整数 n 的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）"></a>204、计数质数，统计所有小于非负整数 n 的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>质数的判断：for (int i = 2; i * i &lt;= n; i++)</p>
-<p>自己写的时候的问题：<strong>最优解暂时有点难理解，还是先只要注意 i * i &lt;= n 这样的优化方式吧</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/count-primes/solution/ru-he-gao-xiao-pan-ding-shai-xuan-su-shu-by-labula/">LeetCode</a></p>
-</blockquote>
-<h3 id="234、回文链表，判断链表是否是回文链表"><a href="#234、回文链表，判断链表是否是回文链表" class="headerlink" title="234、回文链表，判断链表是否是回文链表"></a>234、回文链表，判断链表是否是回文链表</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>1、反转链表，对比反转后和原链表是否相同  2、链表值复制到数组中，再采用前后双指针</p>
-<p>自己写的时候的问题：<strong>写得很完美，第一步，快慢指针找到中间节点  第二步、反转中间节点之后的部分 第三步、对比前半部分和反转后的后半部分</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/palindrome-linked-list/solution/hui-wen-lian-biao-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="326、3的幂，给定一个整数，写一个函数来判断它是否是-3-的幂次方。"><a href="#326、3的幂，给定一个整数，写一个函数来判断它是否是-3-的幂次方。" class="headerlink" title="326、3的幂，给定一个整数，写一个函数来判断它是否是 3 的幂次方。"></a>326、3的幂，给定一个整数，写一个函数来判断它是否是 3 的幂次方。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>1、不断求余，不断除以3，看结果  2、转换成3进制，看是不是前面1个1，后面全是0</p>
-<p>自己写的时候的问题：<strong>老老实实一直除以 3 ，但是，要注意数字 0 ，否则 n % 3 == 0 会进入死循环</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/power-of-three/solution/3de-mi-by-leetcode/">LeetCode</a></p>
-</blockquote>
-<h3 id="242、有效的字母异位词，给定两个字符串-s-和-t-，编写一个函数来判断-t-是否是-s-的字母异位词。"><a href="#242、有效的字母异位词，给定两个字符串-s-和-t-，编写一个函数来判断-t-是否是-s-的字母异位词。" class="headerlink" title="242、有效的字母异位词，给定两个字符串 s 和 t ，编写一个函数来判断 t 是否是 s 的字母异位词。"></a>242、有效的字母异位词，给定两个字符串 s 和 t ，编写一个函数来判断 t 是否是 s 的字母异位词。</h3><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>大小26的数组，两个字符串遍历每个字符，s遍历就在相应下标+1，而遍历t时在相应下标-1</p>
-<p>自己写的时候的问题：<strong>只有小写字母，所以用数组实现了，不难</strong></p>
-</details>
-
-<blockquote>
-<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-anagram/solution/you-xiao-de-zi-mu-yi-wei-ci-by-leetcode/">LeetCode</a></p>
-</blockquote>
+<p>在前面我们了解过了，二者最终都是使用 Instrumentation 的 EXEStartActivity 来实现的，只不过前面的步骤略有不同而已。</p>
+<h2 id="对Activity-的startActivity-方法进行Hook"><a href="#对Activity-的startActivity-方法进行Hook" class="headerlink" title="对Activity 的startActivity 方法进行Hook"></a>对Activity 的startActivity 方法进行Hook</h2><p> Activity1通过startActivity 启动Activity2，这个流程很长，上半场是：Activity1通知AMS要启动Activity2；下半场是： AMS 通知App进程，要启动Activity2 。针对上半场，我们可以Hook的地方包括：</p>
+<ul>
+<li>Activity 的startActivityForResult方法    </li>
+<li>Activity 的 mInstrumentation 字段     </li>
+<li>AMN 的 getDefault 方法获取到的对象    </li>
+</ul>
+<p>针对下半场，我们可以Hook的地方包括：</p>
+<ul>
+<li>H 的 mCallback 字段    </li>
+<li>ActivityThread 的 mInstrumentation 对象，对应的 newActivity 方法和 callActivityOnCreate 方法    </li>
+</ul>
+<p><strong>注意：这里为什么说只能Hook这些地方，一开始我也不理解。经过请教旭哥(刘旭)，我们只能访问到自己所在进程的内容，所以只能Hook自己本身进程，而不能Hook到其他进程去。这也是为什么我们不能Hook到AMS的原因，因为压根就不运行在同一个进程</strong>。经国斌大神指出，只能Hook到自己的进程以及子进程，<strong>如果要Hook其他进程，得有Root权限</strong>。</p>
+<h3 id="Hook-Activity-的-startActivityForResult-方法"><a href="#Hook-Activity-的-startActivityForResult-方法" class="headerlink" title="Hook Activity 的 startActivityForResult 方法"></a>Hook Activity 的 startActivityForResult 方法</h3><p>实际上就是为App写个BaseActivity基类，重写其startActivityForResult方法，这样，不论调用 startActivity 还是 startActivityForResult ，都会执行这个重写逻辑。实际上这都不能称为Hook，只是覆写了而已。</p>
+<h3 id="对Activity-的mInstrumentation-字段进行Hook"><a href="#对Activity-的mInstrumentation-字段进行Hook" class="headerlink" title="对Activity 的mInstrumentation 字段进行Hook"></a>对Activity 的mInstrumentation 字段进行Hook</h3><p>Activity 的startActivityForResult 最终会用 mInstrumentation 去调用 execStartActivity ，mInstrumentation 是private的，可以通过反射来获取这个对象，之后把它Hook成我们自己写的 EvilInstrumentation 类型对象，这次我们只是在调用 execStartActivity 之前打印一行日志。</p>
+<h3 id="对AMN的getDefault-方法进行Hook"><a href="#对AMN的getDefault-方法进行Hook" class="headerlink" title="对AMN的getDefault 方法进行Hook"></a>对AMN的getDefault 方法进行Hook</h3><p>在之前曾经介绍过，AMN的getDefault 返回的是IActivityManager 类型，**IActivityManager 是个接口，那么我们就可以使用 Proxy.newProxyInstance 这种动态代理，把这个IActivityManager 接口类型的对象Hook成我们自定义类MockClass1生成的对象。在实际应用的框架中，一般在 Application 的 attachBaseContext 方法中进行 Hook，这样可以在进入任意一个Activity的时候就能应用这个Hook。</p>
+<h3 id="对H类的mCallback-字段进行Hook"><a href="#对H类的mCallback-字段进行Hook" class="headerlink" title="对H类的mCallback 字段进行Hook"></a>对H类的mCallback 字段进行Hook</h3><p>因为 App 在收到 AMS 发送的 LAUNCH_ACTIVITY 命令后，会通过 Handler 类型的 H 类发送消息，以启动指定的Activity，我们知道，在Handler 内部有个 CallBack 类型的 mCallback 对象，所以我们可以对 H 类的 mCallback 字段进行Hook，拦截这个过程。这时候，你也许会问，为什么不直接Hook了ActivityThread 的mH字段，答案是： 实现不了。截止现在，可以回顾下：</p>
+<ul>
+<li>使用静态代理，只有两个类，一个是Handler.Callback，另一个是 Instrumentation，参与Android运转的类，系统只暴露了这两个    </li>
+<li>使用动态代理，只有两个<strong>接口</strong>： 一个是IActivityManager ，一个是IpackageManager，这<strong>很符合Proxy.newProxyInstance 方法特性，它只能对接口类型对象进行Hook</strong>    </li>
+</ul>
+<h3 id="再次对Instrumentation字段进行Hook"><a href="#再次对Instrumentation字段进行Hook" class="headerlink" title="再次对Instrumentation字段进行Hook"></a>再次对Instrumentation字段进行Hook</h3><p>与前面不同，我们这次截获的是 Instrumentation 的 newActivity 和 callActivityOncreate 方法，这两个方法会创建目标 Activity 实例，并且调用它的 onCreate。</p>
+<h3 id="对AMN的getDefault-方法进行Hook是一劳永逸的"><a href="#对AMN的getDefault-方法进行Hook是一劳永逸的" class="headerlink" title="对AMN的getDefault 方法进行Hook是一劳永逸的"></a>对AMN的getDefault 方法进行Hook是一劳永逸的</h3><p>Instrumentation 调用execStartActivity ，最终调用 AMN.getDefault().startActivity() 方法来启动Activity。我们前面知道，Context 和 Activity 都是通过 Instrumentation 来启动Activity。所以如果我们对 AMN 的 getDefault 方法进行 Hook，那么，不管是从Context 进行startActivity还是从 Activity 进行 startActivityForResult，都能生效，是一劳永逸的。</p>
+<h2 id="启动没有在AndroidManifest-中声明的Activity"><a href="#启动没有在AndroidManifest-中声明的Activity" class="headerlink" title="启动没有在AndroidManifest 中声明的Activity"></a>启动没有在AndroidManifest 中声明的Activity</h2><p>我们插件的App一般是没有在宿主App的AndroidManifest中声明的。</p>
+<h3 id="“欺骗AMS”策略分析"><a href="#“欺骗AMS”策略分析" class="headerlink" title="“欺骗AMS”策略分析"></a>“欺骗AMS”策略分析</h3><p>这要从Activity 页面跳转流程说起：</p>
+<p><img src="" alt="启动Activity的时序图"></p>
+<p>AMS在第2步会检查Activity是否在AndroidManifest中声明，如果不存在就会报错。如果要让AMS检查不到要启动的Activity怎么办呢？难道要Hook AMS ？不行，做不到的，AMS还管理着其他的App，如果这么做，所有App都受影响了，Android整个的安全性都会有问题了。既然如此，我们就只能在第 1 步(检查之前) 和第 5 步上做文章了。基本思路是：</p>
+<ul>
+<li>在第 1 步，发送要启动的Activity 信息给AMS 之前，<strong>把这个Activity 替换为一个在AndroidManifest中声明的StubActivity，这样就能绕过AMS的检查了</strong>。在替换过程中，要把原来的Activity信息存放在Bundle中。    </li>
+<li>在第 5 步，AMS通知App启动StubActivity的时候，我们肯定不是启动StubActivity ，而是要替换成目标 Activity，原先的Activity 存在Bundle中，取出来就行。    </li>
+</ul>
+<p>整个流程如下图所示：</p>
+<p><img src="" alt="Hook Activity 启动流程"></p>
+<h3 id="Hook-的上半场"><a href="#Hook-的上半场" class="headerlink" title="Hook 的上半场"></a>Hook 的上半场</h3><p>前面说了，对AMN进行Hook，可以一劳永逸，这里我们就按照整个思路来：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码参见： https://github.comBaoBaoJianqiang/Hook31</span></span><br></pre></td></tr></tbody></table></figure>
+<p>MockClass1 的基本思路是：拦截startActivity 方法，从参数中取出原油的Intent，替换为启动StubActivity的newIntent，同时把原有的Intent保存在newIntent中，后面换回来的时候还会用到。</p>
+<h3 id="Hook的下半场：对H类的mCallback字段进行Hook"><a href="#Hook的下半场：对H类的mCallback字段进行Hook" class="headerlink" title="Hook的下半场：对H类的mCallback字段进行Hook"></a>Hook的下半场：对H类的mCallback字段进行Hook</h3><p>经过前面的AMS欺骗，在第4步的时候AMS就会通知App启动 StubActivity了，我们没有权限修改AMS进程，只能需改第5步。本节的解决方案是基于对H类的mCallback字段进行Hook。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参考： https://github.com/BaoBaoJianqiang/Hook31</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里主要是将“替身”换成“真身”。</p>
+<h3 id="Hook下半场：对ActivityThread的mInstrumentation字段Hook"><a href="#Hook下半场：对ActivityThread的mInstrumentation字段Hook" class="headerlink" title="Hook下半场：对ActivityThread的mInstrumentation字段Hook"></a>Hook下半场：对ActivityThread的mInstrumentation字段Hook</h3><p>上一节是通过 Hook Handler 的mCallback 把真身换回来，这节换个思路：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//代码可以参考： https://github.com/BaoBaoJianqiang/Hook32</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>对Instrumentation的 newActivity 和 callActivityOnCreate 方法进行拦截。虽然我们没有在源头把真身换回来，但是我在创建目标Activity的对象时，创建的是目标Activity，并调用目标Activity的onCreate  。</p>
+<h3 id="“欺骗AMS”的弊端"><a href="#“欺骗AMS”的弊端" class="headerlink" title="“欺骗AMS”的弊端"></a>“欺骗AMS”的弊端</h3><p>这种欺骗AMS手段有个大大的问题——AMS会认为每次打开的都是StubActivity。<strong>在AMS端有个栈，会存放每次打开的Activity，那么现在栈上就都是StubActivity了，这就相当于那些没有在AndroidManifest中声明的Activity的LaunchMode就只能是standard类型了，即使为此设置了singleTask或者singleTop也不会生效</strong>。</p>
 </body></html>
       
     </div>
@@ -1757,7 +1322,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/6/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><span class="space">&hellip;</span><a class="page-number" href="/page/13/">13</a><a class="extend next" rel="next" href="/page/8/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/6/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><span class="space">&hellip;</span><a class="page-number" href="/page/17/">17</a><a class="extend next" rel="next" href="/page/8/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1803,20 +1368,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">128</span>
+          <span class="site-state-item-count">161</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">10</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">28</span>
+        <span class="site-state-item-count">33</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -1889,7 +1454,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共237.2k字</span>
+  <span class="post-count">博客全站共338k字</span>
 </div>
 
 
