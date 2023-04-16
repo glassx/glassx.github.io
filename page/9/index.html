@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">160</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">152</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,967 +216,6 @@
             
 
   <div class="posts-expand">
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/25/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-13%E8%AF%BE/" class="post-title-link" itemprop="url">第13讲-存储优化<中>-如何优化数据存储</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-25 11:36:00" itemprop="dateCreated datePublished" datetime="2020-06-25T11:36:00+08:00">2020-06-25</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 17:43:48" itemprop="dateModified" datetime="2021-05-05T17:43:48+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h3 id="Serializable-的原理"><a href="#Serializable-的原理" class="headerlink" title="Serializable 的原理"></a>Serializable 的原理</h3><p>Serializable 的原理是<strong>通过 ObjectInputStream 和 ObjectOutputStream 来实现的</strong>，通过 Android 6.0 的源码可以看到 ObjectOutPutStream 的部分源码实现：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeFieldValues</span><span class="params">(Object obj, ObjectStreamClass classDesc)</span>  </span>{</span><br><span class="line">    <span class="keyword">for</span> (ObjectStreamField fieldDesc : classDesc.fields()) {</span><br><span class="line">        ...</span><br><span class="line">        Field field = classDesc.checkAndGetReflectionField(fieldDesc);</span><br><span class="line">        ...</span><br></pre></td></tr></tbody></table></figure>
-
-<p>整个序列化过程使用了大量反射(比如说获取整个类的所有属性，反射意味着效率低)和临时变量(临时变量意味着GC)，并且，<strong>在序列化对象时，不仅会序列化当前对象本身，还需要地柜序列化对象引用的其他对象</strong>，可以参考<a target="_blank" rel="noopener" href="https://juejin.cn/post/6844904049997774856">别人的博客</a>。</p>
-<h3 id="Serializable-的进阶"><a href="#Serializable-的进阶" class="headerlink" title="Serializable 的进阶"></a>Serializable 的进阶</h3><p>Serializable 序列化支持使用自定义 writeObject和readObject，他会先反射判断是否存在我们自己实现的 序列化writeObject方法和反序列化readObject 方法。<strong>通过这两个方法，我们可以对某些字段做修改，也能实现序列化的加密功能。</strong></p>
-<p>还有，Serializable 的反序列默认是不会执行构造函数的</p>
-<h3 id="Parcelable-的永久存储"><a href="#Parcelable-的永久存储" class="headerlink" title="Parcelable 的永久存储"></a>Parcelable 的永久存储</h3><p>一般来说，我们使用 parcelable 只是会在内存中序列化操作，并不会存储到磁盘。其实，我们也可以存储到磁盘的：<strong>通过 Parcel.java 中的 marshall 接口获取byte 数组，然后存在文件中，从而实现 Parcelable 的永久存储。</strong></p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Returns the raw bytes of the parcel.</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] marshall() {</span><br><span class="line">    <span class="keyword">return</span> nativeMarshall(mNativePtr);</span><br><span class="line">}</span><br><span class="line"><span class="comment">// Set the bytes in data to be the raw bytes of this Parcel.</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">unmarshall</span><span class="params">(<span class="keyword">byte</span>[] data, <span class="keyword">int</span> offset, <span class="keyword">int</span> length)</span> </span>{</span><br><span class="line">    nativeUnmarshall(mNativePtr, data, offset, length);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>不过，一般不推荐这样做，因为可能会有系统版本兼容性问题，因为我们无法保证所有的 Android 版本的 Parcel.cpp 实现完全一致。还有就是数据前后的兼容性，这里并没有类似 Serializable 里面有个 serialVersionUID 来保证版本一致性。</p>
-<h2 id="14-数据库优化"><a href="#14-数据库优化" class="headerlink" title="14-数据库优化"></a>14-数据库优化</h2><p>SQLite 默认支持多进程并发操作，它通过文件锁来控制多进程的并发，但是SQLite 的锁粒度并没有非常细，针对的是整个DB文件，简单来说，多进程可以同事获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库</p>
-<p>数据库使用注意：</p>
-<ul>
-<li>防止注入   </li>
-<li>防止窃取      </li>
-<li>小表无需维护索引，因为索引是需要一直维护的，有代价        </li>
-<li>慎用 “select * “ 需要多少列，就取多少列      </li>
-<li>定期删除无用数据             </li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/30/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/30/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-7,8%E8%AF%BE/" class="post-title-link" itemprop="url">第7、8课-启动优化</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-05-30 10:00:00 / 修改时间：10:00:40" itemprop="dateCreated datePublished" datetime="2020-05-30T10:00:00+08:00">2020-05-30</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="启动优化-lt-上-gt-第7讲"><a href="#启动优化-lt-上-gt-第7讲" class="headerlink" title="启动优化<上>-第7讲"></a>启动优化&lt;上&gt;-第7讲</h2><h3 id="启动分析"><a href="#启动分析" class="headerlink" title="启动分析"></a>启动分析</h3><p>着手优化之前，首先分析启动过程。</p>
-<ol>
-<li>首先预览窗口，系统拉起App进程之前，会根据app的Theme属性创建预览窗口。当然，我们禁用预览窗口或者预览窗口为透明时，用户依然可以看到桌面。               </li>
-<li>进程和闪屏页创建完毕，可以看到广告图片界面                 </li>
-<li>主窗口创建完成可以看到首页了         </li>
-<li>首页加载完，才能操作起来            </li>
-</ol>
-<h3 id="启动遇到的问题"><a href="#启动遇到的问题" class="headerlink" title="启动遇到的问题"></a>启动遇到的问题</h3><ul>
-<li>点击图标很久都不响应。可能是禁用了预览窗口或者透明皮肤           </li>
-<li>首页显示太慢。闪屏广告、其它准备工作都要在启动阶段完成，如果耗时太多就慢            </li>
-<li>首页显示后无法操作。工作异步延后之后，首页就会出现白屏，或者首页出来无法操作         </li>
-</ul>
-<h3 id="启动优化"><a href="#启动优化" class="headerlink" title="启动优化"></a>启动优化</h3><p>优化工具：综合看来，在卡顿优化中提到的 “systrace + 函数插桩” 是比较理想的方案，而且还能看到一些关键事件：GC、SystemServer 、CPU 调度等       </p>
-<p><strong>准确的评估之后，才能指引优化的方向</strong></p>
-<h4 id="优化方式"><a href="#优化方式" class="headerlink" title="优化方式"></a>优化方式</h4><ul>
-<li>闪屏优化。今日头条把预览窗口与是县城闪屏效果，用户在很短时间内看到“预览闪屏”，不过这种实现对于低端机型会把总的闪屏时间拉长。所以比较推荐在 6.0及以上的版本才采用“预览闪屏”      </li>
-<li>业务梳理。清楚启动过程中每一个运行的模块，哪些是一定需要的，哪些是可以砍掉，可以懒加载的。<strong>还有，懒加载要防止集中化，容易出现首页用户无法操作的情况</strong>。       </li>
-<li>线程优化。主要在于减少cpu调度带来的波动，让应用启动更加稳定。具体做法是，一方面控制县城的数量，要有线程池(我们是采用Rxjava，统一管理线程池)；还有一个就是管理线程的锁，比如业务有先后顺序，或者优先级不同，这一点可以采用第三方启动框架来解决，比如<a target="_blank" rel="noopener" href="https://github.com/alibaba/alpha">阿里开源的Alpha</a>、<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/6Q818XA5FaHd7jJMFBG60w?">微信内部使用的mmkernel</a>            </li>
-</ul>
-<h2 id="启动优化-lt-下-gt-第8讲"><a href="#启动优化-lt-下-gt-第8讲" class="headerlink" title="启动优化<下>-第8讲"></a>启动优化&lt;下&gt;-第8讲</h2><h3 id="启动进阶方法"><a href="#启动进阶方法" class="headerlink" title="启动进阶方法"></a>启动进阶方法</h3><p>启动过程不建议出现网络io</p>
-<p>还有，就是数据结构选择问题，在启动时，只需要读写很少量的 sp文件，如果与很大的sp文件一起解析，这个解析时间可能就要超过  100ms了(可以说我们的application中的sp解析是花了很长时间的)。</p>
-<h3 id="黑科技"><a href="#黑科技" class="headerlink" title="黑科技"></a>黑科技</h3><p>应用加固对启动速度来说是灾难</p>
-<h3 id="启动监控"><a href="#启动监控" class="headerlink" title="启动监控"></a>启动监控</h3><ul>
-<li>实验室监控，如果客观地反映启动耗时，视频录制是非常好的选择，尤其是我们拿不到竞品的数据(通过分析竞品，我们制定了秒开的标准，可以取平均值、最大值、最小值)              </li>
-<li>线上监控。我们使用talkingdata来监测。(但是我们要注意监测的耗时)，最终衡量指标呢，使用平均法容易忽略掉性能差的手机，可以使用快开慢开比：比如2秒快开比，5秒快开比；另一种就是 90% 用户启动时间，如果90%用户启动时间都小于5秒，那我们90%区间启动耗时就是5秒。                </li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-5,6%E8%AF%BE/" class="post-title-link" itemprop="url">第5、6课-卡顿优化</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-05-27 21:50:00" itemprop="dateCreated datePublished" datetime="2020-05-27T21:50:00+08:00">2020-05-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-05-05 16:58:02" itemprop="dateModified" datetime="2021-05-05T16:58:02+08:00">2021-05-05</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="卡顿优化-lt-上-gt"><a href="#卡顿优化-lt-上-gt" class="headerlink" title="卡顿优化<上>"></a>卡顿优化&lt;上&gt;</h2><h3 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h3><p>获取cpu信息：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 获取 CPU 核心数</span></span><br><span class="line">cat /sys/devices/system/cpu/possible  </span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取某个 CPU 的频率</span></span><br><span class="line">cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="卡顿指标"><a href="#卡顿指标" class="headerlink" title="卡顿指标"></a>卡顿指标</h3><p>出现卡顿，首先应该看<strong>cpu使用率</strong>，可以通过 /proc/stat 查看系统的cpu使用情况：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">proc/self/stat:</span><br><span class="line">  utime:       用户时间，反应用户代码执行的耗时  </span><br><span class="line">  stime:       系统时间，反应系统调用执行的耗时</span><br><span class="line">  majorFaults：需要硬盘拷贝的缺页次数</span><br><span class="line">  minorFaults：无需硬盘拷贝的缺页次数</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果cpu使用率长期大于60%，表示系统处于繁忙状态，就需要<strong>进一步分析用户时间和系统时间的比例</strong>。普通应用程序系统时间不会长期高于 30% ，如果高于这个值，就应该检查<strong>是否是I/O过多，还是其他的系统调用问题</strong>。</p>
-<p>另外，top 命令可以查看哪个进程是cpu消耗大户。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/" class="post-title-link" itemprop="url">第3、4课-内存优化</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-05-27 21:43:00 / 修改时间：21:43:33" itemprop="dateCreated datePublished" datetime="2020-05-27T21:43:00+08:00">2020-05-27</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="内存优化-lt-上-gt"><a href="#内存优化-lt-上-gt" class="headerlink" title="内存优化<上>"></a>内存优化&lt;上&gt;</h2><h3 id="Android中Bitmap-内存分配的变化过程"><a href="#Android中Bitmap-内存分配的变化过程" class="headerlink" title="Android中Bitmap 内存分配的变化过程"></a>Android中Bitmap 内存分配的变化过程</h3><ol>
-<li>3.0以前，Bitmap 对象放在Java堆，像素数据存放在 Native内存中，如果不手动调用 recycle ，那么Native内存中的像素数据完全依赖于 finalize 函数，而这个函数是不可靠的         </li>
-<li>3.0~7.0,Bitmap 对象和像素数据统一放到 Java 堆，这样就算不 recycle 操作，像素数据也会随着一起回收，不过，这导致大量内存占用，引起大量GC。一起放在内存也有可能即使系统有大量内存没利用，但是却会导致oom了(比如给分配的最大堆只到 300M，但是用得差不多了，此时系统却还空闲有3G内存，却要引起oom了)       </li>
-<li>Android 8.0 中，NativeAllocationRegistry 可以满足Bitmap 对象存放在Java 堆，像素数据在 Native 中，还能实现一并回收对象和像素数据。(8.0还提供硬件位图(Hardware Bitmap)，减少内存占用并提升绘制效率)        </li>
-</ol>
-<h3 id="关于内存优化的两个误区"><a href="#关于内存优化的两个误区" class="headerlink" title="关于内存优化的两个误区"></a>关于内存优化的两个误区</h3><ul>
-<li>内存占用越小越好。不是这样的，更多的内存意味着更好的动画效果和更快的缓存命中，只需要做到系统内存充足时多用，系统内存紧张时少用(释放不是必须的内存)即可                </li>
-<li>Native 的内存不用管。其实，当系统内存不足的时候，就会开始依次清理 后台、桌面、服务、前台，一步步来，直到内存足够，最后直到重启手机                  </li>
-</ul>
-<h3 id="内存观测方法"><a href="#内存观测方法" class="headerlink" title="内存观测方法"></a>内存观测方法</h3><ol>
-<li>观察Log，查看GC 回收的原因            </li>
-<li>使用如下命令查看：         </li>
-</ol>
-<blockquote>
-<p>adb shell dumpsys meminfo &lt;package_name|pid&gt; [-d]</p>
-</blockquote>
-<h2 id="内存优化-lt-下-gt"><a href="#内存优化-lt-下-gt" class="headerlink" title="内存优化<下>"></a>内存优化&lt;下&gt;</h2><h3 id="内存优化探讨"><a href="#内存优化探讨" class="headerlink" title="内存优化探讨"></a>内存优化探讨</h3><p>Bigmap 优化、内存泄露优化、设备分级几个层次入手</p>
-<p>设备等级就是，在某些低性能的机器上，动画不要了，进程也不预先启动了。安装包大小也是有要求的，比如有很多app就有极速版这个概念，它们的apk很小，动画也不酷炫。apk大小跟内存的关系可以参考如下图：</p>
-<p><img src="/assets/Book-Notes/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/%E5%AE%89%E8%A3%85%E5%8C%85%E5%A4%A7%E5%B0%8F%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%A4%A7%E5%B0%8F%E5%85%B3%E7%B3%BB.png" alt="安装包大小和内存关系"></p>
-<p>Bitmap 可以用第三方框架来做，比如Fresco，实在要自己管理，可以向后台要求指定宽度，bitmap的inbitMap内存复用，inSample降低采样</p>
-<p>内存泄露：使用LeakCanary自动化检测方案，只可以做到Activity和Fragment的泄漏检测，如何检测其他的内存泄露呢？如何监测疑似的内存泄漏呢？</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/01/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/01/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/" class="post-title-link" itemprop="url">Android开发技巧</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-05-01 09:38:00 / 修改时间：09:40:07" itemprop="dateCreated datePublished" datetime="2020-05-01T09:38:00+08:00">2020-05-01</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android%E6%8A%80%E5%B7%A7/" itemprop="url" rel="index">
-                    <span itemprop="name">Android技巧</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="查看运行的service"><a href="#查看运行的service" class="headerlink" title="查看运行的service"></a>查看运行的service</h2><p>如果要查看当前手机上运行有哪些service（不可以先 adb shell 再执行后面的，否则显示的进程就不对了，至少我的是这样的）：</p>
-<blockquote>
-<p>adb shell dumpsys activity services</p>
-</blockquote>
-<p>当然，肯定是可以加 grep 关键字过滤的：</p>
-<blockquote>
-<p>adb shell dumpsys activity services | grep MiniAppPreService</p>
-</blockquote>
-<p>同理，我们也可以通过 grep 过滤查看当前一组进程(下面示例是过滤出名字中包含 com.example.io 的)：</p>
-<blockquote>
-<p>adb shell ps | grep com.example.io</p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC8%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC8%E7%AB%A0/" class="post-title-link" itemprop="url">第8章：计算机网络中的安全</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-05-01 08:56:00 / 修改时间：09:09:01" itemprop="dateCreated datePublished" datetime="2020-05-01T08:56:00+08:00">2020-05-01</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>8.6 使TCP 连接安全，SSL </p>
-<p>SSL （Secure Socket Layer ）安全套接字层， SSL 版本 3的一个稍加修改的版本被称为 TLS(Transport Layer Security)</p>
-<p>在 http 之下，tcp 之上，有 ssl 层。</p>
-<p>ssl 握手流程：</p>
-<p>总体来说，ssl 握手，首先要建立一个tcp 连接 ，其次在验证server 的真实性 ，最后 client 再将对称加密所需要的key通过公钥加密交给server。此后，两端通过对称加密来完成通信。整个过程如下图所示：</p>
-<p><img src="/assets/Book-Notes/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E7%AC%AC8%E7%AB%A0/ssl%E6%8F%A1%E6%89%8B.png" alt="ssl握手整体步骤"></p>
-<p>抛开tcp连接的建立，详细步骤如下：</p>
-<ol>
-<li>client发送支持的算法列表以及一个随机数 x      </li>
-<li>server 从接收的列表中选择一种对称算法、一种非对称算法 和 一种摘要算法，连同自己的证书 以及 随机数 y 一起返回      </li>
-<li>client 验证该证书，提取公钥，并生成一个<strong>前主密钥</strong>，并用服务器的公钥加密这个 前主密钥，之后发送给server      </li>
-<li>server 解密获得 主密钥    </li>
-<li>client 发送自己这边所有握手的报文的一个 摘要    </li>
-<li>server 端发送自己这边握手报文的一个 摘要    </li>
-</ol>
-<p>最后两个步骤保证了握手免受篡改危害。比如，在观察第一步的时候，客户端提供的算法列表，有些算法强，有些弱，因为还未协商，所以这张列表是以明文发送的。如果中间攻击者从中删除了较强的算法，迫使server 最后只能选择较弱的算法。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC3%E7%AB%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/01/%E4%B9%A6-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C-%E8%87%AA%E8%87%AA%E9%A1%B6%E5%90%91%E4%B8%8B%E6%96%B9%E6%B3%95-%E4%B8%AD%E6%96%87%E7%AC%AC6%E7%89%88-%E7%AC%AC3%E7%AB%A0/" class="post-title-link" itemprop="url">第3章：运输层</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2020-05-01 08:50:00 / 修改时间：09:11:12" itemprop="dateCreated datePublished" datetime="2020-05-01T08:50:00+08:00">2020-05-01</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="3-2-因特网提供的运输服务"><a href="#3-2-因特网提供的运输服务" class="headerlink" title="3.2 因特网提供的运输服务"></a>3.2 因特网提供的运输服务</h2><p>TCP 协议提供的拥塞控制不一定能给通信进程带来直接好处，但能为因特网带来整体好处。</p>
-<h2 id="3-3-无连接运输：UDP"><a href="#3-3-无连接运输：UDP" class="headerlink" title="3.3 无连接运输：UDP"></a>3.3 无连接运输：UDP</h2><p>Dns 是一个通常使用 UDP 的应用层协议的例子。一台主机中的DNS应用程序想要进行一次查询时，它构造一个报文并将其交给UDP。如果没有查询到，要么告知应用程序不能响应，要么试图向另一个dns服务器发送查询。</p>
-<p>为什么不是总选择TCP这种可靠连接呢？有以下几个原因：</p>
-<ul>
-<li>速度快。无需建立连接，不用像TCP 哪样三次握手然后建立连接(想想如果dns运行在tcp上，则会慢很多)     </li>
-<li>更精细控制。使用UDP ，应用层可以更精细控制 何时、发送什么数据     </li>
-<li>UDP 无需维护连接状态。没有维护连接状态，也就不需要发送和跟踪 缓存、拥塞控制、序号确认  等工作，响应更快     </li>
-<li>分组的首部开销小，TCP 有20个字节，而UDP 仅仅 8个字节     </li>
-</ul>
-<p>首先要提一下，UDP 是可以实现可靠数据传输的，可以通过在应用程序中建立可靠性机制来保证。这样无需受制于TCP 拥塞控制机制限制传输速率。</p>
-<p>UDP 首部只有 源端口号，目的端口号，长度(首部+数据) 以及 校验和。校验和用于防止传输过程中引入的差错(路由器内存可能引入比特差错)</p>
-<p>3.4 可靠传输的原理</p>
-<p>TCP 是在不可靠的 IP 层之上实现可靠数据传输协议。</p>
-<p>需要三种协议来处理比特差错的情况：</p>
-<ul>
-<li>差错检测。要有检测手段      </li>
-<li>接收方反馈。     </li>
-<li>重传     </li>
-</ul>
-<p>回退N步：允许发送放发送多个分组，而不需要等待确认，但是也受到滑动窗口的限制，不能超过最大分组数。如果出现超时，发送方重传所有已发送但还未被确认过的分组。当接收到一个连续的ack时，窗口就向前滑动(因为接收方是要求按序接收的，比如n还没收到，但是来了n+1，将会把n+1丢掉的)。<br>选择重传：按照滑动窗口发送时，接收方将确认一个正确接收的分组而不管其是否按序，时序的分组将被缓存直到所有丢失分组都受到位置，这样才一并交给上一层。避免丢弃导致无谓的重传</p>
-<h2 id="3-5-面向连接的传输：TCP"><a href="#3-5-面向连接的传输：TCP" class="headerlink" title="3.5 面向连接的传输：TCP"></a>3.5 面向连接的传输：TCP</h2><p><strong>快速重传</strong>： 一旦收到3个冗余的ACK，TCP就会执行快速重传，即在该报文段的定时器过期之前重传丢失的报文段。      </p>
-<p>TCP让发送方维护一个接收窗口的变量来提供流量控制。</p>
-<p><strong>流量控制服务：</strong>限制发送速率，避免发送方使接收方缓存溢出的可能性。    </p>
-<p>如果客户端故意不发送ACK来完成第三次握手，那就是所谓的SYN洪范攻击。</p>
-<p><strong>拥塞控制：</strong>如果TCP发送方感知到网络没什么拥塞，则TCP发送方增加其发送速率；如果发送方感知有拥塞，则降低发送速率。</p>
-<p>确定拥塞： 超时或者 收到3个冗余的 ACk，就认为发生了拥塞<br>如何控制：可以使用拥塞窗口(congestion window，用cwnd 来表示) 去控制发送方向网络中发送流量的速率。    </p>
-<p>TCP拥塞控制算法：</p>
-<ul>
-<li>慢启动：TCP 连接开始时，cwnd 通常设置一个较小的值，之后，每发送成功一次，cwnd就翻番。因此，tpc开始时较慢，但在慢启动过程中以指数增长。    </li>
-<li>拥塞避免： 一旦进入拥塞避免状态，cwnd的值是上次遇到拥塞时的值的一半，即距离拥塞并不远。因此，tcp 每发送成功一次不再是翻番，而是增加一定的量，先行规律缓慢增长，比慢启动速率慢很多。</li>
-<li>快速恢复： 拥塞窗口减半cwnd=cwnd/2，之后执行拥塞避免算法，使拥塞窗口慢慢增大。</li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/04/19/%E8%AF%BE-%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/04/19/%E8%AF%BE-%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/%E9%AB%98%E7%BA%A7%E9%9D%A2%E8%AF%95%E8%AF%BE%E7%A8%8B/" class="post-title-link" itemprop="url">高级进阶课</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-04-19 22:16:00" itemprop="dateCreated datePublished" datetime="2020-04-19T22:16:00+08:00">2020-04-19</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-25 09:03:10" itemprop="dateModified" datetime="2020-07-25T09:03:10+08:00">2020-07-25</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E4%B8%8A%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">上课笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="4-1-停止线程"><a href="#4-1-停止线程" class="headerlink" title="4-1 停止线程"></a>4-1 停止线程</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>有两种方法：</p>
-<ul>
-<li>调用 interruput 方法，通过抛异常的方式触发</li>
-<li>使用boolean 标志位，注意，要使用volatile 标志位保证可见性；</li>
-</ul>
-<p>一般而言，如果你使用了 Thread.sleep() 这样的系统方法，那么使用 interrupt 方法来停止线程，否则一律使用 boolean 标志位。</p>
-<p>建议转移到线程安全问题上去</p>
-<h3 id="为什么停止线程会有问题"><a href="#为什么停止线程会有问题" class="headerlink" title="为什么停止线程会有问题"></a>为什么停止线程会有问题</h3><p>suspend 方法，但是现在已经被废弃。线程 t1 和 t2 ，如果t1被暂停了，然后一直持有锁 L1，那么t2一直在等待L1，而且不知道什么时候会恢复，这就很糟心了；并且如果t2持有t1需要的锁 L2 ，那就更麻烦了，可能导致死锁。所以线程的暂停(suspend方法)方法被废弃了。停止线程t1，马上释放锁，这时候线程t2 获取锁，接着读取这块加锁的内容，此时，如果t1在这个过程中只写入部分数据，t2 拿到的就是 非法数据，所以停止线程(stop方法)是不安全的。</p>
-<p>为什么Thread 的run方法中执行 sleep 方法要try-catch 捕捉 InterruptedException ，这是因为在sleep 过程中，有可能这个thread 会被调用 thread.interrupt() ，此时就会触发 这个异常，我们应该在 catch 语句中 关闭打开的文件之类的。</p>
-</details>
-
-<h2 id="4-2、如何写出线程安全的代码"><a href="#4-2、如何写出线程安全的代码" class="headerlink" title="4-2、如何写出线程安全的代码"></a>4-2、如何写出线程安全的代码</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>每个线程都有一个自己的内存副本，这是java的内存模型。</p>
-<p>要么不共享，要么不可变。其次就是采取一定手段了</p>
-<p>final 其实还有一个功能就是禁止重排序。某些情况下，构造函数调用完了，非final的成员变量还没初始化完(final 是已经初始化完了)，这就会有问题了。</p>
-<p>为什么 a++ 不是原子性的，因为这个操作首先要将 a 赋值进来，int temp = a; 之后再对temp 操作：temp += 1; 最后再将 temp 的值赋回给a。</p>
-<h3 id="ThreadLocal-的使用建议"><a href="#ThreadLocal-的使用建议" class="headerlink" title="ThreadLocal 的使用建议"></a>ThreadLocal 的使用建议</h3><p>ThreadLocal 对对象也是弱引用</p>
-<ul>
-<li>声明为全局静态final 成员，避免初始化多个ThreadLocal 对象(因为设置value的时候是以ThreadLocal 为key的)        </li>
-<li>避免存储大量对象，因为hash冲突使用的是<strong>开放定址</strong> 法，这并不适合大量数据      </li>
-<li>用完后及时移除，因为它只能靠主动移除和线程退出时移除，否则线程声明周期长的时候，迟迟得不到释放。    </li>
-</ul>
-<p>禁止重排序的方法：</p>
-<ul>
-<li>final 关键字</li>
-<li>volatile关键字</li>
-<li>加锁(synchronized/Lock)</li>
-</ul>
-<p>保证可见性：</p>
-<ul>
-<li>final 关键字    </li>
-<li>volatile     </li>
-<li>加锁(释放锁之前强制刷新到主内存 )     </li>
-</ul>
-<p>保证原子性的方法：</p>
-<ul>
-<li>加锁    </li>
-<li>使用CAS 指令    </li>
-<li>使用原子类型 ，如 AtomicInteger       </li>
-<li>使用原子属性更新器    </li>
-</ul>
-</details>
-
-<blockquote>
-<p>还可以参考<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/95291228aff7">简书上的博客</a></p>
-</blockquote>
-<h2 id="4-3、ConcurrentHashMap"><a href="#4-3、ConcurrentHashMap" class="headerlink" title="4-3、ConcurrentHashMap"></a>4-3、ConcurrentHashMap</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>从1.5 到 1.8 一直在优化</p>
-<p>jdk5：诞生，分段锁(segment)，对段加锁，必要时加锁。它的hashCode 计算方法就是，对key 求hashCode ，之后对这个hashCode 再散列得到散列码 code，之后，根据这个code 的高位 来计算segment 的值，根据低位计算在segment 中的值。<br>1.6：二次hash算法。Integer 的hashCode() 函数返回的就是它的value值。3万多以下的整数高位都是15，于是都集中在一个segment中，退化成 HashTable 了(因为对这个segment 加锁也就相当于对整个ConcurrentHashMap加锁了)<br>1.7：段(segment)懒加载，volatile &amp; CAS 操作避免加锁。一开始并不会把segment 通通new出来，需要哪个。使用volatile  来修饰 segment[] 数组，防止可见性导致的问题，比如，在某个segment 创建后，另一个线程不能马上知道。<br>8、摒弃段(segment)，基于Hashmap 原理并发。  使用    </p>
-<h3 id="求和"><a href="#求和" class="headerlink" title="求和"></a>求和</h3><p>分段计数</p>
-<h3 id="CHM-是弱一致性"><a href="#CHM-是弱一致性" class="headerlink" title="CHM 是弱一致性"></a>CHM 是弱一致性</h3><ul>
-<li>添加元素不一定马上读到。你读过这个段，然后再往这个段添加数据，那么就遗漏了</li>
-<li>同以上的理，清空之后可能还有元素；</li>
-</ul>
-<h3 id="HashTable-的问题"><a href="#HashTable-的问题" class="headerlink" title="HashTable 的问题"></a>HashTable 的问题</h3><ul>
-<li>大锁，对整个HashTable 加锁    </li>
-<li>长锁，直接对方法加锁    </li>
-<li>读写公用一把锁，读写不能同时进行</li>
-</ul>
-<h3 id="CHM-解法"><a href="#CHM-解法" class="headerlink" title="CHM 解法"></a>CHM 解法</h3><p>小锁： 分段锁(1.5<del>1.7 版本使用segment)，后来(1.8版本)桶节点锁<br>短锁：先尝试获取，失败再加锁<br>分离读写锁：读写失败再加锁(1.5</del>1.7版本)，volatile读CAS写(1.7~1.8版本)     </p>
-<h3 id="总结：如何进行锁优化"><a href="#总结：如何进行锁优化" class="headerlink" title="总结：如何进行锁优化"></a>总结：如何进行锁优化</h3><p>长锁不如短缩：尽可能只锁必要的部分<br>大锁不如小锁：对加锁的对象拆分<br>分离读写锁，读写的频次是不一样的<br>消除无用锁，尽量不加锁，使用volatile 或者 CAS </p>
-</details>
-
-<h2 id="4-5-Android-中写出优雅的代码"><a href="#4-5-Android-中写出优雅的代码" class="headerlink" title="4-5 Android 中写出优雅的代码"></a>4-5 Android 中写出优雅的代码</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>异步，不一定涉及到多线程，比如你setOnclickListener，它不是马上执行，而是等点击再相响应。异步不一定快，如果你线程一直在做运算，其实就无需太多线程，如果有很多io，被阻塞在那，那多开线程是有用的。</p>
-<p>避免回调地狱。</p>
-<h3 id="Rxjava-要注意的问题："><a href="#Rxjava-要注意的问题：" class="headerlink" title="Rxjava 要注意的问题："></a>Rxjava 要注意的问题：</h3><ul>
-<li>很多时候Rxjava 请求完数据后，要更新UI，其实本质上这还是匿名内部类，会持有 Activity 引用。更新ui的时候，ui可能已经没有了，可能出现空指针；    </li>
-<li>声明将所有任务的句柄放在 List<disposable> 列表中，在需要停止的时候，遍历执行 Disposable.dispose();     </disposable></li>
-</ul>
-<h3 id="kotlin-协程"><a href="#kotlin-协程" class="headerlink" title="kotlin 协程"></a>kotlin 协程</h3><p>协程将异步逻辑同步化，取消协程，其实是跟 view 绑定，监听它的attach 状态，在dettach 的时候，取消协程。</p>
-</details>
-
-<h2 id="5-1-cpu-架构适配"><a href="#5-1-cpu-架构适配" class="headerlink" title="5-1 cpu 架构适配"></a>5-1 cpu 架构适配</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>注意问题：</p>
-<ul>
-<li>native 开发才关注cpu架构</li>
-<li>不同架构兼容性如何    </li>
-<li>so 库太多如何优化 apk 体积     </li>
-<li>sdk 开发者应该提供哪些so 库    </li>
-</ul>
-<p>armeabi 可以兼容x86 和 arm 架构，但是不兼容 mips(mips 目前已经被Android废弃了)。但是兼容方式无法获得最优性能，性能不敏感的话，可以这么干。有哪个架构的目录，那么所有so库就要有一份这个架构。</p>
-<p>目前用得最多的可能就是 armabi-v7a 了，考虑实际情况可能使用 armabi-v7a 就可以了。</p>
-<p>但是如果你有某个compute.so  针对计算比较多，那么你可以在 armeabi 目录下存在一个 compute.so  以及 compute_v8a.so  ，其他的abi 只要提供一份就可以了(其实，微信就是这么干的)。非启动加载的so可以云端加载，从后台拉取。</p>
-<p>在gradle 中指定需要的so类型，减小apk体积</p>
-<p>sdk 开发要提供完整abi  </p>
-</details>
-
-<h2 id="5-2-Java-native-方法怎么与Native-函数绑定"><a href="#5-2-Java-native-方法怎么与Native-函数绑定" class="headerlink" title="5-2 Java native 方法怎么与Native 函数绑定"></a>5-2 Java native 方法怎么与Native 函数绑定</h2><p>第5章的，都是jni，后面再看</p>
-<h2 id="6-1，Activity-启动流程"><a href="#6-1，Activity-启动流程" class="headerlink" title="6-1，Activity 启动流程"></a>6-1，Activity 启动流程</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="考察什么："><a href="#考察什么：" class="headerlink" title="考察什么："></a>考察什么：</h3><ul>
-<li>与ams 如何交互<br>参数结果如何展示</li>
-<li>Activity 如何实例化</li>
-<li>Activity 生命周期如何流转</li>
-<li>Activity 窗口如 何展示</li>
-<li>Activity转场动画实现机制</li>
-</ul>
-<h3 id="Activity-跨进程启动"><a href="#Activity-跨进程启动" class="headerlink" title="Activity 跨进程启动"></a>Activity 跨进程启动</h3><p>所有进程Zygote fork 出来，预加载到启动资源，加快速度。 </p>
-<p>插件化，要有占位Activity才能实现。只能Activity 在进程内启动另一个Activity 的时候可以，在请求ActivityManagerProxy 之前和在ActivityThread 中开始回调Activity生命周期之前进行相应处理。</p>
-<p>Activity 跨进程启动Activity ，会涉及到Binder 通信，这个Binder 缓冲区是有大小限制的(貌似是4M)，没办法传递的。如果要实现数据传递，如果在同一个进程，可以使用单例，否则呢，不在同一个进程中，可以使用Provider(而AIDL 使用的也是Binder ，同样有大小限制吧)。</p>
-<p>由于Activity 是通过反射构建出来的对象： (Activity)cl.loadClass(className).newInstance()  ，它是通过无参的构造器构造的，所以呢，我们不要去写Activity 的构造函数，这是不应该的；尤其不要只写有参数的构造函数，这样的话，就没法启动这个Activity 了，会崩溃的。</p>
-<p>Fragment 也不要自己写有参数的构造器，虽然我们自己可以把它new出来。但是当Activity 被回收，之后恢复Activity 的时候，会恢复Fragment ，当然，这个恢复也是通过反射的方式，通过无参的构造函数来构建Fragment实例的。如果你是通过有参数的构造函数自己启动Fragment的，那么在恢复的时候可能会丢失信息，<strong>这也是我们要求使用 arguments 方式而不是构造函数的参数给fragment传递数据的原因</strong>。个人猜测，这可能也是不让我们自己new Activity 的方式去构造它的原因吧。</p>
-<h3 id="Activity的窗口展示流程"><a href="#Activity的窗口展示流程" class="headerlink" title="Activity的窗口展示流程"></a>Activity的窗口展示流程</h3><p><img src="" alt="Activity的窗口展示流程"></p>
-<p>在Activity 启动过程中，ActivityThread 执行 handleLaunchActivity，在这个方法中，attach 的时候就会 createPhoneWindow，之后调用 create、start、restoreState、postCreate、resume 过程中，其实都在installDecor (个人觉得是初始化 DecorView)，在resume回调之后，马上调用 makeVisible 才将DecorView 展示出来(layout啊，绘制啊)，我们才能看到显示的内容。这也就是为什么在resume 之前我们无法准确地获取View 的高度的原因。</p>
-<h3 id="转场动画"><a href="#转场动画" class="headerlink" title="转场动画"></a>转场动画</h3><p>前一个页面调用 ExitTransiton，在新页面没打开之前，执行这个退出动画，进入新页面时，执行进入动画，这样就衔接上了。</p>
-</details>
-
-<h2 id="6-2-如何跨App-启动Activity？有哪些注意事项？"><a href="#6-2-如何跨App-启动Activity？有哪些注意事项？" class="headerlink" title="6-2 如何跨App 启动Activity？有哪些注意事项？"></a>6-2 如何跨App 启动Activity？有哪些注意事项？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="如何启动外部应用的-Activity"><a href="#如何启动外部应用的-Activity" class="headerlink" title="如何启动外部应用的 Activity"></a>如何启动外部应用的 Activity</h3><ul>
-<li>共享uid的app(即在App的AndroidManifest文件中都注明了 android:sharedUserId=”xxx”，这个xxx 在两个应用中都是相同的) ，给 Intent 设置包名和Activity的全路径名，即可启动。    </li>
-<li>目标Activity 在AndroidManifest.xml中 设置为 exported=true，之后给Intent 设置 包名 和Activity全路径名即可。     </li>
-<li>给目标Activity 设置 action 和 category ，使用 IntentFilter 隐式启动    </li>
-</ul>
-<h3 id="为允许外部启动的-Activity-添加权限"><a href="#为允许外部启动的-Activity-添加权限" class="headerlink" title="为允许外部启动的 Activity 添加权限"></a>为允许外部启动的 Activity 添加权限</h3><p>为目标Activity 添加权限，如：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">".MainActivity"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:permission</span>=<span class="string">"com.examle.permit"</span>&gt;</span></span><br><span class="line">    </span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"zzz"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"zzzzz"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>那么，如果外部app要启动这个Activity，它要在 AndroidManifest 文件中声明这个权限。之后，再通过 action 和 category 方式启动。不过，这个要求含有目标Activity 的app先行安装。      </p>
-<h3 id="拒绝服务漏洞"><a href="#拒绝服务漏洞" class="headerlink" title="拒绝服务漏洞"></a>拒绝服务漏洞</h3><p>如果你的Activity 暴露出去了，那么攻击者可以来攻击，让你的Activity 拒绝服务。具体的原理如下：</p>
-<ol>
-<li>我们知道，如果Activity A 启动另一个App 的 Activity B 的时候，往Intent 里面传入一个 实现了序列化接口的对象 serializableObject ，是可以传递过去的。    </li>
-<li>在 B 中，只要你去访问了 intent.getExtra() ，那bundle 就会把序列化的数据反序列化过来。     </li>
-<li>好了，如果serializableObject 对象对应的类只在 A 中有，但是在 B 应用中并没有，这时候反序列化就会产生异常(ClassNotFoundException，类找不到异常)。</li>
-</ol>
-<p>拒绝服务异常一般发生在 Activity 启动过程中 或者在 onNewIntent 回调过程中。解决方法包括： 1、使用try-catch   2、不要暴露Activity   </p>
-</details>
-
-
-<h2 id="6-4、在代码任意位置为当前-activity-添加-view"><a href="#6-4、在代码任意位置为当前-activity-添加-view" class="headerlink" title="6-4、在代码任意位置为当前 activity 添加 view"></a>6-4、在代码任意位置为当前 activity 添加 view</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<h3 id="如何在任意位置获取当前Activity"><a href="#如何在任意位置获取当前Activity" class="headerlink" title="如何在任意位置获取当前Activity"></a>如何在任意位置获取当前Activity</h3></details>
-
-<h2 id="6-5、微信右滑返回效果"><a href="#6-5、微信右滑返回效果" class="headerlink" title="6-5、微信右滑返回效果"></a>6-5、微信右滑返回效果</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>Fragment中实现相对简单，Activity 实现起来复杂</p>
-<p>fragment实现： view 跟随手势移动的效果，不涉及window控制</p>
-<p>用Activity实现，前一个activity 要搞成透明的效果，windowIsTranslucent = true，window的background 设置为透明<br>多个Task情况，比如顺序启动 a、b、c 三个，a 和 c 在同一个栈，因此可以先获取b的照片放做背景<br>透明对Activity生命周期影响，设置透明的话，下面的Activity 只能是 onPause 状态，不可能stop<br>所以我们只有在滑动的时候，才要求透明，其他的时候不透明，因为透明会影响绘制效率啊。。。。    </p>
-</details>
-
-<h2 id="7-1、为什么不能在UI线程绘制"><a href="#7-1、为什么不能在UI线程绘制" class="headerlink" title="7-1、为什么不能在UI线程绘制"></a>7-1、为什么不能在UI线程绘制</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>ui线程是什么？ActivityThread 的main函数所运行的线程<br>为什么ui要设计成非线程安全的？因为加锁开销大，ui对时间敏感，ui具有高频可变性</p>
-<p>非ui线程一定不能更新吗？不是，还有surfaceView，它会对canvas 加锁 ： lockCanvas ，其次再draw ，最后 unLockCanvas，绘制放在子线程，效率提高。所以，可能app已经anr了，但是地图绘制界面还在绘制，很奇怪，这是因为地图绘制使用了 surfaceview。不过现在官方推荐使用TexutureView了，不推荐使用 SurfaceView。</p>
-</details>
-
-<h2 id="Handler-的delay-可靠吗？"><a href="#Handler-的delay-可靠吗？" class="headerlink" title="Handler 的delay 可靠吗？"></a>Handler 的delay 可靠吗？</h2><p>不可靠</p>
-<h2 id="7-3、ANR-类型"><a href="#7-3、ANR-类型" class="headerlink" title="7-3、ANR 类型"></a>7-3、ANR 类型</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>原理，就是处理事物之前 postDelay 一个事件，这个事件会导致anr窗口弹出，如果在delay的时间内完成事物，则会removeMessage ，把这个postDelay的message移除，就不会产生anr了。</p>
-<p>Looper为什么不会导致cpu占用过高？因为 epoll多路复用机制</p>
-</details>
-
-<h2 id="7-4、自己实现Handler"><a href="#7-4、自己实现Handler" class="headerlink" title="7-4、自己实现Handler"></a>7-4、自己实现Handler</h2><p>略</p>
-<h2 id="8-1、如何避免oom"><a href="#8-1、如何避免oom" class="headerlink" title="8-1、如何避免oom"></a>8-1、如何避免oom</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>native heap 在内存不够的时候，也会抛oom</p>
-<p>使用合适的数据结构<br>避免枚举-影响内存和编译出来的文件(都会增大)</p>
-<p>Bitmap： 选选择合适的分辨率，如果作为背景不要太清晰<br>不要使用帧动画<br>对Bitmap的重采样</p>
-<p>谨慎使用多进程，新进程会带有一些公共资源，是会消耗内存的。<br>谨慎使用largeHeap = true，不同的手机上不一定能实现，还有，内存太大了，gc会困难<br>使用NDK，Native Heap 优雅避免java 堆内存限制</p>
-</details>
-
-<h2 id="8-2、如何对图片缓存？"><a href="#8-2、如何对图片缓存？" class="headerlink" title="8-2、如何对图片缓存？"></a>8-2、如何对图片缓存？</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>网络/磁盘/内存 进行缓存<br>缓存算法-LRU算法，或者最少使用频率的算法<br>如何验证算法的效果(命中率)</p>
-</details>
-
-<h2 id="如何计算图片占用内存的大小"><a href="#如何计算图片占用内存的大小" class="headerlink" title="如何计算图片占用内存的大小"></a>如何计算图片占用内存的大小</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>根据实图手动计算它在内存中占用的内存。</p>
-<p>首先了解dip，mdpi、hdpi、xhdpi、xxhdpi、xxxhdpi</p>
-<p>canvas 就相当于一个层，这个层根据不同手机进行缩放</p>
-<p>assets(sd卡上的文件也是一样的)：<br>如果png，采用ARGB_8888 的话呢，那就是 宽 × 高 × 4 ，因为每个像素要有4个字节，这里 4个8，每个8代表8个比特<br>如果是jpg，你没有指定加载格式，它默认还是使用 ARGB_8888，计算方式还是：宽 × 高 × 4。 其实jpg它没有透明度，那个A是没有用的，使用 RGB_565 即可，5 + 6 + 5 = 16 ，2个字节，所以就是  宽 × 高 × 2    </p>
-<p>从hdpi：</p>
-<p>假设图片的大小为 112px * 131px ,格式png，如果你图片在 hdpi 中，那么系统会认为你这个图片的密度本身就是1.5，如果你这时候有个2.75密度屏幕的手机，那么它就会换算，比如说宽度 ： 112 / 1.5 * 2.75 = 205.333…. ，系统会四舍五入取 205 ，同理高度会换算成： 131/1.5<em>2.75 = 240，所以如果使用 ARGB_8888 ，那占用内存就是  205</em>240 * 4。同理啊，如果手机屏幕大点，比如说是3，那就是 131/1.5*3  和 112 / 1.5 * 3 了。</p>
-<p>在把它放到xxhdpi，这时候密度是 3 了，这时候如果手机是 3，那就得是 131/3*3  和 112 / 3 * 3 了</p>
-<p>所以如果在 mdpi中，那默认图片密度是 1了，那么在 dpi 是 3的手机上，图片宽高应该是 131*3  和 112 * 3</p>
-<p>以此类推，其实在drawable，后面没有带dpi 的，那效果和 mdpi 一样，默认图片是 1</p>
-<p>如果是nodpi ，告诉系统不会缩放，就按照原始的像素，131 和 112 了</p>
-<p>所以宽高的计算方式 ：  图片/dpi * 屏幕dpi</p>
-<h3 id="图片体积优化"><a href="#图片体积优化" class="headerlink" title="图片体积优化"></a>图片体积优化</h3><p>跟图片存储格式无关。跟采用 ARGB_8888 或者 RGB_565<br>根据需要的尺寸<br>采样<br>使用矩阵变换来放大图片<br>不透明采用  RGB_565<br>.9 图片<br>使用VectorDrawable</p>
-</details>
-
-<h2 id="9-1、Android-p-规避访问私有api的限制"><a href="#9-1、Android-p-规避访问私有api的限制" class="headerlink" title="9-1、Android p 规避访问私有api的限制"></a>9-1、Android p 规避访问私有api的限制</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>访问私有api，我们使用的是 反射 方式</p>
-<p>反射时 setAccessible(true)  ,只是绕过语言层面，并不会更改它的 final 或者 private 属性，不会说把private 改成public。</p>
-<p>Android p中设置了 API 名单，有白名单、黑名单之类的，私有api在黑名单中，通过限制反射来限制访问 私有api</p>
-</details>
-
-<h2 id="9-2、换肤的原理"><a href="#9-2、换肤的原理" class="headerlink" title="9-2、换肤的原理"></a>9-2、换肤的原理</h2><p>略</p>
-<h2 id="9-3、virtualApk-插件化原理"><a href="#9-3、virtualApk-插件化原理" class="headerlink" title="9-3、virtualApk 插件化原理"></a>9-3、virtualApk 插件化原理</h2><p>略</p>
-<h2 id="Tinker-怎么实现热修复"><a href="#Tinker-怎么实现热修复" class="headerlink" title="Tinker 怎么实现热修复"></a>Tinker 怎么实现热修复</h2><p>略</p>
-<h2 id="10-1、如何开展优化工作"><a href="#10-1、如何开展优化工作" class="headerlink" title="10-1、如何开展优化工作"></a>10-1、如何开展优化工作</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>对整个目标是否有清晰认识</p>
-<p>重点问题拆解</p>
-<p>优化前期花 20% 的时间就能解决80%问题，剩下的 20%优化很难</p>
-<p>对比业内(tester 测试其他app的打开页面方式)</p>
-<p>指标监控，前后对比</p>
-</details>
-
-<h2 id="10-x"><a href="#10-x" class="headerlink" title="10-x"></a>10-x</h2><p>都略</p>
-<h2 id="11-1、如何设计一个系统"><a href="#11-1、如何设计一个系统" class="headerlink" title="11-1、如何设计一个系统"></a>11-1、如何设计一个系统</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>保持和面试官沟通，多确认</p>
-<p>需求-&gt; 关键流程 -&gt; 细节，明确边界</p>
-<p>细节和边界的通常问题：</p>
-<p>如何处理并发，是否有频繁io<br>网络怎么接入-短连接、长连接、连接池化，是否频繁与服务端交互(项目中的大接口)、是否有推送啊<br>保障安全性-数据是否需要加密、加密算法、</p>
-</details>
-
-<h2 id="11-2、插件化"><a href="#11-2、插件化" class="headerlink" title="11-2、插件化"></a>11-2、插件化</h2><p>略</p>
-<h2 id="11-3、设计一个短视频app"><a href="#11-3、设计一个短视频app" class="headerlink" title="11-3、设计一个短视频app"></a>11-3、设计一个短视频app</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>视频如何处理？<br>视频来源？自有还是第三方？<br>视频由用户上传还是专业供应平台<br>是否需要建立用户关系链<br>支持分享？<br>支付系统打赏啊？<br>社交。聊天<br>播放器比较耗电<br>视频防止对手获取<br>防止广告被劫持</p>
-</details>
-
-<h2 id="11-4、设计一个网络框架"><a href="#11-4、设计一个网络框架" class="headerlink" title="11-4、设计一个网络框架"></a>11-4、设计一个网络框架</h2><details>
-<summary><font size="2" color="#888888">点击看答案</font></summary>
-
-<p>不局限于http，还可以 websococket</p>
-<p>单向请求还是双向请求啊？</p>
-<p>支持异步请求？使用Rxjava 还是kotlin 协程？</p>
-<p>要考虑可移植性啊？</p>
-<p>缓存策略，多大啊？如何淘汰？ </p>
-<p>全局数据拦截器，对所有请求ip替换啊，对公共结果处理啊</p>
-<p>日志输出，json，pb 转换为可视化</p>
-<p>重试机制，3s、6s 之后再重试，最多重复多少次，防止死循环</p>
-<p>参数组装，bean？hashMap，或者类似Retrofit 使用注解配置</p>
-<p>协议体可以使用 Builder 模式</p>
-<p>数据传输与拦截使用责任链模式</p>
-<p>数据序列化</p>
-<p>DNS 增强-httpDnsServer ，比如google的，还有aliyun 和腾讯云有，可以默认支持几个</p>
-</details></body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
         
   
   
@@ -1493,6 +532,1350 @@
   
   
 
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/03/15/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E7%B2%BE%E9%80%89TOP%E9%9D%A2%E8%AF%95%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/03/15/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E7%B2%BE%E9%80%89TOP%E9%9D%A2%E8%AF%95%E9%A2%98/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-精选TOP面试题</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-03-15 10:15:00" itemprop="dateCreated datePublished" datetime="2020-03-15T10:15:00+08:00">2020-03-15</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-04-11 21:04:45" itemprop="dateModified" datetime="2020-04-11T21:04:45+08:00">2020-04-11</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了"><a href="#注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列-与其他列表有重复的题目就略过了" class="headerlink" title="注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)"></a>注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列(与其他列表有重复的题目就略过了)</h2><h3 id="350、两个数组的交集II"><a href="#350、两个数组的交集II" class="headerlink" title="350、两个数组的交集II"></a>350、两个数组的交集II</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ol>
+<li>hashmap 记录第一个数组每个元素出现次数，再遍历第二个数组    2. 先给两个数组排序，再遍历**</li>
+</ol>
+<p>自己写的时候的问题：<strong>Integer 写错、HashMap&lt;Integer,Integer&gt; 在 int times = get(key) 的时候，要注意判空</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/intersection-of-two-arrays-ii/solution/liang-ge-shu-zu-de-jiao-ji-ii-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="412、Fizz-Buzz，写一个程序，输出从-1-到-n-数字的字符串表示。1-如果-n-是3的倍数，输出“Fizz”；2-如果-n-是5的倍数，输出“Buzz”；3-如果-n-同时是3和5的倍数，输出-“FizzBuzz”。"><a href="#412、Fizz-Buzz，写一个程序，输出从-1-到-n-数字的字符串表示。1-如果-n-是3的倍数，输出“Fizz”；2-如果-n-是5的倍数，输出“Buzz”；3-如果-n-同时是3和5的倍数，输出-“FizzBuzz”。" class="headerlink" title="412、Fizz Buzz，写一个程序，输出从 1 到 n 数字的字符串表示。1. 如果 n 是3的倍数，输出“Fizz”；2. 如果 n 是5的倍数，输出“Buzz”；3.如果 n 同时是3和5的倍数，输出 “FizzBuzz”。"></a>412、Fizz Buzz，写一个程序，输出从 1 到 n 数字的字符串表示。1. 如果 n 是3的倍数，输出“Fizz”；2. 如果 n 是5的倍数，输出“Buzz”；3.如果 n 同时是3和5的倍数，输出 “FizzBuzz”。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>计算 n%3==0 及 n%5==0 的 boolean 值。之后分别输出</p>
+<p>自己写的时候的问题：<strong>canDivid3 的时候，应该使用遍历的下标i ，而不是传入的参数n %3 == 0</strong></p>
+</details>
+
+<blockquote>
+<p> <a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/fizz-buzz/solution/fizz-buzz-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="13、-罗马数字转整数"><a href="#13、-罗马数字转整数" class="headerlink" title="13、 罗马数字转整数"></a>13、 罗马数字转整数</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>前一个数比后一个数小</p>
+<p>自己写的时候的问题：<strong>map写成了 HashMap&lt;String,Integer&gt; ，应该是 HashMap&lt;Character,Integer&gt;，还有，throw 抛出异常的时候，应该要有new关键字，即 throw new IllegalArgumentException(“error input!”);</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/roman-to-integer/solution/yong-shi-9993nei-cun-9873jian-dan-jie-fa-by-donesp/">LeetCode</a></p>
+</blockquote>
+<h3 id="387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回-1"><a href="#387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回-1" class="headerlink" title="387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回 -1"></a>387、字符串中的第一个唯一字符，给定一个字符串，找到它的第一个不重复的字符，并返回它的索引。如果不存在，则返回 -1</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>第一次遍历，次数存放在HashMap中，第二次遍历，找到第一个不重复的。</p>
+<p>自己写的时候的问题：<strong>无</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/first-unique-character-in-a-string/solution/zi-fu-chuan-zhong-de-di-yi-ge-wei-yi-zi-fu-by-leet/">LeetCode</a></p>
+</blockquote>
+<h3 id="28、实现-strStr-，给定一个-haystack-字符串和一个-needle-字符串，在-haystack-字符串中找出-needle-字符串出现的第一个位置-从0开始-。如果不存在，则返回-1。"><a href="#28、实现-strStr-，给定一个-haystack-字符串和一个-needle-字符串，在-haystack-字符串中找出-needle-字符串出现的第一个位置-从0开始-。如果不存在，则返回-1。" class="headerlink" title="28、实现 strStr()，给定一个 haystack 字符串和一个 needle 字符串，在 haystack 字符串中找出 needle 字符串出现的第一个位置 (从0开始)。如果不存在，则返回  -1。"></a>28、实现 strStr()，给定一个 haystack 字符串和一个 needle 字符串，在 haystack 字符串中找出 needle 字符串出现的第一个位置 (从0开始)。如果不存在，则返回  -1。</h3><p>示例：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">输入: haystack = <span class="string">"hello"</span>, needle = <span class="string">"ll"</span></span><br><span class="line">输出: <span class="number">2</span></span><br></pre></td></tr></tbody></table></figure>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>只有第一个字符匹配上才需要比较</p>
+<p>自己写的时候的问题：<strong>haystack = “” 且 needle = “” 时，我返回了 -1，应该是  0，还有计算String的长度应该是 str.length() ,而不是 str.leng ,不过数组倒是可以这样做 arr.length</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/implement-strstr/solution/shi-xian-strstr-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="38、外观数列"><a href="#38、外观数列" class="headerlink" title="38、外观数列"></a>38、外观数列</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>读懂题目很重要，递归</p>
+<p>自己写的时候的问题：<strong>throw 要 new ！</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/count-and-say/solution/di-gui-by-zhaowenhai/">LeetCode</a></p>
+</blockquote>
+<h3 id="69、x的平方根，计算并返回-x-的平方根，其中-x-是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是-2-28…，则结果取2即可"><a href="#69、x的平方根，计算并返回-x-的平方根，其中-x-是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是-2-28…，则结果取2即可" class="headerlink" title="69、x的平方根，计算并返回 x 的平方根，其中 x 是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是 2.28…，则结果取2即可"></a>69、x的平方根，计算并返回 x 的平方根，其中 x 是非负整数。由于返回类型是整数，结果只保留整数的部分，小数部分将被舍去，如8的平方根是 2.28…，则结果取2即可</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>我自己的写法，没有考虑数字越界：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">mySqrt</span><span class="params">(<span class="keyword">int</span> x)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span>(x &lt; <span class="number">0</span>){</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"error input!"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(x == <span class="number">0</span> || x == <span class="number">1</span>){</span><br><span class="line">        <span class="keyword">return</span> x;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> result = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i * i &lt;= x; i++){</span><br><span class="line">        System.out.println(<span class="string">"i = "</span> + i);</span><br><span class="line">        result = i;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其他数字都对，但是如果输入 2147395600 ，则在 i= 46340 时，i就已经是结果了，但是这里的循环条件还是会继续执行，这时候 i= 46341 时，就超出 int 的取值范围越界了，因此不对。<strong>如果非要用这种方法去实现，可以在 for 语句里面加个条件： i * i &gt; 0 。因为Java 中的int型数据是有符号数，最高位表示符号，越界的时候，最高位变成1了，也就是变成负数，所以这个条件在刚发生越界的时候就不满足了，就能得到正确的结果</strong>。</p>
+<p>使用二分查找法要注意几点：首先 (a/2)² &gt; a ，则可以解出来正整数解是 a &gt; 4，即在 a &gt; 4的情况下 a/2 &gt; 根号a 是必然的，再综合 1,2,3,4 这几个特殊数字，我们可以得出，a开根号的值在 [1,a/2] 这种闭合区间。还有，<strong>开根号这里可能会有小数，但是我们只要返回正数，所以可以要求 front == tail ，最后是返回tail的值，要注意</strong>。</p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/sqrtx/solution/x-de-ping-fang-gen-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="371、两整数之和，不使用运算符-和-，计算两个整数-a、b之和"><a href="#371、两整数之和，不使用运算符-和-，计算两个整数-a、b之和" class="headerlink" title="371、两整数之和，不使用运算符 + 和 -，计算两个整数 a、b之和"></a>371、两整数之和，不使用运算符 + 和 -，计算两个整数 a、b之和</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>异或求出普通位相加，与操作求出进位</p>
+<p>自己写的时候的问题：<strong>a 要暂存 无进位结果，我写的时候忘了暂存了。因为无进位结果 + 进位 还有可能产生进位，所以要有 while 循环。</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/sum-of-two-integers/solution/wei-yun-suan-xiang-jie-yi-ji-zai-python-zhong-xu-y/">LeetCode</a></p>
+</blockquote>
+<h3 id="283、移动零，给定一个数组-nums，编写一个函数将所有-0-移动到数组的末尾，同时保持非零元素的相对顺序"><a href="#283、移动零，给定一个数组-nums，编写一个函数将所有-0-移动到数组的末尾，同时保持非零元素的相对顺序" class="headerlink" title="283、移动零，给定一个数组 nums，编写一个函数将所有 0 移动到数组的末尾，同时保持非零元素的相对顺序"></a>283、移动零，给定一个数组 nums，编写一个函数将所有 0 移动到数组的末尾，同时保持非零元素的相对顺序</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>2个指针，1次遍历</p>
+<p>自己写的时候的问题：<strong>无</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/move-zeroes/solution/dong-hua-yan-shi-283yi-dong-ling-by-wang_ni_ma/">LeetCode</a></p>
+</blockquote>
+<h3 id="1、两数之和，给定一个整数数组-nums-和一个目标值-target，请你在该数组中找出和为目标值的那-两个-整数，并返回他们的数组下标。"><a href="#1、两数之和，给定一个整数数组-nums-和一个目标值-target，请你在该数组中找出和为目标值的那-两个-整数，并返回他们的数组下标。" class="headerlink" title="1、两数之和，给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。"></a>1、两数之和，给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>使用 HashMap 辅助</p>
+<p>自己写的时候的问题：<strong>无</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/two-sum/solution/jie-suan-fa-1-liang-shu-zhi-he-by-guanpengchn/">LeetCode</a></p>
+</blockquote>
+<h3 id="101、对称二叉树-给定一个二叉树，检查它是否是镜像对称的"><a href="#101、对称二叉树-给定一个二叉树，检查它是否是镜像对称的" class="headerlink" title="101、对称二叉树,给定一个二叉树，检查它是否是镜像对称的"></a>101、对称二叉树,给定一个二叉树，检查它是否是镜像对称的</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>递归判断</p>
+<p>自己写的时候的问题：<strong>要懂递归啊，这是乱写成功的。不会递归时，把条件列出来，估计就有思路了。</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/symmetric-tree/solution/hua-jie-suan-fa-101-dui-cheng-er-cha-shu-by-guanpe/">LeetCode</a></p>
+</blockquote>
+<h3 id="108-还未写-、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树"><a href="#108-还未写-、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树" class="headerlink" title="108(还未写)、将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树"></a><font color="#ff0000">108(还未写)、</font>将有序数组转换为二叉搜索树，将一个按照升序排列的有序数组，转换为一棵高度平衡二叉搜索树</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>二叉树遍历</p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/convert-sorted-array-to-binary-search-tree/solution/jiang-you-xu-shu-zu-zhuan-huan-wei-er-cha-sou-s-15/">LeetCode</a></p>
+</blockquote>
+<h3 id="118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行"><a href="#118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行" class="headerlink" title="118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行"></a>118、杨辉三角，给定一个非负整数numRows，生成杨辉三角的前numRows行</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>按照描述的方法，暴力解就好</p>
+<p>自己写的时候的问题：<strong>自己想的 for语句，依次生成前面的行</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/pascals-triangle/solution/yang-hui-san-jiao-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。"><a href="#125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。" class="headerlink" title="125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。"></a>125、验证回文串，给定一个字符串，验证它是否是回文串，只考虑字母和数字字符，可以忽略字母的大小写。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>自己写的时候的问题：<strong>自己写的感受还是使用双指针，效率高，转小写，然后去掉无关的符号这种操作效率太低。注意Character的方法 toLowerCase()、 isDigit() 和 isLetter() 就可以了</strong>。</p>
+</details>
+
+<blockquote>
+<p>[LeetCode](<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-palindrome/solution/java-da-dao-zhi-jian-6xing-by-rabbitzhao/）">https://leetcode-cn.com/problems/valid-palindrome/solution/java-da-dao-zhi-jian-6xing-by-rabbitzhao/）</a></p>
+</blockquote>
+<h3 id="268、缺失数字，给定一个包含-0-1-2-…-n-中-n-个数的序列，找出-0-n-中没有出现在序列中的那个数。"><a href="#268、缺失数字，给定一个包含-0-1-2-…-n-中-n-个数的序列，找出-0-n-中没有出现在序列中的那个数。" class="headerlink" title="268、缺失数字，给定一个包含 0, 1, 2, …, n 中 n 个数的序列，找出 0 .. n 中没有出现在序列中的那个数。"></a>268、缺失数字，给定一个包含 0, 1, 2, …, n 中 n 个数的序列，找出 0 .. n 中没有出现在序列中的那个数。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<ol>
+<li>数组中所有数字异或，结果再与 0<del>n 异或，得到的结果就是缺失的那个数字(因为相同的数字异或结果为0)    2. 0</del>n 这些数字的和-数组所有数字的和 = 缺失的数字</li>
+</ol>
+<p>自己写的时候的问题：<strong>自己写的时候，感觉使用 异或 操作简单方便</strong>。</p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/missing-number/solution/que-shi-shu-zi-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="171、Excel-表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A-gt-1，B-gt-2，Z-gt-26，AA-gt-27，AB-gt-28"><a href="#171、Excel-表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A-gt-1，B-gt-2，Z-gt-26，AA-gt-27，AB-gt-28" class="headerlink" title="171、Excel 表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A -> 1，B -> 2，Z -> 26，AA -> 27，AB -> 28"></a>171、Excel 表序列号，给定一个Excel表格中的列名称，返回其相应的列序号。如：A -&gt; 1，B -&gt; 2，Z -&gt; 26，AA -&gt; 27，AB -&gt; 28</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>我们常用的 10 进制数字，0~9 共 10 个数字。题目A-Z，26个字母，所以是26进制，故，AB= 26 + 2 = 28**</p>
+<p>自己写的时候的问题：<strong>看做26进制的数字，从字符串尾部开始遍历，计算每个char所在位的 base ，要注意输入小写字母，所以要统一转为小写去比较</strong>。</p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/excel-sheet-column-number/solution/hua-jie-suan-fa-171-excelbiao-lie-xu-hao-by-guanpe/">LeetCode</a></p>
+</blockquote>
+<h3 id="172、-阶乘后的零，给定一个整数-n，返回-n-结果尾数中零的数量，你算法的时间复杂度应为-O-log-n"><a href="#172、-阶乘后的零，给定一个整数-n，返回-n-结果尾数中零的数量，你算法的时间复杂度应为-O-log-n" class="headerlink" title="172、 阶乘后的零，给定一个整数 n，返回 n! 结果尾数中零的数量，你算法的时间复杂度应为 O(log n)"></a>172、 阶乘后的零，给定一个整数 n，返回 n! 结果尾数中零的数量，你算法的时间复杂度应为 O(log n)</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>可以转换为n的质因数中5的个数</p>
+<p>自己写的时候的问题：*<em>自己写的时候，使用for循环(从 5 到 n，每次进5) 的方式来计算5的个数，结果超时，虽然放在 IntelliJ 中运行结果是对的。因此，应该使用更高效的方式， n /= 5; result += n; *</em>。</p>
+</details>
+
+<blockquote>
+<p>[LeetCode](<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/factorial-trailing-zeroes/solution/xiang-xi-tong-su-de-si-lu-fen-xi-by-windliang-3/）">https://leetcode-cn.com/problems/factorial-trailing-zeroes/solution/xiang-xi-tong-su-de-si-lu-fen-xi-by-windliang-3/）</a></p>
+</blockquote>
+<h3 id="189、旋转数组，给定一个数组，将数组中的元素向右移动-k-个位置，其中-k-是非负数。"><a href="#189、旋转数组，给定一个数组，将数组中的元素向右移动-k-个位置，其中-k-是非负数。" class="headerlink" title="189、旋转数组，给定一个数组，将数组中的元素向右移动 k 个位置，其中 k 是非负数。"></a>189、旋转数组，给定一个数组，将数组中的元素向右移动 k 个位置，其中 k 是非负数。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>首先能想到的是：新建一个数组，然后将原数组中的数字按照旋转后的顺序放到新数组  ，其次就是：首先将整个数组旋转，再分别旋转前面部分和后面部分</p>
+<p>自己写的时候的问题：<strong>写了3次，旋转3次是没问题，关键是处理好 k &gt; nums.length 的情况。</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/rotate-array/solution/xuan-zhuan-shu-zu-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="190、-还未写-颠倒二进制位-颠倒给定的-32-位无符号整数的二进制位。"><a href="#190、-还未写-颠倒二进制位-颠倒给定的-32-位无符号整数的二进制位。" class="headerlink" title="190、(还未写)颠倒二进制位,颠倒给定的 32 位无符号整数的二进制位。"></a>190、<font color="#ff0000">(还未写)</font>颠倒二进制位,颠倒给定的 32 位无符号整数的二进制位。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary><summary>
+
+<p>每次取1位反转</p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-bits/solution/yi-dong-zui-hou-yi-wei-dao-di-yi-wei-4-xing-dai-ma/">LeetCode</a></p>
+</blockquote>
+<h3 id="191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为-‘1’-的个数"><a href="#191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为-‘1’-的个数" class="headerlink" title="191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为 ‘1’ 的个数"></a>191、位1的个数，编写一个函数，输入是一个无符号整数，返回其二进制表达式中数字位数为 ‘1’ 的个数</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>n&amp;(n-1) 或者 一直往右移</p>
+<p>自己写的时候的问题：<strong>无符号数有点难，还么有完全理解。while 条件写成 n &gt; 0 ，应该要写成  n != 0。</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/number-of-1-bits/solution/wei-1de-ge-shu-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="198、打家劫舍-小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额"><a href="#198、打家劫舍-小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额" class="headerlink" title="198、打家劫舍,小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额"></a>198、打家劫舍,小偷计划偷窃沿街的房屋。每间房内都藏有一定的现金，但如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>奇偶，然后选较大</p>
+<p>自己写的时候的问题：<strong>求偶数和的时候，先计算当前偶数和，再与奇数和比较，计算当前偶数和的最终值</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/house-robber/solution/da-jia-jie-she-by-ikaruga/">LeetCode</a></p>
+</blockquote>
+<h3 id="202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为-1，也可能是无限循环但始终变不到-1。如果可以变为-1，那么这个数就是快乐数。"><a href="#202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为-1，也可能是无限循环但始终变不到-1。如果可以变为-1，那么这个数就是快乐数。" class="headerlink" title="202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为 1，也可能是无限循环但始终变不到 1。如果可以变为 1，那么这个数就是快乐数。"></a>202、快乐数，判断一个数是不是快乐数。一个“快乐数”定义为：对于一个正整数，每一次将该数替换为它每个位置上的数字的平方和，然后重复这个过程直到这个数变为 1，也可能是无限循环但始终变不到 1。如果可以变为 1，那么这个数就是快乐数。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>快慢指针用来终止无限循环</p>
+<p>自己写的时候的问题：<strong>主要是要细心，自己写的时候写成 result = temp * temp ,应该是 result += temp * temp</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/happy-number/solution/shi-yong-kuai-man-zhi-zhen-si-xiang-zhao-chu-xun-h/">LeetCode</a></p>
+</blockquote>
+<h3 id="204、计数质数，统计所有小于非负整数-n-的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）"><a href="#204、计数质数，统计所有小于非负整数-n-的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）" class="headerlink" title="204、计数质数，统计所有小于非负整数 n 的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）"></a>204、计数质数，统计所有小于非负整数 n 的质数的数量。（质数是指在大于1的自然数中，除了1和它本身以外不再有其他因数的自然数。）</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>质数的判断：for (int i = 2; i * i &lt;= n; i++)</p>
+<p>自己写的时候的问题：<strong>最优解暂时有点难理解，还是先只要注意 i * i &lt;= n 这样的优化方式吧</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/count-primes/solution/ru-he-gao-xiao-pan-ding-shai-xuan-su-shu-by-labula/">LeetCode</a></p>
+</blockquote>
+<h3 id="234、回文链表，判断链表是否是回文链表"><a href="#234、回文链表，判断链表是否是回文链表" class="headerlink" title="234、回文链表，判断链表是否是回文链表"></a>234、回文链表，判断链表是否是回文链表</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>1、反转链表，对比反转后和原链表是否相同  2、链表值复制到数组中，再采用前后双指针</p>
+<p>自己写的时候的问题：<strong>写得很完美，第一步，快慢指针找到中间节点  第二步、反转中间节点之后的部分 第三步、对比前半部分和反转后的后半部分</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/palindrome-linked-list/solution/hui-wen-lian-biao-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="326、3的幂，给定一个整数，写一个函数来判断它是否是-3-的幂次方。"><a href="#326、3的幂，给定一个整数，写一个函数来判断它是否是-3-的幂次方。" class="headerlink" title="326、3的幂，给定一个整数，写一个函数来判断它是否是 3 的幂次方。"></a>326、3的幂，给定一个整数，写一个函数来判断它是否是 3 的幂次方。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>1、不断求余，不断除以3，看结果  2、转换成3进制，看是不是前面1个1，后面全是0</p>
+<p>自己写的时候的问题：<strong>老老实实一直除以 3 ，但是，要注意数字 0 ，否则 n % 3 == 0 会进入死循环</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/power-of-three/solution/3de-mi-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="242、有效的字母异位词，给定两个字符串-s-和-t-，编写一个函数来判断-t-是否是-s-的字母异位词。"><a href="#242、有效的字母异位词，给定两个字符串-s-和-t-，编写一个函数来判断-t-是否是-s-的字母异位词。" class="headerlink" title="242、有效的字母异位词，给定两个字符串 s 和 t ，编写一个函数来判断 t 是否是 s 的字母异位词。"></a>242、有效的字母异位词，给定两个字符串 s 和 t ，编写一个函数来判断 t 是否是 s 的字母异位词。</h3><details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>大小26的数组，两个字符串遍历每个字符，s遍历就在相应下标+1，而遍历t时在相应下标-1</p>
+<p>自己写的时候的问题：<strong>只有小写字母，所以用数组实现了，不难</strong></p>
+</details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-anagram/solution/you-xiao-de-zi-mu-yi-wei-ci-by-leetcode/">LeetCode</a></p>
+</blockquote>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E8%85%BE%E8%AE%AF%E7%B2%BE%E9%80%89%E7%BB%83%E4%B9%A050%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-LeetCode-%E8%85%BE%E8%AE%AF%E7%B2%BE%E9%80%89%E7%BB%83%E4%B9%A050%E9%A2%98/" class="post-title-link" itemprop="url">面试题-算法-LeetCode-腾讯精选练习50题</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-03-08 15:18:00" itemprop="dateCreated datePublished" datetime="2020-03-08T15:18:00+08:00">2020-03-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-04-06 22:45:07" itemprop="dateModified" datetime="2020-04-06T22:45:07+08:00">2020-04-06</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列"><a href="#注：-以下题目都是根据-LeetCode-App上的顺序，按照由易到难排列" class="headerlink" title="注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列"></a>注： 以下题目都是根据 LeetCode App上的顺序，按照由易到难排列</h2><h3 id="237、删除链表中的节点"><a href="#237、删除链表中的节点" class="headerlink" title="237、删除链表中的节点"></a>237、删除链表中的节点</h3><p>编写一个函数，使其可以删除某个链表中给定的(非末尾)节点，函数将只会传给你要被删除的节点(坑在这里，注意：<strong>传给你的不是head节点和要删除的值，而是直接传给你要删除的那个节点</strong>)。</p>
+<details>
+<summary>点击看答案</summary><summary>
+
+<p>仅仅只是删除而已，简直是脑筋急转弯，被坑进去了</p>
+<p>自己写的时候的问题：<strong>没啥，主要是审题</strong></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/delete-node-in-a-linked-list/solution/shan-chu-lian-biao-zhong-de-jie-dian-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="344、反转字符串"><a href="#344、反转字符串" class="headerlink" title="344、反转字符串"></a>344、反转字符串</h3><details>
+<summary>点击看答案</summary><summary> 
+
+<p>首尾双指针</p>
+<p>自己写的时候的问题：<strong>尴尬，忘了 i++,j– 了</strong></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-string/solution/fan-zhuan-zi-fu-chuan-by-leetcode">LeetCode</a></p>
+</blockquote>
+<h3 id="7、整数反转"><a href="#7、整数反转" class="headerlink" title="7、整数反转"></a>7、整数反转</h3><details>
+<summary>点击看答案</summary><summary>
+
+<p>每次反转一个数字，注意防止溢出(可以考虑result使用long类型)</p>
+<p>自己写的时候的问题：<strong>要注意负数的最小值，和整数最大值一样处理</strong></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-integer/solution/hua-jie-suan-fa-7-zheng-shu-fan-zhuan-by-guanpengc/">LeetCode</a></p>
+</blockquote>
+<h3 id="9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？"><a href="#9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？" class="headerlink" title="9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？"></a>9、回文数，判断一个整数是否是回文数。回文数是指正序（从左向右）和倒序（从右向左）读都是一样的整数。你能不将整数转为字符串来解决这个问题吗？</h3><details>
+<summary>点击看答案</summary><summary>反转后一半数字
+
+<p>自己写的时候的问题：*<em>通过不断除以10，搞清楚这个值到底是什么数量级，比如99，那 div 就是10级，比如 999，那 div 就是 100级，然后通过 n/div 就能得到第一位， n%10，得到最后一位，比较他们的值。依次往复 *</em></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/palindrome-number/solution/dong-hua-hui-wen-shu-de-san-chong-jie-fa-fa-jie-ch/">LeetCode</a></p>
+</blockquote>
+<h3 id="14、-还未做-最长公共前缀"><a href="#14、-还未做-最长公共前缀" class="headerlink" title="14、(还未做)最长公共前缀"></a>14、<font color="#ff0000">(还未做)</font>最长公共前缀</h3><details>
+<summary>点击看答案</summary><summary>
+
+<p>直接看链接，这个不大会</p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/longest-common-prefix/solution/hua-jie-suan-fa-14-zui-chang-gong-gong-qian-zhui-b/">LeetCode</a></p>
+</blockquote>
+<h3 id="88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组-假设nums有足够空间-。"><a href="#88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组-假设nums有足够空间-。" class="headerlink" title="88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组(假设nums有足够空间)。"></a>88、合并两个有序数组nums1和nums2，将nums2合并到nums1中，使nums1成为一个有序数组(假设nums有足够空间)。</h3><details>
+<summary>点击看答案</summary><summary>
+
+<p>从后往前，注意 nums1 中剩余的元素</p>
+<p>自己写的时候的问题：<strong>没问题，从尾到头合并即可</strong></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/merge-sorted-array/solution/he-bing-liang-ge-you-xu-shu-zu-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="20、有效的括号：给定一个只包括-‘-‘，’-’，’-‘，’-’，’-‘，’-’-的字符串，判断字符串是否有效-即括号的开闭符合规则-。"><a href="#20、有效的括号：给定一个只包括-‘-‘，’-’，’-‘，’-’，’-‘，’-’-的字符串，判断字符串是否有效-即括号的开闭符合规则-。" class="headerlink" title="20、有效的括号：给定一个只包括 ‘(‘，’)’，’{‘，’}’，’[‘，’]’ 的字符串，判断字符串是否有效(即括号的开闭符合规则)。"></a>20、有效的括号：给定一个只包括 ‘(‘，’)’，’{‘，’}’，’[‘，’]’ 的字符串，判断字符串是否有效(即括号的开闭符合规则)。</h3><details>
+<summary>点击看答案</summary><summary>
+
+<p>使用HashMap 建立映射关系，Stack 用于遍历</p>
+<p>自己写的时候的问题：<strong>记住 Stack 的 isEmpty() 、pop 、push 方法即可</strong></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/valid-parentheses/solution/you-xiao-de-gua-hao-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的-假设链表元素顺序由小到大"><a href="#21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的-假设链表元素顺序由小到大" class="headerlink" title="21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的(假设链表元素顺序由小到大)"></a>21、合并两个有序链表，将两个有序链表合并为一个新的有序链表并返回。新链表是通过拼接给定的两个链表的所有节点组成的(假设链表元素顺序由小到大)</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>双指针，注意其中一个链表到表尾时，另一个链表整个接上去</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/merge-two-sorted-lists/solution/hua-jie-suan-fa-21-he-bing-liang-ge-you-xu-lian-bi/">LeetCode</a></p>
+</blockquote>
+<h3 id="292、Nim-游戏，桌上一堆石头，两人轮流拿1-3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。"><a href="#292、Nim-游戏，桌上一堆石头，两人轮流拿1-3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。" class="headerlink" title="292、Nim 游戏，桌上一堆石头，两人轮流拿1~3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。"></a>292、Nim 游戏，桌上一堆石头，两人轮流拿1~3块石头，拿到最后一块石头的人获胜。现在给n块石头，你先拿，判定你是否能赢得游戏。你们是聪明人，每一步都是最优解。</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>当 n%4 != 0 时，就可以赢</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/nim-game/solution/292nimyou-xi-by-redsnapper/">LeetCode</a></p>
+</blockquote>
+<h3 id="26、删除排序数组中的重复项，你必须在-原地-修改输入数组-并在使用-O-1-额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。"><a href="#26、删除排序数组中的重复项，你必须在-原地-修改输入数组-并在使用-O-1-额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。" class="headerlink" title="26、删除排序数组中的重复项，你必须在 原地 修改输入数组 并在使用 O(1) 额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。"></a>26、删除排序数组中的重复项，你必须在 原地 修改输入数组 并在使用 O(1) 额外空间的条件下完成。你不需要考虑数组中超出新长度后面的元素。</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>后一个元素与当前重复，则直到不重复的元素，移过来，覆盖重复元素。</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/remove-duplicates-from-sorted-array/solution/shuang-zhi-zhen-shan-chu-zhong-fu-xiang-dai-you-hu/">LeetCode</a></p>
+</blockquote>
+<h3 id="53、最大子序和"><a href="#53、最大子序和" class="headerlink" title="53、最大子序和"></a>53、最大子序和</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>前面的和是否是正数，是正数就有增益</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/maximum-subarray/solution/hua-jie-suan-fa-53-zui-da-zi-xu-he-by-guanpengchn/">LeetCode</a></p>
+</blockquote>
+<h3 id="70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？"><a href="#70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？" class="headerlink" title="70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？"></a>70、爬楼梯，需要爬n阶才能到楼顶，每次可以爬1阶或者2阶，有多少种方法爬到楼顶？</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>斐波那契数列</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/climbing-stairs/solution/pa-lou-ti-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="104、二叉树的最大深度"><a href="#104、二叉树的最大深度" class="headerlink" title="104、二叉树的最大深度"></a>104、二叉树的最大深度</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>记住递归方法，好用的递归的方法</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/maximum-depth-of-binary-tree/solution/er-cha-shu-de-zui-da-shen-du-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="121、买卖股票的最佳时机，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。"><a href="#121、买卖股票的最佳时机，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。" class="headerlink" title="121、买卖股票的最佳时机，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。"></a>121、买卖股票的最佳时机，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润。</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>遍历，记录当前最小的值，以及之后相对应的最大利润</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/best-time-to-buy-and-sell-stock/solution/121-mai-mai-gu-piao-de-zui-jia-shi-ji-by-leetcode-/">LeetCode</a></p>
+</blockquote>
+<h3 id="122、买卖股票的最佳时机-II，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）"><a href="#122、买卖股票的最佳时机-II，给定一个数组，它的第-i-个元素是一支给定股票第-i-天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）" class="headerlink" title="122、买卖股票的最佳时机 II，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）"></a>122、买卖股票的最佳时机 II，给定一个数组，它的第 i 个元素是一支给定股票第 i 天的价格。设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票，注意你不能在买入股票前卖出股票）</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>简单的一次遍历,相邻依次减下去</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/best-time-to-buy-and-sell-stock-ii/solution/mai-mai-gu-piao-de-zui-jia-shi-ji-ii-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素"><a href="#136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素" class="headerlink" title="136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素"></a>136、只出现一次的数字，一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现两次。找出那个只出现了一次的元素</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>所有元素异或</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/single-number/solution/xue-suan-fa-jie-guo-xiang-dui-yu-guo-cheng-bu-na-y/">LeetCode</a></p>
+</blockquote>
+<h3 id="141、环形链表，给定一个链表，判断链表中是否有环"><a href="#141、环形链表，给定一个链表，判断链表中是否有环" class="headerlink" title="141、环形链表，给定一个链表，判断链表中是否有环"></a>141、环形链表，给定一个链表，判断链表中是否有环</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>快慢指针，并且快指针每次走两步，慢指针每次走一步</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/linked-list-cycle/solution/huan-xing-lian-biao-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="557、反转字符串中的单词-III"><a href="#557、反转字符串中的单词-III" class="headerlink" title="557、反转字符串中的单词 III"></a>557、反转字符串中的单词 III</h3><blockquote>
+<p>输入: “Let’s take LeetCode contest”<br>输出: “s’teL ekat edoCteeL tsetnoc”       </p>
+</blockquote>
+<details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>使用辅助栈</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-words-in-a-string-iii/solution/pei-pian-rang-wen-ti-bian-jian-dan-zhan-mo-ni-by-p/">LeetCode</a></p>
+</blockquote>
+<h3 id="155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈"><a href="#155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈" class="headerlink" title="155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈"></a>155、最小栈，设计一个支持push、pop、top操作，并且能在常数时间内检索到最小元素的栈</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>两个栈，一个正常存放元素，一个不同步存放小元素</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/min-stack/solution/shi-yong-fu-zhu-zhan-tong-bu-he-bu-tong-bu-python-/">LeetCode</a></p>
+</blockquote>
+<h3 id="160、相交链表，编写一个程序，找到两个单链表相交的起始节点"><a href="#160、相交链表，编写一个程序，找到两个单链表相交的起始节点" class="headerlink" title="160、相交链表，编写一个程序，找到两个单链表相交的起始节点"></a>160、相交链表，编写一个程序，找到两个单链表相交的起始节点</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>两个指针分别遍历两个链表，到尾结点后切换到另一个链表的头结点，两个指针相交的地方就是第一个相交的节点</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/intersection-of-two-linked-lists/solution/tu-jie-xiang-jiao-lian-biao-by-user7208t/">LeetCode</a></p>
+</blockquote>
+<h3 id="169、多数元素，给定一个大小为-n-的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于-⌊-n-2-⌋-的元素"><a href="#169、多数元素，给定一个大小为-n-的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于-⌊-n-2-⌋-的元素" class="headerlink" title="169、多数元素，给定一个大小为 n 的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于 ⌊ n/2 ⌋ 的元素"></a>169、多数元素，给定一个大小为 n 的数组，找到其中的多数元素。多数元素是指在数组中出现次数大于 ⌊ n/2 ⌋ 的元素</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>排序，中间那个元素就是</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/majority-element/solution/duo-shu-yuan-su-by-leetcode-solution/">LeetCode</a></p>
+</blockquote>
+<h3 id="206、反转链表"><a href="#206、反转链表" class="headerlink" title="206、反转链表"></a>206、反转链表</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>pre节点和current 节点</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/reverse-linked-list/solution/fan-zhuan-lian-biao-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="217、存在重复元素，给定一个整数数组，判断是否存在重复元素。"><a href="#217、存在重复元素，给定一个整数数组，判断是否存在重复元素。" class="headerlink" title="217、存在重复元素，给定一个整数数组，判断是否存在重复元素。"></a>217、存在重复元素，给定一个整数数组，判断是否存在重复元素。</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>HashSet</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/contains-duplicate/solution/cun-zai-zhong-fu-yuan-su-by-leetcode/">LeetCode</a></p>
+</blockquote>
+<h3 id="231、2的幂，给定一个整数，编写一个函数来判断它是否是-2-的幂次方。"><a href="#231、2的幂，给定一个整数，编写一个函数来判断它是否是-2-的幂次方。" class="headerlink" title="231、2的幂，给定一个整数，编写一个函数来判断它是否是 2 的幂次方。"></a>231、2的幂，给定一个整数，编写一个函数来判断它是否是 2 的幂次方。</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>二进制数据中只有1个1</strong><p></p>
+</summary></details>
+
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/power-of-two/solution/power-of-two-er-jin-zhi-ji-jian-by-jyd/">LeetCode</a></p>
+</blockquote>
+<h3 id="二叉搜索树的最近公共祖先-给定一个二叉搜索树-找到该树中两个指定节点的最近公共祖先。"><a href="#二叉搜索树的最近公共祖先-给定一个二叉搜索树-找到该树中两个指定节点的最近公共祖先。" class="headerlink" title="二叉搜索树的最近公共祖先,给定一个二叉搜索树, 找到该树中两个指定节点的最近公共祖先。"></a>二叉搜索树的最近公共祖先,给定一个二叉搜索树, 找到该树中两个指定节点的最近公共祖先。</h3><details>
+<summary>点击看答案</summary>
+
+<p><strong></strong></p><summary><strong>直接看链接</strong><p></p>
+</summary></details>
+
+<p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/lowest-common-ancestor-of-a-binary-search-tree/solution/er-cha-sou-suo-shu-de-zui-jin-gong-gong-zu-xian--2/">LeetCode</a></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-%E6%A6%82%E5%BF%B5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/03/08/%E9%9D%A2-%E7%AE%97%E6%B3%95/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%AE%97%E6%B3%95-%E6%A6%82%E5%BF%B5/" class="post-title-link" itemprop="url">面试题-算法-概念</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-03-08 12:55:00" itemprop="dateCreated datePublished" datetime="2020-03-08T12:55:00+08:00">2020-03-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-05-08 23:52:03" itemprop="dateModified" datetime="2020-05-08T23:52:03+08:00">2020-05-08</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index">
+                    <span itemprop="name">面试</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="二叉查找树-也称二叉搜索树"><a href="#二叉查找树-也称二叉搜索树" class="headerlink" title="二叉查找树(也称二叉搜索树)"></a>二叉查找树(也称二叉搜索树)</h2><ul>
+<li>左子树上的节点值都<strong>小于等于</strong>根节点的值    </li>
+<li>右子树上的节点值都<strong>大于等于</strong>根节点的值    </li>
+<li>左右子树也是二叉搜索树    </li>
+</ul>
+<p>它是基于二分查找的思想，<strong>查找最大的次数为二叉树高度</strong>     </p>
+<h3 id="查找代价"><a href="#查找代价" class="headerlink" title="查找代价"></a>查找代价</h3><ul>
+<li>当左右子树高度大致平衡时，时间复杂度在 O(logN)     </li>
+<li>当先后插入的关键字<strong>有序</strong>时，退化成链表，查找的时间复杂度就在 O(N)了     </li>
+</ul>
+<h3 id="插入代价"><a href="#插入代价" class="headerlink" title="插入代价"></a>插入代价</h3><p>新节点插入到树的叶子节点上，因此，插入节点和查找一个不存在的数据的代价相同    </p>
+<h3 id="删除代价"><a href="#删除代价" class="headerlink" title="删除代价"></a>删除代价</h3><ul>
+<li>如果被删除的节点左、右 有一个为null时，代价仅为 O(1)      </li>
+<li>如果左右子树都存在，时间复杂度最大也不会超过O(logN)      </li>
+</ul>
+<p>缺陷：</p>
+<p>极端情况可能退化成链表，时间复杂度为  n。这主要是由于树不平衡导致的</p>
+<h2 id="平衡二叉查找树-平衡二叉搜索树"><a href="#平衡二叉查找树-平衡二叉搜索树" class="headerlink" title="平衡二叉查找树(平衡二叉搜索树)"></a>平衡二叉查找树(平衡二叉搜索树)</h2><p>是严格的平衡二叉树，它是空树或者左右两个子树的高度差 <strong>小于等于1</strong>，同时，左右两个子树也是平衡二叉搜索树</p>
+<h3 id="查找代价-1"><a href="#查找代价-1" class="headerlink" title="查找代价"></a>查找代价</h3><p>时间很稳定，查找效率最好最坏都是  O(logN)</p>
+<h3 id="插入代价-1"><a href="#插入代价-1" class="headerlink" title="插入代价"></a>插入代价</h3><p>由于要保证严格的平衡，插入时可能要进行再平衡(最多旋转一次)，因此插入的整体代价还在 O(logN)</p>
+<h3 id="删除代价-1"><a href="#删除代价-1" class="headerlink" title="删除代价"></a>删除代价</h3><p>和插入一样，要考虑再平衡，但是最多需要O(logN)次旋转，所以时间复杂度为  O(2logN)</p>
+<h2 id="红黑树-Red-Black-Tree"><a href="#红黑树-Red-Black-Tree" class="headerlink" title="红黑树(Red-Black Tree)"></a>红黑树(Red-Black Tree)</h2><p>它并不严格地平衡，最长路径长度不超过最短路径长度的2倍。它删除和插入引起平衡性改变的概率要远低于平衡二叉搜索树</p>
+<h3 id="查找代价-2"><a href="#查找代价-2" class="headerlink" title="查找代价"></a>查找代价</h3><p>查找代价基本上维持在 O(logN) 级别，最差情况下肯定比平衡二叉搜索树要差，因为没有那么平衡</p>
+<h3 id="插入代价-2"><a href="#插入代价-2" class="headerlink" title="插入代价"></a>插入代价</h3><p>不容易引起失衡，整体代价和平衡二叉搜索树差不多，也是 O(logN) 级别(虽然涉及变色，但是变色的代价很小)</p>
+<h3 id="删除代价-2"><a href="#删除代价-2" class="headerlink" title="删除代价"></a>删除代价</h3><p>相对平衡二叉搜索树，不容易引起失衡，时间复杂度也在 O(logN) 级别</p>
+<h3 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h3><p>平衡二叉搜索树由于插入和删除，会引起需要调整，可以通过 ：变色、左旋转、右旋转  三种方式调整。是否需要调整要根据红黑树的特性：</p>
+<ul>
+<li>节点是红色或黑色    </li>
+<li>根节点是黑色    </li>
+<li>叶子节点都是黑色的空节点    </li>
+<li>红色节点的两个子节点都是黑的(红节点不能连续出现)    </li>
+<li>任一点到每个叶子节点的路径包含相同数目的黑节点    </li>
+</ul>
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/54084335">zhihu</a>、<a target="_blank" rel="noopener" href="https://blog.csdn.net/z702143700/article/details/49079107">csdn</a>、<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/31805309">知乎</a></p>
+</blockquote>
+<h2 id="B-树和B-树"><a href="#B-树和B-树" class="headerlink" title="B-树和B+ 树"></a>B-树和B+ 树</h2><p>我们所谓的B-树，其实并不是B减树，中间是横线，不是减号；B + 就是 B加树了</p>
+<p>如 os 的文件目录存储、数据库中的索引结构的存储，不可能在内存中建立查找结构，必须在磁盘中建立好结构。</p>
+<p>在磁盘组织结构下，从任何一个节点指向其他节点都可能读取一次磁盘，再将数据写入内存比较。这回带来大量的IO操作，所以我们需要新的数据结构，即 B树和B+树。</p>
+<p>B树是一种<strong>多路平衡查找树</strong>，每个节点最多包含k个孩子，k称为B树的阶。K大小取决于<strong>磁盘页的大小</strong>。</p>
+<h2 id="一些算法上的概念"><a href="#一些算法上的概念" class="headerlink" title="一些算法上的概念"></a>一些算法上的概念</h2><h3 id="B树"><a href="#B树" class="headerlink" title="B树"></a>B树</h3><p>理解平衡二叉树后，就会更好理解后续的B树。</p>
+<h4 id="平衡二叉树"><a href="#平衡二叉树" class="headerlink" title="平衡二叉树"></a>平衡二叉树</h4><p>平衡二叉树是一棵二叉树，每个节点的左边节点小于当前节点的值，右边节点的值大于当前节点的值。</p>
+<p>因为二叉树的遍历性能和树的层级成反比，层级h越小查询越快，为了保证树的结构左右两端数据大致平衡以降低二叉树高度，一般会采用算法机制实现节点的平衡，如下图所示：</p>
+<p><img src="/assets/%E9%9D%A2%E8%AF%95/%E7%AE%97%E6%B3%95/%E4%BA%8C%E5%8F%89%E6%A0%91%E5%B9%B3%E8%A1%A1.jpg" alt="平衡树的高度"></p>
+<h4 id="B-树"><a href="#B-树" class="headerlink" title="B 树"></a>B 树</h4><p>当上述的平衡二叉树深度很深无法存储所有的节点数据时，需要读取磁盘。从而树的深度越大，需要的I/O操作次数越多，因此效率也越低，因此我们需要想办法降低树的高度。</p>
+<p>B 树的思路和平衡二叉树一样，但是采用了多叉的方式降低了高度。</p>
+<p>B树的具体实现比较难描述，看下面的参考链接更清晰，就不赘述。</p>
+<blockquote>
+<p>以上内容参考自： <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/27700617">勤劳的小手</a>、<a target="_blank" rel="noopener" href="http://www.androidos.net.cn/book/android-road/data-structure/tree/b-tree.html">B树概念</a></p>
+</blockquote>
+<h3 id="字符串匹配"><a href="#字符串匹配" class="headerlink" title="字符串匹配"></a>字符串匹配</h3><p>主要是利用KMP算法，这个很令人头大，这里贴出算法代码，如果需要详细了解，可以去查看<a target="_blank" rel="noopener" href="https://blog.csdn.net/v_july_v/article/details/7041827">July大神的这篇文章</a>。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">kmp</span><span class="params">(String str, String dest,<span class="keyword">int</span>[] next)</span></span>{<span class="comment">//str文本串  dest 模式串</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>, j = <span class="number">0</span>; i &lt; str.length(); i++){</span><br><span class="line">            <span class="keyword">while</span>(j &gt; <span class="number">0</span> &amp;&amp; str.charAt(i) != dest.charAt(j)){</span><br><span class="line">                j = next[j - <span class="number">1</span>];</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">if</span>(str.charAt(i) == dest.charAt(j)){</span><br><span class="line">                j++;</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">if</span>(j == dest.length()){</span><br><span class="line">                <span class="keyword">return</span> i-j+<span class="number">1</span>;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span>[] kmpnext(String dest){</span><br><span class="line">        <span class="keyword">int</span>[] next = <span class="keyword">new</span> <span class="keyword">int</span>[dest.length()];</span><br><span class="line">        next[<span class="number">0</span>] = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>,j = <span class="number">0</span>; i &lt; dest.length(); i++){</span><br><span class="line">            <span class="keyword">while</span>(j &gt; <span class="number">0</span> &amp;&amp; dest.charAt(j) != dest.charAt(i)){</span><br><span class="line">                j = next[j - <span class="number">1</span>];</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">if</span>(dest.charAt(i) == dest.charAt(j)){</span><br><span class="line">                j++;</span><br><span class="line">            }</span><br><span class="line">            next[i] = j;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> next;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>next数组的计算主要跟模式串有关，与文本串并没有关系，因为，模式串前后公共最长子序列。这样才会让我们跳过大量的重复计算</p>
+<h3 id="数字排列"><a href="#数字排列" class="headerlink" title="数字排列"></a>数字排列</h3><p>题目：用1，2，2，3，4，5 这6个数字，写一个方法，打印出所有不同的排列，如 512234、412235等，要求4不能再第三位，3与5不能相连。</p>
+<blockquote>
+<p>思路：问题可以归结为<strong>图的遍历</strong>，实际上6个数字就是6个结点，把6个结点连成无向连通图，对于每个结点求这个图形的遍历路径，所有结点的遍历路径就是最后对这6个数字的排列组合结果集。当然，这样获取的结果集未达到题目要求：<br>（1）3与5不能相连，这个可以在构造图的时候就满足条件；<br>（2）不能重复，有两个2，明显会存在重复结果，得最后去重（可以放在treeSet中）；<br>（3）4不能排在第三位，这个仍旧在结果集中排除即可。</p>
+</blockquote>
+<p>具体代码略。</p>
+<h3 id="手写算法题。猫扑素数；1到n，求1的个数；单词反转。"><a href="#手写算法题。猫扑素数；1到n，求1的个数；单词反转。" class="headerlink" title="手写算法题。猫扑素数；1到n，求1的个数；单词反转。"></a>手写算法题。猫扑素数；1到n，求1的个数；单词反转。</h3><h3 id="算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别"><a href="#算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别" class="headerlink" title="算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别"></a>算法：排序、二叉树遍历、红黑树了解。常见的数据结构主要有数组、链表、栈、队列、二叉堆、树、图等，红黑树和BL树的区别</h3><h3 id="快速排序底层原理简单描述。"><a href="#快速排序底层原理简单描述。" class="headerlink" title="快速排序底层原理简单描述。"></a>快速排序底层原理简单描述。</h3></body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/02/27/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E8%8E%B7%E5%8F%96debug%E5%8C%85%E7%9A%84cookies%E7%9A%84db%E6%96%87%E4%BB%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/02/27/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E8%8E%B7%E5%8F%96debug%E5%8C%85%E7%9A%84cookies%E7%9A%84db%E6%96%87%E4%BB%B6/" class="post-title-link" itemprop="url">Android获取debug包的cookies的db文件</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-02-27 08:00:00" itemprop="dateCreated datePublished" datetime="2020-02-27T08:00:00+08:00">2020-02-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-03-03 21:29:59" itemprop="dateModified" datetime="2020-03-03T21:29:59+08:00">2020-03-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E9%97%AE%E9%A2%98/" itemprop="url" rel="index">
+                    <span itemprop="name">问题</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>在项目中，用户登录后，需要为白名单中的 host 注入特定的cookies，在用户退出登录的时候，需要将注入的 cookies 清除(只清除app自己注入的cookies，h5 注入的cookies不要清除)。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>Android 的webview 并没有提供针对单个host 清除cookies的方法，只有全部清除，因此主要思路是将需要删除的cookies 设置为过期，再删除过期的即可，具体可以参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/turkeycock/article/details/53091103">Android清除单个域名的cookie</a></p>
+<p>当然，设置cookies过期有两种方法:</p>
+<blockquote>
+<p>Set-Cookie: id=a3fWa; Expires=Wed, 21 Oct 2015 07:28:00 GMT;</p>
+</blockquote>
+<p>使用Cookie的: Expires 属性. 它可以设置cookie的过期时间. 下面的代码表示id这条cookie的过期时间是2015年10月21日早上7点28分;</p>
+<blockquote>
+<p>Set-Cookie: id=a3fWa; Max-Age=86400</p>
+</blockquote>
+<p>使用Cookie的: Max-Age 属性. 它可以指定从现在开始Cookie存在的秒数. 秒数过完则cookie过期</p>
+<p>参考 <a target="_blank" rel="noopener" href="https://www.cnblogs.com/aisowe/p/11566073.html">aisowe</a></p>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>但是在清理的时候，发现总是不能清除掉指定cookie，打印出来发现：同一个host，比如 baidu.com ，它的cookie里面有2个key是一样的，但是值不一样，清理的时候，指定host 为baidu.com ，但是只能清除一个，另一个怎么也清理不掉。</p>
+<p>这就很奇怪了，能想到的就是可能在多个不同的host下都注入了这个key，于是想办法要把它存储cookies的文件取出来看下。</p>
+<p>我们知道，cookies 文件存储在 /data/data/<package>/app_webview，文件名是Cookies ，但是这个路径是一个app内部空间，普通情况下是没办法将这个文件获取出来的，除非是在虚拟机或者root过后，安装特定的文件管理器。</package></p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>不过我们安装Debug 的包的情况下，可能会有解决办法。因为 PackageManager 会检查 AndroidManifest.xml 中 isDebuggable 是不是false，这个值在我们打包的时候会根据你是打release包还是debug包而是不同的值，debug情况下是 isDebuggable = true，release 情况下是 true。</p>
+<p>这样，我们将手机通过Android Studio 安装上debug包，进入shell：</p>
+<blockquote>
+<p>adb shell    </p>
+</blockquote>
+<p>进入app 空间：</p>
+<blockquote>
+<p>run-as <package>    </package></p>
+</blockquote>
+<p>这样就能进入到app的内部空间，当然，也可以参考<a target="_blank" rel="noopener" href="https://www.cnblogs.com/SZ2015/p/4750051.html">不root情况下读取data数据</a> ,此时我们再通过命令：</p>
+<blockquote>
+<p>cd app_webview/</p>
+</blockquote>
+<p>就能进到存放cookies的目录了，通过 ls 命令就能看到 Cookies 这个文件，这个文件是个数据库文件，可以使用sqlite3 打开。此时我们不能直接将其copy到我们电脑上，只能将其复制到我们的 sdcard 中：</p>
+<blockquote>
+<p>cp Cookies /sdcard</p>
+</blockquote>
+<p>此时，Cookies 文件已经被赋值到 sdcard，通过两次 exit 命令，就能退出 shell 模式，再通过 adb pull 命令，就能将其复制到电脑上了。</p>
+<h2 id="数据分析"><a href="#数据分析" class="headerlink" title="数据分析"></a>数据分析</h2><p>在命令行打开Cookies 文件：</p>
+<blockquote>
+<p>sqlite3 /desktop/Cookies<br>.dump cookies</p>
+</blockquote>
+<p>就能看到cookies的数据了，这时候才发现，原来两个host都注入了这个key的cookie，一个是  baidu.com  一个是 .baidu.com，而后者是h5页面自己注入的，接下来问题就很明了了，将需要清除的cookies 按照前面的方法添加过期时间就ok，再手动执行删除过期cookies的操作，任务就完成了。</p>
+<p>该篇文章旨在记录问题解决过程，详细过程这里略过。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/01/15/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC13%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/01/15/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC13%E7%AB%A0/" class="post-title-link" itemprop="url">第13章：热修复原理</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-01-15 22:17:00 / 修改时间：22:18:03" itemprop="dateCreated datePublished" datetime="2020-01-15T22:17:00+08:00">2020-01-15</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>热修复框架的核心技术主要有3类：代码修复、资源修复和动态链接库修复。</p>
+<h2 id="资源修复"><a href="#资源修复" class="headerlink" title="资源修复"></a>资源修复</h2><p>很多热修复的框架的资源修复参考了Instant Run的资源修复原理，因此我们首先了解下Instant Run 的原理。Instant Run 的资源修复核心逻辑在MonkeyPatcher 的monkeyPatchExistingResources 方法中，如下所示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//com/android/tools/fd/runtime/MonkeyPatcher.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">monkeyPatchExistingResources</span><span class="params">(Context context,String externalResourceFile,Collection&lt;Activity&gt; activityes)</span></span>{</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">try</span>{</span><br><span class="line">    <span class="comment">//创建一个新的 AssetManager</span></span><br><span class="line">       AssetManager newAssetManager = (newAssetManager)newAssetManager.class.getConstructor(<span class="keyword">new</span> Class[<span class="number">0</span>]).newInstance(<span class="keyword">new</span> Object[<span class="number">0</span>]);<span class="comment">//1</span></span><br><span class="line">       </span><br><span class="line">       Method mAddAssetPath = AssetManager.class.getDeclareMethod(<span class="string">"addAssetPath"</span>,<span class="keyword">new</span> Class[] {String.class});<span class="comment">//2</span></span><br><span class="line">       </span><br><span class="line">       mAddAssetPath.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">       <span class="comment">//通过反射调用 addAssetPath 方法加载外部的资源( SD 卡)</span></span><br><span class="line">       <span class="keyword">if</span> (((Integer) mAddAssetPath.invoke(newAssetManager,<span class="keyword">new</span> Object[]{ externalResourceFile})).intValue () == <span class="number">0</span>) {<span class="comment">//3</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Could not create new AssetManager"</span>);</span><br><span class="line">            </span><br><span class="line">       <span class="keyword">if</span>{activities != <span class="keyword">null</span>){</span><br><span class="line">         <span class="keyword">for</span> (Activity activity : activities) {</span><br><span class="line">         Resources resources= activity.getResources() ;<span class="comment">//4</span></span><br><span class="line">         <span class="keyword">try</span> {</span><br><span class="line">          <span class="comment">//反射得到 Resources 的 AssetManager 类型的 mAssets 字段</span></span><br><span class="line">          Field mAssets = Resources.class.getDeclareField(<span class="string">"mAssets"</span>);<span class="comment">//5</span></span><br><span class="line">          mAssets.setAccessible(<span class="keyword">true</span> );</span><br><span class="line"></span><br><span class="line">          <span class="comment">//将 mAssets 字段的引用替换为新创建的 AssetManager</span></span><br><span class="line">          mAssets.set(resources,newAssetManager) ;<span class="comment">//6</span></span><br><span class="line">          </span><br><span class="line">          <span class="comment">//得到 Activity 的 Resources.Theme</span></span><br><span class="line">          Resources.Theme theme = activity.getTheme();</span><br><span class="line">          ...</span><br><span class="line">          <span class="comment">//反射得到 Resources.Theme 的 mAssets 字段</span></span><br><span class="line">          Field ma = Resources . Theme.class.getDeclaredField (” mAssets <span class="string">" ) ;</span></span><br><span class="line"><span class="string">          ma.setAccessible(true);</span></span><br><span class="line"><span class="string">          </span></span><br><span class="line"><span class="string">          //将 Resources.Theme 的 mAssets 字段替换为 newAssetManager</span></span><br><span class="line"><span class="string">          ma.set(theme,newAssetManager);//7</span></span><br><span class="line"><span class="string">         } catch (Throwable ignore) {</span></span><br><span class="line"><span class="string">         </span></span><br><span class="line"><span class="string">         }</span></span><br><span class="line"><span class="string">    }</span></span><br><span class="line"><span class="string">}</span></span><br><span class="line"><span class="string"></span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看出，在注释1处创建了一个新的AssetManager，之后通过反射调用 addAssetPath 方法加载外部(SD卡)的资源。在注释4处遍历Activity 列表，得到每个Activity 的Resource ，在5处通过反射得到Resources 的AssetManager 类型的mAsset字段，并在注释6处改写mAssets字段的引用为新的 AssetManager。之后，将AssetManager 类型的mAssets 字段的引用全部替换为新创建的 AssetManager。所以，总共就是两个步骤：</p>
+<ul>
+<li>创建新的 AssetManager ,通过反射调用 addAssetPath 方法加载外部的资源,这样<br>新创建的 AssetManager 就含有了外部资源。     </li>
+<li>将 AssetManager 类型的 rnAssets 字段的引用全部替换为新创建的 AssetManager。</li>
+</ul>
+<h2 id="代码修复"><a href="#代码修复" class="headerlink" title="代码修复"></a>代码修复</h2><p>先写到这，后续有空再来。。。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/12/06/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/12/06/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：理解上下文Context</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-12-06 19:09:00" itemprop="dateCreated datePublished" datetime="2019-12-06T19:09:00+08:00">2019-12-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-02-20 21:53:40" itemprop="dateModified" datetime="2020-02-20T21:53:40+08:00">2020-02-20</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="Context-的关联类"><a href="#Context-的关联类" class="headerlink" title="Context 的关联类"></a>Context 的关联类</h2><p>开发中经常使用的Context 的使用场景大体分为两类：</p>
+<ul>
+<li>使用Context 调用方法，比如启动 Activity、访问资源、调用系统服务等。    </li>
+<li>调用方法时传入，比如弹出 Toast、创建dialog。    </li>
+</ul>
+<p>Activity、Service 与 Application 都间接继承 Context，因此可以说一个应用进程的Context 数量 = Activity 数量 + Service 数量 + 1，这个1就是Application数量。Context 的关联类的关系如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC5%E7%AB%A0/Context%E5%85%B3%E8%81%94%E7%B1%BB%E5%85%B3%E7%B3%BB.png" alt="Context关联类关系"></p>
+<p>可以看出，ContextWrapper 中包含有 Context 类型的 mBase 对象，mBase 具体指向 ContextImpl，此外，ContextThemeWrapper、Service 和 Application 都继承自 ContextWrapper，这样它们都能通过 mBase 来使用Context 的方法。同时它们也是装饰类，在 ContextWrapper 上又添加了不少功能。比如，ContextThemeWrapper 包含了主题相关的方法(getTheme之类)，因此Activity 继承了ContextThemeWrapper，而Service 不需要主题，因此继承 ContextWrapper。Context 关联类的继承结构有以下优点：</p>
+<ul>
+<li>使用者能够方便使用Context 的功能。    </li>
+<li>如果 ContextImpl 发生了变化，它的装饰类 ContextWrapper 无需做任何修改。    </li>
+<li>ContextImpl 的具体实现不会暴露给使用者。     </li>
+<li>通过组合而不是继承，拓展 ContextImpl 的功能。运行时选择不同的装饰类，实现不同功能。    </li>
+</ul>
+<h2 id="Application-Context-的创建过程"><a href="#Application-Context-的创建过程" class="headerlink" title="Application Context 的创建过程"></a>Application Context 的创建过程</h2><p>我们通过 getApplicationContext 来获取应用程序的全局 Application Context，那么 Application Context 是如何创建的呢？在应用程序启动完成后，应用程序就有一个全局的 Application Context，那就从应用程序启动过程着手，Application Context 的创建过程时序图如下：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC5%E7%AB%A0/ApplicationContext%E7%9A%84%E5%88%9B%E5%BB%BA%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="Application context 的创建时序图"></p>
+<p>应用程序进程的主线程管理类 ActivityThread 会调用内部类 ApplicationThread 的 scheduleLaunchActivity 方法来启动Activity，而在scheduleLaunchActivity 中会向 H 发送 LAUNCH_ACTIVITY 类型消息，目的是将启动Activity 的逻辑放在主线程中。在 H 的 handleMessage 方法中最终会调用到 LoadApk 类的  makeApplication 方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/LoadedApk.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> Application <span class="title">makeApplication</span><span class="params">(<span class="keyword">boolean</span> forceDefaultAppClass,Instrumentation nstrumentation)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (mApplication != <span class="keyword">null</span>) {<span class="comment">//l</span></span><br><span class="line">        <span class="keyword">return</span> mApplication;</span><br><span class="line">    }</span><br><span class="line">    ...</span><br><span class="line">    Application app = <span class="keyword">null</span>;</span><br><span class="line">    String appClass = mApplicationinfo.className;</span><br><span class="line">    <span class="keyword">if</span> (forceDefaultAppClass || (appClass == <span class="keyword">null</span>) ) {</span><br><span class="line">        appClass = <span class="string">"android.app.Application”;</span></span><br><span class="line"><span class="string">    }</span></span><br><span class="line"><span class="string">    try {</span></span><br><span class="line"><span class="string">        java.lang.ClassLoader cl= getClassLoader();</span></span><br><span class="line"><span class="string">        if (!mPackageName.equals ("</span>android<span class="string">")){</span></span><br><span class="line"><span class="string">            initializeJavaContextClassLoader ();</span></span><br><span class="line"><span class="string">        }</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        Contextimpl appContext = Contextimpl.createAppContext(mActivityThread,this); //2</span></span><br><span class="line"><span class="string">        app = mActivityThread.rninstrumentation.newApplication(cl, appClass, appContext);//3</span></span><br><span class="line"><span class="string">        appContext. setOUterContext(app) ;//4</span></span><br><span class="line"><span class="string">    }catch (Exception e){</span></span><br><span class="line"><span class="string">        ...</span></span><br><span class="line"><span class="string">    }</span></span><br><span class="line"><span class="string">    ...</span></span><br><span class="line"><span class="string">    mApplication = app;//5</span></span><br><span class="line"><span class="string">    ...</span></span><br><span class="line"><span class="string">    return app;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">}</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>注释1处，假设是第一次启动应用程序，因此 mApplication 为null，在注释2处通过 Contextimpl 的 createAppContext 方法创建 Contextimpl 的实例，注释3中创建了 Application 对象，注释4处将 Application 对象赋值给 Contextimpl 的成员变量 mOuterContext ，<strong>这样，ContextImpl 中也包含了 Application 的引用。</strong>注释5处的 mApplication 即 LoadedApk 的成员变量 mApplication。来看看注释 3 处Application 是如何创建的（最终调用到如下代码的方法）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/lnstrumentation.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">public</span> Application <span class="title">newApplication</span><span class="params">(xxxx)</span></span>{</span><br><span class="line">    Application app = (Application) clazz.newinstance ();</span><br><span class="line">    app.attach(context) ; <span class="comment">//l</span></span><br><span class="line">    <span class="keyword">return</span> app ;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>注释1处通过反射来创建Application</strong>，并调用其 attach 方法，并且将 ContextImpl 类型的对象传进去：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/Application.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">attach</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">    attachBaseContext(context);</span><br><span class="line">    mLoadedApk = Contextimpl.getimpl(context).mPackageinfo;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">attachBaseContext</span><span class="params">(Context base)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span>(mBase != <span class="keyword">null</span> ) {</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException (<span class="string">"Base context already set"</span>);</span><br><span class="line">    }</span><br><span class="line">    mBase = base;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>最终，把一路传过来的 ContextImpl 类型的 base 赋值给 Application 的 mBase 。前面讲过，这个歌mBase 是ContextWrapper 的成员变量，因为Application 继承 ContextWrapper ，所以才有这个变量。因此，Application 的attach 方法的作用就是使 Application 可以使用 Context 的方法，这样，Application 才可以用来代表 Application Context。</p>
+<h2 id="Application-Context-的获取过程"><a href="#Application-Context-的获取过程" class="headerlink" title="Application Context 的获取过程"></a>Application Context 的获取过程</h2><p>我们通过 getApplicationContext 来获取Application Context，这个方法在 ContextWrapper 中实现：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/content/ContextWrapper.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> Context <span class="title">getApplicationContext</span><span class="params">()</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">    return mBase.getApplicationContext( )</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>从前面我们可知，mBase 指的是 ComtextImpl，具体代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/ContextImpl.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> Context <span class="title">getApplicationContext</span> <span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> (mPackageinfo != <span class="keyword">null</span> ) ? mPackageinfo.getApplication() : mMainThread.getApplication();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果 loadedApk 类型的mPackageinfo 不为 null，则调用其 getApplication 方法，否则调用 ActivityThread 的 getApplication 方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/LoadedApk.java</span></span><br><span class="line"></span><br><span class="line"><span class="function">Application <span class="title">getApplication</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> mApplication ;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个 mApplication 应该熟悉，是在前面提到的  LoadedApk 的  makeApplication 方法中注释 5 处被赋值的，是个Application 对象。就这样，我们获取到 Application Context。</p>
+<h2 id="Activity-的Context-创建过程"><a href="#Activity-的Context-创建过程" class="headerlink" title="Activity 的Context 创建过程"></a>Activity 的Context 创建过程</h2><p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC5%E7%AB%A0/Activity%E7%9A%84context%E5%88%9B%E5%BB%BA%E8%BF%87%E7%A8%8B%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="Activity的context创建过程时序图"></p>
+<p>应用程序进程的主线程管理类 ActivityThread 会调用内部类 ApplicationThread 的 scheduleLaunchActivity 方法来启动Activity，最终通过 H 类在主线程中处理启动事项，最终调用到 ActivityThread 的 performLaunchActivity 方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//frameworks/base/core/java/android/app/ActivityThread.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> Activity <span class="title">perfomLaunchActivity</span><span class="params">(ActivityClientRecord r , Intent customintent)</span> </span>{</span><br><span class="line">    ...</span><br><span class="line">    ContextImpl appContext = createBaseContextForActivity(r);<span class="comment">//l</span></span><br><span class="line">    Activity activity = <span class="keyword">null</span> ;</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        java.lang.ClassLoader cl = appContext.getClassLoader();</span><br><span class="line">        activity = mInstrumentation.newActivity(cl , <span class="function">component <span class="title">getClassName</span><span class="params">()</span> , r.intent) </span>; <span class="comment">//2</span></span><br><span class="line">        ...</span><br><span class="line">    }<span class="keyword">catch</span>(Exception e){</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span>(activity != <span class="keyword">null</span>) {</span><br><span class="line">        appContext.<span class="function">setOuterC nte <span class="title">t</span><span class="params">(activity)</span> </span>; <span class="comment">//3</span></span><br><span class="line">        <span class="comment">//4</span></span><br><span class="line">        activity.attach(xxxx,xxxx);</span><br><span class="line">        ...</span><br><span class="line">    }<span class="keyword">catch</span>(Exception e){</span><br><span class="line">        ...</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在注释2处创建了Activity 的实例，注释1处<strong>通过 createBaseContextForActivity 方法创建 Activity 的 ContextImpl</strong>，并在注释4 处将 ContextImpl 对象传给activity 的attach方法，在注释3处调用了 ContextImpl 的 setOuterContext 方法，将 Activity 的实例赋值给 ContextImpl 的成员变量 mOuterContext ，这样，ContextImpl 也可以访问 Activity 的变量和方法。createBaseContextForActivity 方法中，最终也会调用 ContextWrapper 的 attachBaseContext ，将Activity 中的 ContextImpl 对象赋值给 ContextWrapper 的成员变量 mBase，这样，ContextWrapper 的功能就可以交由 ContextImpl 来处理。</p>
+<h2 id="Service-的-Context-创建过程"><a href="#Service-的-Context-创建过程" class="headerlink" title="Service 的 Context 创建过程"></a>Service 的 Context 创建过程</h2><p>Service 的Context 创建过程与 Activity 的Context 创建过程类似，这里先略过，后续有时间再记录。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/11/28/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC12%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/11/28/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC12%E7%AB%A0/" class="post-title-link" itemprop="url">第12章：理解ClassLoader</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-28 10:34:00" itemprop="dateCreated datePublished" datetime="2019-11-28T10:34:00+08:00">2019-11-28</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-03 21:47:10" itemprop="dateModified" datetime="2019-12-03T21:47:10+08:00">2019-12-03</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>热修复和插件化是目前比较热门的技术，想要更好地掌握它们需要先了解ClassLoader。从第11章可知，DVM 和 ART 加载的是dex文件，JVM 加载的是class文件，因此它们的类加载器 ClassLoader 是肯定有区别的。</p>
+<h2 id="Java中的ClassLoader"><a href="#Java中的ClassLoader" class="headerlink" title="Java中的ClassLoader"></a>Java中的ClassLoader</h2><p>虚拟机章节提到 <strong>类加载子系统</strong>，它的主要作用就是通过多种类加载器来查找和加载Class文件到Java虚拟机中。Java<strong>系统</strong>中的类加载器主要包括以下：</p>
+<ul>
+<li>Bootstrap ClassLoader(引导类加载器)：C/C++实现的，用于加载指定的JDK核心类库，比如 java.lang、java.uti等系统类。    </li>
+<li>Extensions ClassLoader(拓展类加载器)： Java中的实现类为 ExtClassLoader ，用于加载Java的拓展类，主要包括 $JAVA_HOME/jre/lib/ext 、java.ext.dir 等目录。    </li>
+<li>Application ClassLoader(应用程序类加载器)：Java中的实现类为 AppClassLoader，用来加载 1、当前程序的 Classpath 目录 ；2、系统属性 java.class.path指定的目录。    </li>
+</ul>
+<h3 id="ClassLoader-继承关系"><a href="#ClassLoader-继承关系" class="headerlink" title="ClassLoader 继承关系"></a>ClassLoader 继承关系</h3><p>以下代码可以验证 运行一个Java程序需要用到哪些类加载器：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClassLoaderTest</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>{</span><br><span class="line">        ClassLoader loader = ClassLoaderTest.class.getClassLoader();</span><br><span class="line">        <span class="keyword">while</span> (loader != <span class="keyword">null</span>){</span><br><span class="line">            System.out.println(loader);<span class="comment">//1</span></span><br><span class="line">            loader = loader.getParent();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码可以获得当前类 ClassLoaderTest 的类加载器，接着打印出当前类加载器的父加载器，直到没有父加载器，打印的结果如：</p>
+<blockquote>
+<p>sun misc Launcher AppClassLoader@75b84c92<br>sun .misc .Launcher$ExtClassLoader@lb6d3586     </p>
+</blockquote>
+<p>可以看出，<strong>加载 ClassLoaderTest 的加载器是 AppClassLoader</strong>，并且AppClassLoader 的父加载器是 ExtClassLoader。但是这里没有打印出 ExtClassLoader 的父加载器 Bootstrap ClassLoader ，是因为Bootstrap ClassLoader 由 C/C++ 编写，并不是一个Java类，因此我们无法在Java代码中获取。</p>
+<h3 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h3><p>所谓的双亲委派模型就是首先判断该Class是否已经加载，如果未加载，则当前加载器委托父加载器进行查找，这样依次地柜，直到委托到最顶层的 Bootstrap ClassLoader，如果Bootstrap ClassLoader 找到了该Class，就直接返回，否则，依次向下查找，如果当前加载器之上的所有加载器都未能加载，则当前加载器自身去查找。</p>
+<p>如果要加载一个位于D盘的Class文件，系统所提供的类加载器就不能满足，这时候需要自定义类加载器 CustomClassLoader 继承java.lang.ClassLoader 并覆写findClass方法，加载D盘的Class文件步骤如下：</p>
+<ol>
+<li>CustomClassLoader 首先从缓存中查找Class文件是否已经加载，已经加载就返回，没有加载就委托给<strong>父加载器(AppClassLoader)</strong>。    </li>
+<li>按照双亲委派模型递归。    </li>
+<li>一直委托到 Bootstrap ClassLoader ，如果 Bootstrap ClassLoader 也没能加载，则交给子加载器(ExtClassLoader)，以此类推。    </li>
+</ol>
+<blockquote>
+<p>综合以上，ClassLoader的父子关系不是使用继承来实现的，二是使用组合来实现代码复用。</p>
+</blockquote>
+<p>双亲委派模型的好处：</p>
+<ol>
+<li>避免重复加载。如果Class已经加载过，就不需要加载，二是直接读取。    </li>
+<li>更加安全。如果不使用双亲委派模型，就可以自定义一个String类来替代系统的String类，显然会造成安全隐患。或者自定义一个Object类，有可能会动摇java基础，因为java里面所有类都要继承java的Object(这段是我自己理解添加的)。采用双亲委派模型似的系统的类在Java虚拟机启动时就被加载，也就无法自定义系统类来替代系统。</li>
+</ol>
+<p>自定义类加载器的代码如下：<br><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC12%E7%AB%A0/%E8%87%AA%E5%AE%9A%E4%B9%89%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A81.jpeg" alt="自定义类加载器1"><br><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC12%E7%AB%A0/%E8%87%AA%E5%AE%9A%E4%B9%89%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A82.jpeg" alt="自定义类加载器2"></p>
+<h2 id="Android-中的ClassLoader"><a href="#Android-中的ClassLoader" class="headerlink" title="Android 中的ClassLoader"></a>Android 中的ClassLoader</h2><h3 id="ClassLoader-的类型"><a href="#ClassLoader-的类型" class="headerlink" title="ClassLoader 的类型"></a>ClassLoader 的类型</h3><p>Android中系统类加载器也主要包括3种：</p>
+<ul>
+<li>BootClassLoader： 由Java代码实现，类的访问修饰符是默认的，只有在同一个包中才能访问，用户无法直接调用。Android系统启动时，会使用BootClassLoader 预加载常用类。    </li>
+<li>DexClassLoader：可以加在dex文件以及包含dex的压缩文件(apk和jar)，不管加载哪种文件，最终都加载dex文件。    </li>
+<li>PathClassLoader：Android使用它来加载系统类和应用程序的类，通常用来加载已经安装的apk的dex文件。</li>
+</ul>
+<h3 id="ClassLoader的继承关系"><a href="#ClassLoader的继承关系" class="headerlink" title="ClassLoader的继承关系"></a>ClassLoader的继承关系</h3><p>通过前面用于验证java类继承关系的代码，在这里同样可以验证Android中类加载器的继承关系。</p>
+<h3 id="ClassLoader-的加载过程"><a href="#ClassLoader-的加载过程" class="headerlink" title="ClassLoader 的加载过程"></a>ClassLoader 的加载过程</h3><p>Android 的 ClassLoader 同样遵循了双亲委派模型，ClassLoader 的加载方法为 loadClass方法，这个方法定义在抽象类 ClassLoader中。ClassLoader的查找流程如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC12%E7%AB%A0/ClassLoader%E7%9A%84%E6%9F%A5%E6%89%BE%E6%B5%81%E7%A8%8B.png" alt="ClassLoader的查找流程"></p>
+<h3 id="BootClassLoader的创建"><a href="#BootClassLoader的创建" class="headerlink" title="BootClassLoader的创建"></a>BootClassLoader的创建</h3><p>在ZygoteInit的main方法中，调用了Zygote的 preload 方法，preload方法中又调用了 ZygoteInit 的 preloadClasses 方法，preloadClasses用于预加载常用的类，这个预加载属于拿空间换时间的策略。在preloadClasses方法中会创建 BootClassLoader 。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2019/11/25/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC4%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/11/25/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：四大组件的工作过程</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-25 14:09:00" itemprop="dateCreated datePublished" datetime="2019-11-25T14:09:00+08:00">2019-11-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-02-09 19:49:06" itemprop="dateModified" datetime="2020-02-09T19:49:06+08:00">2020-02-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="根Activity的启动过程"><a href="#根Activity的启动过程" class="headerlink" title="根Activity的启动过程"></a>根Activity的启动过程</h2><p>根Activity 是应用程序第一个Activity，相比普通的Activity的启动过程，一般用根Activity 的启动过程来指代应用程序的启动过程，更具有参考意义。根Activity 的启动过程比较复杂，这里分为3个部分来讲：<font color="green">Launcher 请求AMS 过程、AMS 到ApplicaitonThread 的调用过程 以及 ActivityThread 启动Activity</font>。</p>
+<h3 id="Launcher-请求AMS-过程"><a href="#Launcher-请求AMS-过程" class="headerlink" title="Launcher 请求AMS 过程"></a>Launcher 请求AMS 过程</h3><p>当我们点击桌面上某个应用的快捷图标时，就会通过Launcher 请求AMS 来启动该应用程序，过程的时序图如下：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/Launcher%E8%B0%83%E7%94%A8AMS%E5%90%AF%E5%8A%A8Activity%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="Launcher调用AMS启动Activity时序图"></p>
+<p>点击桌面图标，会调用 Launcher 的startActivitySafely方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//  packages/apps/Launcher3/src/com/android/launcher3/Launcher.java </span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">startActivitySafely</span><span class="params">(View v ,Intent intent, Itemlnfo item)</span></span>{</span><br><span class="line">    ...</span><br><span class="line">    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); <span class="comment">//l </span></span><br><span class="line">    <span class="keyword">try</span>{</span><br><span class="line">        <span class="keyword">if</span> (xxxx){</span><br><span class="line">            ...</span><br><span class="line">        }<span class="keyword">else</span> <span class="keyword">if</span>(user == <span class="keyword">null</span> || user.equals(Process.myUserHandle())){</span><br><span class="line">            startActivity(intent, optsBundle); <span class="comment">//2 </span></span><br><span class="line">        }<span class="keyword">else</span> {</span><br><span class="line">            ...</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    } <span class="keyword">catch</span> (ActivityNotFoundExceptionlSecurityException e) {</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>因为是启动新的应用，所以注释1处将根Activity 在新的任务栈启动，应用启动会执行到注释2处的startActivity 方法，最终会在Activity 中调用  startActivityForResult 方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//  frameworks/base/core/java/and oid/app/Activity.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startActivityForResult</span><span class="params">(<span class="meta">@RequiresPermission</span> Intent intent, <span class="keyword">int</span> requestCode, <span class="meta">@Nullable</span> Bundle options)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (mParent == <span class="keyword">null</span>) {<span class="comment">//1</span></span><br><span class="line">        options = transferSpringboardActivityOptions(options);</span><br><span class="line">        Instrumentation.ActivityResult ar = minstrumentation.execStartActivity(<span class="keyword">this</span>, mMainThread.getApplicationThread(), mToke,<span class="keyword">this</span>,intent, requestCode , option);</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        ...</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>注释1的mParent 是Activity 类型，表示当前Activity 的父类(个人理解，这里应该说是当前Activity的前一个Activity)，因此mParent == null 成立，最后由 Instrumentation 的execStartActivity方法来执行启动操作。 <strong>Instrumentation 主要用于监控应用程序和系统的交互。</strong>主要代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//  frameworks/base/core/java/android/app/Instrumentation.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> ActivityResult <span class="title">execStartActivity</span><span class="params">(Context who , IBinder contextThread, IBinder token , Activity target, Intent intent ,<span class="keyword">int</span> requestCode ,Bundle options)</span></span>{</span><br><span class="line">...</span><br><span class="line"><span class="keyword">try</span> {</span><br><span class="line">    intent.migrateExtraStreamToClipData();</span><br><span class="line">    intent.prepareToLeaveProcess(who );</span><br><span class="line">    <span class="keyword">int</span> result = ActivityManager.getService().startActivity(xxx,xxx,xxxx));</span><br><span class="line">    checkStartActivityResult(result, intent);</span><br><span class="line">} <span class="keyword">catch</span> (RemoteException e) {</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Failure from system"</span>, e);</span><br><span class="line">}</span><br><span class="line"><span class="keyword">return</span> <span class="keyword">null</span>;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由代码可知，首先通过 ActivityManager 获取 AMS 的代理对象，接着调用代理对象的 startActivity 方法。AMS 的代理对象是一个 IActivityManager(该类由AIDL在工具编译时自动生成的)对象，这个对象封装了 IBinder 类型的 AMS 的引用。通过一系列进程间通信，最终调用 AMS 的 startActivity 方法。</p>
+<h3 id="AMS-到-ApplicationThread-的调用过程"><a href="#AMS-到-ApplicationThread-的调用过程" class="headerlink" title="AMS 到 ApplicationThread 的调用过程"></a>AMS 到 ApplicationThread 的调用过程</h3><p>Launcher 请求进入AMS 后，接着是AMS 到 ApplicationThread 调用流程，时序图如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/AMS%E5%88%B0ApplicationThread%E8%B0%83%E7%94%A8.png" alt="Launcher调用AMS启动Activity时序图"></p>
+<p>在AMS 的startActivity 会使用 startActivityAsUser 实现功能，并获取UserHandle.getCallingUserld() 即 调用者的UserId 作为参数传入。之后，startActivityAsUser 中会判断调用者进程是否被隔离，如果隔离则抛出<font color="green">SecurityException</font>异常；接着，根据UserId 等参数检查调用者权限，如果没权限也抛出 SecurityException 异常。</p>
+<p>AMS 中最终调用ActivityStater 的 startActivityLocked 方法，并且如果有 TaskRecord(代表启动的Activity所在的栈)，则将其也作为参数传入；startActivityLocked 中会收集所有逻辑来决定如何将Intent 和Flags 转换为Activity(生成用于描述Activity 的  ActivityRecord 对象)，并且将Activity 与Task 及 Stack 关联。</p>
+<blockquote>
+<p>TaskRecord 用于描述一个 Activity 任务栈，Activity 任务栈其实是一个假想模型，并不真实存在。</p>
+</blockquote>
+<p>最终调用到 ActivityStackSupervisor 的 startSpecificActivityLocked 方法时，会判断要启动的Activity 所在的应用程序进程是否已经运行，已经运行则调用 realStartActivityLocked 方法，并传入代表应用程序进程的 ProcessRecord。之后会调用 ApplicationThread 的 scheduleLaunchActivity 方法。当前代码逻辑运行在AMS所在进程(即SystemServer进程)中，通过 ApplicationThread 进程间通信，将程序执行到应用程序进程，<strong>ApplicationThread是AMS 进程与应用程序进程的通信桥梁</strong>，如下图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/AMS%E4%B8%8E%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E8%BF%9B%E7%A8%8B%E9%80%9A%E4%BF%A1.png" alt="AMS与应用程序进程通信"></p>
+<h3 id="ActivityThread-启动Activity-的过程"><a href="#ActivityThread-启动Activity-的过程" class="headerlink" title="ActivityThread 启动Activity 的过程"></a>ActivityThread 启动Activity 的过程</h3><p>由前面的知识可知，目前的代码逻辑已经运行到应用程序进程中，先查看下ActivityThread 启动Activity 的时序图：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/ActivityThread%E5%90%AF%E5%8A%A8Activity%E8%BF%87%E7%A8%8B%E7%9A%84%E6%97%B6%E5%BA%8F%E5%9B%BE.png" alt="ActivityThread启动Activity过程的时序图"></p>
+<p>ApplicationThread 是 ActivityThread 的内部类，前面讲过应用程序进程创建完成后，会运行代表主线程的实例 ActivityThread 。接着上一节的内容查看 ApplicationThread.scheduleLaunchActivity 方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//  frameworks/base/core/java/android/app/ActivityThread.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">scheduleLaunchActivity</span><span class="params">(xxx,xx,xxx)</span> </span>{<span class="comment">//参数太多，这里省略了参数</span></span><br><span class="line">    updateProcessState(procState ,<span class="keyword">false</span>);</span><br><span class="line">    ActivityClientRecord r = <span class="keyword">new</span> ActivityClientRecord();</span><br><span class="line">    r.token = token;</span><br><span class="line">    r.ident ＝ident;</span><br><span class="line">    r.intent = intent;</span><br><span class="line">    r.referrer = referrer;</span><br><span class="line">    ...</span><br><span class="line">    updatePendingCoηfiguration (curConfig);</span><br><span class="line">    sendMessage(H.LAUNCH_ACTIVITY ,r);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在把启动Activity 必要的数据封装成 ActivityClientRecord 后，通过 sendMessage 方法将封装的数据以 H.LAUNCH_ACTIVITY 类型发送了出去，这里可以大胆地猜测sendMessage方法是通过handler的 sendMessage 执行的，果不其然,sendMessage 有多个重载方法，最终调用到如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//  frameworks/base/core/java/android/app/ActivityThread.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">sendMessage</span><span class="params">(<span class="keyword">int</span> what ,Object obj ,<span class="keyword">int</span> argl ,<span class="keyword">int</span> arg2 ,<span class="keyword">boolean</span> async)</span></span>{</span><br><span class="line">    Message msg = <span class="function">Message <span class="title">obta</span> <span class="params">()</span></span>;</span><br><span class="line">    msg.what = what;</span><br><span class="line">    msg.ob]= obj;</span><br><span class="line">    msg.argl = argl;</span><br><span class="line">    msg.arg2 = arg2;</span><br><span class="line">    <span class="keyword">if</span> (async) {</span><br><span class="line">        msg .setAsynchronous(<span class="keyword">true</span>);</span><br><span class="line">    }</span><br><span class="line">    mH.sendMessage(msg);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这里的mH指的是 ActivityThread 的内部类 H，前面讲过，这个H是集成Handler，是应用进程中主线程的消息管理类，<strong>因为ApplicationThread 是一个Binder，它的调用逻辑都运行在Binder 线程池中，所以这里需要使用H将代码的逻辑切换到主线程中。</strong>这样一来，我们只需要看 H 的handleMessage 方法即可知道具体的执行操作：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">H</span> <span class="keyword">extends</span> <span class="title">Handler</span> </span>{</span><br><span class="line">    ...</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleMessage</span> <span class="params">(Message msg )</span> </span>{</span><br><span class="line">    <span class="keyword">switch</span> (msg.what) {</span><br><span class="line">        <span class="keyword">case</span> LAUNCH_ACTIVITY:</span><br><span class="line">        Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER，<span class="string">"activityStart"</span>);</span><br><span class="line">        <span class="keyword">final</span> ActivityClientRecord r = (ActivityClientRecord) msg.obj;<span class="comment">//1</span></span><br><span class="line">        r.packageinfo = getPackageinfoNoCheck(r.activityinfo.applicationinfo, r.compatlnfo); <span class="comment">//2</span></span><br><span class="line">        handleLaunchActivity(r,<span class="keyword">null</span> ,<span class="string">"LAUNCH ACTIVITY"</span>); <span class="comment">//3</span></span><br><span class="line">        Trace.traceEnd (Trace . TRACE TAG ACTIVITY MANAGER);</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">        ...</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在注释1处将传过来的 msg 的成员变量 obj 还原成 ActivityClientRecord，注释2获得LoadApk 类型的对象。<strong>应用程序进程要启动Activity时需要将该Activity 所属的APK 加载进来，而LoadApk 就是用来描述已经加载的APK 文件的。</strong>注释3处调用 handleLaunchActivity 方法，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//  frameworks/base/core/java/android/app/ActivityThread.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleLaunchActivity</span><span class="params">(ActivityClientRecord r ,Intent customintent, String reason)</span> </span>{</span><br><span class="line">    ...</span><br><span class="line">    WindowManagerGlobal.initialize ();</span><br><span class="line">    <span class="comment">//启动 Activity</span></span><br><span class="line">    Activity a = performLaunchActivity(r, customintent);<span class="comment">//1</span></span><br><span class="line">    <span class="keyword">if</span>(a != <span class="keyword">null</span>){</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">//将 Activity 的状态置为 Resume</span></span><br><span class="line">        handleResumeActivity(r.token, <span class="keyword">false</span>, r.isForward,!r.activity.mFinished &amp;&amp; !r.startsNotResumed, r.lastProcessedSeq, reason);<span class="comment">//2</span></span><br><span class="line">    }<span class="keyword">else</span>{</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">//停止 Activity 启动</span></span><br><span class="line">        <span class="function">ActivityManager getServ <span class="title">ce</span> <span class="params">()</span> .<span class="title">finishActivity</span><span class="params">(r . token , Activity . RESULT CANCELED , <span class="keyword">null</span> , Activity . DONT_FINISH_TASK_WITH_ACTIVITY)</span> </span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>注释1处performLaunchActivity 方法启动了 Activity，注释2处将Activity的状态设置为 Resume ，如果该Activity 为null，则会通知AMS 停止启动Activity。我们来看看 performLaunchActivity 方法做了什么：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//  frameworks/base/core/java/android/app/ActivityThread.java</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> Activity <span class="title">performLaunchActivity</span><span class="params">(ActivityClientRecord r , Intent customintent)</span> </span>{</span><br><span class="line">    <span class="comment">//获取 Activityinfo</span></span><br><span class="line">    Activityinfo ainfo = r.activityinfo;<span class="comment">//l</span></span><br><span class="line">    <span class="keyword">if</span> (r.packageinfo == <span class="keyword">null</span>) {</span><br><span class="line">        <span class="comment">//获取 APK 文件的描述类 LoadedApk</span></span><br><span class="line">        r.packageinfo = getPackageinfo(ainfo.applicationinfo ,r.compatinfo,Context.CONTEXT_INCLUDE_CODE);<span class="comment">//2</span></span><br><span class="line">    }</span><br><span class="line">    ComponentName component= r.intent.getComponent();<span class="comment">//3</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//创建要启动 Activity 的上下文环境</span></span><br><span class="line">    Contextlmpl appContext = createBaseContextForActivity(r) ; <span class="comment">//4</span></span><br><span class="line">    Activity activity = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        java.lang .ClassLoader cl= appContext.getClassLoader();</span><br><span class="line">        <span class="comment">//用类加载器来创建该 Activity 的实例</span></span><br><span class="line">        activity = <span class="function">mInstrumentation <span class="title">newActivity</span><span class="params">(cl ,component.getClassName()</span> ,r.intent) </span>;<span class="comment">//5</span></span><br><span class="line">        ...</span><br><span class="line">    } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        <span class="comment">//创建 Application</span></span><br><span class="line">        Application app = r.packageinfo.makeApplication(<span class="keyword">false</span> ,minstrumentation); <span class="comment">//6</span></span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">if</span> (activity != <span class="keyword">null</span>) {</span><br><span class="line">            <span class="comment">//初始化Activity，参数太多，省略</span></span><br><span class="line">            activity.attach(....) ;</span><br><span class="line">            ...</span><br><span class="line">            <span class="keyword">if</span> (r.isPersistable()) {</span><br><span class="line">                minstrumentation.callActivityOnCreate(activity,r.state ,r.persistentState); <span class="comment">//8</span></span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                 <span class="function">minstrumentat on <span class="title">callActivityOnCreate</span><span class="params">(activ ty r .state)</span> </span>;</span><br><span class="line">            }</span><br><span class="line">            ...</span><br><span class="line">        }</span><br><span class="line">        r.paused = <span class="keyword">true</span> ;</span><br><span class="line">        mActivities.put(r.token,r);</span><br><span class="line">    } <span class="keyword">catch</span> (SuperNotCalledException e) {</span><br><span class="line">        <span class="keyword">throw</span> e ;</span><br><span class="line">    }<span class="keyword">catch</span> (Exception e) {</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> activity;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>注释1处获取 Activityinfo，用于存储AndroidManifest 以及 代码中设置的Activity 和 Receiver 节点的信息，比如Activity 的theme 和launchMode 。注释3中获取要启动的Activity 的 <strong>ComponentName 对象，该对象中保存了该Activity 的包名和类名</strong>。注释4中启动了Activity的上下文，注释5根据 Activity 的类名，用类加载器创建该 Activity 的实例。之后，注释6中创建了Application ，并且会调用 Application 的 onCreate方法。注释7中调用 Activity 的attach 方法初始化Activity，并且创建Window 对象(PhoneWindow)与Activity 自身关联。注释8中正式启动Activity，并调用Activity 的onCreate 方法。</p>
+<p>至此，根Activity 就启动了，即应用程序启动了。</p>
+<h3 id="根Activity-启动过程中涉及的进程"><a href="#根Activity-启动过程中涉及的进程" class="headerlink" title="根Activity 启动过程中涉及的进程"></a>根Activity 启动过程中涉及的进程</h3><p>根Activity 启动过程中涉及的4个进程之间关系如下：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/%E6%A0%B9Activity%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%B6%89%E5%8F%8A%E7%9A%84%E8%BF%9B%E7%A8%8B%E5%85%B3%E7%B3%BB.png" alt="根Activity启动过程中涉及的进程关系"></p>
+<p>首先Launcher 进程向 AMS 请求创建根 Activity ，AMS 会判断根Activity 所需要的应用程序进程是否存在，不存在就请求 Zygote 进程创建应用程序进程；之后，AMS 请求创建根Activity。上图中步骤 2 采用Socket 通信，步骤 1 和4采用Binder 通信。</p>
+<p>读完书本，虽然各个点清晰，但是未能完整总结，<strong>以下 桌面点击图标 启动流程总结参考自<a target="_blank" rel="noopener" href="http://www.androidos.net.cn/book/android-road/android/advance/app-launch.html">他人博客</a></strong></p>
+<ol>
+<li>点击桌面图标，Launcher 采用Binder IPC 方式向system_server 发起startActivity 请求。    </li>
+<li>system_server 进程接收到请求后，向 zygote 进程发送创建进程请求。    </li>
+<li>zygote 进程fork 出新进程，即App进程。    </li>
+<li>App 进程通过 Binder IPC 向 system_server 发起 attachApplication 请求。     </li>
+<li>system_server收到请求做一系列准备后，通过 Binder IPC 向App 进程发送 scheduleLauncherActivity请求。    </li>
+<li>App 进程的Binder 线程(ApplicationThread)收到请求后，通过Handler 向主线程发送 LAUNCH_ACTIVITY 消息。    </li>
+<li>主线程收到Message 后，通过反射机制创建目标Activity ，并回调Activity.onCreate 等方法。    </li>
+<li>至此，App启动，开始Activity 生命周期。</li>
+</ol>
+<p>这个过程示意图如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/Activity%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%9B%BE.png" alt="Activity启动流程图"></p>
+<h2 id="Service-启动过程"><a href="#Service-启动过程" class="headerlink" title="Service 启动过程"></a>Service 启动过程</h2><p>Service 的启动过程和根Activity 的启动过程有部分相似知识点。Service 的启动过程可以分为两个部分讲解：分别是ContextImpl 到ActivityManageService 的调用过程，以及 ActivityThread 启动 Service。</p>
+<h3 id="ContextImpl-到-AMS-的调用过程"><a href="#ContextImpl-到-AMS-的调用过程" class="headerlink" title="ContextImpl 到 AMS 的调用过程"></a>ContextImpl 到 AMS 的调用过程</h3><p>首先上时序图：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC4%E7%AB%A0/ContextImpl%E5%88%B0AMS%E7%9A%84%E8%B0%83%E7%94%A8%E8%BF%87%E7%A8%8B.png" alt="ContextImpl到AMS的调用过程"></p>
+<p>调用startService方法启动service，这个方法在 ContextWrapper 中实现</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
   </div>
 
   
@@ -1543,7 +1926,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">160</span>
+          <span class="site-state-item-count">152</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1629,7 +2012,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共315k字</span>
+  <span class="post-count">博客全站共320.3k字</span>
 </div>
 
 

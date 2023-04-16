@@ -13480,668 +13480,6 @@ public View getView(final int i, View view, ViewGroup viewGroup) {
       </tags>
   </entry>
   <entry>
-    <title>Java筑基-：(01)Retrofit中的注解反射与动态代理</title>
-    <url>/2023/03/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(01)Retrofit%E4%B8%AD%E7%9A%84%E6%B3%A8%E8%A7%A3%E5%8F%8D%E5%B0%84%E4%B8%8E%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>注解的作用： 用于标记，接口写成 interface ，注解 的写法是 @interface 。</p>
-<h2 id="一、元注解"><a href="#一、元注解" class="headerlink" title="一、元注解"></a>一、元注解</h2><p>元注解，我们用得比较多的是下面 2 种：</p>
-<ul>
-<li><p>@Target ： 针对哪些地方来作用这个注解，有 TYPE （作用在类、接口、枚举，甚至注解上等）、METHOD（方法）、FIELD （属性）、PARAMETER（参数）。 Target 注解的value 是个数组，可以多个的</p>
-</li>
-<li><p>@Retention ： 表示可以将注解信息保存到什么层次。有 SOURCE（源码）、CLASS（.class文件）、RUNTIME（虚拟机级别） </p>
-</li>
-</ul>
-<p>Retention 中三种级别的比较：</p>
-<table>
-<thead>
-<tr>
-<th>级别</th>
-<th>典型技术</th>
-<th>使用场景</th>
-<th>例子</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>SOURCE</td>
-<td>APT（annotion processor tool：注解处理工具）</td>
-<td>编译期获取注解与其成员信息，一般用于生成辅助类</td>
-<td>InDef、StringDef，参数只接受指定的几种值</td>
-</tr>
-<tr>
-<td>CLASS</td>
-<td>字节码增强、插桩</td>
-<td>编译出class文件后，对class修改</td>
-<td></td>
-</tr>
-<tr>
-<td>RUNTIME</td>
-<td>反射</td>
-<td>运行期间，反射获取注解与其元素</td>
-<td></td>
-</tr>
-</tbody></table>
-<blockquote>
-<p>注意：对于 Android 而言，打包 dex 的时候，CLASS 级别的注解都会被抛弃掉，但是 RUNTIME 级别的会保留</p>
-<p>IntDef 的实现原理：传参非指定的时，会报红，看着是报错，但是是不影响运行的！它的原理就是 lint 检测</p>
-</blockquote>
-<h2 id="二、自定义-APT-（annotion-processor-tool）"><a href="#二、自定义-APT-（annotion-processor-tool）" class="headerlink" title="二、自定义 APT （annotion processor tool）"></a>二、自定义 APT （annotion processor tool）</h2><p>我们可以自定义注解处理器，自定义的类继承 AbstractProcessor ，然后注册。</p>
-<blockquote>
-<p>自定义的注解处理器不会被编译到代码中，只是编译的时候使用。这里没有详细写明怎么去自定义，如果后续用到了，可以再去看视频</p>
-</blockquote>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//利用 APT 新增一个类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">APTTest</span> <span class="keyword">extends</span> <span class="title">AbstractProcessor</span> </span>{</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(Set&lt;? extends TypeElement&gt; annotations, RoundEnvironment roundEnv)</span> </span>{</span><br><span class="line">        String code = <span class="string">"public class A {\n"</span> +</span><br><span class="line">                <span class="string">"}"</span>;</span><br><span class="line">        Filer filer = processingEnv.getFiler();</span><br><span class="line">        OutputStream outputStream = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            <span class="comment">//为什么用 JavaFileObject？因为它能默认将生成文件放到 build 目录下，无需你手动去加路径 </span></span><br><span class="line">            JavaFileObject sourceFile = filer.createClassFile(<span class="string">"A"</span>);</span><br><span class="line">            outputStream = sourceFile.openOutputStream();</span><br><span class="line">            <span class="comment">//将代码写入文件</span></span><br><span class="line">            outputStream.write(code.getBytes(StandardCharsets.UTF_8));</span><br><span class="line">            outputStream.flush();</span><br><span class="line">        } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        } <span class="keyword">finally</span> {</span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                <span class="keyword">if</span> (outputStream != <span class="keyword">null</span>) {</span><br><span class="line">                    outputStream.close();</span><br><span class="line">                }</span><br><span class="line">            } <span class="keyword">catch</span> (IOException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>javac 的执行流程如下：</p>
-<p><img src="/Users/panda/Desktop/%E4%B8%AA%E4%BA%BA/blogSource_WB_github/giteeBlog_WB/source/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/javac%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.png" alt="javac的执行流程"></p>
-<p>发现注解之后，执行注解处理器，因为你在注解处理器里面可能会做改变（或者能新增了Java文件），因此能看到注解处理之后会有一条线回去，重新开始处理下。所以，注解处理器中的 process 方法可能会执行多次（因为新生成的类中可能还包括注解，所以可能是非常多的次数）。</p>
-<p>因为 process 方法会执行多次，所以我们必须要判断注解过程是否执行完了，如果已经执行完了，就不要再去生成文件 A 了，可以通过如下方法判断过程执行完：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">annotations.isEmpty()</span><br><span class="line"></span><br><span class="line">roundEnv.processingOver()</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="三、字节码插桩技术"><a href="#三、字节码插桩技术" class="headerlink" title="三、字节码插桩技术"></a>三、字节码插桩技术</h2><p>为什么字节码插桩？因为你还是 Java 代码的时候，可能没有这种条件去做这个事情。比如，组件 A 中需要 new 出 B 组件中的 一个类，由于大家都是互相独立的，没有引用，但是 字节码中就不一样了，所有的类都变成了 class 了，肯定有引用的。<strong>典型的如 ARouter 中的 路由表的实现。</strong></p>
-<blockquote>
-<p>还有个典型的例子是 腾讯的 Matrix 性能监控的实现</p>
-</blockquote>
-<p>字节码插桩也能用来实现  AOP ，比如 360 的 APM ，这样就能实现在代码中的判断。</p>
-<blockquote>
-<p> 字节码插桩的本质： .class 是个文件，它有自己的格式，可以作为读入，按照一定的格式修改，再保存就可以了</p>
-</blockquote>
-<h2 id="四、反射"><a href="#四、反射" class="headerlink" title="四、反射"></a>四、反射</h2><p>我们能够通过反射修改 final 类型的成员的值吗？答案是肯定的，但是肯定有人经历过下面这种情景：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReflectTest</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> a = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getA</span><span class="params">()</span></span>{</span><br><span class="line">        <span class="keyword">return</span> a;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">        ReflectTest reflectTest = <span class="keyword">new</span> ReflectTest();</span><br><span class="line">        Field a = ReflectTest.class.getDeclaredField(<span class="string">"a"</span>);</span><br><span class="line">        a.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        a.set(reflectTest, <span class="number">2</span>);</span><br><span class="line"></span><br><span class="line">        System.out.println(<span class="string">"a = "</span> + reflectTest.a);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>通过上面的代码反射修改 a 的值为 2，但是最终 println 打印出来的却是  1 ，这是没有修改？其实不是，这是因为 Java 编译过程的优化导致的，这里是内联，我们看下它编译成的字节码，反编译过来：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReflectTest</span> </span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> a = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ReflectTest</span><span class="params">()</span> </span>{</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getA</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">        ReflectTest reflectTest = <span class="keyword">new</span> ReflectTest();</span><br><span class="line">        Field a = ReflectTest.class.getDeclaredField(<span class="string">"a"</span>);</span><br><span class="line">        a.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        a.set(reflectTest, <span class="number">2</span>);</span><br><span class="line">        PrintStream var10000 = System.out;</span><br><span class="line">        Objects.requireNonNull(reflectTest);</span><br><span class="line">        var10000.println(<span class="string">"a = "</span> + <span class="number">1</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>看到代码最后一行，我们的 reflectTest.a 已经直接 变成 1 了，并且注意看 getA() 方法 ，它里面return a 也直接变为 return 1 。所以，我们可以知道，其实 a 的值是已经改了，但是通过上述的代码看不出来。</p>
-<p>那么问题来了，如果我想获取到这个修改后的 a 值怎么办？  答案还是通过反射获取，将最后一行的打印改成这样就行，就能正常输出修改后的 2 值了：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">System.out.println(<span class="string">"a = "</span> + a.getInt(reflectTest));</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="4-1-反射调用方法为什么耗时"><a href="#4-1-反射调用方法为什么耗时" class="headerlink" title="4.1 反射调用方法为什么耗时"></a>4.1 反射调用方法为什么耗时</h3><p>比如通过对象普通调用方法，类似 object.method() ， 字节码中用 iconst_1 指令即可完成，不需要做额外事情，但是对于反射获取而言</p>
-<ul>
-<li><p>但是反射，我们调用的的是  Object.invoke (Object obj, Object…args) 能看出来，参数是 <strong>变长</strong> 的了，并且还都是 Object ，意味着你普通方法是 int 型 的话，这里需要装箱成  Integer类型，再包装成 Object 数组，在执行的时候又会把数组拆开，并且拆箱为基本数据类型。</p>
-</li>
-<li><p>从源码可知，反射需要遍历所有的方法，匹配方法名和参数，然后才能得到正确的目标方法</p>
-</li>
-<li><p>反射时需要检查方法的可见性，以及参数的匹配性</p>
-</li>
-<li><p>反射时，编译期无法对动态调用的代码做优化，比如 内联</p>
-<blockquote>
-<p>比如，上面我们更改 a 的值为 2 ，通过反射时就能获取这个值，说明是没有做优化的</p>
-</blockquote>
-</li>
-</ul>
-<p>当然，现在硬件性能已经非常强了，反射能带来的影响还是比较小的，。</p>
-<h2 id="五、动态代理"><a href="#五、动态代理" class="headerlink" title="五、动态代理"></a>五、动态代理</h2><p>动态代理的原理是，会自动给你生成代码，相当于修改字节码。自己去看下编译期给自动生成的那个 Proxy 类。</p>
-<p><font color="#ff0000">动态代理的原理还不太清楚，下次来需要着重梳理</font></p>
-<h4 id="作业"><a href="#作业" class="headerlink" title="作业"></a>作业</h4><p> 注解+反射+ 动态代理实现 @Click 方法，动态代理为了<strong>开闭原则</strong>，如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@Click(R.id.button)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">click</span><span class="params">(View view)</span></span>{</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Java筑基-：(02)JVM内存管理</title>
-    <url>/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(02)JVM%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、Java-程序执行过程"><a href="#一、Java-程序执行过程" class="headerlink" title="一、Java 程序执行过程"></a>一、Java 程序执行过程</h2><p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/Java%E8%BF%90%E8%A1%8C%E8%BF%87%E7%A8%8B.png" alt="Java执行过程"></p>
-<h2 id="二、JVM-规范"><a href="#二、JVM-规范" class="headerlink" title="二、JVM 规范"></a>二、JVM 规范</h2><p>Java 在 JVM 上经过 ClassLoader 加载后，有 2 种执行方式：</p>
-<ul>
-<li><p>字节码解释器解释执行。Java 先编译成 class 文件，再由 C++ 解释器</p>
-</li>
-<li><p>JIT执行：HotSpot 就这样执行，将Java 代码翻译成汇编等形式的机器码，速度较快</p>
-</li>
-</ul>
-<p>JVM 是 C++ 写的，它解释执行是怎么解释呢？它碰到你 Java 代码中的 new 关键字的时候，它就执行某一段 C ++ 代码，类似：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(碰到了<span class="keyword">new</span>) {</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>也就是通过 C++ 来翻译 Java 语言。这经过了一道转换，效率是有点低的。</p>
-<p>JIT 执行，直接将Java 代码翻译成汇编代码等机器代码，就能迅速执行。不过一般只有热点代码才这样做。缺点是，你要先提前翻译，编译的时间会比较长。</p>
-<h3 id="2-1-运行时数据区域"><a href="#2-1-运行时数据区域" class="headerlink" title="2.1 运行时数据区域"></a>2.1 运行时数据区域</h3><p><strong>直接内存</strong>：没有经过 JVM 的虚拟化。比如总共有 8G 的存储空间，JVM 虚拟化了 6G ，但是还剩下 2G 我们没法去通过 JVM 使用，这时候就能用直接内存去使用这 2G 空间。</p>
-<blockquote>
-<p>优点是不受 JVM 管理，不会受到 GC 影响，毕竟 GC 会Stop The World；缺点同样明显，就是使用不方便，自己申请，用完要记得释放，否则造成内存泄漏。</p>
-</blockquote>
-<p>虚拟机栈的大小在不同的平台上的大小是不同的，在 Linux 上一般是 1M 。如果是死递归，不断往虚拟机栈压入栈帧，讲道理会将这个栈空间耗尽，不过现实中往往先 StackOverFlow。</p>
-<p>一个线程光这个虚拟机栈就占了 1M 的空间，如果有500 个线程，那么占用的空间也是非常可观的，所以我们也要控制线程数量。</p>
-<p>每个栈帧里面会包含什么呢？ 一般是：</p>
-<ul>
-<li><p>局部变量表</p>
-</li>
-<li><p>操作数栈</p>
-</li>
-<li><p>动态链接</p>
-</li>
-<li><p>完成出口</p>
-</li>
-</ul>
-<p>可能这些概念不太好懂，举个例子，看下面的代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Person</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">work</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">        <span class="keyword">int</span> x = <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">int</span> y = <span class="number">2</span>;</span><br><span class="line">        <span class="keyword">int</span> z = (x+y) * <span class="number">10</span>;</span><br><span class="line">        <span class="keyword">return</span> z;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">        Person person = <span class="keyword">new</span> Person();</span><br><span class="line">        person.work();</span><br><span class="line">        person.hashCode();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>上述代码在执行 main 方法的时候，会为 main 线程创建一个虚拟机栈，调用一个方法就会创建一个栈帧，<strong>所以 main 方法会有一个栈帧，调用 person.work 的时候也会创建一个栈帧</strong>。整个过程大体上会有如下操作：</p>
-<ol>
-<li><p>x 和 y 都被定义了，但是还没使用，所以压入<strong>局部变量表中</strong></p>
-</li>
-<li><p>执行 (x+y) * 10 的操作时，先计算 x + y = 3， 将 3 这个临时值放入<strong>操作数栈</strong></p>
-</li>
-<li><p>之后，将操作数 10 也压入<strong>操作数栈</strong>的栈顶</p>
-</li>
-<li><p>接着， 操作数栈中的 3 和 10 都出栈，相乘得到结果 30 ，再压入 <strong>操作数栈</strong> 中</p>
-</li>
-<li><p>因为这里定义是 z 局部变量接受这个结果，所以需要将操作数栈中的 30 出栈，在局部变量表中放入 z 这个值 30</p>
-</li>
-<li><p>最后要返回 z ，方法与方法之间操作，这个<strong>返回值相当于一个操作数</strong>，所以又要将 z 这个 30 值复制到 <strong>操作数栈中</strong></p>
-</li>
-<li><p>最后，带着 work 方法栈帧中操作数栈的这个 30 ，返回了 main 方法的 栈帧。</p>
-</li>
-</ol>
-<blockquote>
-<p>这里有个点需要注意下，构造方法也是方法，所以也会有栈帧</p>
-</blockquote>
-<p>这个过程一直伴随着程序计数器的不断移动。至于<strong>完成出口</strong>，是记录调用方执行到哪里之后再来调用当前方法的，上述main 方法中 ，假如 是main 方法自己执行到行号 2 的时候就调用 person.work 了，此时，work 方法中记录的程序出口就是这个行号2，work 方法执行完，切回main 方法时， 会把这个值带回去，这样便知道从哪里继续执行。来看一下下面的这张图，这是字节码：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/%E5%AD%97%E8%8A%82%E7%A0%81%E7%A4%BA%E6%84%8F.png" alt="字节码示意图"></p>
-<p>左边的就是 0,1,2…12 ，这些代表行号，也代表字节码的偏移量，<strong>有些指令比较短，有些比较长，会占据不止一行，所以，行号可能会跳过，上面的图中没有 8 这个行号，就是因为 bipush 指令比较大</strong>；右边的代表操作。非静态方法的局部变量表的第 0 个位置存的是 this ，也就是当前的对象。</p>
-<p><strong>动态链接</strong> 主要是<strong>跟多态有关</strong>。本地方法栈和虚拟机栈是可以合并的， HotSpot 就是这么做的。</p>
-<h2 id="三、课堂问题"><a href="#三、课堂问题" class="headerlink" title="三、课堂问题"></a>三、课堂问题</h2><p>课程中 demo 搞出来个 stackoverflow ，这个值得注意：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Person</span> </span>{</span><br><span class="line">    Person haha = <span class="keyword">new</span> Person();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">        Person wo = <span class="keyword">new</span> Person();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>因为在 main 方法中 wo 来new Person 的对象时， 就会触发 haha 的又来 new 一个 new Person 对象，就会陷入死循环了。</p>
-<h2 id="四、直接内存"><a href="#四、直接内存" class="headerlink" title="四、直接内存"></a>四、直接内存</h2><p>如果想使用直接内存，可以通过 ByteBuffer 来实现，这样可以被回收：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">    ByteBuffer byteBuffer = ByteBuffer.allocateDirect(<span class="number">3</span> * <span class="number">1024</span> * <span class="number">1024</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>ByteBuffer 是使用 unsafe 来实现的。</p>
-<h2 id="五、工具"><a href="#五、工具" class="headerlink" title="五、工具"></a>五、工具</h2><p>使用 <strong>HSDB</strong> 查看 JVM 中的各个对象，能通过指定类和里面的对象，就能看到。</p>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Java筑基-：(03)对象的分配及垃圾回收机制</title>
-    <url>/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(03)%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%88%86%E9%85%8D%E5%8F%8A%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、-JVM-中对象的创建过程"><a href="#一、-JVM-中对象的创建过程" class="headerlink" title="一、 JVM 中对象的创建过程"></a>一、 JVM 中对象的创建过程</h2><p>对象的整体创建过程如下所示：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA%E8%BF%87%E7%A8%8B.png" alt="对象创建过程"></p>
-<p>我们的<strong>常量池</strong>里面可能存在符号引用，什么是符号引用？我们引用了一个对象，但是不知道这个对象的真实地址。举个例子：你引用了  com.esun.B  ，如果是<strong>直接引用的话，那就是真实的地址。</strong> 如果你在 A 的常量池里面引用了 B ，但是 B 还没有加载进来，这时候你就只能用一个符号。</p>
-<p>在检查加载的过程会去检验是否能正常将符号引用转换为直接引用。</p>
-<h3 id="1-1-内存分配"><a href="#1-1-内存分配" class="headerlink" title="1.1 内存分配"></a>1.1 内存分配</h3><p>内存分配一般有 2 种方式：</p>
-<ul>
-<li><p>指针碰撞。内存比较规整，前面内存已经分配到 7 了，那么这次分配从 8 开始</p>
-</li>
-<li><p>空闲列表。不在乎内存碎片，根据维护的空闲列表来分配</p>
-</li>
-</ul>
-<p>分配的时候需要注意多线程安全，主要有 2 种方式：</p>
-<ul>
-<li><p>CAS  + 失败重试操作</p>
-</li>
-<li><p>本地线程分配缓冲：给每个线程在 Eden 区默认划分一块空间，线程分配的时候，就在那块空间去操作，由于线程有自己专属的，所以并不会有线程安全问题</p>
-</li>
-</ul>
-<h3 id="1-2-对象内存布局"><a href="#1-2-对象内存布局" class="headerlink" title="1.2 对象内存布局"></a>1.2 对象内存布局</h3><p>一个对象会包括对象头、实例数据、以及对齐填充（不一定有）。其中对象头很重要，它主要包括：</p>
-<ul>
-<li><p>Markword</p>
-</li>
-<li><p>类型指针，指向方法区中的 Class ，标明它是哪个类型</p>
-</li>
-<li><p>记录数组长度（如果是数组对象才有）</p>
-</li>
-</ul>
-<h2 id="二、GC"><a href="#二、GC" class="headerlink" title="二、GC"></a>二、GC</h2><h3 id="2-1-判断对象存活"><a href="#2-1-判断对象存活" class="headerlink" title="2.1 判断对象存活"></a>2.1 判断对象存活</h3><p>有 2 种主流的方式：</p>
-<ul>
-<li><p>引用计数，不能解决循环引用——Python 就是用这种方案</p>
-</li>
-<li><p>可达性分析，也说 根可达方法</p>
-</li>
-</ul>
-<p>GCRoots 主要有4种，但是不止4种：</p>
-<ul>
-<li><p>静态变量</p>
-</li>
-<li><p>线程栈变量</p>
-</li>
-<li><p>常量池</p>
-</li>
-<li><p>JNI （指针）</p>
-</li>
-<li><p>如果还纠结，就有其他：Class对象、类加载器、</p>
-</li>
-</ul>
-<blockquote>
-<p>方法区中的 class 对象是否能被回收？肯定能被回收，有一个很重要的条件是 new 出的所有对象都被回收了。其他的还包括它的 ClassLoader 也被回收了等等。</p>
-</blockquote>
-<p>真正要宣布一个对象可回收需要 2 次标记，首先是不可达，其次就是 finalize ，所以不可达不是非死不可的条件。 finalize 里面可以让引用继续来。 DirectByteBuffer 直接内存分配，它里面也用了虚引用，是否用来协助内存回收？？待确认</p>
-<h3 id="2-2-对象分配策略"><a href="#2-2-对象分配策略" class="headerlink" title="2.2 对象分配策略"></a>2.2 对象分配策略</h3><p>对象的分配原则：</p>
-<ul>
-<li><p>对象优先在 Eden 分配</p>
-</li>
-<li><p>空间分配担保</p>
-</li>
-<li><p>大对象直接进入老年代</p>
-</li>
-<li><p>长期存活的对象进入老年代</p>
-</li>
-<li><p>动态年龄判定</p>
-</li>
-</ul>
-<p>我们说<strong>几乎所有的对象都在堆上分配</strong>，为什么是几乎？因为还有<strong>栈上分配</strong>这种方案：</p>
-<ul>
-<li>触发了 JIT （热点数据），逃逸分析的时候发现对象不会逃出当前方法和线程，的时候就可能触发栈上分配</li>
-</ul>
-<h3 id="2-3-GC-详情"><a href="#2-3-GC-详情" class="headerlink" title="2.3 GC 详情"></a>2.3 GC 详情</h3><p>堆分代：</p>
-<ul>
-<li><p>新生代： Eden区、s0、s1 区，三者大小 8:1:1 ？为什么，因为大多数对象都是朝生夕死的，存活时间很短</p>
-</li>
-<li><p>老年代，一般老年代 GC ，就会触发 Full  GC： 也就是年轻代、老年代、方法区都 GC</p>
-</li>
-</ul>
-<p>新生代一般是用复制算法，老年代是标记整理、标记清除算法</p>
-<p>标记整理算法都是怎么做呢？ 其实是： 标记——&gt;整理——&gt; 清除 ，为什么要这么做呢？（有些人会以为是：标记——&gt;清除——&gt; 整理 ），这是因为这里的时候，可以覆盖那些垃圾，等整理完了之后，垃圾可能会变少了，清除也快一些。</p>
-<blockquote>
-<p>这个过程会有STW 的，暂停所有线程，这是为什么？因为整理的时候，对象的位置会发生变化啊，整理之后，以前在位置 15 的时候变成 位置 6 了，所以要停止。</p>
-</blockquote>
-<h2 id="三、虚拟机的优化技术"><a href="#三、虚拟机的优化技术" class="headerlink" title="三、虚拟机的优化技术"></a>三、虚拟机的优化技术</h2><ul>
-<li><p>热点数据编译成本地代码</p>
-</li>
-<li><p>本地线程分配缓冲</p>
-</li>
-</ul>
-<p>最终， JVM 的学习一张图看了：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/JVM%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B.jpg" alt="JVM一张图"></p>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Java筑基-：(04)JVM垃圾回收器及性能调优</title>
-    <url>/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(04)JVM%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%8F%8A%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、JVM-中常见的垃圾回收器"><a href="#一、JVM-中常见的垃圾回收器" class="headerlink" title="一、JVM 中常见的垃圾回收器"></a>一、JVM 中常见的垃圾回收器</h2><p>一般来说的话，年轻代占整个堆空间的 1/3 ，而老年代占整个堆空间的的 2/3 。</p>
-<p>但是对于 Parallel Scavenge/Parallel Old 这对组合（这种组合目前的<strong>吞吐量</strong>最大，前者回收年轻代，后者回收老年代，从名字也能看出来）垃圾收集器而言，之前说的一些内容可能不适用了：</p>
-<ul>
-<li><p>堆的大小是会动态变化的，不是一成不变的，比如最开始是 200 ，后来空间不够，GC 过后被扩容到 300M ；如果发现空闲堆太多，可能就缩小到 100M 了； </p>
-</li>
-<li><p>年轻代不一定占堆空间的 1/3 了，年轻代和老年代的占比也可能变化</p>
-</li>
-<li><p>年轻代里面也可能不是 8:1:1 的结构了</p>
-</li>
-</ul>
-<p>一般来说，平时建议堆的最大大小和最小大小设置同一个值，不要让空间时不时变化。</p>
-<h2 id="二、响应优先的垃圾回收器"><a href="#二、响应优先的垃圾回收器" class="headerlink" title="二、响应优先的垃圾回收器"></a>二、响应优先的垃圾回收器</h2><p>后来，大家的需求变成<strong>响应优先</strong>， <strong>CMS （Concurrent Mark Sweep）</strong> 标记清除  垃圾回收器就是这个跨时代的垃圾回收器。 它是单独针对老年代的垃圾收集器。<strong>导致卡顿的一般是老年代的 GC 操作</strong>。它是怎么做到响应时间最短呢？步骤如下：</p>
-<ol>
-<li><p>初始标记——GC Roots 的数量是决定性因素</p>
-</li>
-<li><p>并发标记</p>
-</li>
-<li><p>重新标记</p>
-</li>
-<li><p>并发清除</p>
-</li>
-</ol>
-<p>为什么能响应时间最短，那是因为把耗时的标记和清除操作都能并发了！</p>
-<p>为什么能做到并发清理？因为标记-清除可以做到并发，因为我并不关心垃圾，我只关心与 GC Roots 有连接的部分。所以垃圾被覆盖啊之类的都是可以的，<strong>所以我能够不暂停而去做清理操作</strong>。</p>
-<h2 id="三、CMS-的预清理"><a href="#三、CMS-的预清理" class="headerlink" title="三、CMS 的预清理"></a>三、CMS 的预清理</h2><p>预清理主要往 2 个方面努力：</p>
-<ul>
-<li><p>在并发标记的阶段，如果 Eden 区有 A 对象引用到 老年代中与GC Roots没有连接的 B 对象（会被老年代里面视为垃圾），就要把 B 标记为GC Roots 可达的点。这个操作本来是放在重新标记阶段，现在放在并发标记阶段。这样，减少了重新标记 STW 的时间。</p>
-</li>
-<li><p>并发标记阶段，如果老年代内部引用发生变化（之前不可达的变为可达的了），建一个类似于卡表结构，后续的重新标记阶段就无需考虑这个区域了</p>
-</li>
-</ul>
-<p>处理 From 和 to 区（那 2 个survivor 区域的名字）的对象 ， 到老年代可达，导致老年代的并发标记中的引用变化。并发可中断预处理的过程就是 ：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">while</span>(xxx){</span><br><span class="line">    <span class="number">1</span>、处理 from 和 to 区的对象到老年代可达，导致的老年代并发标记中的引用变化</span><br><span class="line">    <span class="number">2</span>、老年代内部的引用变化，记录在一张表中</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这样，在重新标记就可能只需要扫描部分区域即可。</p>
-<p>退出循环的部分条件：</p>
-<ul>
-<li><p>时间控制，达到一个时间之后自动停止</p>
-</li>
-<li><p>Eden 区的内存使用达到设定的比例，如果比例太高的话，你这个并发预处理没什么作用</p>
-</li>
-</ul>
-<p>都是为了让一些在重新标记做的事情，可以放到并发标记阶段，减少停留时间</p>
-<blockquote>
-<p>预处理是做一次，扫到就扫到了，没扫到就算了；而 并发可中断预处理 会在 while 中一遍一遍地轮，多次扫描。</p>
-</blockquote>
-<p>CMS 中的问题：</p>
-<ul>
-<li><p>CPU 敏感：由于有多线程</p>
-</li>
-<li><p>浮动垃圾：由于是多线程，所以会有一些清理不到，比如你边扫地别人边丢垃圾</p>
-</li>
-<li><p>内存碎片：CMS 本质还是标记-清理算法</p>
-</li>
-</ul>
-<h2 id="四、JVM-的调优技巧"><a href="#四、JVM-的调优技巧" class="headerlink" title="四、JVM 的调优技巧"></a>四、JVM 的调优技巧</h2><p>如果需要确定总堆的大小，可以用堆空间的<strong>活跃数据</strong>来做，比如，JVM 运行了一个星期之后，一般就能得到其活跃区间的大小了，一般总堆以及 年轻代、老年代的设置规则如下：</p>
-<table>
-<thead>
-<tr>
-<th>空间</th>
-<th>倍数</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>总堆大小</td>
-<td>3~4倍活跃数据大小</td>
-</tr>
-<tr>
-<td>年轻代</td>
-<td>1~1.5倍活跃数据大小</td>
-</tr>
-<tr>
-<td>老年代</td>
-<td>2~3倍活跃数据大小</td>
-</tr>
-<tr>
-<td>永久代/元空间</td>
-<td>1.2~1.5倍Full GC 后的永久代空间占用</td>
-</tr>
-</tbody></table>
-<h3 id="4-1-拓展-增大年轻代空间能不能提高-GC-效率？"><a href="#4-1-拓展-增大年轻代空间能不能提高-GC-效率？" class="headerlink" title="4.1 拓展-增大年轻代空间能不能提高 GC 效率？"></a>4.1 拓展-增大年轻代空间能不能提高 GC 效率？</h3><p>答案： <strong>可以</strong>。因为如下原因：</p>
-<ul>
-<li><p>GC 时间间隔会增大。扩容之后，一般扫描的时间间隔会增加，比如以前是 500ms ，后续会变为 1000ms。</p>
-</li>
-<li><p>放在年轻代回收比放在老年代回收好，因为新生代的复制算法效率比较高。未增大之前，可能过两轮对象就进入老年代了（大对象直接进入、或者说某一个年龄超过一半了，等等都是会进入老年代的，不一定得年龄到了）；但是增大之后，由于新生代对象的朝生夕死的特性，还没挨到下一次GC，对象就已经不可达了，进入不了老年代</p>
-</li>
-<li><p>扫描判断对象是否存活的耗时比复制存活对象的耗时少。年轻代 gc 消耗的时间是： 扫描对象（耗时 T1） 、复制存活的对象到幸存区（T2），那么总时间是 T1 + T2 。那么想想，当我们扩容成 2 倍的时候，是什么情况？扫描时间应该是变成了 2 * T2 了，但是存活对象的复制过程呢？由于GC间隔时间拉长，很多对象被回收了，复制存活对象的耗时一般会比 2 * T2 要小。</p>
-</li>
-</ul>
-<h3 id="4-2-JVM-如何如何避免-Minor-GC-时扫描全堆的？"><a href="#4-2-JVM-如何如何避免-Minor-GC-时扫描全堆的？" class="headerlink" title="4.2 JVM 如何如何避免 Minor GC 时扫描全堆的？"></a>4.2 JVM 如何如何避免 Minor GC 时扫描全堆的？</h3><p>前面我们说不同的代有不同的垃圾回收器，他们的算法是一样的，如下图所示：</p>
-<p>那么，当跨代引用的时候，是如何做到无需扫描全堆的呢？举个例子，假如<strong>你要回收年轻代</strong>，我们老年代里面有个对象 A，引用了年轻代中的一个对象 B，那么老年代的 A 会被作为 GC Roots ，那么你要确定这个根，你要在老年代里面去找根？</p>
-<p>所以如果有跨代，那么我们是否要进行全堆的扫描（不然没法知道GC Roots 啊，虽然你说上述情况可以作为 GC Roots）？答案是不用的，因为 JVM 可能会维护有<strong>卡表结构</strong>，它标记了所有的对象。未跨代的时候，是某个标记，假设说是 0 ；如果有跨代引用，在卡表里面就标记成另一个了，假设是 0 。</p>
-<h3 id="4-3-常量池（方法区）"><a href="#4-3-常量池（方法区）" class="headerlink" title="4.3 常量池（方法区）"></a>4.3 常量池（方法区）</h3><p>常量池一般有 3 种，分别如下：</p>
-<ul>
-<li><p>Class 常量池：.class 文件中带的，编译时的字面量、引用。</p>
-</li>
-<li><p>运行时常量池：运行时如果用到的某个类A ，如果 ClassLoader 还未加载这个类 A ，那么就会是一个符号引用，这是个常量，到运行时符号引用转为直接引用。</p>
-</li>
-<li><p>字符串常量池：规范里面是没有的。与 String 的设计思想有关系，String 对象不可变（类被final，value数组也是final）</p>
-</li>
-</ul>
-<p>new String(“abc”) ，已经有字面量 “abc” 了，在编译的 时候就会被放入常量池里面，并且在堆里面会创建一个 String 对象，值指向常量池的那个 “abc” 。</p>
-<p>“ab” + “cd” +”ef” 这种，编译器在编译的时候就会变成 “abcdef” 直接给优化了</p>
-<p>如果发现如下这种循环次数比较多的字符串相加，编译器也会优化:</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">String str = <span class="string">"ab"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i&lt;<span class="number">100</span>;i++) {</span><br><span class="line">   str += arr[i];</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>变为使用 StringBuilder 来实现。</p>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Java筑基-：(05)安卓虚拟机与类加载机制-1</title>
-    <url>/2023/03/31/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(05)%E5%AE%89%E5%8D%93%E8%99%9A%E6%8B%9F%E6%9C%BA%E4%B8%8E%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6-1/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、JVM-与-Dalvik"><a href="#一、JVM-与-Dalvik" class="headerlink" title="一、JVM 与 Dalvik"></a>一、JVM 与 Dalvik</h2><p>JVM 与 Dalvik 实现不同：</p>
-<ul>
-<li><p>JVM 是基于栈的虚拟机：每个运行时的线程都有一个独立的栈，每一次方法的调用都会往栈里面压入一个栈帧，最顶部的是当前栈帧，代表当前执行的方法。<strong>基于栈的虚拟机通过操作数栈进行所有操作。</strong></p>
-</li>
-<li><p>Dalvik 是基于寄存器的虚拟机：相当于<strong>将操作数栈和局部变量表合并成了虚拟寄存器</strong>。</p>
-</li>
-</ul>
-<p>对于如下同一段代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> a = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">int</span> b = <span class="number">2</span>;</span><br><span class="line">    <span class="keyword">int</span> c = a + b;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>二者运行过程差异如下图所示：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/JVM%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%9A%84%E8%BF%90%E8%A1%8C%E7%BB%93%E6%9E%84.png" alt="二者差异"></p>
-<p>上图是JVM 运行过程</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/Dalvik%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%9A%84%E8%BF%90%E8%A1%8C%E7%BB%93%E6%9E%84.png" alt="Dalvik的结构"></p>
-<p>上图是 Dalvik 的运行过程。</p>
-<h2 id="二、Dalvik-和-Art-区别"><a href="#二、Dalvik-和-Art-区别" class="headerlink" title="二、Dalvik 和 Art 区别"></a>二、Dalvik 和 Art 区别</h2><p>Android Dalvik 最开始是解释执行，执行的是 dex 字节码，需要经过虚拟机翻译，然后才能被机器执行。而从 2.2 开始，支持 JIT 即时编译（Just In Time），运行过程中将热点代码直接编译成机器码，后续就省略了翻译过程！因此效率更高，但也因此跨平台不行。</p>
-<p>Android 5.0 最开始 ART 虚拟机执行的是本地机器码，但是 Dex 里面还是字节码。所以这个机器码从哪里来？原因是 安装做了优化，做了 AOT （Ahead Of Time）提前编译，做了 dex2oat 的优化，所以安装也慢（5.0 、6.0）。但是从 7.0 以后，又没那么慢了，变成混编了，混合了 AOT、解释 以及 JIT 这三种方式了。在运行过程中解释执行，对热点代码进行 JIT ，并且经过 JIT 编译的方法（这是临时的）记录到配置文件中。当设备空闲和充电的时候，编译守护进程会运行，根据 Profile 文件对常用代码进行 AOT 编译，下次就可以直接运行使用，而不用再从dex 文件中找了。</p>
-<p>对比：</p>
-<table>
-<thead>
-<tr>
-<th>栈式 vs 寄存器式</th>
-<th>对比</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>指令条数</td>
-<td>栈式 &gt; 寄存器式</td>
-</tr>
-<tr>
-<td>移植性</td>
-<td>栈式优于寄存器式</td>
-</tr>
-<tr>
-<td>代码尺寸</td>
-<td>栈式 &lt; 寄存器式</td>
-</tr>
-<tr>
-<td>指令优化</td>
-<td>栈式更不易优化</td>
-</tr>
-<tr>
-<td>解释器执行速度</td>
-<td>栈式解释器速度稍慢</td>
-</tr>
-<tr>
-<td>代码生成难度</td>
-<td>栈式简单</td>
-</tr>
-<tr>
-<td>简单实现中数据移动次数</td>
-<td>栈式移动次数多</td>
-</tr>
-</tbody></table>
-<h2 id="三、ClassLoder"><a href="#三、ClassLoder" class="headerlink" title="三、ClassLoder"></a>三、ClassLoder</h2><ul>
-<li><p>BootClassLoader ： 加载Android FrameWork 中的类，比如 String、Activity 等</p>
-</li>
-<li><p>PathClassLoader： 我们程序的 ClassLoader ，我们引入的第三方库、写的代码等</p>
-</li>
-</ul>
-<blockquote>
-<p>Android 都是自己写了这些 ClassLoader ，没有使用 Java 之前的那些，这个也能理解，原来Java 自己去加载类的时候，是加载 .class 文件；而 Android中是加载 .dex 文件了</p>
-</blockquote>
-<p>ClassLoader 在 load 一个类的时候，都是需要 IO 操作的（从磁盘把文件读进来），然后按照一定格式解析（类似Json 一样），所以，这个 load 这个操作一定是个耗时操作。</p>
-<blockquote>
-<p>注意，ClassLoader 做双亲委派机制，其中的 parent 不是指当前类的父类，这个 parent 只是 ClassLoader 中的一个成员变量而已。所以应该叫做<strong>父加载器</strong>更好点</p>
-<p>比如，PathClassLoader 的父加载器是 BootClassLoder ，但是它的父类是 BaseDexClassLoader </p>
-</blockquote>
-<h3 id="3-1-为什么双亲委托机制"><a href="#3-1-为什么双亲委托机制" class="headerlink" title="3.1 为什么双亲委托机制"></a>3.1 为什么双亲委托机制</h3><ul>
-<li><p>避免重复。被父加载器加载过了，自己就不用加载了</p>
-</li>
-<li><p>安全： 防止核心API 库被随意篡改。</p>
-<blockquote>
-<p>比如说你自己创建个 java.lang.String 类，如果没有双亲委派机制，那么你加载了你自己的 String 类，要是有崩溃，那么其他类基本上都会受影响，String 使用太广泛了。所以，双亲委派反正都是父ClassLoader 去加载，会导致都是同一个，不会有歧义。</p>
-</blockquote>
-</li>
-</ul>
-<h3 id="3-2-PathClassLoader"><a href="#3-2-PathClassLoader" class="headerlink" title="3.2 PathClassLoader"></a>3.2 PathClassLoader</h3><p>里面可以有个 dexPath 参数，初看起来只能传入一个 dex 的路径，其实是可以传入多个的，多个路径以 <strong>冒号 (:)</strong> 分割即可。之后，为每个路径的dex 文件生成一个 Element 元素，最后形成 一个 dexElements 数组。 </p>
-<p><font color="#ff0000">ClassLoader 中有个 DexPathList？？？？存疑，自己去看下</font></p>
-<h2 id="四、热修复"><a href="#四、热修复" class="headerlink" title="四、热修复"></a>四、热修复</h2><p>修复了 Demo.java 这个类，之后打包成  dex 文件，然后想办法将其插入到 dexElements 数组的最前面，这样，找 Demo.java 这个类的时候，从 dexElements 数组从前往后找，先找到修复后的 Demo.java ，后面的有bug 的 Demo.java 就会不管了。这样就能实现热修复了。</p>
-<p>可以在 Application 的第一个方法中插入新的 dex ，要保证需要修复的类没有被加载过。因为被加载过就有这个类的缓存了，就不会从 dex 文件中去找了。</p>
-<h3 id="4-1-将补丁-dex-插入到-dexElements-数组最前面"><a href="#4-1-将补丁-dex-插入到-dexElements-数组最前面" class="headerlink" title="4.1 将补丁 dex 插入到 dexElements 数组最前面"></a>4.1 将补丁 dex 插入到 dexElements 数组最前面</h3><p>这里肯定需要用到反射，具体步骤如下：</p>
-<ol>
-<li><p>获取到当前应用的 PathClassLoader</p>
-</li>
-<li><p>反射获取到它的属性对象 pathList </p>
-</li>
-<li><p>反射修改 pathList 的 dexElements ，这里又分为 3 个步骤</p>
-<ol>
-<li><p>把补丁包 patch.dex 转化为 Element[] 数组 </p>
-</li>
-<li><p>获得 pathList 的 dexElements 属性 dexElements</p>
-</li>
-<li><p>将上述新生成的 Element 数组，与老的 dexElements 合并生成新的数组 newPatchElements ，之后将这个 newPatchElements 赋值给上述的 pathList 的成员变量</p>
-</li>
-</ol>
-</li>
-</ol>
-<p>怎么把单个的类打包成 dex ？在 build-tools 目录下，使用里面的 dx 来打包，命令如下：</p>
-<blockquote>
-<p>dx –dex –output=output.dex /packagename/A.class </p>
-</blockquote>
-<h3 id="4-2-我们为什么不能修改系统的类，只能修改自己的类呢？"><a href="#4-2-我们为什么不能修改系统的类，只能修改自己的类呢？" class="headerlink" title="4.2 我们为什么不能修改系统的类，只能修改自己的类呢？"></a>4.2 我们为什么不能修改系统的类，只能修改自己的类呢？</h3><p>这是因为双亲委派机制，系统的类（比如 String 类）都是通过 BootClassLoader 去加载的，而我们的类是 PathClassLoader 加载的。并且 PathClassLoader 的父加载器是 BootClassLoader ！</p>
-<h2 id="五、答疑环节"><a href="#五、答疑环节" class="headerlink" title="五、答疑环节"></a>五、答疑环节</h2><p>前面讲到Android N 的时候，会有一些代码变成 机器码了，所以，这时候我们用上述的方法，是不能完成热修复的。那咋办？Tinker 自己创建了一个 ClassLoader ，这样系统就不会使用系统给的 ClassLoader ，缓存的机器码自然也就不存在了，还是会去找dex去执行。</p>
-<p><strong>作业：自己实现一个 热修复的代码Demo。</strong>，补丁包直接放在 sd 卡里面即可。</p>
-<blockquote>
-<p>这里需要注意在 Android 10.0 的时候，对存储权限有格外要求，你可以放在私有目录</p>
-</blockquote>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Java筑基-：(06)Java基础进阶-序列化</title>
-    <url>/2023/04/05/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(06)Java%E5%9F%BA%E7%A1%80%E8%BF%9B%E9%98%B6-%E5%BA%8F%E5%88%97%E5%8C%96/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、序列化与二进制串"><a href="#一、序列化与二进制串" class="headerlink" title="一、序列化与二进制串"></a>一、序列化与二进制串</h2><p>序列化其实就是<strong>将数据结构转换成二进制串的过程</strong>。这里的二进制串，在 Java 中很容易和 String 的概念混淆，实际上 String 也是一种特殊对象（Object），对于跨语言间的通信，序列化后的数据当然不能使某种语言的特殊数据类型。</p>
-<blockquote>
-<p>二进制串在 Java 里面所指的应当是 byte[] </p>
-</blockquote>
-<h2 id="二、序列化-反序列化的目的"><a href="#二、序列化-反序列化的目的" class="headerlink" title="二、序列化/反序列化的目的"></a>二、序列化/反序列化的目的</h2><ul>
-<li><p>数据的生命周期需要比 JVM 长。Java 允许我们在内存中创建可复用的对象，但是一般只有 JVM 存在的时候，这些对象才能存在，即对象生命周期不能比 JVM 更长。所以，如果需要停止 JVM 后数据还存在，就要序列化保存这些数据。</p>
-</li>
-<li><p>序列化只是对变量而言。序列化对象的时候，<strong>只针对变量进行序列化</strong>，不针对方法进行序列化。</p>
-</li>
-<li><p>需要永久保存或者在网络上传输的时候，需要序列化之后才能进行。</p>
-</li>
-</ul>
-<h2 id="三、序列化常见的方案"><a href="#三、序列化常见的方案" class="headerlink" title="三、序列化常见的方案"></a>三、序列化常见的方案</h2><ul>
-<li><p>Java 中有 Serializable</p>
-</li>
-<li><p>Android 中有 Parcelable</p>
-</li>
-<li><p>还有 Json、xml 、Protocol Buffer 等</p>
-</li>
-</ul>
-<h2 id="四、选择合理的序列化方案"><a href="#四、选择合理的序列化方案" class="headerlink" title="四、选择合理的序列化方案"></a>四、选择合理的序列化方案</h2><ul>
-<li><p>性能</p>
-</li>
-<li><p>通用性</p>
-</li>
-<li><p>鲁棒性</p>
-</li>
-<li><p>可调式性/可读性</p>
-</li>
-<li><p>可扩展/兼容性</p>
-</li>
-<li><p>安全性/访问限制</p>
-</li>
-</ul>
-<h2 id="五、Serializable"><a href="#五、Serializable" class="headerlink" title="五、Serializable"></a>五、Serializable</h2><p>首先， Serializable 只是一个接口，为什么一个空的接口能够实现序列化？<strong>因为它只是一个标识、标记！</strong></p>
-<p>如果要保存到磁盘上，还需要使用 IO 流（ObjectInputStream/ObjectOutPutStream）来辅助，这个好理解。</p>
-<h2 id="六、Externalizable"><a href="#六、Externalizable" class="headerlink" title="六、Externalizable"></a>六、Externalizable</h2><p>要自己实现 writeExternal 和 readExternal 方法，但是使用的时候需要注意以下几点：</p>
-<ul>
-<li><p>write 和 read 方法二者要对应，比如，write 的阶段没有只写入了一个 String 类型，但是读的时候 读了 String 还要读 int ，这时候就会导致崩溃报错。</p>
-</li>
-<li><p>write 和 read 的顺序要保持一致，比如先 write 了String ，再 write  了int ，读的时候如果先读int ，后读String ，也会导致报错</p>
-</li>
-<li><p>要有默认无参的、public类型的构造函数，如果你自己写了有参数的构造函数，一定再加上无参的默认构造函数</p>
-</li>
-</ul>
-<blockquote>
-<p>为什么要有一个 public 无参的构造函数？</p>
-</blockquote>
-<h2 id="七、相关面试题"><a href="#七、相关面试题" class="headerlink" title="七、相关面试题"></a>七、相关面试题</h2><h3 id="7-1-什么是-serialVersionUID-？-如果不定义会发生什么？"><a href="#7-1-什么是-serialVersionUID-？-如果不定义会发生什么？" class="headerlink" title="7.1 什么是 serialVersionUID ？ 如果不定义会发生什么？"></a>7.1 什么是 serialVersionUID ？ 如果不定义会发生什么？</h3><ol>
-<li><p>serialVersionUID 是一个 private static final long 类型的 ID ，它<strong>通常是对象的 hashCode</strong></p>
-</li>
-<li><p>它用于对象的版本控制，我们可以在类文件中指定这个值</p>
-</li>
-<li><p>如果不指定它的值，当你序列化类 A.java 生成了文件 a.txt ，之后，在 A 类中添加了一个字段 sex ，则在反序列化的时候会报错，提示版本不一致</p>
-</li>
-<li><p>还有，如果指定serialVersionUID 为 1，序列化 A 的时候生成了 a.txt ，这时候添加了字段 sex ，如果此时不改 serialVersionUID 的值，反序列化的时候，能成功，只是 sex 字段为 null（这里说的是对象类型，如果是 int 等类型就会是 0 ，后面一样）而已</p>
-</li>
-<li><p>接着上面，如果序列化了 A ，添加了 sex 字段，此时还将 serialVersionUID 改为 2 ，此时反序列化就会报错，同样是版本不一致</p>
-</li>
-</ol>
-<h3 id="7-2-序列化的时候，如果某些成员不要序列化，该怎么实现？"><a href="#7-2-序列化的时候，如果某些成员不要序列化，该怎么实现？" class="headerlink" title="7.2 序列化的时候，如果某些成员不要序列化，该怎么实现？"></a>7.2 序列化的时候，如果某些成员不要序列化，该怎么实现？</h3><p>使用 transient 关键字。加了 这个关键字的对象 sex ，在反序列化的时候会为null（如果是int 等类型就会是 0） 。</p>
-<h3 id="7-3-如果类-A-中有成员未实现可序列化接口，会发生什么？"><a href="#7-3-如果类-A-中有成员未实现可序列化接口，会发生什么？" class="headerlink" title="7.3 如果类 A 中有成员未实现可序列化接口，会发生什么？"></a>7.3 如果类 A 中有成员未实现可序列化接口，会发生什么？</h3><p>如果 A 中有成员 User 对象没有实现可序列化接口，序列化的时候会报 “不可序列化”的异常。</p>
-<h3 id="7-4-如果类-A-是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？"><a href="#7-4-如果类-A-是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？" class="headerlink" title="7.4 如果类 A 是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？"></a>7.4 如果类 A 是可序列化的，但是其父类不是，则反序列化后，从父类继承过来的实例变量状态如何？</h3><p>假如 User 继承了 Person 类，并且实现了 Serializable 接口，但是 Person 类没有实现 Serializable 接口。</p>
-<p>即 父类的成员未默认值，Object 类型为 null ，int 等类型为  0。</p>
-<p>如果要想父类也实现，需要父类也实现 Serializable 接口，并且有默认的构造函数（无参的，public 的）。</p>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Java筑基-：(07)Java IO在Android中应用基础篇</title>
-    <url>/2023/04/08/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(07)Java%20IO%E5%9C%A8Android%E4%B8%AD%E5%BA%94%E7%94%A8%E5%9F%BA%E7%A1%80%E7%AF%87/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>数据流是一组有序、有起点和终点的字节的数据序列，包括输入流和输出流。</p>
-<h2 id="一、IO-简介"><a href="#一、IO-简介" class="headerlink" title="一、IO 简介"></a>一、IO 简介</h2><p>流序列中的数据既可以是未经过加工的原始二进制数据，也可以是经过一定编码处理后符合某种格式规定的特定数据。在Java 中流分为 2 种： <strong>字节流 和 字符流</strong>：</p>
-<ul>
-<li>字节流： 数据流中最小的数据单位是字节</li>
-<li>字符流：数据流中最小的数据单元是字符，Java 中的字符是 Unicode 编码，<strong>一个字符占用 2 个字节</strong></li>
-</ul>
-<p>java.io 中最重要的就是 5 个类和一个接口：</p>
-<ul>
-<li><p>5个类指： File、字节流中的 OutputStream 和 InputStream、字符流中的 Writer 和 Reader ；</p>
-</li>
-<li><p>一个接口是指 ： Serializable </p>
-</li>
-</ul>
-<blockquote>
-<p>在 Android 中，文本文件/XML 等这些都是用 <strong>字符流</strong>来读写；而如 RAR、图片等非文本，则用字节流来读写。</p>
-</blockquote>
-<h2 id="二、Java-IO-中的装饰模式"><a href="#二、Java-IO-中的装饰模式" class="headerlink" title="二、Java IO 中的装饰模式"></a>二、Java IO 中的装饰模式</h2><p>以一段容易让人费解的代码开始：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">DataOutputStream out = <span class="keyword">new</span> DataOutputStream(</span><br><span class="line">        <span class="keyword">new</span> BufferedOutputStream(</span><br><span class="line">                <span class="keyword">new</span> FileOutputStream(</span><br><span class="line">                        <span class="keyword">new</span> File(file))));</span><br></pre></td></tr></tbody></table></figure>
-
-<p>这个代码看起来很乱，多重嵌套，其实要理解 IO ，也不难，难的是要更优地去使用 IO 。接下来抽丝剥茧地解释一下上述代码：</p>
-<ol>
-<li><p>new File() 就是创建一个 File 文件，这个没什么好说的</p>
-</li>
-<li><p>FileOutputStream 这层就是将 File 转为字节流</p>
-</li>
-<li><p>BufferedOutputStream 就是<strong>用来提升速度的</strong>，减少对磁头的调用，如果没有它，就会一个一个字节地去访问磁盘；有了它之后，就是一块一块地访问</p>
-</li>
-<li><p>而使用 DataOutputStream 就是保持数据的格式</p>
-</li>
-</ol>
-<p>我们在日常使用的时候，一般都要是优先考虑 DataOutputStream ，然后交给 BufferedOutputStream 提升效率。上面的例子就是典型的用法。</p>
-<p>要理解输入输出流，要把自己当做电脑的 <strong>内存</strong>，站在内存的角度思考，这样 OutputStream 就是写出到磁盘上了，InputStream 就是读入到内存了。</p>
-<p>为了能更好地理解，我们这里写一个 Demo：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">testDataOutputStream</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">    DataOutputStream out = <span class="keyword">new</span> DataOutputStream(<span class="keyword">new</span> BufferedOutputStream(</span><br><span class="line">            <span class="keyword">new</span> FileOutputStream(<span class="keyword">new</span> File(<span class="string">"C:\\Users\\panda\\IdeaProjects\\JavaDemo\\src\\testtxt\\out.txt"</span>))</span><br><span class="line">    ));</span><br><span class="line">    out.writeInt(<span class="number">1</span>);</span><br><span class="line">    out.writeBoolean(<span class="keyword">false</span>);</span><br><span class="line">    out.writeByte((<span class="keyword">byte</span>)<span class="number">0x41</span>);</span><br><span class="line">    out.writeLong((<span class="keyword">long</span>)<span class="number">0x98765432</span>);</span><br><span class="line"></span><br><span class="line">    out.close();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<p>我们能看到上述代码往文件中写入了东西，但是直接打开看起来是乱码的，这只是编码的问题，使用正确的编码就不会有问题。</p>
-<blockquote>
-<p>还有一点要注意，使用 DataOutputStream 写入之后，通过 DataIntputStream 读出来的时候，需要保证顺序，比如上述例子里面先写入 int ，后写入 boolean ，读的时候也要先读 int 后读 boolean ，否则会错乱</p>
-</blockquote>
-<p>序列化的时候，大量使用这个 IO 操作。</p>
-<h2 id="三、装饰器模式"><a href="#三、装饰器模式" class="headerlink" title="三、装饰器模式"></a>三、装饰器模式</h2><p>在上述代码中，我们使用 FileOutputStream 也能满足需求，但是为了磁盘好我们又包装了 BufferedOutputStream ，此时也已经能用了，但是为了数据格式，我们又加了 DataOutputStream 。</p>
-<p>这种整个一层一层封装就是我们常见的<strong>装饰模式</strong>，如果要对装饰模式理解深刻一点的话，可以用视频中老师举的例子： 人本身就是一个类（类似Android 中的 Context），但是人一般都穿内衣（），而内衣之外，一般都会穿日常衣服装饰自己。整个装饰器模式的结构如下图所示：</p>
-<h2 id="四、字节流与字符流的区别"><a href="#四、字节流与字符流的区别" class="headerlink" title="四、字节流与字符流的区别"></a>四、字节流与字符流的区别</h2><p>在开发中到底使用字节流好还是使用字符流好呢？</p>
-<p>首先，在硬盘上保存文件或者进行传输的时候都是以字节的形式进行的，包括图片也是按字节完成。<strong>字符只有到了内存中才会形成</strong>。所以，如果要使用 Java 程序实现拷贝功能的话，应该选用字节流进行操作，并且采用边读边写的方式（节省内存）。</p>
-<h2 id="五、字节流与字符流的转换"><a href="#五、字节流与字符流的转换" class="headerlink" title="五、字节流与字符流的转换"></a>五、字节流与字符流的转换</h2><p>虽然 Java 支持字节流和字符流，但是有时候需要在二者之间进行转换， InputStreamReader 和 OutputStream 这 2 个类是字节流和字符流之间相互转换的类。</p>
-<h3 id="5-1-InputStreamReader"><a href="#5-1-InputStreamReader" class="headerlink" title="5.1 InputStreamReader"></a>5.1 InputStreamReader</h3><p>用于<strong>将字节流的字节码转成字符</strong>，其中一个构造 方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//用默认字符集创建一个 InputStreamReader 对象</span></span><br><span class="line">InputStreamReader(InputStream in)</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h3 id="5-2-OutputStreamWriter"><a href="#5-2-OutputStreamWriter" class="headerlink" title="5.2 OutputStreamWriter"></a>5.2 OutputStreamWriter</h3><p>用于<strong>将写入的字符转成字节后写入一个字节流</strong>，其中一个构造方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//用默认字符集创建一个 OutputStreamWriter</span></span><br><span class="line">OutputStreamWriter(OutputStream out)</span><br></pre></td></tr></tbody></table></figure>
-
-
-
-<h3 id="5-3-BufferedWriter-和-BufferedReader"><a href="#5-3-BufferedWriter-和-BufferedReader" class="headerlink" title="5.3 BufferedWriter 和  BufferedReader"></a>5.3 BufferedWriter 和  BufferedReader</h3><p>为了频繁转换字节流和字符流，对以上2个类进行了封装， 即 BufferedWriter类封装了OutputStreamWriter类；BufferedReader类封装了InputStreamReader类；示例代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">BufferedWriter out=<span class="keyword">new</span> BufferedWriter(<span class="keyword">new</span> OutputStreamWriter(System.out));</span><br><span class="line">BufferedReader in= <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(System.in);</span><br><span class="line"></span><br><span class="line"><span class="comment">//下面的语句可以从控制台读取一行字符串</span></span><br><span class="line">BufferedReader in=<span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(System.in));</span><br><span class="line">String line=in.readLine();</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>MP4视频首帧加载时间过长的问题</title>
     <url>/2023/03/07/%E9%9D%A2-%E7%9F%A5%E8%AF%86/MP4%E8%A7%86%E9%A2%91%E9%A6%96%E5%B8%A7%E5%8A%A0%E8%BD%BD%E6%97%B6%E9%97%B4%E8%BF%87%E9%95%BF%E7%9A%84%E9%97%AE%E9%A2%98/</url>
     <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>MP4 格式的课程视频从打开播放器到第一帧画面显式，加载时间过长</p>
@@ -14170,169 +13508,918 @@ public View getView(final int i, View view, ViewGroup viewGroup) {
       </tags>
   </entry>
   <entry>
-    <title>Java筑基-：(09)线程与进程理论知识入门</title>
-    <url>/2023/04/12/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(09)%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%90%86%E8%AE%BA%E7%9F%A5%E8%AF%86%E5%85%A5%E9%97%A8/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>进程是申请资源的基本单位，线程是cpu 时间片的基本单位。</p>
-<h2 id="一、cpu-核心与线程数"><a href="#一、cpu-核心与线程数" class="headerlink" title="一、cpu 核心与线程数"></a>一、cpu 核心与线程数</h2><p>目前一个 cpu 上可以有多个核心，cpu 上一个核心可以对应一个线程。</p>
-<p>Intel 的 <strong>超线程技术</strong>，可以实现 1 个cpu 核心对应 2 个逻辑处理器。所以在 windows上你查看性能的时候，发现只有 4 核心，但是有 8 个逻辑处理器。</p>
-<h2 id="二、线程轮转"><a href="#二、线程轮转" class="headerlink" title="二、线程轮转"></a>二、线程轮转</h2><p>1.6G 的 CPU 执行一条指令一般在 0.6ns （0.6纳秒）级别，所以是非常快的。但是线程的上下文切换时非常耗时的，一般耗时在 2W 个 CPU 周期级别。</p>
-<h2 id="三、并行-和-并发"><a href="#三、并行-和-并发" class="headerlink" title="三、并行 和 并发"></a>三、并行 和 并发</h2><ul>
-<li><p>并行就是同时进行，比如，有 2 个咖啡机，就可以同时 2 个人并行打咖啡</p>
-</li>
-<li><p>并发：说并发，一定是有时间单位的，会有并发量的说法。所以基于上面的例子来说，只有一台咖啡机，大家轮着来，这时候就有类似 这个咖啡机每小时的并发量是 10，就是给10个人提供服务。</p>
-</li>
-</ul>
-<h2 id="四、高并发的意义"><a href="#四、高并发的意义" class="headerlink" title="四、高并发的意义"></a>四、高并发的意义</h2><ul>
-<li><p>充分利用硬件资源。比如有四核，但是你只有一个线程</p>
-</li>
-<li><p>用户响应。比如商城 App ，下单之后，会给快递发送消息，给用户发送短信等等，这些其实都是互相独立的，不用单线程进行</p>
-</li>
-</ul>
-<p>但是，多线程不一定快，因为有竞争锁的过程，可能比单线程还慢</p>
-<p>OS 对线程数总数是有限制的，比如 Linux 1000个，windows 2000 个</p>
-<p>线程都会有栈空间的，所以线程数量太多的话，空间占用都很可观</p>
-<p>句柄和文件描述符也都有数量上限</p>
-<p>Java 程序天生就是多线程的，比如，你写个main方法，简单写几行代码，比如下面的代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">    <span class="comment">//Java 虚拟机线程系统的管理接口</span></span><br><span class="line">    ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();</span><br><span class="line">    <span class="comment">//不需要获取同步的monitor 和 synchronizer 信息，仅仅获取线程堆栈信息</span></span><br><span class="line">    ThreadInfo[] threadInfos = threadMXBean.dumpAllThreads(<span class="keyword">false</span>, <span class="keyword">false</span>);</span><br><span class="line">    <span class="keyword">for</span> (ThreadInfo threadInfo: threadInfos) {</span><br><span class="line">        System.out.println(<span class="string">"["</span> + threadInfo.getThreadId() + <span class="string">"]"</span> + threadInfo.getThreadName());</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>上面的 ThreadMXBean就是用来查看当前虚拟机所有的线程的，我们可以看到有多个线程在运行，运行的结果可能会如下所示：</p>
-<blockquote>
-<p>[1]main<br>[8]Reference Handler<br>[9]Finalizer<br>[10]Signal Dispatcher<br>[11]Attach Listener<br>[17]Common-Cleaner<br>[18]Monitor Ctrl-Break<br>[19]Notification Thread</p>
-</blockquote>
-<p>其中 main 线程我们能理解，就是我们的主线程； Finalizer 方法也好理解，因为 Object 类中有个 finalize() 方法，我们在学习 GC 的时候了解过，如果对象不可达，但是重写了 finalize() 方法还没执行的话，会交给一个 低优先级（守护）线程去执行，但是不保证 finalize() 方法执行完成。说的就是这个 Finalizer 线程。</p>
-<h2 id="五、开启新线程的方式"><a href="#五、开启新线程的方式" class="headerlink" title="五、开启新线程的方式"></a>五、开启新线程的方式</h2><p>到底有几种方式，其实挺纠结的，那么我们就以 Java 的 Thread.java 类的官方文档来看：</p>
-<blockquote>
-<p> There are two ways to create a new thread of execution</p>
-</blockquote>
-<p>上面说的就是 2 种：</p>
-<ul>
-<li><p>扩展 Thread 类（继承一下Thread），重写 run 方法。</p>
-</li>
-<li><p>Runnable 接口。比如： UserRunnable implements Runnable，之后，在 new Thread的时候，将这个 UserRunnable 作为参数传进去</p>
-</li>
-</ul>
-<blockquote>
-<p>类似 Callable 之类的其实就是 Runnable 接口来实现新线程的。</p>
-</blockquote>
-<h3 id="Thread-和-Runnable-二者的区别"><a href="#Thread-和-Runnable-二者的区别" class="headerlink" title="Thread 和 Runnable 二者的区别"></a>Thread 和 Runnable 二者的区别</h3><p>Thread 是 Java 对线程的抽象，而 Runnable 是对任务的抽象</p>
-<h2 id="六、线程的停止"><a href="#六、线程的停止" class="headerlink" title="六、线程的停止"></a>六、线程的停止</h2><p>stop 、destroy suspend 、resume 等线程方法已经被废弃了，因为他们停止的时候，不一定<strong>正常</strong>释放资源。比如要写文件 10k ，但是才写了 4k，就stop 了。</p>
-<p>但是 interrupt 方法可以作为我们停止线程的一个方法。</p>
-</body></html>]]></content>
-      <categories>
-        <category>听课笔记</category>
-      </categories>
-      <tags>
-        <tag>享学Android三期</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Java筑基-：(08)FileIO项目实战—dex文件改造</title>
-    <url>/2023/04/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(08)FileIO%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98%E2%80%94dex%E6%96%87%E4%BB%B6%E6%94%B9%E9%80%A0/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>自己编译的模拟器，它可以在源码上打log，做到可控。并且，所有的行为都会经过模拟器，比如后面你的url请求</p>
-<h2 id="二、常用的思路"><a href="#二、常用的思路" class="headerlink" title="二、常用的思路"></a>二、常用的思路</h2><p>加固思路有以下几种：</p>
-<ul>
-<li><p>反模拟器，一旦发现模拟器，就停止核心代码运行</p>
-</li>
-<li><p>代码虚拟化，自己写的代码先运行在自己写的虚拟机上，后续再运行到系统的虚拟机上<br>加密，核心代码是以压缩或者加密形式存在的，被分割成一段一段的，需要的时候，再把目标段加载到内存。</p>
-</li>
-<li><p>加壳方案，分为壳dex和源dex，壳不加密，源加密</p>
-</li>
-</ul>
-<p>关于第 3 种加固方案的总体示意图如下：</p>
-<p><img src="D:%5C%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E4%BA%AB%E5%AD%A6vip%E4%B8%89%E6%9C%9F%5C%E5%9B%BE%E7%89%87%5C%E5%8A%A0%E5%9B%BA%E6%96%B9%E6%A1%88%E6%A6%82%E8%A7%88.png" alt="加固方案概览"></p>
-<p>最后为什么有个签名，因为加固过程会修改 APK，必然破坏了 APK ，因此需要重新签名。以上方案值得我们的思考的有几点：</p>
-<ul>
-<li><p>壳dex 与 源 dex 可以随意拼凑吗？</p>
-</li>
-<li><p>壳 dex 怎么生成？</p>
-</li>
-<li><p>如何签名？</p>
-</li>
-<li><p>如果运行新的 apk（如何脱壳）？</p>
-</li>
-</ul>
-<h2 id="四、Apk打包过程"><a href="#四、Apk打包过程" class="headerlink" title="四、Apk打包过程"></a>四、Apk打包过程</h2><p>简单说一下 APK 的打包过程，整体流程如下图所示：</p>
-<p><img src="" alt="Android打包流程"></p>
-<p>几个重要的过程：</p>
-<ol>
-<li><p>首先 aapt 工具将资源文件生成 R.java 文件</p>
-</li>
-<li><p>aidl 工具将 aidl 文件生成 Java 文件</p>
-</li>
-<li><p>将上述的 java 文件、项目自己的 java 文件，通过 Java compiler 一起生成 .class 文件</p>
-</li>
-<li><p>.class 文件通过 dx 工具生成 dex 文件</p>
-</li>
-<li><p>将 dex 文件和那些资源文件一起压缩生成 apk</p>
-</li>
-<li><p>签名</p>
-</li>
+    <title>他山之石</title>
+    <url>/2020/05/02/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="GUOBIN"><a href="#GUOBIN" class="headerlink" title="GUOBIN"></a>GUOBIN</h2><h3 id="GUOBIN-1"><a href="#GUOBIN-1" class="headerlink" title="GUOBIN-1"></a>GUOBIN-1</h3><ol>
+<li>项目，做了什么优化</li>
+<li>如果有一个首页 横向有很多东西、纵向也有很多东西  你怎么处理？（ViewPager2 + RecyclerView） 我讲了500的首页动态化方案给他听</li>
+<li>浏览器输入地址到显示干了什么</li>
+<li>https</li>
+<li>项目网络框架（视频传输用什么？我说udp，并且给出了原因跟说了下http3）</li>
+<li>二叉搜索树的删除</li>
+<li>背书 死锁、多线程访问临界资源问题</li>
+<li>有一个Button有ABC三种样式 然后屏蔽View的其他方法怎么做（我说了三种方法1. 编译时发现访问了View方法报错  2. 继承并且复写方法为空实现，内部提供super访问方法 3.面向对象思想 返回一个只有ABC三个方法的接口）</li>
+<li>逻辑题 烧绳子 1小时得出45分钟     有桶里有3种无限的球 一次拿两个 问至少拿多少次才能出现重复的方案  排列组合共6种  所以至少7次</li>
 </ol>
-<h2 id="加壳"><a href="#加壳" class="headerlink" title="加壳"></a>加壳</h2><p>生成原始 apk ，然后解压到目录 unzip 中文件夹中，当然，要把之前的签名文件给剔除；之后，找到所 unzip 中所有的 dex 文件，进行加密。</p>
-<p>接下来，将项目中的一个 lib 生成的 aar 转成 dex 文件， dx 工具可以将 jar 转成 dex，当然，这个 lib 有自己的 Application ，在正式使用的时候，上述 原始 apk 中的 Application 在最开始的时候要通过反射的方式调用这个 lib 的 Application ，让其形式上作为 App 的默认 Application ，以便后续的解密。</p>
-<p>将加密的 dex 和 aar 转成的 dex 一起放入 unzip 中，这样 ，unzip 文件夹中有了 加密的 dex 和 lib 的dex ，以及原始 apk 中所有的 资源，这时候通过 zip 压缩，就能将 unzip 中所有的内容压缩起来，改名 apk （这个打包apk 的过程需要确认）</p>
-<p>最后，对这个 apk 进行签名，就形成了正式的apk 。</p>
-<h2 id="脱壳"><a href="#脱壳" class="headerlink" title="脱壳"></a>脱壳</h2><p>上述打包的 APK 最终需要安装使用，安装成功后，</p>
-<p>我们的安装包都会安装在 </p>
+<h3 id="GUOBIN-2"><a href="#GUOBIN-2" class="headerlink" title="GUOBIN-2"></a>GUOBIN-2</h3><ol>
+<li>voliate关键字的作用，加上是否能保证原子操作的原子性？如何保证原子性</li>
+<li>recyclerview缓存机制</li>
+<li>tcp三次握手、项目网络库实现，为什么要用上udp？</li>
+<li>hashmap插入操作、什么时候转红黑树，为什么要转？线程安全么？ConcurrentHashMap如何保证安全</li>
+<li>binder优点、对比其他IPC机制，为什么要引入binder？</li>
+<li>OSI模型，每层作用跟有什么协议</li>
+<li>概率题：一个家庭有三个孩子，已知其中一个为男，求另外两个至少有一个女的概率</li>
+<li>算法：旋转链表LeetCode 61</li>
+</ol>
+<h3 id="GUOBIN-3"><a href="#GUOBIN-3" class="headerlink" title="GUOBIN-3"></a>GUOBIN-3</h3><p>https相关<br>项目的mvvm，redux等、为什么不用databinding？（难找问题、编译慢）<br>jni如何获取JNIEnv、Jvm结构体、native如何保持jobject的引用  local  reference需要每次都delete么？<br>项目网络库的实现 为何不用http？对比优缺点、除了C2S 有S2C功能么（push功能）怎么实现的。 保活链接呢，断了怎么办？（我们项目是自研的网络库，使用一个tcp socket、两个udp socket链接，tcp socket使用类似http2<br>的方式发送请求）<br>有没搞过windows开发？<br>有没搞过音频开发？<br>kotlin特点、优缺点、协程怎么实现？为什么不在java实现？协程的含义？dart的协程大致是怎么实现的（跟kotlin差不多）？（java原本是用在服务上的，不是搞移动的）</p>
+<h3 id="GUOBIN-4"><a href="#GUOBIN-4" class="headerlink" title="GUOBIN-4"></a>GUOBIN-4</h3><pre><code>（1）自我介绍
+（2）你主要负责什么模块、奖金优化是什么东西（奖金优化的前提是如果能中奖，中奖金额要怎么样）、如何将所有组合列出来、如何将注数分配出去、奖金范围怎么算的
+（3）APP的架构是怎么样的，为什么要这样子架构？MVP每块你们是怎么分工的
+（3）首屏怎么调优的、加快启动速度的，内存泄漏怎么检测，LeakCanary原理是什么
+（4）HashMap源码相关、为什么要将链转红黑树？红黑树特点、插入删除
+（5）消息循环源码、如何做到任务切换线程、想要提交一个任务有几种方式
+（6）Kotlin协程原理，怎么切换线程的，为什么要换Kotlin及其优缺点
+（6）一个无序、实际上是逆序的数组排序用什么算法好 我说的是快排、实际上应该用归并排序能获得最好的时间复杂度</code></pre><h3 id="GUOBIN-5"><a href="#GUOBIN-5" class="headerlink" title="GUOBIN-5"></a>GUOBIN-5</h3><pre><code>（1）还是奖金优化
+（2）还是性能调优、怎么瘦身、打包流程、模块化
+（3）开发者GPUInfo中的每条柱状图颜色代表含义、命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思
+（4）Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的
+（5）物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域
+（6）binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体
+（7）广度、深度搜索，拓朴排序、最短路径算法
+（8）ELF文件格式、反编译器原理
+（9）Kotlin优缺点</code></pre><h3 id="GUOBIN-6"><a href="#GUOBIN-6" class="headerlink" title="GUOBIN-6"></a>GUOBIN-6</h3><pre><code>（1）项目架构是怎么样的
+（2）画一下结构图
+（3）为什么要迁移项目到Kotlin
+（4）线程 协程 为什么需要线程池 他的状态变化是怎么样的 在Android中的应用
+（5）如何设计一个App的架构 该考虑什么
+（6）Flutter怎么从平台到Dart的 如何渲染的
+（7）你觉得面得怎么样</code></pre><h3 id="GUOBIN-7"><a href="#GUOBIN-7" class="headerlink" title="GUOBIN-7"></a>GUOBIN-7</h3><p>讲个项目你负责的模块<br>多个Fragment在销毁后重建之后重叠怎么办<br>设计一个图片缓存框架<br>缓存算法用什么<br>有个ListView快速滑动 如何优化Bitmap的显示<br>Bitmap的复用听过没有<br>如何进行内存优化 减少内存消耗</p>
+<h3 id="GUOBIN-8"><a href="#GUOBIN-8" class="headerlink" title="GUOBIN-8"></a>GUOBIN-8</h3><p>讲下项目的架构<br>负责的模块<br>算法 最大子序和<br>try catch finally关于return的执行结果<br>hashmap源码 treemap如何对两个元素进行比较 非compareble对象比较<br>hashcode equals区别<br>object有什么方法<br>讲讲Android存在的设计模式<br>android的消息机制<br>android的事件分发<br>讲个android的源码 自选<br>LeakCanary</p>
+<h3 id="GUOBIN-9"><a href="#GUOBIN-9" class="headerlink" title="GUOBIN-9"></a>GUOBIN-9</h3><p>android消息机制<br>android事件分发<br>设计模式讲讲有什么认识的 代理模式优缺点<br>图片 缓存机制<br>首屏调优 内存调优</p>
+<h2 id="cici"><a href="#cici" class="headerlink" title="cici"></a>cici</h2><p>1、数组实现队列</p>
+<p>2、gc的流程</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>可以查看 <a href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/">虚拟机</a> 第5题</p>
+</details>
+
+<p>3、java软引用与弱引用区别  </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考以前的<a href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">读书笔记</a></p>
+</details>
+
+<p>4、java中的this编译时的原理</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>我们知道，this关键字主要有三个用途：</p>
+<ul>
+<li>调用本类中的属性    </li>
+<li>调用本类中的其他方法    </li>
+<li>调用本类中的其他构造函数</li>
+</ul>
+<p>this编译时的原理：</p>
+<ol>
+<li>this指代的一定是对象(所以静态方法不能使用this)，且该对象的静态类型就是就是当前类      </li>
+<li>实例方法以及 <strong>构造方法</strong>的第一个参数都是this（在构造方法之前，jvm其实已经给对象在堆中分配好了内存了，构造方法的作用是对类<strong>初始化</strong>）     </li>
+<li>this一般出现在方法中；如果this出现在方法体外部，如：在类A中定义了成员变量 A a = this;最终这行代码仍然会<strong>被放入 A 类的构造函数中执行</strong>。</li>
+</ol>
+<p>参考<a href="https://blog.csdn.net/weixin_41920291/article/details/98118035">他人的博客</a></p>
+</details>
+
+<p>5、final变量用反射修改</p>
+<p>6、HashMap的内部结构，给定一个key，如何找到对应的value，使用equal</p>
+<p>7、volatile</p>
+<p>8、Java线程池有什么作用</p>
+<p>9、Java动态代理</p>
+<p>10、handler机制</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a> 第4题即可     </p>
+</details>
+
+<p>11、android跨进程通信的方式</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>阅读<a href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">以前的读书笔记</a></p>
+</details>
+
+<p>12、自定义控件方式</p>
+<p>13、Canvas绘制过什么 手写功能</p>
+<p>14、断点续传的实现</p>
+<p>15、如何设计图片加载库</p>
+<p>16、有看过哪些安卓的源码 </p>
+<ul>
+<li>Activity启动    </li>
+<li>handler      </li>
+<li>ThreadHandler</li>
+<li>IntentThread     </li>
+</ul>
+<p>17、看过哪些开源项目    </p>
+<ul>
+<li>LeakCanary    </li>
+<li>Alpha    </li>
+<li>okhttp    </li>
+</ul>
+<p>18、app 启动速度的优化做过哪些</p>
+<p>19、fresco加载图片原理 优势是什么</p>
+<p>20、写程序时，堆和栈有什么优化点 内存回收时机 如何判断对象可被回收</p>
+<p>21、引用计数法和gc root法</p>
+<p>22、事件分发 cancel事件一般在什么时候被触发</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考<a href="">源码理解</a>中的12、13题</p>
+</details>
+
+<p>23、touchdelagate 一个父view只能设置一个delegate，如何解决设置多个</p>
+<p>24、App整个架构了解么</p>
+<p>25、mvvm data binding</p>
+<p>26、webview</p>
+<p>27、fragment startactivity</p>
+<p>28、动画的原理</p>
+<p>黄油计划 vsync</p>
+<p>设计一个离线视频下载功能</p>
+<p>Activity 启动流程</p>
+<p>android  app签名原理</p>
+<p>Android查询资源文件layout原理</p>
+<p>设计一个decode bitmap方法</p>
+<p>启动Activity A后，按home键，再从桌面启动activity A ， Activity A的生命周期</p>
+<p>handler原理</p>
+<p>onSaveInstanceState调用时机</p>
+<p>Fragment View区别</p>
+<p>Java内存管理和内存回收</p>
+<p>Android scheme</p>
+<p>Activity怎么管理自己的生命周期，ActivityThread怎么运作</p>
+<p>消息事件分发</p>
+<p>进程之间通讯</p>
+<p>线程锁</p>
+<p>touch事件分发原理scrollview和viewpager之间的滑动如何防止冲突，里面listitem也需要支持滑动怎么办</p>
+<p>插件化的了解情况动态代理实现（自由发挥的）</p>
+<p>如何实现一个拥有取出最小值方法的堆栈，要求算法的事件复杂度是O(E)如何算</p>
+<p>二叉树节点之间的最小距离</p>
+<p>两个链表，可能很长，实现求和（大数求和），结果也是单向链表</p>
+<p>ActivityTask的使用</p>
+<p>onNewIntent的调用时机</p>
+<p>checkbox，up事件和down事件的区别</p>
+<p>怎么用Standard方式来实现一个SingleTop启动的Activity</p>
+<p>Http文件上传的具体过程</p>
+<h4 id="GUOBIN-2-1"><a href="#GUOBIN-2-1" class="headerlink" title="GUOBIN-2"></a>GUOBIN-2</h4><p>富途有一个概率问题，3个人去打天上的飞机，每个人打中的概率都是0.6，一起打，飞机被打中的概率是多少</p>
+<p>超大图片加载到app预览，占用内存很大，实现方案上需要注意什么，怎么解决这个问题</p>
+<p>微信朋友圈刷列表卡顿，让你定位你如何入手，怎么安排怎么开展工作</p>
+<p>还一个，一堆钻石，每个大小可能不一样，你一次只能看一个，看完拿了就结束了，没拿就看下一个，不能回头。怎么保证能拿到一个比较大的钻石，钻石数量无限，可以认为是百万级</p>
+<p>笔试（1h）:</p>
+<p>笔试主要是做一些基础题，主要涉及基础数学、操作系统、算法等基本知识</p>
+<p>1：数独游戏，在9*9的数独上填充数字</p>
+<p>2：逻辑电路的概率题</p>
+<p>3：猴子吃桃问题</p>
+<p>4：页面置换算法为FIFO，求缺页中断的次数</p>
+<p>5：有7g和2g砝码，如果利用砝码和天平在3次之内将140g的面粉分为90g和50g</p>
+<p>第一次：将140g面粉分为70g和70g<br>第二次：将70g面粉分为35g和35g<br>第三次：利用砝码将35g面粉分为20g和15g。由此35+15 = 50g； 35+35+20 = 90g<br>6：编程题 : 根据中序遍历结果和先序遍历结果建树</p>
+<p>7:? 编程题：将字符串“l.am.happy”反转为“yapph.ma.I”</p>
+<pre><code>/**
+ * 两次翻转，先对每个单词进行翻转，再对整体进行翻转 
+ */
+public String reverseString(String str){
+
+    if(str == null || str.length() == 0){
+        return null;
+    }
+    // 分割单词
+    String []wordList = str.split("/.");
+    for(int i = 0; i &lt; wordList.length; i++){
+        // 对每个单词进行翻转
+        wordList[i] = convert(wordList[i]);
+    }
+
+    int low = 0;
+    int high = wordList.length - 1;
+    while(low &lt; high){
+        String tmp = wordList[low];
+        wordList[low] = wordList[high];
+        wordList[high] = tmp;
+        low++;
+        high--;
+    }
+
+    StringBuffer sb = new StringBuffer();
+    for(int i = 0; i &lt; wordList.length - 1; i++){
+        sb.append(wordList[i]).append(".");
+    }
+    sb.append(wordList[wordList.length - 1]);
+    return sb.toString();
+}
+
+// 对单个单词进行翻转
+public String convert(String str){
+    int low = 0;
+    int high = str.length() - 1;
+    char[]tmpStr = str.toCharArray();
+    while(low &lt; high){
+        char temp = tmpStr[low];
+        tmpStr[low] = tmpStr[high];
+        tmpStr[high] = temp;
+        low++;
+        high--;
+    }
+    return String.valueOf(tmpStr);
+}</code></pre><p>8:? 编程题：不能使用系统函数，计算任意两个日期的天数差</p>
+<p>9:? 推导题：A、B、C、D四个人分别带着一顶帽子。共两顶黑帽子，两顶白帽子。其中D和A、B、C三个隔了一堵不透明的墙。A可以看到B、C帽子的颜色。B可以看到C帽子的颜色。只要能判断自己的帽子颜色，就可以立刻说出来。他们四人沉默了几分钟，这时候一个人说到，它知道自己帽子的颜色是什么了，请问这个人是谁？</p>
+<p>答案：应该是B。A能看到B、C两人的帽子。如果B、C两个人的帽子颜色相同，那么A立刻就能说出来自己帽子的颜色。否则，如果A沉默，我们就能断定B、C带了不同颜色的帽子。因为B能看到C帽子的颜色，B和C帽子的颜色不同，所以，我们能够推断出B。</p>
+<p>?</p>
+<p>一面：</p>
+<p>一面主要是针对刚才的笔试题进行提问，以及抓着简历和项目经历来问</p>
+<p>1：解释一下MVC、MVP、MVVM架构模式</p>
+<p>2：解释一下Android组件化（LiveData + ViewModel）</p>
+<p>3:? ?对ios架构有了解吗？(只了解过Viper)</p>
+<p>4：Kotlin的特点、优点和缺点</p>
+<p>优点:</p>
+<p>完全兼容Java<br>Null safe<br>支持lambda表达式（比Java8更好）<br>支持扩展<br>支持高阶函数<br>体验一致的开发工具链<br>代码简洁<br>缺点：</p>
+<p>可读性差<br>编译速度慢<br>操作不当容易引出大错误<br>学习资料少<br>IDEA 自动转换工具，把 Java 转换成 Kotlin，转换质量比人工转的要差的多。<br>5:? 抓项目细节，问项目的实现</p>
+<p>6：Android如何进行优化，如内存优化、布局优化、性能优化</p>
+<p>布局优化：</p>
+<p>尽量减少布局文件的层级<br><include>标签，主要用于布局重用，提高布局的复用性<br><merge>标签，一般和<include>标签配合使用，可以减少布局的层级<br><viewstub>标签，提供了按需加载的功能，当需要时才会将ViewStub中的布局加载到内存，这提高了程序的初始化效率<br>绘制优化：</viewstub></include></merge></include></p>
+<p>避免在View的onDraw方法中执行大量的操作</p>
+<p>onDraw中不要创建新的局部变量，这是因为onDraw方法可能会被频繁的调用，这样就会在一瞬间产生大量的临时对象<br>onDraw方法中不要做耗时的任务，也不能执行成千上万次的循环操作。否则这回导致View的绘制流程不流畅<br>内存优化：</p>
+<p>尽量使用Android特有的数据容器。如SparseArray、SparseBooleanArray<br>不要使用过多的枚举类，枚举占用的内存空间比整形大<br>适当使用软引用和弱引用<br>尽量采用静态内部类，这样可以避免潜在的由于内部类而导致的内存泄露</p>
+<p>二面：</p>
+<p>1:? 重载和重写的区别</p>
+<p>方法的重写(Overriding)和重载(Overloading)是java多态性的不同表现，重写是父类与子类之间多态性的一种表现，重载是一类中多态性的一种表现。</p>
+<p>override（重写）：</p>
+<p>　　 1、方法名、参数、返回值相同。</p>
+<p>　　 2、子类方法不能缩小父类方法的访问权限。</p>
+<p>　　?3、子类方法不能抛出比父类方法更多的异常(但子类方法可以不抛出异常)。</p>
+<p>　　 4、存在于父类和子类之间。</p>
+<p>　　 5、方法被定义为final不能被重写。</p>
+<p>　overload（重载）：</p>
+<p>　　1、参数类型、个数、顺序至少有一个不相同。?</p>
+<p>　　2、不能重载只有返回值不同的方法名。</p>
+<p>　　3、存在于父类和子类、同类中。</p>
+<p>2：Android应用的启动过程</p>
+<p>时序图</p>
+<p>3：TCP建立连接的过程</p>
+<p>建立连接：</p>
+<p>TCP/IP协议中，TCP协议提供可靠的连接服务，采用三次握手建立一个连接。</p>
+<p>（1）第一次握手：建立连接时，客户端A发送SYN包（SYN=j）到服务器B，并进入SYN_SEND状态，等待服务器B确认。</p>
+<p>（2）第二次握手：服务器B收到SYN包，必须确认客户A的SYN（ACK=j+1），同时自己也发送一个SYN包（SYN=k），即SYN+ACK包，此时服务器B进入SYN_RECV状态。</p>
+<p>（3）第三次握手：客户端A收到服务器B的SYN＋ACK包，向服务器B发送确认包ACK（ACK=k+1），此包发送完毕，客户端A和服务器B进入ESTABLISHED状态，完成三次握手。</p>
+<p>完成三次握手，客户端与服务器开始传送数据</p>
+<p>释放链接：</p>
+<p>由于TCP连接是全双工的，因此每个方向都必须单独进行关闭。这个原则是当一方完成它的数据发送任务后就能发送一个FIN来终止这个方向的连接。收到一个?FIN只意味着这一方向上没有数据流动，一个TCP连接在收到一个FIN后仍能发送数据。首先进行关闭的一方将执行主动关闭，而另一方执行被动关闭。</p>
+<p>?CP的连接的拆除需要发送四个包，因此称为四次挥手(four-way handshake)。客户端或服务器均可主动发起挥手动作，在socket编程中，任何一方执行close()操作即可产生挥手操作。</p>
+<p>（1）客户端A发送一个FIN，用来关闭客户A到服务器B的数据传送。?</p>
+<p>（2）服务器B收到这个FIN，它发回一个ACK，确认序号为收到的序号加1。和SYN一样，一个FIN将占用一个序号。?</p>
+<p>（3）服务器B关闭与客户端A的连接，发送一个FIN给客户端A。?</p>
+<p>（4）客户端A发回ACK报文确认，并将确认序号设置为收到序号加1。</p>
+<p>4：传输层和网络层的联系</p>
+<p>网络层负责ip数据报的产生以及ip数据包在逻辑网络上的路由转发。</p>
+<p>传输层提供端到端通信服务层次,提供可靠及非可靠连接。</p>
+<p>网络层只是根据网络地址将源结点发出的数据包传送到目的结点（点到点），其主要任务是：通过路由选择算法，为报文或分组通过通信子网选择最适当的路径。该层控制数据链路层与传输层之间的信息转发，建立、维持和终止网络的连接。具体地说，数据链路层的数据在这一层被转换为数据包，然后通过路径选择、分段组合、顺序、进/出路由等控制，将信息从一个网络设备传送到另一个网络设备。</p>
+<p>而传输层则负责将数据可靠地传送到相应的端口（端到端），传输层提供了主机应用程序进程之间的端到端的服务。传输层利用网络层提供的服务，并通过传输层地址提供给高层用户传输数据的通信端口，使高层用户看到的只是在两个传输实体间的一条端到端的、可由用户控制和设定的、可靠的数据通路。</p>
+<p>5：25匹马，5条跑道。要选出最快的前三名，最少要跑几次？</p>
+<p>7次。将25匹马分成五批，跑五次，决胜出每批马的第一名。再让每批第一名的马跑一次，决定前三名，设为A,B,C。此时可确认跑得最快的为A，但是第二名和第三名不确定。于是可以让A1,A2, B，B1，C跑一次。（A1代表A组的第二名），决胜出前二名。就是最快的第二和第三名的马。</p>
+<p>6：老王卖鞋，一双进价30元，老王赔本卖，只卖20元。有个骗子来买，给老王50元假钞。老王未能识别，又没有零钱，把这假钞拿到隔壁铺子的老李换了50元零钱，回来找了骗子30。隔壁很快发现问题，拿假钞来换，老王只好把自己的家底真钞50元换给隔壁。问老王损失了多少钱？</p>
+<p>损失了60元，由题目可知老李没有任何损失。老王找了骗子30元，同时又得到了一双价值30的鞋子。赚了60元，因此可以得出老李亏了60元。</p>
+<p>7：死锁产生的必要条件</p>
+<p>互斥条件：请求的资源为临界资源<br>请求和保持条件：申请新资源，保持旧资源<br>不剥夺条件：已获得的资源，在使用完之前，不被外力剥夺<br>环路等待条件：互相等待资源<br>8：多少个进程竞争多少个临界资源会产生死锁？</p>
+<p>两个或以上进程需要两个或以上资源</p>
+<p>9：你怎么规划你以后的发展？</p>
+<p>（接下来巴拉巴拉一大堆产品的问题，产品的优势、竞争力等等）</p>
+<p>?</p>
+<p>Hr面（20min）</p>
+<h2 id="杂"><a href="#杂" class="headerlink" title="杂"></a>杂</h2><p>其实证书的本地校验还有一个步骤就是，将获取的新证书与老证书对比下，对比新旧证书</p>
+<p>在kotlin中各个部分的执行顺序：</p>
+<p>companion &gt; init &gt; constructor</p>
+<p>自己写代码如下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">KotlinTest</span> </span>{</span><br><span class="line">    <span class="keyword">init</span> {</span><br><span class="line">        println(<span class="string">"init"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">constructor</span>(){</span><br><span class="line">        println(<span class="string">"constructor init"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> {</span><br><span class="line">        <span class="keyword">init</span>{</span><br><span class="line">            println(<span class="string">"companion init"</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>会输出：</p>
 <blockquote>
-<p>/data/data/包名/files/fake_apk/  </p>
+<p>companion init    </p>
+<p>init    </p>
+<p>constructor init</p>
 </blockquote>
-<p>这种目录下，在壳的 Application （那个lib 中的 Application）的 attachBaseContext 的时候，我们可以将这个apk加载进来，然后过滤出所有加密的 dex 文件，之后解密，然后将这些解密后的文件存入到指定的目录，后续就使用这些已经解密的dex 。当然，我们不需要每次都去解密这个 dex ，将其存起来就好了，下次直接使用。</p>
-<h2 id="对称加密、非对称加密"><a href="#对称加密、非对称加密" class="headerlink" title="对称加密、非对称加密"></a>对称加密、非对称加密</h2><p>看了，但是笔记略</p>
+<p>对称加密哪些</p>
+<p>三次、四次握手</p>
+<p>注意postInvalidate的使用</p>
+<h2 id="关于如何排查ANR"><a href="#关于如何排查ANR" class="headerlink" title="关于如何排查ANR"></a>关于如何排查ANR</h2><h3 id="获取日志文件"><a href="#获取日志文件" class="headerlink" title="获取日志文件"></a>获取日志文件</h3><p>首先，获取日志文件：</p>
 <blockquote>
-<p>后续要根据视频内容自己写一下整个的加壳、脱壳的过程</p>
+<p>adb bugreport buglog</p>
+</blockquote>
+<p>之后，就会显示进度生成，有个时候会生成不成功，没关系，再来一次</p>
+<p>生成之后，这个文件被导入到当前项目的路径下，解压这个 buglog.zip 文件即可，打开 [机型]xxx.txt 查看里面的日志。</p>
+<h3 id="ANR类型和日志关键字"><a href="#ANR类型和日志关键字" class="headerlink" title="ANR类型和日志关键字"></a>ANR类型和日志关键字</h3><p>KeyDispatchTimeout-主要类型按键或触摸事件,input事件在5S内没有处理完成发生ANR</p>
+<p>日志关键字：Reason: Input dispatching timed out xxxx</p>
+<p>ServiceTimeout-bind，create，start，unbind等在主线程处理耗时，前台Service在20s内，后台Service在200s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout executing <a href="https://links.jianshu.com/go?to=http%3A%2F%2Fservice%2Fexecuting%2520service" target="_blank">service:/executing service</a> XXX</p>
+<p>3）BroadcastTimeout- BroadcastReceiver onReceiver处理事务时前台广播在10S内，后台广播在60s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout of broadcast XXX/Receiver during timeout:XXX/Broadcast of XXX</p>
+<p>4）ProcessContentProviderPublishTimedOutLocked-ContentProvider publish在10s内没有处理完成发生ANR<br>日志关键字：timeout publishing content providers</p>
+<h3 id="造成ANR的常见原因"><a href="#造成ANR的常见原因" class="headerlink" title="造成ANR的常见原因"></a>造成ANR的常见原因</h3><ul>
+<li>主线程耗时操作，如复杂的layout，庞大的for循环，IO等。    </li>
+<li>主线程被子线程同步锁block    </li>
+<li>主线程被Binder 对端block    </li>
+<li>Binder被占满导致主线程无法和SystemServer通信    </li>
+<li>得不到系统资源（CPU/Memory/IO）</li>
+</ul>
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/33d5e48e4a13">简书上的博客</a>、<a href="https://www.jianshu.com/p/082045769443">简书博客二</a></p>
+</blockquote>
+<h3 id="dayuwuxian"><a href="#dayuwuxian" class="headerlink" title="dayuwuxian"></a>dayuwuxian</h3><p>在目前所在公司主要负责什么？</p>
+<p>为什么要重构网络框架？重构后有什么亮点？</p>
+<blockquote>
+<p>网关不让用。并发token设计、数据解析 adapter 设计、日志系统设计。</p>
+</blockquote>
+<p>OkHttp 里面有哪些比较关键的设计让你觉得挺好的？线程池为什么要这样设计？它有哪些 intercetor ，分别是什么含义 ？这些 interceptor 执行的顺序是什么？</p>
+<p>网络防劫持是怎么做的？</p>
+<p>设计一个类，有add、remove、dispatch 这 3 个方法，其中add 表示将 listener 添加进来， remove 表示将 listener 移除，dispatch 方法表示遍历目前的listener ，然后调用每个 listener 的 invoke 方法，请问这个类怎么设计？</p>
+<p>设计的APM上线了吗，完成度怎么样？为什么要设计这么个APM ？怎么收集卡顿、ANR 呢？</p>
+<p>有用kotlin吗？kotlin的 lazy 是怎么实现的？-有很多中模式。这些模式的原理是什么，比如Synchronize 模式的原理是什么？用过协程吗？</p>
+<p>有用过 JetPack 吗？用过哪些？</p>
+<p>https证书防抓包的原理是什么？证书是双向验证还是单向验证？破解包了替换掉证书还能不能行？怎么更新从后台下载来的证书？怎么做的？</p>
+<p>https的请求过程是什么样的，与http有什么区别？</p>
+<p>一大堆无序的数字，取出前k个最小的数字</p>
+<h2 id="频繁GC、OOM-的排查"><a href="#频繁GC、OOM-的排查" class="headerlink" title="频繁GC、OOM 的排查"></a>频繁GC、OOM 的排查</h2><p>Android 的profile 功能-&gt;memory -&gt; dump ，得到 hprof 文件</p>
+<p>AS 现在直接能看到各个对象了，或者按照以前的，将 hprof 文件转一道，使用 MAT 打开</p>
+<h2 id="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"><a href="#两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛" class="headerlink" title="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"></a>两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛</h2><p>设先抛先吃的概率为p1， 后抛先吃的概率为p2</p>
+<p>那么有：</p>
+<p>p1 = 1/2 + 1/2 * p2</p>
+<p>p1 + p2 = 1</p>
+<p>解方程可得，</p>
+<p>p1 = 2/3</p>
+<blockquote>
+<p>参考自<a href="https://www.nowcoder.com/questionTerminal/6f11c63cb97a4e0884bb40985cf95393?toCommentId=474963">牛客网</a></p>
 </blockquote>
 </body></html>]]></content>
       <categories>
-        <category>听课笔记</category>
+        <category>笔记</category>
       </categories>
       <tags>
-        <tag>享学Android三期</tag>
+        <tag>攻玉</tag>
       </tags>
   </entry>
   <entry>
-    <title>Java筑基-：(10)线程与进程理论知识入门</title>
-    <url>/2023/04/12/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(10)%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%90%86%E8%AE%BA%E7%9F%A5%E8%AF%86%E5%85%A5%E9%97%A8/</url>
-    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="一、Java-线程安全停止工作"><a href="#一、Java-线程安全停止工作" class="headerlink" title="一、Java 线程安全停止工作"></a>一、Java 线程安全停止工作</h2><p>interrupt() 方法是对线程发起中断，只是改写了一下 标志位！不代表线程要立即停止工作。不过可以根据这个标志位来决定是否停止线程了。</p>
+    <title>自我经验</title>
+    <url>/2023/02/03/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E8%87%AA%E6%88%91/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>1、内存泄漏怎么检测？LeakCanary 原理</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+[参考以前的源码解析第10点](https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/)
+</details>
+
+<p>2、HashMap 源码？为什么要将链表转成红黑树？红黑树特点？</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+[参考java基础中的第3点](https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/)
+
+</details>
+
+<p>3、消息循环源码、如何做到任务切换线程？想要提交一个任务有几种方式？</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>关于源码，可以从postDelay、IdleHandler、插队的msg 几个角度来讲。其中源码可以查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础中的3、4题</a>，后面两个可以参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的32、33题</a></p>
+</details>
+
+<p>4、多个Fragment在销毁后重建之后重叠怎么办</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<h3 id="产生重叠的原因"><a href="#产生重叠的原因" class="headerlink" title="产生重叠的原因"></a>产生重叠的原因</h3><p>一般是由于我们采用show 和 hide 的方式( 而不是replace )来控制Fragment 的显示和隐藏，当Activity 由于内存不足被回收之后再恢复的时候，如果不做处理，那就会把这些fragment new 出来添加到Activity 中，由于是刚new出来的，并没有以前的show/hide 状态，因此就造成重叠。</p>
+<h3 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h3><p>在第一次进入Activity 初始化Fragment的时候，为添加的fragment 设置tag ，并且 tag 为fragment的全限定名，将这些tag以列表形式tags保存。在 onSaveInstanceState 回调的时候，保存tags。</p>
+<p>在恢复的时候，首先恢复出来tags，再依次遍历tags中的tag，使用FragmentManager.findFragmentByTag 查找fragment。如果查找出来的 fragment 不空，则直接使用，否则的话，就使用 savedInstanceState?.classLoader.loadClass(tag) 来反射新建这个fragment (因为我们的tag就是fragment 的全限定名嘛)。</p>
+<h3 id="replace-方式切换fragment-与-show-hide-方式切换fragment"><a href="#replace-方式切换fragment-与-show-hide-方式切换fragment" class="headerlink" title="replace 方式切换fragment 与 show/hide 方式切换fragment"></a>replace 方式切换fragment 与 show/hide 方式切换fragment</h3><p>replace 固然可以避免很多不必要的问题，但是它不能保存页面状态，对用户体验不友好，频繁切换还会导致卡顿。show/hide 方式只会控制隐藏/展示，所以效率上会好一些。</p>
+</details>
+
 <blockquote>
-<p>基于这一点，我们可以说 <strong>JDK 中的线程是协作式的，而不是抢占式的。</strong></p>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/d2b088e7b6c0">简书上的博客</a>、<a href="https://blog.csdn.net/qq_27258799/article/details/80489722">披萨大叔</a></p>
 </blockquote>
-<p>所以，我们可以在 while 循环中，可以通过 isInterrupted() 来判断标记位状态，来判断是否终止线程，比如：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">UsetThread</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>{</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.run();</span><br><span class="line">        <span class="keyword">while</span>(!isInterrupted()) {</span><br><span class="line">            System.out.println(<span class="string">"线程正在执行"</span>);</span><br><span class="line">            System.out.println(<span class="string">"线程isInterrupted标记位："</span> + isInterrupted());</span><br><span class="line">        }</span><br><span class="line">        System.out.println(<span class="string">"最终线程isInterrupted标记位："</span> + isInterrupted());</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>5、设计一个图片缓存框架，缓存算法用什么</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
+<p>缓存算法使用 LRUCache，其原理可以参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础-LruCache原理</a></p>
+</details>
 
+<p>6、有个ListView快速滑动 如何优化Bitmap的显示</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
-<p>在这里，需要注意线程自己成员方法 isInterrupt() 以及 Thread.isInterrupt() 方法，如果是后者的话，它发现Thread.isInterrupt() == true 的时候，会又置为 false。所以上述在while 循环外面输出的<strong>最终线程xxx</strong>会为false（而如果用线程的成员方法isInterrupt() 这里会输出true ）：</p>
+<p>监听列表的 onScrollChangeListener ，在快速滑动的时候， Fresco.getImagePipeline().pause() ,停下之后又 resume() 操作。</p>
+</details>
+
 <blockquote>
-<p>最终线程isInterrupted标记位：false 。不过我在本地运行（JDK1.8）的时候，并没有 Thread.isInterrupted() 这个方法了，可能高版本不见了</p>
+<p>以上内容可以参考：<a href="https://www.cnblogs.com/ldq2016/p/6646761.html">cnblogs上的博客</a></p>
 </blockquote>
-<h3 id="还是推荐使用-isInterrupted-来终止线程"><a href="#还是推荐使用-isInterrupted-来终止线程" class="headerlink" title="还是推荐使用 isInterrupted() 来终止线程"></a>还是推荐使用 isInterrupted() 来终止线程</h3><p>博客或者很多书籍上都会定义一个 volatile 类型的boolean 值 isCancel 来判断是否要结束线程的运行，如下所示：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">while</span>(!isCancel) {</span><br><span class="line">    doSomething();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>7、Bitmap的复用听过没有</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
-<p>但是，其实我们并不推荐这样做，因为这样的话，假如我在里面实现了Thread.sleep()  操作，这时候，我压根就不会判断到这个 isCacel 变量：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">while</span>(!isCancel) {</span><br><span class="line">    Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">    doSomething();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>Bitmap 复用可以参考 <a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的58知识点</a></p>
+<p>大图加载可以参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础38知识点</a></p>
+</details>
 
+<p>kotlin 协程原理？怎么切换线程的？Kotlin 优点和缺点？</p>
+<p>调优、怎么瘦身，打包流程，模块化</p>
+<p>开发者模式中，GPUInfo 中柱状图颜色代表的含义；命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思</p>
+<p>Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的</p>
+<p>物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域</p>
+<p>binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体</p>
+<p>如何进行内存优化 减少内存消耗</p>
+<h2 id="虾"><a href="#虾" class="headerlink" title="虾"></a>虾</h2><p>1、try catch finally关于return的执行结果</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
+<p>参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">java基础-Java finally与return执行顺序</a></p>
+</details>
 
-<p>但是，在  sleep 阶段我们可以照常响应 interrupt 操作：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">while</span>(!isInterrupted()) {</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        sleep(<span class="number">300</span>);</span><br><span class="line">    } <span class="keyword">catch</span> (InterruptedException e) {</span><br><span class="line">        System.out.println(<span class="string">"in InterruptedException 中，isInterrupted = "</span> + isInterrupted());</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(e);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>2、treemap如何对两个元素进行比较? 非compareble对象比较?</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
-<p>这里是会响应try-catch 的，但是这里要注意一点，这个 println 会输出 ：</p>
+<p>如果是非 compareble 对象，则通过构造函数传入自定义的 Comparetor 比较器。</p>
+<p>参考<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">java基础第10个知识点</a></p>
+</details>
+
+<p>3、object有什么方法</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>clone、equals、finalize、getClass、hashCode、identityHashCode、identityHashCodeNative、internalClone、notify、notifyAll、toString、wait</p>
+</details>
+
 <blockquote>
-<p>in InterruptedException 中，isInterrupted = false</p>
+<p>以上内容参考自系统源码</p>
 </blockquote>
-<p>也就是<strong>在 catch 里面，我们去判断 isInterrupt 居然还是 false</strong>，这是因为抛出这个异常之后，又会将标志位置为 false，所以如果要真正让状态对，还需要我们在 catch 代码中手动实现 interrupt 方法：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">while(!isInterrupted()) {</span><br><span class="line">    try {</span><br><span class="line">        sleep(300);</span><br><span class="line">    } catch (InterruptedException e) {</span><br><span class="line">        interrupt();</span><br><span class="line">        System.out.println("in InterruptedException 中，isInterrupted = " + isInterrupted());</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>4、讲讲Android存在的设计模式</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
+<ul>
+<li>Context 的装饰器模式       </li>
+<li>AlertDialog 使用了建造者模式     </li>
+<li>BitmapFactory 的工厂模式    </li>
+<li>View 的layout、measure、draw 就是 责任链模式</li>
+<li>aidl 代理模式     </li>
+<li>ListView、Gridview 等 使用的适配器模式      </li>
+</ul>
+</details>
 
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/1a9f571ad7c0">简书上的文章</a></p>
+</blockquote>
+<p>5、android的事件分发</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
 
-<p>为什么 sleep 、wait 方法要这么设计？要让你自己处理完自己的操作之后（比如释放锁资源），才自己去 interrupt = true，自主性更强。如果直接中断为 true 了，那么持有的资源，如锁可能不会被正确释放。像上述第二段代码，自己加了 interrupt 之后，再次 while 循环就不会进去了。</p>
+<p>可以参考<a href="https://glassx.gitee.io/2019/02/25/Android%20%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/">以前写的专题</a></p>
+</details>
+
+<p>6、android的消息机制</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的第4点</a></p>
+</details>
+
+<p>7、LeakCanary</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p><a href="https://glassx.gitee.io/2019/11/20/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%B3%BB%E7%BB%9F%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3/">参考以前的源码解析第10点</a></p>
+</details>
+
+<p>8、讲个android的源码 自选</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>讲讲Handler，在<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础的第4点</a>的基础上完善下表述。</p>
+</details>
+
+<p>9、hashcode 与 equals理解</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>可以看看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Java%E5%9F%BA%E7%A1%80/">Java基础的15~18知识点</a></p>
+</details>
+
+<p>10、设计模式讲讲有什么认识的，代理模式优缺点</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>代理模式优点：</p>
+<ul>
+<li>协调调用者和被调用者，降低耦合度    </li>
+<li>增强被调用者的功能。增加和更换代理无需修改被调用者源码，如何开闭原则，具有良好的可扩展性。      </li>
+<li>保护目标对象      </li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>增加了类         </li>
+<li>速度可能慢。在调用者和被调用者之间增加了代理对象，因此请求处理的速度可能会变慢    </li>
+<li>增加系统复杂度。实现代理模式需要额外的工作，有些可能还比较复杂，比如远程代理。      </li>
+</ul>
+</details>
+
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/6991491be81a">简书上的博客</a></p>
+</blockquote>
+<p>图片 缓存机制</p>
+<p>首屏调优 内存调优</p>
+<h2 id="lazada"><a href="#lazada" class="headerlink" title="lazada"></a>lazada</h2><p>1、自我介绍一下    </p>
+<p>2、app网络防劫持 介绍下，出现劫持，解决方案呢？拦截了webview 网络请求后，用什么请求 </p>
+<p>3、性能优化，做了哪些工作</p>
+<p>4、强引用、弱引用和软引用。弱引用和软引用的区别。    </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>参考以前的<a href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">读书笔记</a></p>
+</details>
+
+<p>5、MVC 和 MVP 的区别。他们各个层次之间交互有什么区别 </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>以前写的关于<a href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">设计模式的内容</a> 第1题 </p>
+</details>
+
+<p>6、SharedPreference 是线程/进程 安全的吗？apply 和 commit 有什么区别？(提交到哪？是本地的xml 还是 内存的xml？)，有什么坑？ </p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a> 第20题即可     </p>
+</details>
+
+<p>7、Handler 机制说一下？ 消息延迟是怎么做到的？我有个新消息，在已有的消息队列中我想让他先执行，可以吗。</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a> 第4题即可     </p>
+</details>
+
+<p>8、最有挑战的项目？你负责做了什么？给公司带来什么价值？，这个sdk给你们的产品带来什么价值？如何判断你这个sdk是否好用？你们的业务成功率是多少，有统计吗？如果要设计这个监控这个sdk？你们有相关的埋点吗？感觉面试官隐约对app的监控感兴趣。</p>
+<p>9、http 和 http2 有什么区别。</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">网络知识</a> 第15题即可     </p>
+</details>
+
+<p>10、http 和 https 有什么区别。告诉我它是怎么做到安全的呢？</p>
+<details>
+<summary><font size="2" color="#888888">点击看答案</font></summary>
+
+<p>查看<a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">网络知识</a> 第9、10题即可     </p>
+</details>
+
+<p>11、kotlin 语言与java 语言相比有什么优点吗？</p>
+<p>12、kotlin 的协程了解吗？它的原理？协程相比线程创建的开销小一些？主线程使用协程是不是不会阻塞？假设我在主线程里面使用协程执行非常耗时的操作，我的主线程会ANR吗？为什么在io操作比较多的时候对协程有利呢？协程有自己的栈空间吗？  </p>
+<h2 id="BD"><a href="#BD" class="headerlink" title="BD"></a>BD</h2><p>线程同步方法（关键字，并发包）</p>
+<p>wait/notify,notify方法和notifyAll方法区别，notifyAll方法唤醒的线程，怎么决定哪一个线程得到运行</p>
+<p>HashMap(要很熟悉)，put过程，get过程</p>
+<p>现在key为double类型，需要将key的整数部分当成同一个key应该怎么做（提示：重写方法）</p>
+<p>内存泄露分析</p>
+<p>进程间通信方式(别忘了BroadcastReceiver)</p>
+<p>A跳转到B的生命周期调用，如果A的onStop方法方法发生在B的onResume方法之前会发生什么现象，如果B是singleTask又是什么情况？会调用B的哪些方法</p>
+<p>service运行在什么线程</p>
+<p>Handler内存泄露原理(message.target = handler，所以真正原因是由于message造成的)，解决方法，一个线程可以有多个Handler吗。</p>
+<p>handler的sendMessage方法和postRunable方法区别</p>
+<p>HandlerThread</p>
+<p>设计一个图片加载框架，LRUCache原理</p>
+<p>看过第三方库的源码吗</p>
+<p>排序算法，时间复杂度，快排为什么是NlogN</p>
+<p>完全二叉树高度</p>
+<p>弱引用和软引用</p>
+<p>今天面到的题目新的部分有几个  1include merge viewstub区别  2二叉树第n层节点个数  3touchdelegate </p>
+<h2 id="BD-1"><a href="#BD-1" class="headerlink" title="BD"></a>BD</h2><p>1、http状态码</p>
+<p><a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">网络知识</a>第16题</p>
+<p>onTouch、onTouchEvent、onClick 执行顺序</p>
+<p>onclick 不响应，如何排查    </p>
+<p>设计一个下载框架(考虑多线程)。</p>
+<p>单进程中，一个线程下载和用两个线程下载哪个更快？</p>
+<p>在主线程要优先执行一个任务咋办？除了消息栅栏外还有其他方法吗？<br>Thread.join，还有吗？如何发送消息栅栏，这是hide方法，自己如何发送异步消息。</p>
+<p>空闲的时候执行某个任务有什么方法？IdleHandler，还有其他方式吗</p>
+<p>IntentService 与 Service 区别，啥时候用IntentService  </p>
+<p>synchronized 锁优化策略</p>
+<p>线程安全的集合有哪些？CopyOnWriteList 在什么时候使用？HashTable 与 ConcurrentHashMap 的区别？</p>
+<p>线程池的拒绝策略有哪些？</p>
+<p>什么情况下singleTask 在一个进程中会有两个实例？ NEW_TASK A启动B，B启动C，C启动D，现在从D启动A，并且启动完成后只保留A，如何做？</p>
+<p>Okhttp 的 addInteceptor 与 addNetWorkInterceptor 的区别 </p>
+<p>如何保证dns的安全？自己建立dns服务器，httpdns</p>
+<p>做sdk的话，如何在接入的时候管理第三方依赖</p>
+<p>设计模式，整体和部分</p>
+<p>Okhttp 多个host，如何配置</p>
+<h2 id="TX"><a href="#TX" class="headerlink" title="TX"></a>TX</h2><p>了解插件化吗？有哪些第三方开源的方案？Tinker的原理</p>
+<p>行业内性能优化的方案有了解吗？页面如何秒开？</p>
+<p>串行GC的时候，会锁住堆挂起线程，那么无论线程处于什么状态都能挂起吗？</p>
+<p>多线程中的同步队列与等待队列(可能问的是 同步队列和条件队列)</p>
+<p>CAS是啥？AQS是啥<a href="https://ddnd.cn/2019/03/15/java-abstractqueuedsynchronizer/">可以参考这里</a>？RetraintLock的原理</p>
+<p>锁的种类，什么是可重入锁</p>
+<p>如何让多个线程同时启动</p>
+<p>Java内存空间怎么划分</p>
+<p>有哪些GC算法，哪些对象可以作为GC Root</p>
+<p>JNI 中，Env是啥，它能干什么</p>
+<p>什么情况下本地方法栈会引用Java对象</p>
+<p>HashMap原理</p>
+<p>Android系统的启动流程，应用为什么用zygote来fork，有什么好处</p>
+<p>Apk的签名原理，v1和v2</p>
+<p>https相比http的优势是什么？除了安全之外呢？证书如何校验</p>
+<p>Java的堆与栈的区别，除了存储的对象不一样之外，还有其他不一样么？</p>
+<p>进程间通信为什么用Binder，Binder的原理？空间大小限制（貌似是4M）?</p>
+<p>可重入锁是什么？悲观锁和乐观锁的区别？</p>
+<p>什么时候用到TCP，什么时候用到UDP？举例</p>
+<p>https的攻击手段，https的证书是如何发送给客户端的？</p>
+<p>RecyclerView和ListView的区别</p>
+<h2 id="TX-1"><a href="#TX-1" class="headerlink" title="TX"></a>TX</h2><p>http状态码</p>
+<p>ontouch  ontouchEvent  onClick  执行顺序</p>
+<p>onClick不响应，应该怎么排查</p>
+<p>设计一个下载框架（还要考虑多线程），单进程中，一个线程下载和用两个线程下载谁快？（要充分利用cpu）</p>
+<p>在主线程我要优先执行一个任务咋办？消息栅栏，除了这种方法之外呢？如何发送消息栅栏？这是hide方法</p>
+<p>空闲的时候执行某个任务有什么方法？IdleHandler，thread. join，还有啥方法吗</p>
+<p>IntentService 与service区别？啥时候用IntentService </p>
+<p>synchronize锁优化策略</p>
+<p>线程安全集合有哪些？HashTable与ConcurrentHashMap 的区别？Copy onWrite List在啥时候用？</p>
+<p>线程池的拒绝策略有哪些</p>
+<p>什么情况下singleTask在一个进程中会有两个实例</p>
+<p>a启动b，b启动c，c再启动d，这时候直接回到a页面，并且只保留a页面，有啥方法？</p>
+<p>okhttp的addIntercept 与 add Network Interceptor 方法区别？</p>
+<p>dns安全，httpdns 方案</p>
+<p>做sdk管理第三方依赖</p>
+<p>设计模式，整体和部分</p>
+<p>自己发送异步消息</p>
+<p>okhttp多个host，多重配置</p>
+<p>异步创建view的原理</p>
+<p>如何插桩</p>
+<p>哪些地方匿名共享内存：堆，contentprovider，显示的时候</p>
+<p>sp原理</p>
+<p>事件分发</p>
+<p>hashtable concurrentHashMap</p>
+<h2 id="BD-2"><a href="#BD-2" class="headerlink" title="BD"></a>BD</h2><p>handler，IdleHandler原理，使用</p>
+<p>组件化，插件化，热修复</p>
+<p>断点续传</p>
+<p>用过哪些开源库？retrofit的原理</p>
+<p>反转二叉树</p>
+<p>做了哪些优化？gpu优化？</p>
+<p>hashmap原理，如何hash？为什么8个的时候要红黑树？</p>
+<p>a启动b生命周期怎么走</p>
+<p>gc算法，哪些可以作为gc root，分代算法是怎样的？</p>
+<p>volatile关键字作用？能保证原子性吗？</p>
+<p>webview内存泄露的原理，handler内存泄露原理</p>
+<p>如何发现内存泄露？LeakCanary的原理是什么？</p>
+<p>Activity的启动模式</p>
+<p>taskaffinity的作用？</p>
+<p>进程间通信方式有哪些？AIDL能传递的数据类型有哪些？AIDL怎么使用？AIDL的方法参数能传接口吗？都跨进程干什么</p>
+<p>app崩溃率多少？怎么统计的？能捕捉所有异常吗？如何捕捉native的崩溃？</p>
+<p>动态代理</p>
+<h2 id="TX-2"><a href="#TX-2" class="headerlink" title="TX"></a>TX</h2><p>relativelayout与constrantlayout（可以参考链接：<a href="https://mp.weixin.qq.com/s/gGR2itbY7hh9fo61SxaMQQ）">https://mp.weixin.qq.com/s/gGR2itbY7hh9fo61SxaMQQ）</a></p>
+<p>如何查看cursor之类的导致内存泄露问题</p>
+<p>onclick，onTouch执行顺序</p>
+<p>算法：链表的中间元素，判断链表是否有环，快排最好最差时间复杂度，快排是怎么操作的</p>
+<h2 id="TX3-面试"><a href="#TX3-面试" class="headerlink" title="TX3 面试"></a>TX3 面试</h2><p>近期有做什么优化或者重大技术？<br>DNS污染是怎么回事<br>https的证书是怎么起作用的？<br>用什么检测内存泄漏-LeakCanary<br>扫码登录是怎么做到的<br>多线程用过吗，乐观锁与悲观锁说下    </p>
+<h2 id="TX1"><a href="#TX1" class="headerlink" title="TX1"></a>TX1</h2><p>String可以继承吗？为什么？为什么设计成不可变？<br>快排原理<br>二分查找原理<br>Activity的几种启动方式，Service中怎么启动Activity（参考链接：<a href="https://blog.csdn.net/fang323619/article/details/74388804），从源码角度来说，ActivityManager">https://blog.csdn.net/fang323619/article/details/74388804），从源码角度来说，ActivityManager</a> 为什么会对4种tag做处理</p>
+<p>事件传递的机制(触摸事件)？Activity 的顶级响应视图是啥？onTouchListener 与onClickListener 哪个先执行(onTouchListener)？onTouchListener 返回true 之后，onClickListener 还会执行吗(不会)？onTouchListener 和 onLongClick 哪个先执行？</p>
+<p>View的绘制流程？从掉帧的角度来说下 View 的绘制流程？<br>ScrollView 嵌套滑动冲突怎么去解决？在父view的up里面return 了true，子view会收到down事件吗？<br>tcp与udp区别，tcp三次握手做了什么<br>单例模式怎么写，为什么<br>大图一般是怎么优化的？fresco的源码有看过吗，它有什么缺点？有没有用过其他的图片框架？<br>Activitymanagerservice 源码<br>知道哪些app性能优化</p>
+<h2 id="lazada-1"><a href="#lazada-1" class="headerlink" title="lazada"></a>lazada</h2><p>自我介绍<br>性能优化做了哪些工作<br>四种引用的含义<br>mvp 与 mvc 区别<br>Handler 机制，如何实现消息延迟<br>最有挑战的项目，负责做了什么<br>业务监控怎么设计<br>http与http2的区别<br>http与https的区别<br>kotlin语言与java的区别，优点<br>kotlin的协程原理，有自己的栈空间吗，与线程区别</p>
+<p>英语自我介绍下？–妥妥挂了。。</p>
+<h2 id="猫总"><a href="#猫总" class="headerlink" title="猫总"></a>猫总</h2><p>为什么不用URLConnection而用OKHttp不了解</p>
+<h2 id="qq的music"><a href="#qq的music" class="headerlink" title="qq的music"></a>qq的music</h2><p>自我介绍下<br>性能优化的经验<br>如何设计措施，防止以后新人在主线程添加太多的任务<br>了解过启动框架吗<br>如何分阶段启动相关任务，这些任务有相互依赖，或者有向无关图<br>能达到什么效果，量化下<br>内存优化的内容<br>webp 占用内存小一些还是尺寸小一些？<br>图片框架本来就会做这些裁剪之类的功能，这样自己做是否就重复了<br>其它内存优化的点(我觉得可以说说大图加载，只加载一部分)<br>了解ashmem 吗，除了这个作用还能有其他作用吗<br>优化app的整体内存占用<br>第一步得分析吧。profile 工具<br>第二步、分析问题在哪，native 和 Java 层 的内存占用，如果native 和 Java 中图片占用都比较大，如何分析<br>第三步、是内存泄漏导致的、还是大数组、大对象</p>
+<p>用LRU 的话，一般不会引起内存很大占用，所以如果内存大，一般是内存泄漏导致的</p>
+<p>Talkingdata 统计些什么     </p>
+<p>监控dns的成功率，即用户使用你的ip直接请求的成功率了，以前系统直接解析，现在是用户直接打不开         </p>
+<p>尝试使用https 去解决吗</p>
+<p>网络成功率怎么优化      </p>
+<p>dark 和 art 的 gc 过程有了解吗        </p>
+<p>非并行 GC 的过程</p>
+<p>分配内存，不够，然后做什么操作，最后就会分配成功。分配不够的话，系统会扩容，扩容发生在什么时机           </p>
+<p>常用设计模式，单例模式怎么写      </p>
+<p>volatile ：</p>
+<p>性能优化了解不太多，尤其内存优化总结不多，数据量化</p>
+<h2 id="BD-3"><a href="#BD-3" class="headerlink" title="BD"></a>BD</h2><p>Fresco 架构上说下，MVC模式，说说 Fresco加载gift的流程和原理<br>4. 一个大的ViewGroup，上面显示两个不一样大小的图片，内容一样，怎么做（利用Fresco的缓存）<br>5. 一个图片是50 * 50，一个图片是100 * 100，内存大小是怎样的，比如 50<em>50的内存大小是1，100</em>100的内存大小是多少？  两张图片，内存变大了还是不变，内存副本有几份？<br>6. RecyclerView 滑动的时候，缓存机制<br>7. RecyclerView 下面一个子item，我手指按在RecylerView上，然后滑动，说出滑动过程<br>8. 海量数据中找出TOP N（堆）<br>9. 自定义帧动画机制，一边解压一边加载，用完之后回收，inBitmap进行内存复用。用了哪些数据结构，如何保证按顺序执行。<br>10. bitmap drawable 区别(互相转化，drawable包含bitmap)Bitmap是Drawable . Drawable不一定是Bitmap Drawable在内存占用和绘制速度这两个非常关键的点上胜过Bitmap</p>
+<p>1、   jni 方法调用是怎么实现之类的<br>2、   java  string 和 c++ string 有什么区之类的<br>3、   自己做的项目上遇到的技术难题和解决方案<br>4、   消息队列</p>
+<h2 id="看点1"><a href="#看点1" class="headerlink" title="看点1"></a>看点1</h2><p>React Native了解它的实现原理吗？除了组件映射，还有更深的理解吗？<br>Android哪一块比较熟比较擅长，聊聊？<br>可以给子线程创建消息队列吗？看过消息队列的底层原理吗？对，Native层的代码<br>Android里面什么是ANR？遇到ANR怎么排查？<br>硬件加速和非硬件加速有什么区别？<br>HARDWARE_LAYER 与 SOFT_LAYER 分别代表什么意思？<br>UI性能相关性能的优化有没有做过？比如一个列表滑动很卡顿，怎么优化？如何查看占用内存和cpu？GC怎么会影响性能？有什么手段可以降低布局层级？<br>Recyclerview与Listview的缓存原理？不同类型的item他们怎样缓存？<br>Android内存怎么优化？什么是内存泄漏？什么情况会出现内存泄漏？实际中举个例子？Handler为什么会泄漏Activity？<br>图片展示比较多的App，怎么解决内存占用问题？用了什么图片框架？为什么Fresco 在5.0以下具有优势？Fresco的实现原理，大概流程是怎样的？</p>
+<p>内存中未解码图片是啥样？<br>怎样为图片框架设置内存缓存策略？怎么决定淘汰哪些内存？<br>还有没有了解其他图片框架吗？<br>怎样尽量降低位图占用的空间大小？<br>图片列表，怎么优化性能？<br>视频播放相关的经验有吗？播放器用的是什么？videoView用的是哪个？TextureView 和 SurfaceView 有什么区别？哪个性能更好？为什么？这两个view和Android中普通的view有什么区别？使用方式有什么区别？</p>
+<blockquote>
+<h1 id="SurfaceTexture，TextureView区别"><a href="#SurfaceTexture，TextureView区别" class="headerlink" title="SurfaceTexture，TextureView区别"></a>SurfaceTexture，TextureView区别</h1><p>我们知道，一般Activity 包含多个View，他们组成树状结构，但是只有顶层的 DecorView 才是对 WMS 可见的，它在 WMS 中有一个对应的 WindowState ，相应地，在 SF中对应 Layer。</p>
+<p>而SurfaceView 继承自 View，因此本质上是个View，但是它有自己的Surface，这个 Surface 在 WMS 中有对应自己的 WindowState ，在 SF 中也会有自己的 Layer。如下图所示：</p>
+<p><img src="https://img-blog.csdn.net/20150304164219975?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamluemh1b2p1bg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt="SurfaceView示意"></p>
+<p>这样，虽然SurfaceView 仍然在 View 目录树中，但是其实它与主窗口是分离的，这个的好处就是<strong>这个surface的渲染可以放到单独的线程去做，渲染时，而已有自己的GL context</strong>，这对于游戏、视频等性能相关的应用非常有益，因为<strong>它不会影响主线程的响应</strong>。但是同样也有缺点：因为它有自己的Surface ，所以它不受<strong>view的属性控制，因此不能进行平移、缩放等变换以及动画</strong>。</p>
+<p>而 TextureView 在View 也继承自View，在目录树中以普通的View存在，因此支持旋转、缩放 以及动画，但是 TextureView  必须只能在<strong>支持硬件</strong>加速 的窗口中，它对draw方法进行了重载，<strong>把收到的数据作为纹理更新到对应的HardwareLayer 中</strong>。</p>
+<blockquote>
+<p>看不大懂，参考资料<a href="https://blog.csdn.net/jinzhuojun/article/details/44062175">CSDN</a></p>
+</blockquote>
+</blockquote>
+<p>你觉得视频播放怎么优化视频首帧加载速度？有看过Exoplayer的实现吗？它的解码过程和原理？<br>FFmpeg有了解过吗？<br>有做过C/C++之类的开发吗？大概是个多大的代码量？<br>有用过OpenGL吗？<br>对Android的组件化有了解多少？了解Android的热修复吗？热修复的原理是什么？<br>https怎么实现安全的？https的握手比http的握手多了几个RTT ？<br>http 1.0 、2.0、3.0 之间的区别？http3.0 最大的优势？<br>其他看过的第三方开源的框架？</p>
+<h2 id="TX-MUSIC"><a href="#TX-MUSIC" class="headerlink" title="TX MUSIC"></a>TX MUSIC</h2><p>单例怎么写呢？volatile关键字在这里面的作用。如果我不需要懒加载，什么时候不需要做懒加载？</p>
+<blockquote>
+<p>关于单例的饿汉和懒汉加载模式，目前知道的一个答案就是：<strong>类中还有其他静态方法或变量时，饿汉模式才有优势，此时可以通过访问任一静态成员来实例化对象，这缘于首次访问静态成员会引发类的加载，而类加载时会初始化静态变量</strong>，具体可以参考<a href="https://bbs.csdn.net/topics/394314888?list=lz">别人的提问</a></p>
+</blockquote>
+<p>用过反射吗？App发布的时候，需要混淆的，混淆对反射有什么影响？有没有用过Gson，有什么功能？知道它的工作原理吗？怎么知道类的成员变量的名字？我是一个泛型，我是一个List，类型是String，反射能不能拿到泛型的数据？泛型你知道有上界和下界这个东西？他们有什么用？</p>
+<p>sharedpreference 的apply 和commit有什么区别？apply什么时候同步到磁盘上去(pause和广播，跟广播有啥关系？)？apply是异步的对吧？</p>
+<p>有接触过插件化？插件化的原理是什么？怎么欺骗系统。</p>
+<p>handler的工作原理？如何移除消息屏障？handler怎么导致的内存泄漏？</p>
+<p>防止二次打包，是怎么做的？现在拿到一个包，想二次打包，而如果他做了二次打包的验证，你怎么绕过？我拿了别人的库，别人会校验签名，如果我想用这个库，怎么弄？你们的签名验证怎么做的？</p>
+<p>kotlin印象深刻的特性，举例一下？异步的代码写成同步，怎么写？怎么做到异步能写成同步的？正常来讲，我们是从上往下执行的，为毛它可以在中途切线程？怎么做到让出线程使用权限呢？但是如果是使用Java的wait、notify会阻塞，但是kotlin不会啊，咋做的？用kotlin从子线程切换到主线程，怎么做？GlobalScop 有什么不好的点吗？kotlin的空安全了解么？在定义变量的时候，就指定是否可以为空，你觉得这样好不好？lateinit的作用是啥？什么情况比较适合使用 lateinit？</p>
+<blockquote>
+<p>如果 lateinit 和 lazy 对比，lateinit <strong>只用于变量var</strong>，而 layzy <strong>只用于常量val</strong>，一般用于单例在变量第一次调用时才执行。其次，基于我个人的理解，lateinit 适用的场景是<strong>你不想指定一个变量为可空类型，但是又得在稍后(或者得等到满足某个参数时，假如RecyclerView的Adapter对象，可能得等到某个callback 初始化之后，才能作为参数来new 这个Adapter)才能初始化的那种变量</strong>。以上参考<a href="https://www.jianshu.com/p/5fe384a2575b">简书的博客</a></p>
+</blockquote>
+<p>https怎么做到安全？https的流程？怎么校验证书？你是说自己也计算一遍对吧？服务端发证书给你，中途被我换了，客户端能不能发现被换了？用我自己的私钥签名了，客户端如何发现的？证书链怎么验证？我做了个代理，做了个中间人攻击，一般我能听别人https的内容，为什么我能做到呢？你们本地https的证书校验的证书从哪里来？那你获取证书这部分我是不是可以中间人攻击，你们发的是tcp包还是http包？http包那你们也还是会有明文，就会有漏洞。对称加密的密钥是怎么生成的？为什么需要客户端和服务端一起作用来生成？为什么后面需要使用对称加密来做？</p>
+<p>知道DNS会有劫持吗？你们的情况不一定是dns劫持，可能是别人直接把你们的Http包给替换了？httpDNS 有什么好处？-更科学地翻译成ip，深圳访问不会被分配到北京。</p>
+<p>数组，找到数组里面第一个重复的数字，怎么做？HashSet去做时间复杂度多少？意思是遍历一次就行了是吧？</p>
+<p>如果App出现了频繁的GC，怎么排查？怎么排查有没有内存泄漏的？-leakcanary ，如果在IDE里面使用工具呢？如果我想看哪些对象被频繁申请，怎么搞？</p>
+<blockquote>
+<p>看起来面试官想要说出MAT，可以参考下<a href="https://baijiahao.baidu.com/s?id=1596318542314042563&amp;wfr=spider&amp;for=pc">别人的博客</a>。但是其实目前已经无需MAT就能直接在AS里面操作了</p>
+</blockquote>
+<h2 id="BD-4"><a href="#BD-4" class="headerlink" title="BD"></a>BD</h2><p>挑一个比较有价值的项目聊聊？500彩票，那聊一聊做了哪些事情？模块化和mvp讲讲，mvp有什么优缺点？-MVP类增加了，寻找逻辑没那么直接。有没有做成组件化的形式吗，打包成aar之类的发布？</p>
+<p>插件化讲一讲？打包怎么办？插件用到宿主的资源咋办？怎么识别类，是将dex添加到dexlist中还是自定义 ClassLoader ？启动service、广播、ContentProvider？Activity去hook它的mCallback，但是假如高版本的时候不让你去反射咋办？宿主里面的类更新了，插件版本没有更新，这情况咋办？</p>
+<p>讲一下handler吧？</p>
+<p>用过哪些第三方组件，开源库？网络库用的啥？用过github上哪些轮子啊？okhttp源码有看过吗？他有很多拦截器，他是怎么弄的输入输出？</p>
+<p>注解有用过吗？除了用来替代枚举外还在哪里用过吗？</p>
+<p>写个算法题：单向链表，自己去定义结点，他有个值，还有个next指向下一个。我们输入两个这种链表，找到他们第一个公共节点返回，没有的话，返回null  。</p>
+<h2 id="BD二"><a href="#BD二" class="headerlink" title="BD二"></a>BD二</h2><p>做了哪些非业务的工作？所理解的网络劫持是什么样的？怎么发现网络劫持和预防？https可以解决DNS劫持问题吗？如果要篡改http可以在哪些环节篡改？你觉得谁会来篡改你们的App网络报文？https为什么可以保证不被篡改？介绍下Https的流程？我们要分析https的请求的话，可以怎么做吗？App又怎么去防这种事情呢？服务端拉取证书怎么保证安全呢？-ip直连去拉取证书。量很大的情况下，都通过ip去获取证书的话，服务端会不会扛不住？如果ip挂了，或者运营商给你封了，那你怎么办？-内置证书，防止重打包 。做了一些安全方面的事情，是哪些？为什么App签名本地校验是防君子不能防小人？</p>
+<p>sp做加密，出于什么目的？别人怎么读到你的sp存储的内容？哪些存储的内容需要加密？sp写的时候加密以及读的时候需要解密，这个性能会有影响吗？业界有没有好的方案来解决Sp吗？-替代方案是MMKV  。MMKV 是如何解决跨进程问题？为什么SP跨进程是不好的？</p>
+<p>性能上做了一些优化，做了哪些事情？App启动优化做了哪些事情？内存优化主要做了什么？hashmap 换成arrayMap 等会有多大的收益？这个内存收益怎么衡量？-启动App进入到彩票购彩页面。防止内存泄漏怎么去做的？线上如果要做一些这样的监控怎么做？-talkingdata 。 它的原理有去了解吗？内存泄漏经常会OOM，这种OOM怎么在线上怎么监控？-发生的时候，dump内存信息上传分析。更详细的没有去了解是吧？</p>
+<p>算法题目：给定一个字符串S，返回 反转后的 字符串。反转的规则：其中不是字母的字符都保留在原地，而所有字母的位置发生反转。</p>
+<p>例如：        输入：”ab-cd”        输出：”dc-ba”<br>输入：”a-bC-dEf-ghIj”        输出：”j-Ih-gfE-dCba”</p>
+<h2 id="BD-5"><a href="#BD-5" class="headerlink" title="BD"></a>BD</h2><p>视频播放采用什么播放器？视频播放首帧优化？有其他方式来优化视频播放，比如卡顿等体验？视频播放碰到过什么问题？</p>
+<p>选择SurfaceView还是TextureView ？视频有做过加密吗？视频地址是固定的吗？</p>
+<p>视频格式了解吗？分辨率、帧率、码率 都是什么含义？</p>
+<p>git 的merge  和 rebase 有什么区别？代码从本地到远端是怎么流转的，比如我新建一个文件，怎么到远端的？</p>
+<p>性能优化做了哪些内容？</p>
+<p>json解析耗时几百毫秒，是怎么统计到的？systrace 用过吗？</p>
+<p>不重要的任务是怎么去初始化的？</p>
+<p>用过线程池吗？对线程的管控怎么搞？如果有人在代码中直接去new  Thread，这个怎么管控？</p>
+<p>RxJava里面线程池的线程有限制吗？RxJava的原理有多少？RxJava的线程切换怎么实现的？RxJava是怎么切换的线程，比如他observeOn 和 subScribeOn 这两个操作符？这两个操作符有什么区别？多次调用他们会多次生效吗？为什么不能多次生效？</p>
+<p>协程的原理？同样作为操作线程的工具，它和RxJava的本质区别是什么？与RxJava比较还有没有别的优势？kotlin的作用域函数apply、also等，怎么确定什么时候用什么？</p>
+<p>图片规范的方式去使用，怎么规范？</p>
+<p>fresco 有几级缓存？</p>
+<p>组件化怎么弄的？组件化做到什么程度？</p>
+<p>module之间怎么通信？除了基础module，其他的module  A 想要和 module B 通信，A启动B里面的一个页面？</p>
+<p>为什么选择MVP？P层可能会无线膨胀，有没有什么解决办法</p>
+<p>最近jetpack的组件有没有了解？</p>
+<p>如何设计一个组件化的app<br>View的绘制流程<br>activity的启动模式<br>如何监控启动就crash的问题<br>如何独立编译单独的组件<br>对比一下图片加载模块，Glide 和Fresco , AsyncImageView</p>
+<p>主要还是通过项目发散开的问题：<br>1，android开发中常见的两种序列化，serializeble 和 parcelable 的区别<br>2，recyleview中的常见卡顿问题是如何解决的，如何监控到用户的卡顿（监控UI线程的message 处理逻辑，超过60ms）<br>3，项目比较大，编译比较慢的解决办法（插件化，组件化）<br>4，项目中遇到的一个小问题，是如何解决的<br>5，OOM类型的问题如何解决<br>6，内存泄漏如何监</p>
+<p>Android so如何减包<br>Android Camera采集渲染流程<br>如何排序一个比内存大的文件</p>
+<p>C++ 父类析构函数的virtual作用，怎么实现防止内存泄漏的<br>C++ 虚函数表是什么<br>JNI的attachCurrentThread作用是什么<br>JNI的LocalRef和GlobalRef new了是否要delete，可以不delete么？<br>简单介绍下libuv</p>
+<h2 id="BD3"><a href="#BD3" class="headerlink" title="BD3"></a>BD3</h2><p>http与https的差异有多少？https这个安全层是怎么做的，怎么保证安全的？非对称加密是在哪里使用？数字证书除了公钥之外还有其他的吗？数字证书和数字签名有什么关系？验证双方身份的时候，用了个什么结构，比如说，我发了个信息给你，怎么验证是我发给你的？是在https建立后，使用对称加密之后，如何验证双方的身份？</p>
+<blockquote>
+<p>http与https的区别，参考自己<a href="https://glassx.gitee.io/2019/11/22/%E9%9D%A2%E8%AF%95%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%9F%A5%E8%AF%86/">以前写的博客</a>-<font color="#ff0000">（要记得同步回博客中）</font>：</p>
+<ul>
+<li>scheme不一样，一个是http，一个是https</li>
+<li>Https是ssl加密传输，Http是明文传输     </li>
+<li>Https是使用端口443，而Http使用80     </li>
+<li>HttpsSSL+HTTP协议构建的可进行加密传输、身份认证的网络协议要比Http协议安全      </li>
+<li>Https协议需要到CA申请证书</li>
+</ul>
+</blockquote>
+<p>列举下自己所知道的http的状态码？</p>
+<blockquote>
+<p>1开头表示临时响应，还需要继续操作    </p>
+<p>2开头表示成功    </p>
+<p>3开头表示重定向，301表示永久移动，302表示临时移动</p>
+<p>4开头表示请求错误，比如：400表示服务器不理解请求语法，403表示禁止访问，404未找到  </p>
+<p>5表示服务端错误，比如：500服务器内部错误、502错误网关、503表示 服务不可用，维护或者超载了  </p>
+</blockquote>
+<p>get和post方法之间有多少差异？get不会对后台数据进行修改，post会修改？</p>
+<blockquote>
+<p>按照REST规范来说的话，get就是获取资源，不会有副作用，也就是这个操作是幂等的；post就是创建资源的意思，这个就不是幂等的。此外，put的含义就是replace，就是用来修改元素；delete就是用来删除。</p>
+<p>但是如果，纯粹说http的话，这个就很宽泛了，我们说get不能有body、get是幂等、post有body、post不是幂等，这些规则都是可以被打破的，比如，post的参数可以放在queryString里、header里，当然也能放在body里，当然也可以每个部分放一点；get也能做成等非幂等的，甚至于，我们在日常使用的时候，post都能做成幂等，这就要求后台判断重复订单了。</p>
+<p>以上文章参考自<a href="https://www.zhihu.com/question/28586791">知乎上的文章</a>，<font color="#ff0000">（要记得同步回博客中）</font></p>
+</blockquote>
+<p>TCP 下的流量控制的核心内容？-本质是不要把对方buffer打爆  。 对方已经很拥堵了，怎么控制呢？</p>
+<p>java中静态方法能调用非静态方法吗？我从类对象角度讲的，但面试官感觉是要求从类加载的角度讲。</p>
+<blockquote>
+<p>因为静态方法属于类，在类加载的时候，就被加载到方法区了，因此在类没有创建对象的时候后也是可以调用的。而非静态方法则得在类创建对象之后才存在。因此并不能这样调用。内容可以参考<a href="https://blog.csdn.net/weixin_44325444/article/details/109273226">csdn的博客</a></p>
+</blockquote>
+<p>Java中，有多层for循环，有个场景需要在最里面的for循环中跳出多个for循环继续执行下面的代码，怎么搞？</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//比较简单的解决方案是：</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    loop: <span class="keyword">for</span>(<span class="keyword">int</span> i =<span class="number">0</span>;i&lt; <span class="number">5</span>;i++) {</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">0</span>;j &lt; <span class="number">4</span>;j++) {</span><br><span class="line">            <span class="keyword">if</span>(j == <span class="number">1</span>) {</span><br><span class="line">                <span class="keyword">break</span> loop;</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//可以参考[博客园](https://www.cnblogs.com/fastfn/p/9777067.html)</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>创建fragment的时候，为什么官方不推荐构造方法，而要通过setArguments的方式？-为了考虑恢复。  了解到什么时候会有这种恢复的场景？-从前一个Activity返回到当前Activity。  Fragment 的两个adapter， 一个是 fragmentpageAdapter ，一个是 fragmentpageStateAdapter，他俩有什么区别？</p>
+<blockquote>
+<p>FragmentPagerAdapter与FragmentStatePagerAdapter的区别：<br>FragmentPagerAdapter拥有自己的缓存策略，当和ViewPager配合使用的时候，会缓存当前Fragment以及左边一个、右边一个，一共三个Fragment对象；<strong>在每次切换页面的时候，是将fragment进行分离(transaction.detach)，适合页面较少的fragment使用以保存一些内存，对系统内存不会有多大影响</strong>。</p>
+<p>FragmentStatePagerAdapter是PagerAdapter的子类，这个适配器对实现多个Fragment界面的滑动是非常有用的。<strong>当Fragment对用户不可见的时候，整个Fragment会被销毁(transaction.remove)，只会保存Fragment的保存状态</strong>。</p>
+<p>参考<a href="https://liuqiang.blog.csdn.net/article/details/79793168">刘强的博客</a>、<a href="https://blog.csdn.net/zhaokaiqiang1992/article/details/40342411">赵凯强的博客</a></p>
+</blockquote>
+<p>MeasureSpac 里面有三种模式，解释下？</p>
+<blockquote>
+<p>参考以前写的<a href="https://glassx.gitee.io/2019/03/08/%E9%9D%A2%E8%AF%95%E9%A2%98-%E9%92%88%E5%AF%B9%E7%AE%80%E5%8E%86%E7%9A%84%E9%97%AE%E9%A2%98/">面试题目第3题</a></p>
+</blockquote>
+<p>handler的post和sendMessage有什么区别？-post是runnable，send是message，post的runnable最终会封装成 message，并且what默认为1,——面试官看起来不满足这个解释。</p>
+<blockquote>
+<p>使用send时，由于是我们自己创建的Message，所以我们最终在handleMessage 方法中switch-case来处理Message。</p>
+<p>使用post的方式时，我们post过去的是一个runnable，在post方法中，会创建一个 Message，并且将这个runnable赋值给Message的callback字段。之后通过 sendMessageDelay(msg,0) 来实现。</p>
+<p>而我们知道，在Handler的dispatchMessage方法中，会首先判断msg.callback == null，如果不为null的话，就直接执行 msg.callback.run() 了；如果为null，则会判断 handler的mCallback字段是否为null，不null的话，直接调用 mCallback.handleMessage(msg) 将当前msg给处理了，并且直接return回去了；如果以上条件都不满足，则会调用我们通常覆写的  handleMessage() 方法，交由我们自己处理。</p>
+</blockquote>
+<p>上面内容主要是看系统源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">post</span><span class="params">(<span class="meta">@NonNull</span> Runnable r)</span> </span>{</span><br><span class="line">       <span class="keyword">return</span>  sendMessageDelayed(getPostMessage(r), <span class="number">0</span>);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> Message <span class="title">getPostMessage</span><span class="params">(Runnable r)</span> </span>{</span><br><span class="line">        Message m = Message.obtain();</span><br><span class="line">        m.callback = r;</span><br><span class="line">        <span class="keyword">return</span> m;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispatchMessage</span><span class="params">(<span class="meta">@NonNull</span> Message msg)</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (msg.callback != <span class="keyword">null</span>) {</span><br><span class="line">            handleCallback(msg);</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            <span class="keyword">if</span> (mCallback != <span class="keyword">null</span>) {</span><br><span class="line">                <span class="keyword">if</span> (mCallback.handleMessage(msg)) {</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">            handleMessage(msg);</span><br><span class="line">        }</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>算法：</p>
+<p>给出两个有序的整数数组 <img src="https://www.nowcoder.com/equation?tex=A%20%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">，请将数组 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">合并到数组 <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">中，变成一个有序的数组<br>注意：<br>可以假设 <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">数组有足够的空间存放 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">数组的元素， <img src="https://www.nowcoder.com/equation?tex=A%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=B%5C" alt="img">中初始的元素数目分别为 <img src="https://www.nowcoder.com/equation?tex=m%5C" alt="img">和 <img src="https://www.nowcoder.com/equation?tex=n%5C" alt="img"></p>
+<h3 id="TX1-1"><a href="#TX1-1" class="headerlink" title="TX1"></a>TX1</h3><p>全程参与的项目有哪几个？</p>
+<p>项目里面哪个对你成长帮助比较大，收获比较大？</p>
+<p>遇到什么问题？为什么想着优化H5？如何优化H5页面的打开速度？是预创建 WebView 是吧？</p>
+<p>项目中碰到什么难点，以及是怎么去攻克它的？</p>
+<p>如果插件化要做好兼容性，应该怎么做？</p>
+<p>如何保证App的安全？</p>
+<p>有用 Service 开发吗？</p>
+<p>你们的跨进程通信用的什么方式？你知道有哪些跨进程通信方式？这些跨进程通信方式各有什么优势或者特点，他们之间的差异是什么？</p>
+<p>介绍下APK的启动过程——描述下进程启动、应用启动？启动过程哪些过程可能产生ANR ？</p>
+<p>Apk 中有一些第三方的包 Jar，在应用启动过程中，这些 Jar 是怎么链接起来的 ？——Android会把这些 jar 打包成 dex ， 那么这些 dex 是什么时候加载呢？</p>
+<p>类似抖音功能遇到了什么难点？怎么解决的？——播放错乱，咋解决？</p>
+<p>Android的源码看过多少？有编译过Android的源码吗？</p>
+<p>adb命令会吗？我想查看手机的剩余电量，怎么拿？ Linux的一些命令呢？root 和 Hook 了解多少？</p>
+<p>NDK 开发有吗？</p>
+<p>主要开发语言，Java 、Kotlin ？</p>
+<p>ART 知道吗？与 Dalvik 的区别？GC有什么不同？</p>
+<p>如果让你一个人开发App，能 Cover 住吗？</p>
+<p>有做单元测试吗？</p>
+<h3 id="ALi"><a href="#ALi" class="headerlink" title="ALi"></a>ALi</h3><p>Java集合类有哪些？有什么特点？ ArrayList、LinkedList、HashMap？</p>
+<p>ConcurrentHashMap是线程安全？它是怎么实现线程安全的？</p>
+<p>Java的线程有哪些状态？创建线程，调用它的start() 方法，这时候它处于什么状态？</p>
+<p>Java 中处理多线程并发的方法有哪些？Synchronize 在底层是怎么保证加锁成功？Volatile 主要用在什么场景？</p>
+<p>是否有用过 ThreadLocal ？看 Handler 源码时看过</p>
+<p>线程的集中管理会用到线程池，有哪些比较关键的参数？</p>
+<p>Activity声明周期？Activity A 到 Activity B ，二者经历的生命周期是怎样的？启动模式介绍下？日常开发时，有没有碰到要用某种启动模式的？</p>
+<p>是否有多进程的场景？——做小程序的时候</p>
+<p>Handler 的机制简单说一下？子线程发送消息，如何流转到主线程的？</p>
+<p>讲下 View 的主要绘制流程？多层 View 和 Layout，怎么把这些操作传递下去吗？ViewRootImpl 有了解吗？</p>
+<p>涉及到多进程的话，如何进行多进程间的通信？Messager 主要用在什么场景？ AIDL 主要用在什么场景？Binder 的基本原理？为什么要引入Binder ，不用 Linux 的？</p>
+<p>性能优化，页面秒开是从哪些方面做的？发现性能会有问题才做性能优化吧？是怎么分析性能？怎么检测内存泄漏？LeakCanary的原理？后来有没有思考有没有哪些内容可以做得更好？最耗时的点是啥，怎么去优化的？</p>
+<p>做过小程序的开发，你们的小程序是自研的吗？有哪些权限限制？</p>
+<p>RN的了解？</p>
+<h2 id="杂"><a href="#杂" class="headerlink" title="杂"></a>杂</h2><p>其实证书的本地校验还有一个步骤就是，将获取的新证书与老证书对比下，对比新旧证书</p>
+<p>在kotlin中各个部分的执行顺序：</p>
+<p>companion &gt; init &gt; constructor</p>
+<p>自己写代码如下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">KotlinTest</span> </span>{</span><br><span class="line">    <span class="keyword">init</span> {</span><br><span class="line">        println(<span class="string">"init"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">constructor</span>(){</span><br><span class="line">        println(<span class="string">"constructor init"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> {</span><br><span class="line">        <span class="keyword">init</span>{</span><br><span class="line">            println(<span class="string">"companion init"</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>会输出：</p>
+<blockquote>
+<p>companion init    </p>
+<p>init    </p>
+<p>constructor init</p>
+</blockquote>
+<p>对称加密哪些</p>
+<p>三次、四次握手</p>
+<p>注意postInvalidate的使用</p>
+<h2 id="关于如何排查ANR"><a href="#关于如何排查ANR" class="headerlink" title="关于如何排查ANR"></a>关于如何排查ANR</h2><h3 id="获取日志文件"><a href="#获取日志文件" class="headerlink" title="获取日志文件"></a>获取日志文件</h3><p>首先，获取日志文件：</p>
+<blockquote>
+<p>adb bugreport buglog</p>
+</blockquote>
+<p>之后，就会显示进度生成，有个时候会生成不成功，没关系，再来一次</p>
+<p>生成之后，这个文件被导入到当前项目的路径下，解压这个 buglog.zip 文件即可，打开 [机型]xxx.txt 查看里面的日志。</p>
+<h3 id="ANR类型和日志关键字"><a href="#ANR类型和日志关键字" class="headerlink" title="ANR类型和日志关键字"></a>ANR类型和日志关键字</h3><p>KeyDispatchTimeout-主要类型按键或触摸事件,input事件在5S内没有处理完成发生ANR</p>
+<p>日志关键字：Reason: Input dispatching timed out xxxx</p>
+<p>ServiceTimeout-bind，create，start，unbind等在主线程处理耗时，前台Service在20s内，后台Service在200s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout executing <a href="https://links.jianshu.com/go?to=http%3A%2F%2Fservice%2Fexecuting%2520service" target="_blank">service:/executing service</a> XXX</p>
+<p>3）BroadcastTimeout- BroadcastReceiver onReceiver处理事务时前台广播在10S内，后台广播在60s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout of broadcast XXX/Receiver during timeout:XXX/Broadcast of XXX</p>
+<p>4）ProcessContentProviderPublishTimedOutLocked-ContentProvider publish在10s内没有处理完成发生ANR<br>日志关键字：timeout publishing content providers</p>
+<h3 id="造成ANR的常见原因"><a href="#造成ANR的常见原因" class="headerlink" title="造成ANR的常见原因"></a>造成ANR的常见原因</h3><ul>
+<li>主线程耗时操作，如复杂的layout，庞大的for循环，IO等。    </li>
+<li>主线程被子线程同步锁block    </li>
+<li>主线程被Binder 对端block    </li>
+<li>Binder被占满导致主线程无法和SystemServer通信    </li>
+<li>得不到系统资源（CPU/Memory/IO）</li>
+</ul>
+<blockquote>
+<p>以上内容参考自<a href="https://www.jianshu.com/p/33d5e48e4a13">简书上的博客</a>、<a href="https://www.jianshu.com/p/082045769443">简书博客二</a></p>
+</blockquote>
+<h3 id="dayuwuxian"><a href="#dayuwuxian" class="headerlink" title="dayuwuxian"></a>dayuwuxian</h3><p>在目前所在公司主要负责什么？</p>
+<p>为什么要重构网络框架？重构后有什么亮点？</p>
+<blockquote>
+<p>网关不让用。并发token设计、数据解析 adapter 设计、日志系统设计。</p>
+</blockquote>
+<p>OkHttp 里面有哪些比较关键的设计让你觉得挺好的？线程池为什么要这样设计？它有哪些 intercetor ，分别是什么含义 ？这些 interceptor 执行的顺序是什么？</p>
+<p>网络防劫持是怎么做的？</p>
+<p>设计一个类，有add、remove、dispatch 这 3 个方法，其中add 表示将 listener 添加进来， remove 表示将 listener 移除，dispatch 方法表示遍历目前的listener ，然后调用每个 listener 的 invoke 方法，请问这个类怎么设计？</p>
+<p>设计的APM上线了吗，完成度怎么样？为什么要设计这么个APM ？怎么收集卡顿、ANR 呢？</p>
+<p>有用kotlin吗？kotlin的 lazy 是怎么实现的？-有很多中模式。这些模式的原理是什么，比如Synchronize 模式的原理是什么？用过协程吗？</p>
+<p>有用过 JetPack 吗？用过哪些？</p>
+<p>https证书防抓包的原理是什么？证书是双向验证还是单向验证？破解包了替换掉证书还能不能行？怎么更新从后台下载来的证书？怎么做的？</p>
+<p>https的请求过程是什么样的，与http有什么区别？</p>
+<p>一大堆无序的数字，取出前k个最小的数字</p>
+<h2 id="频繁GC、OOM-的排查"><a href="#频繁GC、OOM-的排查" class="headerlink" title="频繁GC、OOM 的排查"></a>频繁GC、OOM 的排查</h2><p>Android 的profile 功能-&gt;memory -&gt; dump ，得到 hprof 文件</p>
+<p>AS 现在直接能看到各个对象了，或者按照以前的，将 hprof 文件转一道，使用 MAT 打开</p>
+<h2 id="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"><a href="#两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛" class="headerlink" title="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"></a>两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛</h2><p>设先抛先吃的概率为p1， 后抛先吃的概率为p2</p>
+<p>那么有：</p>
+<p>p1 = 1/2 + 1/2 * p2</p>
+<p>p1 + p2 = 1</p>
+<p>解方程可得，</p>
+<p>p1 = 2/3</p>
+<blockquote>
+<p>参考自<a href="https://www.nowcoder.com/questionTerminal/6f11c63cb97a4e0884bb40985cf95393?toCommentId=474963">牛客网</a></p>
+</blockquote>
 </body></html>]]></content>
       <categories>
-        <category>听课笔记</category>
+        <category>笔记</category>
       </categories>
       <tags>
-        <tag>享学Android三期</tag>
+        <tag>攻玉</tag>
       </tags>
   </entry>
 </search>
