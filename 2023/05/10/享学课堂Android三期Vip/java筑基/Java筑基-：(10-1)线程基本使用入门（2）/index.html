@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、分而治之思想算法中分而治之思想和动态规划思想有点类似，要注意区分：  分而治之: 将一个任务分割成很多小任务，并且各个任务之间无关联  动态规划： 将一个任务 A 分割成很多小任务，比如 a1、a2、a3 ，假如存在 a1 执行完成才能执行a3，那就是小任务有关联性了，这就是动态规划思想了     快排，归并，二分都是分而治之的思想。  在 Java 7 中提供了 Fork&#x2F;Join 工具（F">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java筑基-：线程基本使用入门（2）">
+<meta property="og:url" content="https://glassx.github.io/2023/05/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(10-1)%E7%BA%BF%E7%A8%8B%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E5%85%A5%E9%97%A8%EF%BC%882%EF%BC%89/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、分而治之思想算法中分而治之思想和动态规划思想有点类似，要注意区分：  分而治之: 将一个任务分割成很多小任务，并且各个任务之间无关联  动态规划： 将一个任务 A 分割成很多小任务，比如 a1、a2、a3 ，假如存在 a1 执行完成才能执行a3，那就是小任务有关联性了，这就是动态规划思想了     快排，归并，二分都是分而治之的思想。  在 Java 7 中提供了 Fork&#x2F;Join 工具（F">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/Runnable%E5%92%8CCallable%E5%92%8CFuture.png">
+<meta property="article:published_time" content="2023-05-10T11:25:00.000Z">
+<meta property="article:modified_time" content="2023-05-17T14:13:34.599Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/Runnable%E5%92%8CCallable%E5%92%8CFuture.png">
+
+<link rel="canonical" href="https://glassx.github.io/2023/05/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(10-1)%E7%BA%BF%E7%A8%8B%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E5%85%A5%E9%97%A8%EF%BC%882%EF%BC%89/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>Java筑基-：线程基本使用入门（2） | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">173</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/05/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(10-1)%E7%BA%BF%E7%A8%8B%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E5%85%A5%E9%97%A8%EF%BC%882%EF%BC%89/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java筑基-：线程基本使用入门（2）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-05-10 19:25:00" itemprop="dateCreated datePublished" datetime="2023-05-10T19:25:00+08:00">2023-05-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-05-17 22:13:34" itemprop="dateModified" datetime="2023-05-17T22:13:34+08:00">2023-05-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、分而治之思想"><a href="#一、分而治之思想" class="headerlink" title="一、分而治之思想"></a>一、分而治之思想</h2><p>算法中分而治之思想和动态规划思想有点类似，要注意区分：</p>
+<ul>
+<li><p><strong>分而治之:</strong> 将一个任务分割成很多小任务，并且各个任务之间无关联</p>
+</li>
+<li><p><strong>动态规划：</strong> 将一个任务 A 分割成很多小任务，比如 a1、a2、a3 ，假如存在 a1 执行完成才能执行a3，那就是小任务有关联性了，这就是动态规划思想了</p>
+</li>
+</ul>
+<blockquote>
+<p> 快排，归并，二分都是分而治之的思想。</p>
+</blockquote>
+<p>在 Java 7 中提供了 Fork/Join 工具（Fork：将任务拆分成很多独立的子任务；Join：将所有的子任务结果合并）来让分而治之的思想并发执行起来。当然，我们也可以不使用这个框架，自己将任务分成很多小任务，然后用多线程去执行。不过呢，Java 的 ForkJoin 给提供了<strong>工作窃取（work-stealing）</strong> 算法，能够让执行更高效。</p>
+<h3 id="2-1-工作窃取"><a href="#2-1-工作窃取" class="headerlink" title="2.1 工作窃取"></a>2.1 工作窃取</h3><p><strong>工作窃取（work-stealing）</strong> 简单来说就是空闲线程试图从繁忙线程的 deques 中窃取工作。</p>
+<p>默认情况下，每个工作线程从自己的双端队列中获取任务，但如果自己队列中任务已经执行完成，队列为空时，它就会从另一个繁忙线程的双端队列尾部或者全局入口队列中获取任务，因为这是最大概率可能找到工作的地方。</p>
+<blockquote>
+<p>为什么会有任务先执行完成呢？因为工作量的划分不一定均等。即使是相同数量的数字相加，比如，每个任务都是10个数字相加，如果数字很大的话，耗时也会很长。</p>
+</blockquote>
+<h2 id="二、Java-提供的-ForkJoin"><a href="#二、Java-提供的-ForkJoin" class="headerlink" title="二、Java 提供的 ForkJoin"></a>二、Java 提供的 ForkJoin</h2><p>Java 提供分而治之的框架： ForkJoin。既然是要提交任务，我们需要对任务进行封装，ForkJoin 提供了 ForkJoinTask<v> 来包装任务：</v></p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">ForkJoinTask</span>&lt;<span class="title">V</span>&gt; <span class="keyword">implements</span> <span class="title">Future</span>&lt;<span class="title">V</span>&gt;, <span class="title">Serializable</span></span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>不过一般不直接使用它，而是用它的 2 个主要的子类：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">RecursiveTask</span>&lt;<span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">ForkJoinTask</span>&lt;<span class="title">V</span>&gt;</span></span><br><span class="line"><span class="class"></span></span><br><span class="line"><span class="class"></span></span><br><span class="line"><span class="class"><span class="title">public</span> <span class="title">abstract</span> <span class="title">class</span> <span class="title">RecursiveAction</span> <span class="keyword">extends</span> <span class="title">ForkJoinTask</span>&lt;<span class="title">Void</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>从这 2 个子类我们能看出，RecursiveTask 更适合有返回值的情形；RecursiveAction 适合没有返回值的情形。ForkJoinTask 它有2种使用方法：</p>
+<ul>
+<li><p>同步用法：采用 invoke 来提交任务</p>
+</li>
+<li><p>异步用法：采用submit 或者 execute 方法来提交任务</p>
+</li>
+</ul>
+<p>使用 ForkJoin 的方法如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    <span class="keyword">int</span>[] src = MakeArray.makeArray();</span><br><span class="line">    <span class="comment">//第一步，创建池子</span></span><br><span class="line">    ForkJoinPool pool = <span class="keyword">new</span> ForkJoinPool();</span><br><span class="line">    <span class="comment">//第二步：构建任务</span></span><br><span class="line">    SumTask innerFind = <span class="keyword">new</span> SumTask(src, <span class="number">0</span>, src.length - <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">long</span> start = System.currentTimeMillis();</span><br><span class="line">    <span class="comment">//第三步、提交，invoke 意味着同步执行</span></span><br><span class="line">    pool.invoke(innerFind);</span><br><span class="line">    <span class="comment">//第四步、获取结果</span></span><br><span class="line">    System.out.println(<span class="string">"the result is "</span> + innerFind.join() +</span><br><span class="line">            <span class="string">"，spend time："</span> + (System.currentTimeMillis() - start));</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其中，makeArray 只是用来生成一个数组：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MakeArray</span> </span>{</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> ARRAY_LENGTH = <span class="number">4000</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">static</span> <span class="keyword">int</span> THRESHOLD = <span class="number">47</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span>[] makeArray() {</span><br><span class="line">        <span class="keyword">int</span>[] result = <span class="keyword">new</span> <span class="keyword">int</span>[ARRAY_LENGTH];</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; ARRAY_LENGTH; i++) {</span><br><span class="line">            result[i] = i;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>真正的任务代码，由于我们需要有返回值，所以我们继承了 RecursiveTask ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SumTask</span> <span class="keyword">extends</span> <span class="title">RecursiveTask</span>&lt;<span class="title">Integer</span>&gt; </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> THREASHOLD = MakeArray.ARRAY_LENGTH / <span class="number">10</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span>[] src;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> fromIndex;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> toIndex;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SumTask</span><span class="params">(<span class="keyword">int</span>[] src, <span class="keyword">int</span> fromIndex, <span class="keyword">int</span> toIndex)</span> </span>{</span><br><span class="line">        <span class="keyword">this</span>.src = src;</span><br><span class="line">        <span class="keyword">this</span>.fromIndex = fromIndex;</span><br><span class="line">        <span class="keyword">this</span>.toIndex = toIndex;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> Integer <span class="title">compute</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="comment">//判定任务大小是否合适</span></span><br><span class="line">        <span class="keyword">if</span> (toIndex - fromIndex &lt; THREASHOLD) {</span><br><span class="line">            <span class="comment">//满足要求，计算结果</span></span><br><span class="line">            System.out.println(<span class="string">"from index = "</span> + fromIndex + <span class="string">"，toIndex = "</span> + toIndex);</span><br><span class="line">            <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = fromIndex; i &lt;= toIndex; i++) {</span><br><span class="line">                <span class="comment">//Thread.sleep(1);</span></span><br><span class="line">                count = count + src[i];</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">return</span> count;</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            <span class="comment">//还不满足要求，则继续拆分任务</span></span><br><span class="line">            <span class="keyword">int</span> mid = (fromIndex + toIndex) / <span class="number">2</span>;</span><br><span class="line">            <span class="comment">//拆分出左边的任务</span></span><br><span class="line">            SumTask left = <span class="keyword">new</span> SumTask(src, fromIndex, mid);</span><br><span class="line">            <span class="comment">//拆分出右边的任务</span></span><br><span class="line">            SumTask right = <span class="keyword">new</span> SumTask(src, mid + <span class="number">1</span>, toIndex);</span><br><span class="line">            <span class="comment">//提交到我们创建的 pool 中</span></span><br><span class="line">            invokeAll(left, right);</span><br><span class="line">            <span class="keyword">return</span> left.join() + right.join();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在重写的 compute 方法中，我们不断拆分任务，直至任务满足我们定义的阈值位置。计算量越大，中途 IO 操作越多 或者 休眠时间越多， ForkJoin 的优势越明显。如果只是少量数据，那么由于：</p>
+<ol>
+<li><p>ForkJoin 的递归调用</p>
+</li>
+<li><p>ForkJoin 多线程切换</p>
+</li>
+</ol>
+<p>反而导致还没单线程那么快。但是当计算过程中有IO 操作或者休眠时间时，ForkJoin 在大量数据情况下的优势就会显示出来。我们注意上述代码中注释的代码 ： Thread.sleep(1); 如果在单线程计算和 ForkJoin 计算过程中都休眠 1ms ，后续导致的耗时差异是很大的，这个可以自行验证。</p>
+<p>上面我们看了同步的操作，接下来看下如果进行异步操作，以下代码将根据指定的文件中，所有的 txt 文件，有可能文件下还有目录：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">        ForkJoinPool pool = <span class="keyword">new</span> ForkJoinPool();</span><br><span class="line"></span><br><span class="line">        FindDirFiles task = <span class="keyword">new</span> FindDirFiles(<span class="keyword">new</span> File(<span class="string">"D:/"</span>));</span><br><span class="line"></span><br><span class="line">        <span class="comment">//异步提交</span></span><br><span class="line">        pool.execute(task);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//主线程做自己的事情</span></span><br><span class="line">        System.out.println(<span class="string">"Task isRuning"</span>);</span><br><span class="line">        Thread.sleep(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">        System.out.println(<span class="string">"doing other works"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取结果，这是一个阻塞方法</span></span><br><span class="line">        task.join();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//由于上述join 是阻塞方法，所以一定得有结果之后，才会打印下面的 task end</span></span><br><span class="line">        System.out.println(<span class="string">"task end"</span>);</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>首先 main 方法中调用与上述的同步差不多，只不过在使用 execute 异步调用后，主线程的日志和子线程的日志同时在打，最后，我们会调用 task.join 阻塞方法，这也导致当所有文件遍历完成后，才会在main 线程中 输出最后的 task end 语句。我们看下 FindDirFiles 的实现：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FindDirFiles</span> <span class="keyword">extends</span> <span class="title">RecursiveAction</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> File path;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FindDirFiles</span><span class="params">(File path)</span> </span>{</span><br><span class="line">        <span class="keyword">this</span>.path = path;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">compute</span><span class="params">()</span> </span>{</span><br><span class="line">        List&lt;FindDirFiles&gt; subTasks = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        File[] files = path.listFiles();</span><br><span class="line">        <span class="keyword">if</span> (files != <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">for</span> (File file : files) {</span><br><span class="line">                <span class="keyword">if</span> (file.isDirectory()) {</span><br><span class="line">                    <span class="comment">//对每个子目录新建一个子任务</span></span><br><span class="line">                    subTasks.add(<span class="keyword">new</span> FindDirFiles(file));</span><br><span class="line">                } <span class="keyword">else</span> {</span><br><span class="line">                    <span class="comment">//遇到文件，检查</span></span><br><span class="line">                    <span class="keyword">if</span> (file.getAbsolutePath().endsWith(<span class="string">"txt"</span>)) {</span><br><span class="line">                        System.out.println(<span class="string">"文件："</span> + file.getAbsolutePath());</span><br><span class="line">                    }</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (!subTasks.isEmpty()) {</span><br><span class="line">                <span class="comment">//在当前的 ForkJoinPool 上调度所有的子任务</span></span><br><span class="line">                <span class="keyword">for</span> (FindDirFiles subTask : invokeAll(subTasks)) {</span><br><span class="line">                    subTask.join();</span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由于不需要返回结果，所以我们继承 RecursiveAction 即可，在 compute 中，我们将为每个目录创建一个 Task 加入 list 中，最后一并 invokeAll 执行。</p>
+<h2 id="三、CountDownLatch"><a href="#三、CountDownLatch" class="headerlink" title="三、CountDownLatch"></a>三、CountDownLatch</h2><p>它的作用是等待一个线程或者多个线程执行完成后再执行后续的操作。比如说要等所有的初始化工作（多个子线程）执行完成之后，才进入主线程执行。</p>
+<p>对于 CountDownLatch 而言，计数器和线程数量是没关系的，有可能在同一个线程中做 2 个任务执行  2 次 countDown 操作。</p>
+<p>线程做完 countDown 操作之后，能够继续执行，并不是说一定就要关闭之类的。</p>
+<p>CountdownLatch 的 await 方法（即等待所有的扣减到 0 后才能执行的地方）可以在多个地方使用，比如同时在 主线程调用 countDownLatch.await() 以及在某个子线程中调用 countDownLatch.await() ，当 countDownLatch 计数器减为 0 的时候，主线程和那个子线程都会被唤醒接着执行。</p>
+<h2 id="四、CyclicBarrier"><a href="#四、CyclicBarrier" class="headerlink" title="四、CyclicBarrier"></a>四、CyclicBarrier</h2><p>它的主要思想是，在某个点设置一个屏障， 比如 3 个线程，如果 A 线程先执行完成，它会 await 在那里等待；同样 B 线程也会这样，一直到 C 线程也执行完成，此时，3个线程才一起执行。它有 2 个主要构造方法：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//parties 表示操控的线程数量</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">CyclicBarrier</span><span class="params">(<span class="keyword">int</span> parties)</span> </span>{</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>以及：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">CyclicBarrier</span><span class="params">(<span class="keyword">int</span> parties, Runnable barrierAction)</span> </span>{</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其中第二个 构造方法的 barrierAction 表示的是，当所有的操控的线程都执行到这个屏障的时候，此时优先执行一下这个 Rnnable ，之后三个线程才继续执行。这样做的一个好处就是：</p>
+<p>举个例子吧，如果3 个线程计算一个任务的 3 个部分，这时候，我们可以用设置这个 Runnable 来合并这 3 部分结果，之后，这 3 个线程都拿着合并后的结果执行后面的操作。</p>
+<h2 id="五、CountDownLatch-与-CyclicBarrier-的区别"><a href="#五、CountDownLatch-与-CyclicBarrier-的区别" class="headerlink" title="五、CountDownLatch 与  CyclicBarrier 的区别"></a>五、CountDownLatch 与  CyclicBarrier 的区别</h2><p>虽然二者在功能上很相似，但其实是有很大区别的，主要体现在：</p>
+<ul>
+<li><p>CountDownLatch 定义的数字只能扣减一次，CyclicBarrier 能多次调用 await ，后续的 await 还都能触发 barrierAction 的执行</p>
+</li>
+<li><p>CountDownLatch 用外部线程协调；而 CyclicBarrier 本身相互协调</p>
+</li>
+<li><p>CountDownLatch 扣减数和线程数不一样，比如一个线程可以 countdown 多次；但 CyclicBarrier 初始化时传入的 数量必须是管控的线程数量</p>
+</li>
+<li><p>这点没大听懂，大体是说 CountDownLatch 运行中不允许其他线程执行；而CyclicBarrier 可以通过 barrierAction 执行其他线程任务。<font color="#ff0000">还需要额外确认这点</font></p>
+</li>
+</ul>
+<h2 id="六、Semaphore"><a href="#六、Semaphore" class="headerlink" title="六、Semaphore"></a>六、Semaphore</h2><p>主要用于<strong>流控</strong>的场景。比如，数据库最多只能有 10 个连接，那么我们可以通过 Semaphore 发放 10 个 <strong>许可证</strong>。在正常使用的时候通过 acquire 和 release  来控制获取和释放操作。还是看如下代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">ConnectionImpl</span> <span class="keyword">implements</span> <span class="title">Connection</span> </span>{</span><br><span class="line">    。。。省略实现</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SemaphoreDemo</span> </span>{</span><br><span class="line">    <span class="comment">//许可证数量</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">static</span> <span class="keyword">int</span> POOL_SIZE = <span class="number">10</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2个新号指示器，分别表示 池子还有可用的连接 / 已用的连接</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Semaphore useful, uselessful;</span><br><span class="line">    <span class="comment">//存放资源的池子</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> LinkedList&lt;Connection&gt; pool = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> {</span><br><span class="line">        <span class="comment">//初始化放入资源</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; POOL_SIZE; i++) {</span><br><span class="line">            pool.addLast(<span class="keyword">new</span> ConnectionImpl());</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SemaphoreDemo</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">this</span>.useful = <span class="keyword">new</span> Semaphore(POOL_SIZE);</span><br><span class="line">        <span class="keyword">this</span>.uselessful = <span class="keyword">new</span> Semaphore(<span class="number">0</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//归还连接</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">returnConnection</span><span class="params">(Connection connection)</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">        <span class="keyword">if</span> (connection != <span class="keyword">null</span>) {</span><br><span class="line">            System.out.println(<span class="string">"当前有"</span> + useful.getQueueLength() + <span class="string">"个线程等待连接，"</span></span><br><span class="line">                    + <span class="string">"可用连接数："</span> + useful.availablePermits());</span><br><span class="line">            <span class="comment">//通过 uselessful 的 acquire 来获取空位</span></span><br><span class="line">            <span class="keyword">synchronized</span> (pool) {</span><br><span class="line">                pool.addLast(connection);</span><br><span class="line">            }</span><br><span class="line">            <span class="comment">//许可证释放</span></span><br><span class="line">            useful.release();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//获取连接</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Connection <span class="title">takeConnect</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">        <span class="comment">//获取许可，如果没有许可可能阻塞</span></span><br><span class="line">        useful.acquire();</span><br><span class="line">        Connection connection;</span><br><span class="line">        <span class="comment">//拿到许可，为什么还需要同步？</span></span><br><span class="line">        <span class="comment">//这是因为如果有 4 个许可，那么可能同时有 4 个线程过来取值，所以，还需要对池子同步</span></span><br><span class="line">        <span class="keyword">synchronized</span> (pool) {</span><br><span class="line">            connection = pool.removeFirst();</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//空位释放</span></span><br><span class="line">        uselessful.release();</span><br><span class="line">        <span class="keyword">return</span> connection;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来就是编写 Demo 使用：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">BusiThread</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>{</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> SemaphoreDemo semaphoreDemo = <span class="keyword">new</span> SemaphoreDemo();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.run();</span><br><span class="line">        <span class="comment">//随机，让每个线程持有的连接时间不一样</span></span><br><span class="line">        Random r = <span class="keyword">new</span> Random();</span><br><span class="line">        <span class="keyword">long</span> start = System.currentTimeMillis();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            Connection connection = semaphoreDemo.takeConnect();</span><br><span class="line">            System.out.println(<span class="string">"Thread_"</span> + Thread.currentThread().getName()</span><br><span class="line">                    + <span class="string">"获取数据库连共耗时【"</span> + (System.currentTimeMillis() - start) + <span class="string">"】ms"</span>);</span><br><span class="line">            <span class="comment">//模拟业务操作</span></span><br><span class="line">            Thread.sleep(<span class="number">100</span> + r.nextInt(<span class="number">100</span>));</span><br><span class="line">            System.out.println(<span class="string">"查询数据完成，归还连接"</span>);</span><br><span class="line">            semaphoreDemo.returnConnection(connection);</span><br><span class="line">        } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">50</span>; i++) {</span><br><span class="line">        Thread t = <span class="keyword">new</span> BusiThread();</span><br><span class="line">        t.start();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述代码会显示出前面 10 个线程几乎是 0ms 就获取到资源，而后续的会等待：</p>
+<blockquote>
+<p>Thread_Thread-1获取数据库连共耗时【0】ms<br>Thread_Thread-0获取数据库连共耗时【0】ms<br>Thread_Thread-2获取数据库连共耗时【0】ms<br>Thread_Thread-3获取数据库连共耗时【0】ms<br>Thread_Thread-4获取数据库连共耗时【0】ms<br>Thread_Thread-5获取数据库连共耗时【0】ms<br>Thread_Thread-6获取数据库连共耗时【0】ms<br>Thread_Thread-7获取数据库连共耗时【0】ms<br>Thread_Thread-8获取数据库连共耗时【0】ms<br>Thread_Thread-9获取数据库连共耗时【1】ms<br>查询数据完成，归还连接<br>当前有40个线程等待连接，可用连接数：0<br>Thread_Thread-10获取数据库连共耗时【113】ms<br>查询数据完成，归还连接<br>当前有39个线程等待连接，可用连接数：0<br>Thread_Thread-11获取数据库连共耗时【124】ms<br>查询数据完成，归还连接<br>当前有38个线程等待连接，可用连接数：0<br>Thread_Thread-12获取数据库连共耗时【141】ms</p>
+<p>。。。省略一部分运行数据</p>
+</blockquote>
+<p>这里可能大家有个疑问，为什么需要定义 2 个 Semaphore： useful, uselessful。其中 前者是代表可用的许可，后者代表空位。为什么这么设计？还得从 Semaphore 的机制说起：即使没有调用 acquire ，而是直接调用 release ，这样也是可以的，<strong>可以在release 的时候传入一个 new 出来的Connection 对象 ！！！</strong>，假如出现这种情况的话，我们的许可证会越来越多，而不是我们初衷的限制了。</p>
+<p>acquire 只是做流控，但是不能做同步操作，比如，它有 4 个许可证，意味着可以允许 4 个线程同时去取资源，这时候我们还是需要对存储资源的池子做同步的。 所以，我们上述的代码 takeConnect() 方法中，在 acquire 之后，还需要 synchronized (pool) 操作：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Connection <span class="title">takeConnect</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">    <span class="comment">//获取许可，如果没有许可可能阻塞</span></span><br><span class="line">    useful.acquire();</span><br><span class="line">    <span class="comment">//省略无关代码。。。</span></span><br><span class="line">    <span class="keyword">synchronized</span> (pool) {</span><br><span class="line">        connection = pool.removeFirst();</span><br><span class="line">    }</span><br><span class="line">    <span class="comment">//省略无关代码。。。</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="七、Exchange"><a href="#七、Exchange" class="headerlink" title="七、Exchange"></a>七、Exchange</h2><p>Exchange 的使用场景很少。它的含义是：两个线程 A 和 B，在某一位置设定一个点，当某个先执行完了，就会等待另一个线程。当 2 个线程都执行到这个点时，二者交换数据，然后接着继续执行，没错，只是交换数据。</p>
+<h2 id="八、Callable-、Task"><a href="#八、Callable-、Task" class="headerlink" title="八、Callable 、Task"></a>八、Callable 、Task</h2><p>我们前面说了开启一个线程有 2 种方式：new Thread 和 new Runnable 。但是，由于 Runnable 类的 run 方法是 void 类型的，没有返回值：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Runnable</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>因此 Java 中给准备了 Callable 这样的类，让方法有返回值：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Callable</span>&lt;<span class="title">V</span>&gt; </span>{</span><br><span class="line">    <span class="function">V <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由于Thread 中只能接收 Runnable 参数，因此 Callable 不能直接传入使用，因此就有了 Task 这种类型，可能课程中的这张图更形象一点：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/Runnable%E5%92%8CCallable%E5%92%8CFuture.png" alt="Runnable和Callable和Future"></p>
+<p>关于 Callable 的使用，我们可以参考下面的代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CallableDemo</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">UseCallable</span> <span class="keyword">implements</span> <span class="title">Callable</span>&lt;<span class="title">Integer</span>&gt;</span>{</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> sum;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Integer <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">            System.out.println(<span class="string">"Callable 子线程开始计算"</span>);</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt;<span class="number">5000</span>;i++) {</span><br><span class="line">                sum += i;</span><br><span class="line">            }</span><br><span class="line">            System.out.println(<span class="string">"Callable 子线程计算结束，结果："</span> + sum);</span><br><span class="line">            <span class="keyword">return</span> sum;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">        UseCallable useCallable = <span class="keyword">new</span> UseCallable();</span><br><span class="line">        FutureTask&lt;Integer&gt; task = <span class="keyword">new</span> FutureTask&lt;&gt;(useCallable);</span><br><span class="line">        <span class="keyword">new</span> Thread(task).start();</span><br><span class="line">        System.out.println(<span class="string">"main 方法中获取结果："</span> + task.get());</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>不过，需要注意的是，我们如果想取消 Task ，可以直接调用 task.cancel(true); ，其中传入的 true 是中断线程的标志，前面章节有说我们不建议使用 volatile 类型的变量去停止线程，还是希望使用 interrupt 去停止。所以，我们光调用 task.cancel(true);还不行，还得在线程中配合中断操作，如下所示：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Integer <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>{</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>;i&lt;<span class="number">5000</span>;i++) {</span><br><span class="line">        <span class="keyword">if</span> (Thread.currentThread().isInterrupted()) {</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//删除无关代码</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F/" rel="tag"># 享学Android三期</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/04/20/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(09-1)%E7%BA%BF%E7%A8%8B%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E5%85%A5%E9%97%A8-1/" rel="next" title="Java筑基-：(09-1)线程基本使用入门-1">
+                  <i class="fa fa-chevron-left"></i> Java筑基-：(09-1)线程基本使用入门-1
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/05/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A%EF%BC%8813%EF%BC%892021.8.24%20%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E5%92%8C%E5%BD%92%E7%BA%B3%E6%80%BB%E7%BB%9301/" rel="prev" title="Java筑基-：（13）2021.8.24 深入理解并发编程和归纳总结01">
+                  Java筑基-：（13）2021.8.24 深入理解并发编程和归纳总结01 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%88%86%E8%80%8C%E6%B2%BB%E4%B9%8B%E6%80%9D%E6%83%B3"><span class="nav-number">1.</span> <span class="nav-text">一、分而治之思想</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%B7%A5%E4%BD%9C%E7%AA%83%E5%8F%96"><span class="nav-number">1.1.</span> <span class="nav-text">2.1 工作窃取</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Java-%E6%8F%90%E4%BE%9B%E7%9A%84-ForkJoin"><span class="nav-number">2.</span> <span class="nav-text">二、Java 提供的 ForkJoin</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81CountDownLatch"><span class="nav-number">3.</span> <span class="nav-text">三、CountDownLatch</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81CyclicBarrier"><span class="nav-number">4.</span> <span class="nav-text">四、CyclicBarrier</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81CountDownLatch-%E4%B8%8E-CyclicBarrier-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">5.</span> <span class="nav-text">五、CountDownLatch 与  CyclicBarrier 的区别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Semaphore"><span class="nav-number">6.</span> <span class="nav-text">六、Semaphore</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81Exchange"><span class="nav-number">7.</span> <span class="nav-text">七、Exchange</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81Callable-%E3%80%81Task"><span class="nav-number">8.</span> <span class="nav-text">八、Callable 、Task</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">173</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共355.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'b05b4816684d4b5fc3e40b9f208b977e',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

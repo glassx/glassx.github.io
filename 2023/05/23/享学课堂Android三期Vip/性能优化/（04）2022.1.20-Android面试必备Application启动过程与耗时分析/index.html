@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、概述分为三个步骤：  通过源码分析，知道启动流程（便于启动监控——哪些地方耗时）  阿里的启动优化方案  如何实现高效的 SplashActivity    二、启动流程分为三个流程，如下图所示：  在第二个阶段中，Application 的启动很关键，其中 Application 中的 attachBaseContext 方法比较关键，很多时候我们会在里面做一些比较前置的任务，诸如：  对于">
+<meta property="og:type" content="article">
+<meta property="og:title" content="性能优化-：（04）2022.1.20-Android面试必备Application启动过程与耗时分析">
+<meta property="og:url" content="https://glassx.github.io/2023/05/23/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8804%EF%BC%892022.1.20-Android%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87Application%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E8%80%97%E6%97%B6%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、概述分为三个步骤：  通过源码分析，知道启动流程（便于启动监控——哪些地方耗时）  阿里的启动优化方案  如何实现高效的 SplashActivity    二、启动流程分为三个流程，如下图所示：  在第二个阶段中，Application 的启动很关键，其中 Application 中的 attachBaseContext 方法比较关键，很多时候我们会在里面做一些比较前置的任务，诸如：  对于">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%90%AF%E5%8A%A8%E4%B8%89%E6%B5%81%E7%A8%8B.png">
+<meta property="article:published_time" content="2023-05-23T01:13:00.000Z">
+<meta property="article:modified_time" content="2023-05-24T15:07:41.344Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%90%AF%E5%8A%A8%E4%B8%89%E6%B5%81%E7%A8%8B.png">
+
+<link rel="canonical" href="https://glassx.github.io/2023/05/23/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8804%EF%BC%892022.1.20-Android%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87Application%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E8%80%97%E6%97%B6%E5%88%86%E6%9E%90/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>性能优化-：（04）2022.1.20-Android面试必备Application启动过程与耗时分析 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">33</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">173</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/05/23/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8804%EF%BC%892022.1.20-Android%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87Application%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E8%80%97%E6%97%B6%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          性能优化-：（04）2022.1.20-Android面试必备Application启动过程与耗时分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-05-23 09:13:00" itemprop="dateCreated datePublished" datetime="2023-05-23T09:13:00+08:00">2023-05-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-05-24 23:07:41" itemprop="dateModified" datetime="2023-05-24T23:07:41+08:00">2023-05-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、概述"><a href="#一、概述" class="headerlink" title="一、概述"></a>一、概述</h2><p>分为三个步骤：</p>
+<ol>
+<li><p>通过源码分析，知道启动流程（便于启动监控——哪些地方耗时）</p>
+</li>
+<li><p>阿里的启动优化方案</p>
+</li>
+<li><p>如何实现高效的 SplashActivity </p>
+</li>
+</ol>
+<h2 id="二、启动流程"><a href="#二、启动流程" class="headerlink" title="二、启动流程"></a>二、启动流程</h2><p>分为三个流程，如下图所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%90%AF%E5%8A%A8%E4%B8%89%E6%B5%81%E7%A8%8B.png" alt="App启动的3个流程"></p>
+<p>在第二个阶段中，Application 的启动很关键，其中 Application 中的 attachBaseContext 方法比较关键，很多时候我们会在里面做一些比较前置的任务，诸如：</p>
+<ul>
+<li><p>对于加固的 App ，这里会做解密的操作</p>
+</li>
+<li><p>对于热修复而言，第一时间将修复的 dex 给生效</p>
+</li>
+</ul>
+<p>只需要在执行类之前，dex 中包括这个类。所以，理论上我们可以无需一次性将所有的 dex 文件在 attachBaseContext 的时候加载进去。第一个 Activity 启动之后，再将其他的 dex 加载进去。attachBaseContext 阶段可以使用字节的 BoostMultiDex 方案去优化。</p>
+<p>只有 window 才能展示出来看到，而目前在 Android 里面就一个 PhoneWindow ，所以，我们看到的第一屏肯定只能是 第一个 Activity 的 PhoneWindow。</p>
+<p>那么，在用户点击Launcher 到第一个 Activity 显示出来之前，我们要显示内容，显示什么内容呢？其实显示的是Application 的主题，这个主题里面有个属性：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">application</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:theme</span>=<span class="string">"@style/Theme.AndroidDemo"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">activity</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:name</span>=<span class="string">".MainActivity"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:exported</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"android.intent.action.MAIN"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">            <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"android.intent.category.LAUNCHER"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">application</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>application 的 theme 是 @style/Theme.AndroidDemo ，然后我们可以在theme 里面设置  android:windowSplashscreenContent 值：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resources</span> <span class="attr">xmlns:tools</span>=<span class="string">"http://schemas.android.com/tools"</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- Base application theme. --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">style</span> <span class="attr">name</span>=<span class="string">"Theme.AndroidDemo"</span> <span class="attr">parent</span>=<span class="string">"Theme.MaterialComponents.DayNight.DarkActionBar"</span>&gt;</span><span class="xml"></span></span><br><span class="line"><span class="xml">        <span class="tag">&lt;<span class="name">item</span> <span class="attr">name</span>=<span class="string">"android:windowSplashscreenContent"</span>&gt;</span>@drawable/ic_launcher_background<span class="tag">&lt;/<span class="name">item</span>&gt;</span></span></span><br><span class="line"><span class="xml">    </span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>当然，以上操作要求 API 版本是 26 ，如果要兼容低的版本，就要设置 background 属性，但是这二者还是有区别的：</p>
+<ul>
+<li><p>background 只能是图片</p>
+</li>
+<li><p>windowSplashscreenContent 可以做动画</p>
+</li>
+</ul>
+<p>这是怎么实现的呢？Application 里面压根就没有 Window 啊，其实在startActivity 的时候，Activity 真正启动之前，add 了一个 SplashWindow，WindowManager 通过 addView 的方式将 window 交给 WMS 去展示这个闪屏页了，这个闪屏window 会去解析 windowSplashscreenContent 字段。在第一个 Activity 初始化完，Activity 的 window 也通过 vm.addView 展示的时候，就会覆盖 SplashWindow 。</p>
+<p>以上就是黑白屏优化，这其实就是欺骗用户，实际上也没加快启动速度。</p>
+<p>所以，我们优化启动速度，优化在哪里呢？其实就是 vm.addView 添加 SplashWindow 和 vm.addView 第一个 Activity 的 window 之间的过程，将这个过程尽量缩短。并且，<strong>这个过程里面会执行 Application.onCreate()</strong>，所以我们需要减少 onCreate 的耗时。</p>
+<h2 id="优化方法"><a href="#优化方法" class="headerlink" title="优化方法"></a>优化方法</h2><p>线程数，有些 SDK 会启动线程，你自己可能压根没创建线程。所以如何控制这个线程数呢？后续再讲，基本上可以通过阿里的 Alpha 。（老师说Android 的 startUp 比较垃圾），这就是 Application 的 onCreate 方法优化方法。</p>
+<p>上述的过程还会经历第一个 Activity 的onCreate、onStart、onResume 这些流程</p>
+<p>perfomStartActivity 的过程中， Activity.attach 的时候会为Activity创建 Context 、创建 window ，并未 window 设置 WindowManager。为什么这么设计？因为单一职责问题，Activity 是管理生命周期的，Window 是管理 View 的。</p>
+<p>我们在 Activity 的 onCreate 中只应该去做 view 的操作，其他的诸如数据库初始化之类的应该放在子线程中异步操作。</p>
+<blockquote>
+<p>装饰模式是功能增强；代理模式只是代理，没有增强。</p>
+</blockquote>
+<p>有可能面试官会问，为什么采用 inflater 解析的view ，要比自定义的 view 效率低？这里我们可以看 setContentView 方法，最底层就是使用 inflater 实现的，如果能看到后面就会发现，大量使用反射创建出来 View 。而反射又是比较耗时的，所以总结如下：</p>
+<ul>
+<li><p>解析 xml 耗时</p>
+</li>
+<li><p>根据 xml 反射 view 的反射操作耗时</p>
+</li>
+</ul>
+<p>所以，Activity 的 onCreate 怎么优化？如果采用的还是 xml 就没法优化；只能通过减少 xml 中的布局的层级，减少 view 个数，就减少时间；还有就是从上面的原理来说，可以自己去 new 这些view 。不过也可以用 compose ，它没有 xml 了，通过 new 之类的创建出来的。固定测量方式，避免过度渲染，多次测量问题。</p>
+<p>onCreate 执行完成后，只是解析完成了 xml ，在 setContentView 的时候会创建 decorView，然后创建了 window ，但是还没有 显示出来，还要在 wm.addView() 才能显示在硬件上。而 handleResume 的时候，先执行了 onResume 回调之后，然后再执行Activity 的wm.addView() 。</p>
+<p>所以，Activity 怎么优化，就得onResume() 以及之前的所有方法（onCreate、onStart） 。所以，在 onResume 这里面如果有耗时操作，就要上前面说的阿里的策略了（Alpha）。以及相应的<strong>懒加载</strong>思想（ViewStub、Viewpaget+fragment 等）。</p>
+<p>层级，深度遍历，多一层 2的次幂</p>
+<p>尽量使用 ConstraintLayout 而不是 Linelayout 这些，会增加嵌套。从观法的数据来看，其渲染速度比 RelativeLayout 要提升 40% 。</p>
+<p>Activity 中所有的回调都是在 handler 里面执行的。handler 机制体系里面会有MessageQueue ，message 按照时间排序，如果最开始的那个msg 都要 10ms 后执行，那么线程就会通过 epoll 机制睡眠了。所以我们还是利用 IdelHandler 去让主线程空闲的时候去做。比如说，后台 Service 有些内容是没有必要那么及时的，可以考虑在IdleHandler 中执行。</p>
+<blockquote>
+<p>GC 会 STW ，所以，我们也能在 IdleHandler 中取做 GC ，这样就不会影响主线程，LeakCanary里面就是这么做的（老师展示的代码是这样的，AndroidWatchExecutor.waitForIdle()  方法。还需要自己确认下）。要注意一点，IdleHandler 中不要做耗时操作，因为它也是个 msg</p>
+</blockquote>
+<p>当 App 第一个 Activity 的 window 展示将 SplashWindow 覆盖的时候，是在 windowFocusChange 中实现切换的。所以我们一般用 windowFocusChange 来标记新的 window 启动。</p>
+<p>每一个 Activity 都会有一个独一无二的 Window </p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>启动优化分为几个点：</p>
+<ul>
+<li><p>黑白屏阶段，使用 manifest 中 theme 的 windowSplashscreenContent 属性</p>
+</li>
+<li><p>Application 的 attachBaseContext() 回调中，可以用 字节的 BoostMultiDex 方案</p>
+</li>
+<li><p>Application 的 onCreate 阶段，采用图论原理，将各个任务依次执行，例如阿里的 Alpha 框架</p>
+</li>
+<li><p>接着就到了Activity 阶段，由于要遭 onResume 之后才会执行 vm.addView 最终展示 window ，所以在 onCreate、onStart 、onResume 这些回调里面都不要执行耗时操作</p>
+</li>
+</ul>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F/" rel="tag"># 享学Android三期</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/05/22/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8803%EF%BC%892022.1.18-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E7%AC%AC%E4%B8%89%E6%AC%A1%E8%AF%BE%EF%BC%88%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%20%E5%86%85%E5%AD%98%E7%AF%87%EF%BC%89/" rel="next" title="性能优化-：（03）2022.1.18-性能优化第三次课（性能优化 内存篇）">
+                  <i class="fa fa-chevron-left"></i> 性能优化-：（03）2022.1.18-性能优化第三次课（性能优化 内存篇）
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/05/24/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8805%EF%BC%892022.1.23-Android%E5%90%AF%E5%8A%A8%E4%BC%98%E5%8C%96%EF%BC%8C%E6%9C%89%E5%90%91%E6%97%A0%E7%8E%AF%E5%9B%BE%E4%BB%BB%E5%8A%A1%E7%AE%A1%E7%90%86%E5%88%86%E6%9E%90/" rel="prev" title="性能优化-：（05）2022.1.23-Android启动优化，有向无环图任务管理分析">
+                  性能优化-：（05）2022.1.23-Android启动优化，有向无环图任务管理分析 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">一、概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">二、启动流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%98%E5%8C%96%E6%96%B9%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">优化方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">173</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共355.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'ef645e012b731e5ec5121f9cef442041',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
