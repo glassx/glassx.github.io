@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、为何监听Activity&#x2F;Fragment 生命周期Glide 的使用很简单： 1Glide.with(this).load().into(imageView)  其中的职责很简单：  with ： 生命周期管理。传入 Activity 或者 Fragment 就会创建一个空白 Fragment 来监听生命周期，传入 Application Context 则不会  load：构建出 Requ">
+<meta property="og:type" content="article">
+<meta property="og:title" content="09-Glide-第一节课(最新Glide4.11源码阅读)">
+<meta property="og:url" content="https://glassx.github.io/2023/06/17/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%B8%80%E8%8A%82%E8%AF%BE(%E6%9C%80%E6%96%B0Glide4.11%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB)/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、为何监听Activity&#x2F;Fragment 生命周期Glide 的使用很简单： 1Glide.with(this).load().into(imageView)  其中的职责很简单：  with ： 生命周期管理。传入 Activity 或者 Fragment 就会创建一个空白 Fragment 来监听生命周期，传入 Application Context 则不会  load：构建出 Requ">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-17T08:09:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T14:55:08.975Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/17/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%B8%80%E8%8A%82%E8%AF%BE(%E6%9C%80%E6%96%B0Glide4.11%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB)/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>09-Glide-第一节课(最新Glide4.11源码阅读) | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/17/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%B8%80%E8%8A%82%E8%AF%BE(%E6%9C%80%E6%96%B0Glide4.11%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          09-Glide-第一节课(最新Glide4.11源码阅读)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-17 16:09:00" itemprop="dateCreated datePublished" datetime="2023-06-17T16:09:00+08:00">2023-06-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 22:55:08" itemprop="dateModified" datetime="2023-06-28T22:55:08+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、为何监听Activity-Fragment-生命周期"><a href="#一、为何监听Activity-Fragment-生命周期" class="headerlink" title="一、为何监听Activity/Fragment 生命周期"></a>一、为何监听Activity/Fragment 生命周期</h2><p>Glide 的使用很简单：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Glide.with(<span class="keyword">this</span>).load().into(imageView)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其中的职责很简单：</p>
+<ul>
+<li><p>with ： 生命周期管理。传入 Activity 或者 Fragment 就会创建一个空白 Fragment 来监听生命周期，传入 Application Context 则不会</p>
+</li>
+<li><p>load：构建出 RequestBuilder 对象</p>
+</li>
+<li><p>into ： 做了几件事情：1）运行队列、等待队列 2）活动缓存 3）内存缓存 4）网络模型</p>
+</li>
+</ul>
+<p>面试题：我们使用了 Glide.with(this).load().into 加载图片之后，在 Activity 的 onDestroy 中是不是要调用：<em>Glide.with(this).clear(imageView)</em> 来清理掉不用的 View 呢？</p>
+<blockquote>
+<p>很多同学可能会回复这是必须的，但是事实上这不是必需的，因为 Glide 内部会有监听机制，在 Activity 的onDestroy 中会自动 clear 掉。</p>
+</blockquote>
+<h2 id="二、生命周期作用域"><a href="#二、生命周期作用域" class="headerlink" title="二、生命周期作用域"></a>二、生命周期作用域</h2><p>那么 Glide 是怎么做到自动 clear 呢？原理在于<strong>它会创建一个空白的 Fragment 来监控 Activity/Fragment 的生命周期变化</strong>。</p>
+<p>你可以发送很多的加载图片的request ，这些统一由 RequestManager 去管理。</p>
+<p><strong>如果在子线程使用 Glide 加载图片，即时你传入 Activity ，也是在 Application 作用域，这时候不会给你搞那个空白的 Fragment</strong> 。总结一下各种情况下根据 with 传入的参数而产生的生命周期作用域：</p>
+<ul>
+<li><p><strong>在子线程</strong>：作用域为 Application</p>
+</li>
+<li><p>（在主线程）传入 ServiceContext/Application Context： 作用域为 Application</p>
+</li>
+<li><p>（在主线程）传入View：作用域为 Fragment 或者 Activity</p>
+</li>
+<li><p>（在主线程）传入 Fragment： 作用域为 Fragment</p>
+</li>
+<li><p>（在主线程）传入 Activity： 作用域为 Activity</p>
+</li>
+</ul>
+<blockquote>
+<p>所以也可以总结说 Application 作用域和非Application 作用域，这是根据是否创建空白 Fragment 监听生命周期这个动作来区分的</p>
+</blockquote>
+<p>老师说学习开源框架最好的方式就是：先大概看一遍，然后仿照它的 API 开始自己写，把它所有的实现都简化：比如它是工厂模式创建对象，那我就直接 new 出来；假如它有各种判空，直接干掉，假如有复杂的条件判断，先干掉。实现最简单的，这样才能快速理解整个流程。</p>
+<p>RequestManager 中，生命周期 onStart 的时候: 运行队列-全部开始执行；等待队列-全部清空；onStop 的时候： 运行队列-全部停止，所有任务添加到等待队列；</p>
+<p>Glide 中设计很巧妙的一个点就是：Glide 需要保证一个 Activity 只能有一个空白 Fragment 来监听它的生命周期，那么在 RequestManagerRetriever 这个类中，就会写出看起来匪夷所思的代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> RequestManagerFragment <span class="title">getRequestManagerFragment</span><span class="params">(FragmentManager fm, Fragment parentHint, <span class="keyword">boolean</span> isParentVisible)</span> </span>{</span><br><span class="line">  RequestManagerFragment current = (RequestManagerFragment) fm.findFragmentByTag(FRAGMENT_TAG);</span><br><span class="line">  <span class="keyword">if</span> (current == <span class="keyword">null</span>) {</span><br><span class="line">    current = pendingRequestManagerFragments.get(fm);</span><br><span class="line">    <span class="keyword">if</span> (current == <span class="keyword">null</span>) {</span><br><span class="line">      current = <span class="keyword">new</span> RequestManagerFragment();</span><br><span class="line">      current.setParentFragmentHint(parentHint);</span><br><span class="line">      <span class="keyword">if</span> (isParentVisible) {</span><br><span class="line">        current.getGlideLifecycle().onStart();</span><br><span class="line">      }</span><br><span class="line">      pendingRequestManagerFragments.put(fm, current);</span><br><span class="line">      fm.beginTransaction().add(current, FRAGMENT_TAG).commitAllowingStateLoss();</span><br><span class="line">      handler.obtainMessage(ID_REMOVE_FRAGMENT_MANAGER, fm).sendToTarget();</span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line">  <span class="keyword">return</span> current;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>创建了这个 fragment 需要将其放入map 中先保存起来，之后再 commit 这个 fragment ；再然后就通过 Handler 移除这个 fragment ，为什么这么做？</p>
+<p>这是因为 fragment 做 commit 操作的时候，是通过主线程的 Handler 执行的，最后会体现在handler 往主线程发送了一个 Message，如果这个Message 还没执行，此时来了第二个请求，那么它通过 getTag 去获取这个 Fragment 是获取不到的，那么就会再创建一个，所以这里需要缓存下；那为什么在 commit 之后可以通过（主线程的） Handler 移除缓存的Fragment 呢？那么是因为 ，由于 commit 操作先执行，那么 commit 这个 Message 肯定在后续的移除 fragment 的这个 Message 之后，由于 Handler 是顺序执行这些 Message 的，所以执行移除操作的时候，commit 的那个 message 肯定已经执行过了，所以可以执行！</p>
+<p>JetPack 的 Lifecycle 就是 模仿的 Glide 。Glide 的源码太庞大了。</p>
+<p>有两个空白 Fragment ，一个是 Androidx 的 Fragment ，一个是 android.app 的 Fragment 。我们要注意区分。</p>
+<h2 id="三、生命周期回调"><a href="#三、生命周期回调" class="headerlink" title="三、生命周期回调"></a>三、生命周期回调</h2><p>Fresco 看起来非常舒服，很容易看懂</p>
+<p>但是 Glide 可能你看了一周源码，还是找不到网络请求的地方，看懂 Glide 的源码之后，再去看 Fresco 和 Picaso 都是很简单的事情。老师说是要研究半年才能给大家说这个事情。</p>
+<p>老师说 RxJava 和 Okhttp 在 Glide 面前是小弟。这个也确实比较复杂</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/16/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8B%E3%80%91/" rel="next" title="08-Okhttp-【下】">
+                  <i class="fa fa-chevron-left"></i> 08-Okhttp-【下】
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/17/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%BA%8C%E8%8A%82%E8%AF%BE(%E6%9C%80%E6%96%B0Glide4.11%20%E4%B8%BB%E7%BA%BF%E6%B5%81%E7%A8%8B%E5%88%86%E6%9E%90)/" rel="prev" title="09-Glide-第二节课(最新Glide4.11 主线流程分析)">
+                  09-Glide-第二节课(最新Glide4.11 主线流程分析) <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BD%95%E7%9B%91%E5%90%ACActivity-Fragment-%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="nav-number">1.</span> <span class="nav-text">一、为何监听Activity&#x2F;Fragment 生命周期</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E4%BD%9C%E7%94%A8%E5%9F%9F"><span class="nav-number">2.</span> <span class="nav-text">二、生命周期作用域</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%9B%9E%E8%B0%83"><span class="nav-number">3.</span> <span class="nav-text">三、生命周期回调</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'e020d55f968b746ff389a293610d2afa',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

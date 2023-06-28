@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、重试重定向拦截器-重试限制首先判断是否取消了，取消了直接抛出异常 之后在 try-catch 代码块里面执行责任链获取 response，并且捕捉 RouteException （路线异常，比如 socket 连接失败）和 IOException （IO 异常），在这 2 种 异常中判断是否需要重试，调用的是 recover 函数： 123456&#x2F;&#x2F;检查是否需要重试if (!recover(e">
+<meta property="og:type" content="article">
+<meta property="og:title" content="08-Okhttp-【下】">
+<meta property="og:url" content="https://glassx.github.io/2023/06/16/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8B%E3%80%91/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、重试重定向拦截器-重试限制首先判断是否取消了，取消了直接抛出异常 之后在 try-catch 代码块里面执行责任链获取 response，并且捕捉 RouteException （路线异常，比如 socket 连接失败）和 IOException （IO 异常），在这 2 种 异常中判断是否需要重试，调用的是 recover 函数： 123456&#x2F;&#x2F;检查是否需要重试if (!recover(e">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E8%BF%9E%E6%8E%A5%E6%B5%81%E8%BD%AC%E8%BF%87%E7%A8%8B.png">
+<meta property="article:published_time" content="2023-06-16T08:03:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T14:50:30.069Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E8%BF%9E%E6%8E%A5%E6%B5%81%E8%BD%AC%E8%BF%87%E7%A8%8B.png">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/16/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8B%E3%80%91/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>08-Okhttp-【下】 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/16/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8B%E3%80%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          08-Okhttp-【下】
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-16 16:03:00" itemprop="dateCreated datePublished" datetime="2023-06-16T16:03:00+08:00">2023-06-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 22:50:30" itemprop="dateModified" datetime="2023-06-28T22:50:30+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、重试重定向拦截器-重试限制"><a href="#一、重试重定向拦截器-重试限制" class="headerlink" title="一、重试重定向拦截器-重试限制"></a>一、重试重定向拦截器-重试限制</h2><p>首先判断是否取消了，取消了直接抛出异常</p>
+<p>之后在 try-catch 代码块里面执行责任链获取 response，并且捕捉 RouteException （路线异常，比如 socket 连接失败）和 IOException （IO 异常），在这 2 种 异常中判断是否需要重试，调用的是 recover 函数：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//检查是否需要重试</span></span><br><span class="line"><span class="keyword">if</span> (!recover(e.lastConnectException, call, request, requestSendStarted = <span class="literal">false</span>)) {</span><br><span class="line">    <span class="keyword">throw</span> e.firstConnectException.withSuppressed(recoveredFailures)</span><br><span class="line">} <span class="keyword">else</span> {</span><br><span class="line">    <span class="comment">//。。。。</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看出，检查是否需要重试，如果不需要，直接抛出异常就终止了，否则才继续往后面走重试。那么是否需要重试的条件是什么呢？ 有以下几点：</p>
+<ul>
+<li><p>OkHttpClient 可以配置是否允许重试，设置为 false 直接不能重试</p>
+</li>
+<li><p>request body 不允许复用，那就不能重试</p>
+</li>
+<li><p>产生了 FileNotFoundException 异常，也不用重试了</p>
+</li>
+<li><p>产生了不允许重试的异常（协议异常-如返回204代表无响应体，但是Content-Lenth 不为0，二者产生冲突，就是协议异常了、证书异常、除连接超时之外的 IO 中断异常）</p>
+</li>
+<li><p>最后一关，是否有拥有更多路线（设置了代理，DNS 返回了多个 ip -应该重试其他ip），即使上面的判断都通过，只要没有更多路线，都不能重试</p>
+</li>
+</ul>
+<p>重定向限制次数，<strong>20 次</strong></p>
+<h2 id="二、重试重定向拦截器-重定向规则"><a href="#二、重试重定向拦截器-重定向规则" class="headerlink" title="二、重试重定向拦截器-重定向规则"></a>二、重试重定向拦截器-重定向规则</h2><p>次数超出 20 次，也抛出异常。</p>
+<p>代码中是通过 followUpRequest 方法来确定重定向的，同过 response 的响应码来判断响应码，这个重定向看起来不只是重定向功能，如果只是重定向，可能只需要判断 3xx 这个码就可以了，实际上，这里面判断多个码，包括：</p>
+<ul>
+<li><p>3xx：重定向</p>
+</li>
+<li><p>401：服务器需要授权，比如某些接口需要登录</p>
+</li>
+<li><p>407：代理需要授权，比如付费代理，验证身份</p>
+</li>
+<li><p>408：请求超时</p>
+</li>
+<li><p>421：当前客户端所在的ip到服务器的连接数超了</p>
+</li>
+<li><p>503：服务不可用</p>
+</li>
+</ul>
+<p>个人觉得准备面试的话就记住 3xx、需要授权、连接数超了这几个基本上就可以了</p>
+<blockquote>
+<p>代理有 2 种，HTTP 代理和 Socket 代理，Http代理代理的是 Http，Socket 代理它代理的是 TCP/IP </p>
+</blockquote>
+<h2 id="三、桥接拦截器"><a href="#三、桥接拦截器" class="headerlink" title="三、桥接拦截器"></a>三、桥接拦截器</h2><p>桥接拦截器主要功能就是在请求前和请求后做一些通用繁琐处理：</p>
+<ul>
+<li><p>请求前补全请求头（设置cookie、设置UA、设置Host字段、content-Length 、Content-Type 、Gzip 压缩等）</p>
+</li>
+<li><p>得到响应后：接收 Cookies 并回调给用户，在下次请求的时候读取相应 cookies 数据设置到请求头；如果有设置 gzip ，则解析 gzip 数据</p>
+</li>
+</ul>
+<h2 id="四、缓存拦截器"><a href="#四、缓存拦截器" class="headerlink" title="四、缓存拦截器"></a>四、缓存拦截器</h2><p>关于缓存的请求头和响应头非常多，所以这里很复杂，Http 的缓存我们可以按照行为分为： <strong>强缓存</strong> 和 <strong>协商缓存</strong>。</p>
+<ul>
+<li><p>强缓存： 有缓存的时候，直接将缓存给用户，不会发送请求给服务端，可以通过 Cache-Control 和 Expires 来判断缓存过期时间。</p>
+</li>
+<li><p>协商缓存：请求还是会发给服务端，但是服务端可能会返回 304 （此时没有请求体的），意味着服务端在这段时间没有修改，使用本地的缓存就好。</p>
+</li>
+</ul>
+<p>如果 networkReqeust 存在，则优先发起网络请求，否则使用 cacheResponse 缓存，若都不存在则请求失败。</p>
+<h2 id="五、连接拦截器-新建连接"><a href="#五、连接拦截器-新建连接" class="headerlink" title="五、连接拦截器-新建连接"></a>五、连接拦截器-新建连接</h2><p>代码很少，总共就 4 行代码</p>
+<p>在这里来判断是 http1 还是 http2。找到连接之后，还需要连接是否健康（未关闭，正常工作），</p>
+<p>普通代理：可以想象 Fiddler，它是可以更改你的数据再发送出去的</p>
+<p>隧道代理：是无法更改客户端的请求的，将客户端的数据无脑地发送给服务端</p>
+<p>Okhttp 支持你创建代理，可以选择是 Http 代理还是 Sockets 代理。老师有写这些代理使用的方式，有现成代码，这里就不贴出来了。</p>
+<p>ALPN 是 TLS 的扩展协议，从 与 服务端的 hello 里面可以协商到使用哪一种协议。会存储在 sslSocket 中</p>
+<h2 id="六、连接拦截器-连接池"><a href="#六、连接拦截器-连接池" class="headerlink" title="六、连接拦截器-连接池"></a>六、连接拦截器-连接池</h2><p>首先从连接池中获取连接，如果没有，才去做上述的新建连接。</p>
+<p>每次put 新的连接到池子里面的时候，都会扔进去一个定时执行的 Task，用于执行 clean 任务，清除不可用的连接，无效的连接。不移走会占用内存。比如，你刚创建的连接，那么5分钟后肯定会过期，如果没有使用的话</p>
+<p>连接池最多允许 5 个空闲连接；连接池中闲置的连接最多允许闲置 5 分钟。比如，某个连接 baidu.com 只使用了一次，这样就能将其清理掉。清理的时候，将闲置时长最长的清理掉。 </p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E8%BF%9E%E6%8E%A5%E6%B5%81%E8%BD%AC%E8%BF%87%E7%A8%8B.png" alt="连接执行流程"></p>
+<h2 id="七、请求服务拦截器与面试总结"><a href="#七、请求服务拦截器与面试总结" class="headerlink" title="七、请求服务拦截器与面试总结"></a>七、请求服务拦截器与面试总结</h2><p>发送很简单，这里就不写了，有个点需要注意下，如果是发送个比较大的文件，是需要与服务端协商的，Okhttp 是这样做的：</p>
+<ol>
+<li><p>如果服务器允许则返回 100 ，则客户端继续发送请求体</p>
+</li>
+<li><p>如果服务器不允许就直接返回给用户</p>
+</li>
+<li><p>如果服务器忽略这个问询的请求头，一直无法读取应答，此时会抛出超时异常</p>
+</li>
+</ol>
+<h3 id="7-1-面试题"><a href="#7-1-面试题" class="headerlink" title="7.1 面试题"></a>7.1 面试题</h3><p>Okhttp 的请求过程</p>
+<p>构建 Request ，通过 OkhttpClient 获得 Call （RealCall对象）如果：</p>
+<ul>
+<li><p>是同步请求，则在发起请求的线程中直接获取结果（调用5个Interceptor）</p>
+</li>
+<li><p>如果是异步请求，则通过 Dispatcher 分发到线程池中进行请求获取结果（也是调用5个Interceptor）</p>
+</li>
+</ul>
+<p>拦截器如何工作的？</p>
+<p>责任链模式将请求者与执行者解耦，请求者只需将请求发送给责任链即可</p>
+<p>应用拦截器与网络拦截器的区别？</p>
+<ul>
+<li><p>他们在 interceptors 中的顺序不一样</p>
+</li>
+<li><p>网络拦截器不一定执行，因为有可能直接拿了缓存，不需要后续的执行了</p>
+</li>
+</ul>
+<p>Okhttp 如何复用连接？</p>
+<p>host 验证规则一样、dns 一样等等，这些属性都一样。当然，也会清理垃圾连接，超过 5 分钟没有使用的连接，超过5个闲置连接后，清理闲置最久的连接</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/15/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8A%E3%80%91/" rel="next" title="08-Okhttp-【上】">
+                  <i class="fa fa-chevron-left"></i> 08-Okhttp-【上】
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/17/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%B8%80%E8%8A%82%E8%AF%BE(%E6%9C%80%E6%96%B0Glide4.11%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB)/" rel="prev" title="09-Glide-第一节课(最新Glide4.11源码阅读)">
+                  09-Glide-第一节课(最新Glide4.11源码阅读) <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E9%87%8D%E8%AF%95%E9%87%8D%E5%AE%9A%E5%90%91%E6%8B%A6%E6%88%AA%E5%99%A8-%E9%87%8D%E8%AF%95%E9%99%90%E5%88%B6"><span class="nav-number">1.</span> <span class="nav-text">一、重试重定向拦截器-重试限制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E9%87%8D%E8%AF%95%E9%87%8D%E5%AE%9A%E5%90%91%E6%8B%A6%E6%88%AA%E5%99%A8-%E9%87%8D%E5%AE%9A%E5%90%91%E8%A7%84%E5%88%99"><span class="nav-number">2.</span> <span class="nav-text">二、重试重定向拦截器-重定向规则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%A1%A5%E6%8E%A5%E6%8B%A6%E6%88%AA%E5%99%A8"><span class="nav-number">3.</span> <span class="nav-text">三、桥接拦截器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E7%BC%93%E5%AD%98%E6%8B%A6%E6%88%AA%E5%99%A8"><span class="nav-number">4.</span> <span class="nav-text">四、缓存拦截器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E8%BF%9E%E6%8E%A5%E6%8B%A6%E6%88%AA%E5%99%A8-%E6%96%B0%E5%BB%BA%E8%BF%9E%E6%8E%A5"><span class="nav-number">5.</span> <span class="nav-text">五、连接拦截器-新建连接</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E8%BF%9E%E6%8E%A5%E6%8B%A6%E6%88%AA%E5%99%A8-%E8%BF%9E%E6%8E%A5%E6%B1%A0"><span class="nav-number">6.</span> <span class="nav-text">六、连接拦截器-连接池</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E8%AF%B7%E6%B1%82%E6%9C%8D%E5%8A%A1%E6%8B%A6%E6%88%AA%E5%99%A8%E4%B8%8E%E9%9D%A2%E8%AF%95%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">七、请求服务拦截器与面试总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E9%9D%A2%E8%AF%95%E9%A2%98"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 面试题</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '0943f314485fe7ba2ddee3bdc431cf8c',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

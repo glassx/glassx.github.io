@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、储备知识很多同学回答 Binder 是什么的时候，只会说 Binder 是一种进程间通信机制，这是不完善的，我们要说出以下 3 个点才算完整：  机制：Binder 是一个进程间通信机制 驱动： Binder 是一个虚拟物理设备驱动 应用层：Binder 是一个能发起通信的 Java 类（Service里面就有用到Binder类）  Linux 一切皆文件  多进程的好处？  突破内存限制，如">
+<meta property="og:type" content="article">
+<meta property="og:title" content="（02）2021.12.12-Binder机制与常见面试题讲解---Leo老师">
+<meta property="og:url" content="https://glassx.github.io/2023/06/09/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8802%EF%BC%892021.12.12-Binder%E6%9C%BA%E5%88%B6%E4%B8%8E%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%E8%AE%B2%E8%A7%A3---Leo%E8%80%81%E5%B8%88/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、储备知识很多同学回答 Binder 是什么的时候，只会说 Binder 是一种进程间通信机制，这是不完善的，我们要说出以下 3 个点才算完整：  机制：Binder 是一个进程间通信机制 驱动： Binder 是一个虚拟物理设备驱动 应用层：Binder 是一个能发起通信的 Java 类（Service里面就有用到Binder类）  Linux 一切皆文件  多进程的好处？  突破内存限制，如">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-09T02:20:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T13:42:22.843Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-源码解析">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/09/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8802%EF%BC%892021.12.12-Binder%E6%9C%BA%E5%88%B6%E4%B8%8E%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%E8%AE%B2%E8%A7%A3---Leo%E8%80%81%E5%B8%88/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>（02）2021.12.12-Binder机制与常见面试题讲解---Leo老师 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/09/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8802%EF%BC%892021.12.12-Binder%E6%9C%BA%E5%88%B6%E4%B8%8E%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%E8%AE%B2%E8%A7%A3---Leo%E8%80%81%E5%B8%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          （02）2021.12.12-Binder机制与常见面试题讲解---Leo老师
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-09 10:20:00" itemprop="dateCreated datePublished" datetime="2023-06-09T10:20:00+08:00">2023-06-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 21:42:22" itemprop="dateModified" datetime="2023-06-28T21:42:22+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、储备知识"><a href="#一、储备知识" class="headerlink" title="一、储备知识"></a>一、储备知识</h2><p>很多同学回答 Binder 是什么的时候，只会说 Binder 是一种进程间通信机制，这是不完善的，我们要说出以下 3 个点才算完整：</p>
+<ul>
+<li>机制：Binder 是一个进程间通信机制</li>
+<li>驱动： Binder 是一个虚拟物理设备驱动</li>
+<li>应用层：Binder 是一个能发起通信的 Java 类（Service里面就有用到Binder类）</li>
+</ul>
+<p>Linux 一切皆文件 </p>
+<p>多进程的好处？</p>
+<ul>
+<li>突破内存限制，如图库内存占用过多</li>
+<li>功能稳定性，比如长连接，独立进程</li>
+<li>规避内存泄漏，比如 webview 正常使用会有内存泄漏</li>
+<li>隔离风险： 不稳定的功能放入独立的进程，比如dump 内存</li>
+</ul>
+<p>为什么Android采用 Binder：</p>
+<ul>
+<li>性能： 只需要一次</li>
+<li>特点：基于C/S，易用性高（如共享内存使用很复杂，参考多线程共享变量，涉及的线程安全加锁）</li>
+<li>安全性，为每个App分配 UID，同时支持匿名和实名。公交车，只要能到那里，都能坐车；Binder 既有实名又有匿名，实名的服务是大家都可以访问，比如 AMS、WMS ，匿名服务，类似滴滴打车，你是不能直接联系到司机的，只能通过滴滴给你虚拟号。匿名服务只能通过代理去真正获取服务。（实名和匿名的区别在于是否注册）。</li>
+</ul>
+<blockquote>
+<p>自己写的服务可以实名吗？是可以的，调用 API 即可</p>
+</blockquote>
+<p>一个进程会分为 用户空间和内核空间。如果是 32位系统（总共有 2^32 这么大，即 4G），那么用户空间一般 3G，内核空间 1G </p>
+<p>所有进程的内核空间都是映射到物理内存上是同一块空间，</p>
+<p>内核空间是地球仪，物理内存是地球；进程1的用户空间是 月球仪器，对应的物理内存是月球；进程2的用户空间是火星仪，对应的物理内存是火星。</p>
+<p>我们平时说的拷贝次数，指的就是 copy_from_user 或者 copy_to_user 这种系统调用，每调用一次就是所说的类似 Binder 只用拷贝一次这种说法。</p>
+<blockquote>
+<p>为什么只关心这个系统的调用呢？这是因为在用户态和内核态切换非常耗时，它有上下文切换的，需要保存当前运行状态。</p>
+</blockquote>
+<p>传统的IPC就是 copy_from_user ，接着再 copy_to_user ，2次</p>
+<p>服务端和内核端，google 已经实现了，所以开发者只要开发 客户端。降低 Binder 的使用难度</p>
+<p>为什么不从两个应用之间映射？还需要经过内核？</p>
+<p>老师说的是，如果直接2个应用之间，就变成了 内存共享，google 做 Binder 就是因为内存共享比较难控制，所以宁愿用 Binder 来浪费一次性能。感觉说服力不够，得自己想想。</p>
+<h2 id="二、Binder"><a href="#二、Binder" class="headerlink" title="二、Binder"></a>二、Binder</h2><p>MMKV 也是使用 mmap 实现的。</p>
+<h3 id="2-1-AIDL-生成的类细节"><a href="#2-1-AIDL-生成的类细节" class="headerlink" title="2.1 AIDL 生成的类细节"></a>2.1 AIDL 生成的类细节</h3><p>AIDL 类似黄牛，帮我们代办一些事情，降低办事的复杂度。帮我们生成 Java 代码。AIDL 生成的 Java 代码，我们自己去手写也是一样的。</p>
+<p>Proxy 是给客户端使用的，Stub 服务端使用。asInterface 判断如果是跨进程，那么返回的是代理对象，否则，返回的是本身。Binder 通信会创建 2个 Parcel  ，一个是数据包，一个是结果包。</p>
+<p>ServiceManager 也是个服务，它的 handle 句柄是固定的： 0 。Service 创建之后，可以去 ServiceManager 中注册，建立 Service 和 handle 句柄的映射关系。</p>
+<p>客户端调用 transact 方法的时候，服务端那边就会响应 onTransact 方法。我们一般调用一个类的方法，可以写明全路径，比如一般是： com.xx.haha.Demo ，但是在 Binder 中，觉得传全路径过去占用的空间比较大，所以对方法做了精简，比如，用 1 代表 addPerson、2代表getPersonList 等，节约空间。这个体现在 Stub 中的那些静态常量。</p>
+<p>onTransact 中，如果调用的方法没有返回值，则执行完就完了；否则，将执行结果写到 reply 中。 客户端调用服务端一般是同步的，所以计算过程客户端会挂起，所以一般要在子线程去做这种Binder 调用。<strong>如果要使用异步调用，就使用 oneWay</strong></p>
+<h3 id="2-2-Intent-为什么不能传送大的数据"><a href="#2-2-Intent-为什么不能传送大的数据" class="headerlink" title="2.2 Intent 为什么不能传送大的数据"></a>2.2 Intent 为什么不能传送大的数据</h3><p>为什么只能 1M - 8k ？这是因为 Binder 是一个驱动，通过 mmap 创建的空间大小就是 1M - 8k （就是 1M - 2 * pageSize ，pageSize 是 4k），如果是异步的话 ，则是 (1M - 8k)/2 。</p>
+<p>至于为什么是 1M - 8k ，那总得给个数字，不可能无限大。可能是为了充分利用存储空间。</p>
+<p>mmp 最开始只会给 1 页，也就是 4k ，如果有需要才会扩充，最大就是上面说的 1M - 8k （oneWay 就减半）。</p>
+<blockquote>
+<p>其实还有一个打包需要占用空间，所以真正可用的空间还不到 1M - 8k</p>
+</blockquote>
+<p><font color="#ff0000">补充视频里面有代码的详细讲解，不过目前面试用不到，先不看</font></p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" rel="tag"># 享学Android三期-源码解析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/08/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8801%EF%BC%892021.12.9-Handler%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90---Alvin%E8%80%81%E5%B8%88%EF%BC%883%EF%BC%89/" rel="next" title="（01）2021.12.9-Handler源码分析---Alvin老师（3）">
+                  <i class="fa fa-chevron-left"></i> （01）2021.12.9-Handler源码分析---Alvin老师（3）
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/09/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8803%EF%BC%892021.12.14-Android%E7%9A%84%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B---Leo%E8%80%81%E5%B8%88/" rel="prev" title="（03）2021.12.14-Android的启动流程---Leo老师">
+                  （03）2021.12.14-Android的启动流程---Leo老师 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%82%A8%E5%A4%87%E7%9F%A5%E8%AF%86"><span class="nav-number">1.</span> <span class="nav-text">一、储备知识</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Binder"><span class="nav-number">2.</span> <span class="nav-text">二、Binder</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-AIDL-%E7%94%9F%E6%88%90%E7%9A%84%E7%B1%BB%E7%BB%86%E8%8A%82"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 AIDL 生成的类细节</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Intent-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E4%BC%A0%E9%80%81%E5%A4%A7%E7%9A%84%E6%95%B0%E6%8D%AE"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Intent 为什么不能传送大的数据</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '069c0888abb6ef64516d2baf02b7700a',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

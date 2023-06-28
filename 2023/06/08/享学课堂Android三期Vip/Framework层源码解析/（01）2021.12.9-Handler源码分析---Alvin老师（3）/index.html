@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="线程的跨越是怎么实现的？ 内存是不分线程的，可以在子线程和主线程都使用。 在子线程里面执行某个函数（比如调用 Handler 的 sendMessage 方法），这个函数就在子线程里面 事件变为内存了，MessageQueue.enqueueMessage(msg) 将这一块内存放入了 MessageQueue 了。  Looper.loop 是在主线程中，所以取出来的 Message 是通过 d">
+<meta property="og:type" content="article">
+<meta property="og:title" content="（01）2021.12.9-Handler源码分析---Alvin老师（3）">
+<meta property="og:url" content="https://glassx.github.io/2023/06/08/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8801%EF%BC%892021.12.9-Handler%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90---Alvin%E8%80%81%E5%B8%88%EF%BC%883%EF%BC%89/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="线程的跨越是怎么实现的？ 内存是不分线程的，可以在子线程和主线程都使用。 在子线程里面执行某个函数（比如调用 Handler 的 sendMessage 方法），这个函数就在子线程里面 事件变为内存了，MessageQueue.enqueueMessage(msg) 将这一块内存放入了 MessageQueue 了。  Looper.loop 是在主线程中，所以取出来的 Message 是通过 d">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-08T09:00:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T13:39:59.002Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-源码解析">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/08/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8801%EF%BC%892021.12.9-Handler%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90---Alvin%E8%80%81%E5%B8%88%EF%BC%883%EF%BC%89/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>（01）2021.12.9-Handler源码分析---Alvin老师（3） | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/08/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8801%EF%BC%892021.12.9-Handler%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90---Alvin%E8%80%81%E5%B8%88%EF%BC%883%EF%BC%89/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          （01）2021.12.9-Handler源码分析---Alvin老师（3）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-08 17:00:00" itemprop="dateCreated datePublished" datetime="2023-06-08T17:00:00+08:00">2023-06-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 21:39:59" itemprop="dateModified" datetime="2023-06-28T21:39:59+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>线程的跨越是怎么实现的？</p>
+<p>内存是不分线程的，可以在子线程和主线程都使用。</p>
+<p>在子线程里面执行某个函数（比如调用 Handler 的 sendMessage 方法），这个函数就在子线程里面</p>
+<p>事件变为内存了，MessageQueue.enqueueMessage(msg) 将这一块内存放入了 MessageQueue 了。 </p>
+<p>Looper.loop 是在主线程中，所以取出来的 Message 是通过 dispatchMessage 放在 主线程执行的</p>
+<p>所以上述就是子线程切换到主线程的流程。</p>
+<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>有学员问存在以下几个条件：</p>
+<ol>
+<li><p>所有 Looper 对象（不论主线程还是子线程的）中放 Looper 对象的 ThreadLocal 都是同一个对象</p>
+<blockquote>
+<p>这个没问题，因为 Looper 类中的 用于存放Looper 对象的 ThreadLocal 是 static final 的，整个 App 只有一个</p>
+</blockquote>
+</li>
+<li><p>那么看起来，所有线程也都公用同一个 Looper 对象了啊</p>
+</li>
+</ol>
+<p>看下 Looper 的源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ThreadLocal&lt;Looper&gt; sThreadLocal = <span class="keyword">new</span> ThreadLocal&lt;Looper&gt;();</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以学员说得没错， sThreadLocal 是整个 App 唯一的。但是，如果我们了解 ThreadLocal 的源码的话，就能得出如下的式子：</p>
+<blockquote>
+<p>Thread1 -&gt; 有自己的 ThreadLocalMap1 -&gt; 存储的键值对样式 &lt;sThreadLocal, Looper1&gt;</p>
+</blockquote>
+<blockquote>
+<p>Thread2 -&gt; 有自己的 ThreadLocalMap2 -&gt; 存储的键值对样式&lt;sThreadLocal, Looper2&gt;</p>
+</blockquote>
+<p>能看到，在线程1中键值对存在ThreadLocalMap1 这个map 对象中， 样式是 &lt;sThreadLocal, Looper1&gt; ；线程2 中键值对存在 ThreadLocalMap2 这个 map 对象中，的样式是 &lt;sThreadLocal, Looper2&gt;</p>
+<p>所以，根本原因在于： <strong>每个线程都有自己的 ThreadLocalMap</strong>，虽然所有的线程中的不一样的 Looper 对象都有同一个 ThreadLocal 对象，但是这些线程有不一样的 ThreadLocalMap ，所以用同一个 ThreadLocal 对象作为 key 在不同的 ThreadLocalMap 中取值，取到的肯定是不同的 Looper ，这下明白了。</p>
+<h3 id="如何获取-Message"><a href="#如何获取-Message" class="headerlink" title="如何获取 Message"></a>如何获取 Message</h3><p>使用 Message.obtain() ，因为 Message 使用完成后，都会回收，所以我们可以一直使用，这是享元设计模式。这样就维持一个池子，避免内存抖动，防止 OOM。new 了必然会回收，回收了就可能有碎片。</p>
+<p>在 Looper.loop 方法里面，msg.target.dispathcMessage(msg) 执行完后，在 for(; ;) 死循环最后一句的时候会调用 msg.recycleUnchecked(); 进行回收，将回收的msg 插入到池子的<strong>头部</strong>。</p>
+<h3 id="Looper-死循环不会-ANR-？"><a href="#Looper-死循环不会-ANR-？" class="headerlink" title="Looper 死循环不会 ANR ？"></a>Looper 死循环不会 ANR ？</h3><p>不是同一个层面的东西。毫不相关的问题。点击 5秒没响应 ANR ，其实这个点击事件它也是一个 Message。</p>
+<h2 id="HandlerThread"><a href="#HandlerThread" class="headerlink" title="HandlerThread"></a>HandlerThread</h2><p>HandlerThread 存在的意义：</p>
+<ul>
+<li><p>方便使用</p>
+</li>
+<li><p>线程安全，getLooper 的线程安全问题</p>
+</li>
+</ul>
+<p>wait 会释放锁，这样其他的函数才能获取到锁执行 notify 操作。notify 不会释放锁， 要等 synchronized 代码全部执行完才释放锁（notify操作可能不在synchronized 代码块最后 ）。</p>
+<h3 id="IntentService"><a href="#IntentService" class="headerlink" title="IntentService"></a>IntentService</h3><p>处理后台耗时任务。一个任务分为多个子任务，子任务按照顺序执行完成后，任务才能算完成，这时候可以使用 IntentService ，这样可以保证所有的子任务在同一线程执行。关于要执行的多个任务，代码写法如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 请求1</span></span><br><span class="line">Intent i = <span class="keyword">new</span> Intent(<span class="string">"cn.scu.finch"</span>);</span><br><span class="line">Bundle bundle = <span class="keyword">new</span> Bundle();</span><br><span class="line">bundle.putString(<span class="string">"taskName"</span>, <span class="string">"task1"</span>);</span><br><span class="line">i.putExtras(bundle);</span><br><span class="line">startService(i);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 请求2</span></span><br><span class="line">Intent i2 = <span class="keyword">new</span> Intent(<span class="string">"cn.scu.finch"</span>);</span><br><span class="line">Bundle bundle2 = <span class="keyword">new</span> Bundle();</span><br><span class="line">bundle2.putString(<span class="string">"taskName"</span>, <span class="string">"task2"</span>);</span><br><span class="line">i2.putExtras(bundle2);</span><br><span class="line">startService(i2);</span><br><span class="line"></span><br><span class="line">startService(i);  <span class="comment">//多次启动</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p> 具体可以参考<a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1963339">Android多线程：IntentService使用教程(含实例讲解)-腾讯云开发者社区-腾讯云 (tencent.com)</a></p>
+<p>类似的思想也体现在 Fragment 的管理上，：</p>
+<p>在 FragmentPagerAdapter 中，会有 instantiateItem 方法。里面会执行 mCurTrasaction.attach(fragment) ，去 attach fragment ，但是这个 attach 方法会立即执行么？ 不会的，这时候只会加入list 中，等 commit 的时候才会一起执行。</p>
+<p>并且可以保证 attach 一定是在 detach 后面执行，也是用 msg 来实现</p>
+<p><strong>具体得自己再去看下源码</strong>，老师讲得不详细。</p>
+<h4 id="glide-中的巧妙使用"><a href="#glide-中的巧妙使用" class="headerlink" title="glide 中的巧妙使用"></a>glide 中的巧妙使用</h4><p>假设有这样一段代码：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">with</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">val</span> fragmentManager = supportFragmentManager</span><br><span class="line">    <span class="keyword">val</span> f: MyFragment? = fragmentManager.findFragmentByTag(<span class="string">"tag"</span>) <span class="keyword">as</span> MyFragment?</span><br><span class="line">    <span class="keyword">if</span> (f == <span class="literal">null</span>) {</span><br><span class="line">        fragmentManager.beginTransaction()</span><br><span class="line">            .add(MyFragment(), <span class="string">"tag"</span>)</span><br><span class="line">            .commitAllowingStateLoss()</span><br><span class="line"></span><br><span class="line">        <span class="comment">//通过某种途径得到commit 时候用到的 handler </span></span><br><span class="line">        <span class="comment">//handler.sendMessage(removeFragmentMessage)</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果连续调用 2 次，会怎样？可能你会想，第一次已经创建了 MyFragment 实例了，第二次直接通过 findFragmentByTag 就能找出来了。但是不是的，可能会创建 2 次 MyFragment 。这是因为最后在 commitAllowingStateLoss 的时候，最终是将这个操作作为一个 msg 扔到 Handler 里面。所以，<strong>第二次调用 with 的时候，第一次不一定执行完</strong>!所以，可能执行 2 次。 这个在 glide 的源码中有体现：</p>
+<ol>
+<li><p>创建一个 HashMap ，以 tag 为key ，第一次的时候，首先从 hashmap中获取，如果没有，再从 fragmentManager 中获取，如果还没有，就创建一个，然后将其加入到 HashMap 中</p>
+</li>
+<li><p>第二次的时候，首先判断 HashMap 里面有没有，如果有的话，就忽略，因为这个 Fragment 最终肯定会被创建出来，此时应该是commit 的中提交到 handler 中的 msg 还没执行。</p>
+</li>
+<li><p>在上述代码的注释部分，可以看到最终通过handler 发送一个消息，这个消息用于将 fragment 从 HashMap 中移除 Fragment ，防止内存泄漏。</p>
+</li>
+</ol>
+<blockquote>
+<p>第三点为什么可以这么做呢？因为同一个handler ，commit 的时候发的消息，肯定在前面，后续用于移除 msg 的 msg 肯定在后面，这样很巧妙地保证了用完fragmengt 就从 HashMap 中移除。</p>
+</blockquote>
+<p>上述代码其实就是 glide 中的一段代码设计思想，具体可以参考 <a target="_blank" rel="noopener" href="https://www.jianshu.com/p/317b2d6bde1b">Glide生命周期管理 - 简书 (jianshu.com)</a>    中  2.0.1 <strong>创建RequestManagerFragment</strong>  这个章节。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" rel="tag"># 享学Android三期-源码解析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/02/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8801%EF%BC%892021.12.9-Handler%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90---Alvin%E8%80%81%E5%B8%88%EF%BC%882%EF%BC%89/" rel="next" title="（01）2021.12.9-Handler源码分析---Alvin老师（2）">
+                  <i class="fa fa-chevron-left"></i> （01）2021.12.9-Handler源码分析---Alvin老师（2）
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/09/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8802%EF%BC%892021.12.12-Binder%E6%9C%BA%E5%88%B6%E4%B8%8E%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%E8%AE%B2%E8%A7%A3---Leo%E8%80%81%E5%B8%88/" rel="prev" title="（02）2021.12.12-Binder机制与常见面试题讲解---Leo老师">
+                  （02）2021.12.12-Binder机制与常见面试题讲解---Leo老师 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E8%8E%B7%E5%8F%96-Message"><span class="nav-number">2.</span> <span class="nav-text">如何获取 Message</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Looper-%E6%AD%BB%E5%BE%AA%E7%8E%AF%E4%B8%8D%E4%BC%9A-ANR-%EF%BC%9F"><span class="nav-number">3.</span> <span class="nav-text">Looper 死循环不会 ANR ？</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HandlerThread"><span class="nav-number"></span> <span class="nav-text">HandlerThread</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#IntentService"><span class="nav-number">1.</span> <span class="nav-text">IntentService</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#glide-%E4%B8%AD%E7%9A%84%E5%B7%A7%E5%A6%99%E4%BD%BF%E7%94%A8"><span class="nav-number">1.1.</span> <span class="nav-text">glide 中的巧妙使用</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '33e0eee559a4c0b8d42c1880d98dbdff',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

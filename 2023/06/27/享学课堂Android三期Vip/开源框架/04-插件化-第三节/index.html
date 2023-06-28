@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="HookAMS 使用的是动态代理，Hook Handler 使用的是反射。 Android 10 的 AMS 变成 ATMS ，Singleton 貌似也变了，需要注意适配。Handler 的话，由于原理没变，一般不需要另行适配 二、资源加载我们加载资源就关注2个地方：  assets 目录下的资源  res 目录下的资源   资源替换有2种可选方案：  插件与宿主的资源直接合并，但是可能引起资源">
+<meta property="og:type" content="article">
+<meta property="og:title" content="04-插件化-第三节">
+<meta property="og:url" content="https://glassx.github.io/2023/06/27/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/04-%E6%8F%92%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%89%E8%8A%82/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="HookAMS 使用的是动态代理，Hook Handler 使用的是反射。 Android 10 的 AMS 变成 ATMS ，Singleton 貌似也变了，需要注意适配。Handler 的话，由于原理没变，一般不需要另行适配 二、资源加载我们加载资源就关注2个地方：  assets 目录下的资源  res 目录下的资源   资源替换有2种可选方案：  插件与宿主的资源直接合并，但是可能引起资源">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-27T08:04:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T14:28:17.124Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/27/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/04-%E6%8F%92%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%89%E8%8A%82/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>04-插件化-第三节 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/27/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/04-%E6%8F%92%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%89%E8%8A%82/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          04-插件化-第三节
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-27 16:04:00" itemprop="dateCreated datePublished" datetime="2023-06-27T16:04:00+08:00">2023-06-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 22:28:17" itemprop="dateModified" datetime="2023-06-28T22:28:17+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>HookAMS 使用的是动态代理，Hook Handler 使用的是反射。</p>
+<p>Android 10 的 AMS 变成 ATMS ，Singleton 貌似也变了，需要注意适配。Handler 的话，由于原理没变，一般不需要另行适配</p>
+<h2 id="二、资源加载"><a href="#二、资源加载" class="headerlink" title="二、资源加载"></a>二、资源加载</h2><p>我们加载资源就关注2个地方：</p>
+<ul>
+<li><p>assets 目录下的资源</p>
+</li>
+<li><p>res 目录下的资源</p>
+</li>
+</ul>
+<p>资源替换有2种可选方案：</p>
+<ul>
+<li><p>插件与宿主的资源直接合并，但是可能引起资源冲突</p>
+</li>
+<li><p>专门创建一个新的 AssetManager （或者 Resource） 来加载插件的资源</p>
+</li>
+</ul>
+<h3 id="2-1-创建-Resources-对象"><a href="#2-1-创建-Resources-对象" class="headerlink" title="2.1 创建 Resources 对象"></a>2.1 创建 Resources 对象</h3><p>首先通过 class.newInstance （这是因为 AssetManager 不能直接去new ，hide 的）的方式创建一个 AssetManager 对象 myAssetManager，然后通过 addAssetPath 方法将插件的路径给加进去。之后new 出来 Resources 对象，传入这个创建的 myAssetManager 即可。</p>
+<p>那么，怎么让插件的 Activity 去用上这个 Resources 对象呢？我们可以借助 Application 去实现这个事情，分为以下几步：</p>
+<ol>
+<li><p>在宿主中定义 Application ，并且其 getResource 返回我们自己创建的 Resource 对象</p>
+</li>
+<li><p>插件 Activity 都继承 BaseActivity</p>
+</li>
+<li><p>在插件的 BaseActivity 中，getResource 返回 getApplication.getResource </p>
+</li>
+</ol>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//宿主里面</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyApplication</span> <span class="keyword">extends</span> <span class="title">Application</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Resources mResources;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.onCreate();</span><br><span class="line">        mResources = LoadUtil.loadResource(<span class="keyword">this</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Resources <span class="title">getResources</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">return</span> mResources == <span class="keyword">null</span> ? <span class="keyword">super</span>.getResources() : mResources;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//插件的 BaseActivity</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseActivity</span> <span class="keyword">extends</span> <span class="title">AppCompatActivity</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Resources <span class="title">getResources</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (getApplication() != <span class="keyword">null</span> &amp;&amp; getApplication().getResources() != <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">return</span> getApplication().getResources();</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getResources();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>但是，这样对 宿主 App 是会有影响的，我们能不能插件自己的资源插件自己去加载？并且我们知道，插件的 Application 是不会被执行的。为了不影响宿主，我们可以在 BaseActivity 中去做 Resource 的加载：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseActivity</span> <span class="keyword">extends</span> <span class="title">AppCompatActivity</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Resources <span class="title">getResources</span><span class="params">()</span> </span>{</span><br><span class="line">        Resources resources = LoadUtil.getResources(getApplication());</span><br><span class="line">        <span class="comment">// 如果插件作为一个单独的app，返回 super.getResources()</span></span><br><span class="line">        <span class="keyword">return</span> resources == <span class="keyword">null</span> ? <span class="keyword">super</span>.getResources() : resources;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>这里要尤其注意的是，<strong>LoadUtil.getResouces(context) 的时候一定要传入 Application 这个Context， 如果传入this 也就是当前 Activity 的Context ，就会导致循环调用了</strong>。 看下 LoadUtil 的实现：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LoadUtil</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">static</span> String apkPath = <span class="string">"/sdcard/plugin-debug.apk"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Resources mResources;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Resources <span class="title">getResources</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (mResources == <span class="keyword">null</span>) {</span><br><span class="line">            mResources = loadResource(context);</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> mResources;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> Resources <span class="title">loadResource</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">        <span class="comment">// assets.addAssetPath(key.mResDir)</span></span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            AssetManager assetManager = AssetManager.class.newInstance();</span><br><span class="line">            <span class="comment">// 让 这个 AssetManager对象 加载的 资源为插件的</span></span><br><span class="line">            Method addAssetPathMethod = AssetManager.class.getMethod(<span class="string">"addAssetPath"</span>, String.class);</span><br><span class="line">            addAssetPathMethod.invoke(assetManager, apkPath);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 如果传入的是Activity的 context 会不断循环，导致崩溃</span></span><br><span class="line">            Resources resources = context.getResources();</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 加载插件的资源的 resources</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> Resources(assetManager, resources.getDisplayMetrics(), resources.getConfiguration());</span><br><span class="line">        } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<h3 id="2-2-冲突导致崩溃"><a href="#2-2-冲突导致崩溃" class="headerlink" title="2.2 冲突导致崩溃"></a>2.2 冲突导致崩溃</h3><p>不过，这里要提一嘴，我们通过插件的 BaseActivity 这种方式能够完成插件资源加载并且不报错，是因为我们的 BaseActivity 继承了 Activity ，如果我们继承了 AppcompatActivity 的话，就会产生崩溃了，会提示这段代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mDecorContentParent = (DecorContentParent) subDecor</span><br><span class="line"> .findViewById(R.id.decor_content_parent);</span><br><span class="line">mDecorContentParent.setWindowCallback(getWindowCallback());</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>其中的 mDecorContentParent 为 null ，为什么会这样呢？我们可以看打出的包中，我们知道，R.id.xxx 最终在打包好的 Apk 中是 数值存在的，一般是 0x7fxxxxx之类的，我们可以看下宿主APk 和 插件 APk 中 R.id.decor_content_parent 最终的数值：</p>
+<blockquote>
+<p>// 宿主的<br>0x7f07004e decor_content_parent false</p>
+<p>// 插件的<br>0x7f07004d decor_content_parent false</p>
+</blockquote>
+<p>所以，在 宿主中，编译后应该是这样的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mDecorContentParent = (DecorContentParent) subDecor</span><br><span class="line"> .findViewById(<span class="number">0x7f07004e</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在插件中应该是这样的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mDecorContentParent = (DecorContentParent) subDecor</span><br><span class="line"> .findViewById(<span class="number">0x7f07004d</span>);</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>说明二者是不一样的值，一个是 4e ，一个是 4d 。而由于双亲委派的原因，这个AppcompatActivity 用的是宿主的，所以就会产生问题。<strong>注意，这个问题不论是aapt 修改还是new 出来 Resourse（AssetManger）的方式，都会出现</strong>。</p>
+<blockquote>
+<p>这里还是没怎么搞懂，讲道理因为宿主有 0x7f07004e ，那么插件在运行的时候也能找到这个 0x7f07004e 这个资源。</p>
+</blockquote>
+<p>老师说是因为 插件用的还是宿主那个 Context 导致的，所以需要在插件 BaseActivity 中创建自己的 Context （注意，这个操作不会影响宿主的，指挥对插件有影响）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseActivity</span> <span class="keyword">extends</span> <span class="title">AppCompatActivity</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="keyword">protected</span> Context mContext;</span><br><span class="line">    <span class="comment">// 不会影响到宿主</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(<span class="meta">@Nullable</span> Bundle savedInstanceState)</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        Resources resources = LoadUtil.getResources(getApplication());</span><br><span class="line"></span><br><span class="line">        mContext = <span class="keyword">new</span> ContextThemeWrapper(getBaseContext(), <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">        Class&lt;? extends Context&gt; clazz = mContext.getClass();</span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            Field mResourcesField = clazz.getDeclaredField(<span class="string">"mResources"</span>);</span><br><span class="line">            mResourcesField.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">            mResourcesField.set(mContext, resources);</span><br><span class="line">        } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>然后，我们在插件的 Activity 中都要用这个创建出来的 mContext 去加载资源：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainActivity</span> <span class="keyword">extends</span> <span class="title">BaseActivity</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        Log.e(<span class="string">"leo"</span>, <span class="string">"onCreate: 启动插件的Activity"</span>);</span><br><span class="line"></span><br><span class="line">        View view = LayoutInflater.from(mContext).inflate(R.layout.activity_main, <span class="keyword">null</span>);</span><br><span class="line">        setContentView(view);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个看起来很麻烦，还需要自己创建Context ，那么为什么步通过反射替换 Activity 的Context 呢？这还是因为<strong>双亲委派操作</strong>，如果你替换了 Activity 的，根据双亲委派原则，宿主也会受影响了。</p>
+<h3 id="2-3-宿主与插件的资源合并"><a href="#2-3-宿主与插件的资源合并" class="headerlink" title="2.3 宿主与插件的资源合并"></a>2.3 宿主与插件的资源合并</h3><p>只要不与系统的 id 冲突，可以自己去设置id ，你都可以 0x10 开头，不过我们约定一般是 0x70 等开始，到 0x7e </p>
+<blockquote>
+<p>插件化，建议宿主的 dex 文件在前面，不然如果插件的代码有问题，就把宿主也带崩了。所以，宿主先加载会好点。</p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/27/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/04-%E6%8F%92%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%BA%8C%E8%8A%82/" rel="next" title="04-插件化-第二节">
+                  <i class="fa fa-chevron-left"></i> 04-插件化-第二节
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/27/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/05-%E7%83%AD%E4%BF%AE%E5%A4%8D-%E7%AC%AC%E4%B8%89%E8%8A%82/" rel="prev" title="05-热修复-第三节">
+                  05-热修复-第三节 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E8%B5%84%E6%BA%90%E5%8A%A0%E8%BD%BD"><span class="nav-number">1.</span> <span class="nav-text">二、资源加载</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%88%9B%E5%BB%BA-Resources-%E5%AF%B9%E8%B1%A1"><span class="nav-number">1.1.</span> <span class="nav-text">2.1 创建 Resources 对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%86%B2%E7%AA%81%E5%AF%BC%E8%87%B4%E5%B4%A9%E6%BA%83"><span class="nav-number">1.2.</span> <span class="nav-text">2.2 冲突导致崩溃</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%AE%BF%E4%B8%BB%E4%B8%8E%E6%8F%92%E4%BB%B6%E7%9A%84%E8%B5%84%E6%BA%90%E5%90%88%E5%B9%B6"><span class="nav-number">1.3.</span> <span class="nav-text">2.3 宿主与插件的资源合并</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '8922d88d17149a5eb08876f051151ef7',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

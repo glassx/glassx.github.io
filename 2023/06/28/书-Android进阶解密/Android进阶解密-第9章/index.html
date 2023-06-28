@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、Native 方法的注册1.1 静态注册可以参照系统中的 MediaRecorder.java 写一个简单的静态注册的范例： 12345678public class MediaRecorder {    static {        System.loadLibrary(&quot;media_jni&quot;);        native_init();    }    private static n">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第9章：JNI原理">
+<meta property="og:url" content="https://glassx.github.io/2023/06/28/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC9%E7%AB%A0/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、Native 方法的注册1.1 静态注册可以参照系统中的 MediaRecorder.java 写一个简单的静态注册的范例： 12345678public class MediaRecorder {    static {        System.loadLibrary(&quot;media_jni&quot;);        native_init();    }    private static n">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC9%E7%AB%A0/JNI%E5%9F%BA%E6%9C%AC%E7%B1%BB%E5%9E%8B%E7%9A%84%E6%98%A0%E5%B0%84%E5%85%B3%E7%B3%BB.jpg">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC9%E7%AB%A0/JNI%E5%BC%95%E7%94%A8%E7%B1%BB%E5%9E%8B%E6%98%A0%E5%B0%84.jpg">
+<meta property="article:published_time" content="2023-06-28T07:34:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T15:08:01.914Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android进阶解密">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC9%E7%AB%A0/JNI%E5%9F%BA%E6%9C%AC%E7%B1%BB%E5%9E%8B%E7%9A%84%E6%98%A0%E5%B0%84%E5%85%B3%E7%B3%BB.jpg">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/28/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC9%E7%AB%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>第9章：JNI原理 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/28/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC9%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第9章：JNI原理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-06-28 15:34:00 / 修改时间：23:08:01" itemprop="dateCreated datePublished" datetime="2023-06-28T15:34:00+08:00">2023-06-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、Native-方法的注册"><a href="#一、Native-方法的注册" class="headerlink" title="一、Native 方法的注册"></a>一、Native 方法的注册</h2><h3 id="1-1-静态注册"><a href="#1-1-静态注册" class="headerlink" title="1.1 静态注册"></a>1.1 静态注册</h3><p>可以参照系统中的 MediaRecorder.java 写一个简单的静态注册的范例：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MediaRecorder</span> </span>{</span><br><span class="line">    <span class="keyword">static</span> {</span><br><span class="line">        System.loadLibrary(<span class="string">"media_jni"</span>);</span><br><span class="line">        native_init();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">native</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">native_init</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 static 代码块中我们调用 System.loadLibrary(“media_jni”);  来加载 so 的。如果让我们手动来编译 MediaRecorder.java 生成 JNI 方法，那么可以这样：</p>
+<blockquote>
+<p>javac com/example/MediaRecorder.java</p>
+<p>javah com .example .MediaRecorder</p>
+</blockquote>
+<p>其中第一个命令会将 java 编译成 .class 文件，第二个 javah 命令会在当前目录（media/src/main/java）中生成 com_example _MediaRecorder.h 这种头文件 ！这个头文件会包含如下代码：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">JNIEXPORT <span class="keyword">void</span> JNICALL <span class="title">Java_com_example_MediaRecorder_native_1init</span> </span></span><br><span class="line"><span class="function"><span class="params">(JNIEnv *, jclass)</span> </span>;<span class="comment">//1</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>方法 Java_com_example_MediaRecorder_native_1init 以 Java_开头说明是在 Java 平台中调用 JNI 方法的，后面的 com_example_MediaRecorder_native_1init 指的是 包名 + 类名 + 方法名 的格式。其中参数<strong>JNIEnv是 Native 世界中 Java 环境的</strong>，通过 JNIEnv 指针就能在Native 访问 Java 世界的代码，不过，<strong>它只在创建它的线程中有效，不能跨线程传递</strong>。里面的 jclass 对应 Java 中的 java.lang.Class 实例，很多 java 中的类型对应到 Native 就是在前面加一个 j ，尤其是基本类型（基本类型除了 void ，其他的都是）。</p>
+<h4 id="1-1-1-静态注册后的调用"><a href="#1-1-1-静态注册后的调用" class="headerlink" title="1.1.1 静态注册后的调用"></a>1.1.1 静态注册后的调用</h4><p>当我们在 Java 中调用 native_init 这个 native 方法时，就会从 JNI 中寻找 Java_com_example_MediaRecorder_native_1init 函数，如果没有就会报错，如果找到，就会建立 &lt;native_init ，Java_com_example_MediaRecorder_native_1init&gt; 映射，其实就是保存 JNI 函数指针，这样下次再调用就直接使用这个函数指针，避免每次重复查找。</p>
+<p><strong>静态注册就是根据方法名，将 Java 方法和 JNI 函数建立关联</strong>！这种静态注册的方式有一些缺点：</p>
+<ul>
+<li><p>JNI 层的函数名称过长</p>
+</li>
+<li><p>声明 Native 方法的类需要用 javah 生成头文件</p>
+</li>
+<li><p>初次调用 Native 方法时需要建立关联，影响效率</p>
+</li>
+</ul>
+<p>如果 Java 的 Native 方法知道它在 JNI 中对应的函数指针，就能避免上述缺点，这就是<strong>动态注册</strong>。</p>
+<h3 id="1-2-动态注册"><a href="#1-2-动态注册" class="headerlink" title="1.2 动态注册"></a>1.2 动态注册</h3><p>系统的 MediaRecorder 采用的就是动态注册。JNI 中有一个用来记录 Java 方法和 Native 方法映射的数据结构： JNINativeMethod ，代码如下：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> stuct {</span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">char</span>* name;<span class="comment">//Java 方法的名字</span></span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">char</span>* signature;<span class="comment">//方法签名</span></span><br><span class="line">    <span class="keyword">void</span>* fnPtr;<span class="comment">//JNI中对应的方法指针</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>有了数据结构我们就能映射了，在 MediaRecorder 的 Native 代码中是这样的：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> JNINativeMethod gMethods[] = {</span><br><span class="line">    {<span class="string">"start"</span>,   <span class="string">"()V"</span>,  (<span class="keyword">void</span> *)android_media_MediaRecorder_start}</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>忽略了其他方法，说明一下：</p>
+<ul>
+<li><p>第一个参数 “start” 就是 Java 方法的名字，</p>
+</li>
+<li><p>第二个参数 “()V” 是签名，为什么需要签名呢？<strong>因为 Java 中方法是可以重名的，只是入参或者返回值不同，有这个签名可以区分不同的方法</strong>；</p>
+</li>
+<li><p>第三个参数是 jni 中方法名</p>
+</li>
+</ul>
+<p>在System.loadLibrary 调用加载这个 so 之后，就会执行 register 来注册这种映射关系。体现在 Android 源码上就是在 <strong>AndroidRuntime。registerNativeMethods</strong> 函数的时候，注册系统需要的这些 native 方法。</p>
+<h3 id="1-3-方法签名"><a href="#1-3-方法签名" class="headerlink" title="1.3 方法签名"></a>1.3 方法签名</h3><p>方法签名格式就是 ：（参数签名格式… ）返回值签名格式，比如有些签名是这样的：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"(Ljava/lang/Object; Ljava/lang/String;Lava/lang/String;)V"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>这就说明这个方法入参是 Object，String，String ；返回值是 void </p>
+<h2 id="二、数据类型的转换"><a href="#二、数据类型的转换" class="headerlink" title="二、数据类型的转换"></a>二、数据类型的转换</h2><h3 id="2-1-基本数据类型的转换"><a href="#2-1-基本数据类型的转换" class="headerlink" title="2.1 基本数据类型的转换"></a>2.1 基本数据类型的转换</h3><p>基本类型转换关系如下所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC9%E7%AB%A0/JNI%E5%9F%BA%E6%9C%AC%E7%B1%BB%E5%9E%8B%E7%9A%84%E6%98%A0%E5%B0%84%E5%85%B3%E7%B3%BB.jpg" alt="JNI基本类型转换关系"></p>
+<h3 id="2-2-引用数据类型的转换"><a href="#2-2-引用数据类型的转换" class="headerlink" title="2.2 引用数据类型的转换"></a>2.2 引用数据类型的转换</h3><p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E7%AC%AC9%E7%AB%A0/JNI%E5%BC%95%E7%94%A8%E7%B1%BB%E5%9E%8B%E6%98%A0%E5%B0%84.jpg" alt="JNI引用类型映射"></p>
+<h2 id="三、解析-JNIEnv"><a href="#三、解析-JNIEnv" class="headerlink" title="三、解析 JNIEnv"></a>三、解析 JNIEnv</h2><p>它是 Java 环境的代表，<strong>它只能在创建它的线程有效，不能跨线程传递。</strong>，它的主要作用有 2 点：</p>
+<ul>
+<li><p>调用 Java 方法</p>
+</li>
+<li><p>操作 Java （中的变量和对象等）</p>
+</li>
+</ul>
+<p>在 jni.h 文件中除了定义 JNIEnv 还定义了 JavaVM ，<strong>JavaVM 代表的是 Java 虚拟机，每一个进程中只有一个 JavaVM</strong>，因此，该进程所有的线程都能使用这个 JavaVM ，通过 JavaVM 的 AttachCurrentThread 就能获取这个线程的 JNIEnv ，<strong>这样就能在不同的线程中调用 Java 方法了</strong>。</p>
+<blockquote>
+<p>注意：使用了 AttachCurrentThread 的情况下，在线程退出前务必调用 DetachCurrentThread 函数来释放资源 ！</p>
+</blockquote>
+<p>我们知道， <strong>JNIEnv 是 JNINativeInterface* 类型的</strong>，它里面包含了很多函数，这里列举 3 个比较常用的函数：</p>
+<ul>
+<li><p>FindClass ： 用来找到 Java 中指定名称的类</p>
+</li>
+<li><p>GetMethodID：用于获取 Java 中的方法</p>
+</li>
+<li><p>GetFieldID：用来得到 Java 中的成员变量</p>
+</li>
+</ul>
+<p>平时使用一般是这样的：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">android_media_MediaRecorder_native_init</span><span class="params">(JNIEnv *env)</span> </span>{</span><br><span class="line">    jclass clazz;</span><br><span class="line"></span><br><span class="line">    clazz = env -&gt; FindClass(<span class="string">"android/media/MediaRecorder"</span>);</span><br><span class="line">    <span class="keyword">if</span> (clazz == <span class="literal">NULL</span>) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    fields.context = env -&gt; GetFieldID(clazz, <span class="string">"mNativeContext"</span>, <span class="string">"J"</span>);</span><br><span class="line">    <span class="keyword">if</span> (fields.context == <span class="literal">NULL</span>) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    fields.surface = env -&gt; GetFieldID(clazz, <span class="string">"mSurface"</span>, <span class="string">"Landroid/view/Surface;"</span>);</span><br><span class="line">    <span class="keyword">if</span> (fields.surface == <span class="literal">NULL</span>) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    jclass surface = env -&gt; FindClass(<span class="string">"android/view/Surface"</span>);</span><br><span class="line">    <span class="keyword">if</span> (surface == <span class="literal">NULL</span>) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    fields.post_event = env -&gt; GetStaticMethodID(clazz, <span class="string">"postEventFromNative"</span>,</span><br><span class="line">            <span class="string">"(Ljava/lang/Object;IIILjava/lang/Object;)V"</span>);</span><br><span class="line">    <span class="keyword">if</span> (fields.post_event == <span class="literal">NULL</span>) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>上述保存clazz 和 jfildID 以及 jmethodID 类型的 变量有2个原因：</p>
+<ul>
+<li><p>为了效率考虑，如果每次调用相关方法时都要查询方法和变量，效率会变低</p>
+</li>
+<li><p>成员变量是本地引用，在 android_media_MediaRecorder_native_ini函数返回时就会自动释放</p>
+</li>
+</ul>
+<h2 id="四、引用类型"><a href="#四、引用类型" class="headerlink" title="四、引用类型"></a>四、引用类型</h2><p>略</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/" rel="tag"># Android进阶解密</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/28/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/05-%E7%83%AD%E4%BF%AE%E5%A4%8D-%E7%AC%AC%E4%BA%8C%E8%8A%82/" rel="next" title="05-热修复-第二节">
+                  <i class="fa fa-chevron-left"></i> 05-热修复-第二节
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Native-%E6%96%B9%E6%B3%95%E7%9A%84%E6%B3%A8%E5%86%8C"><span class="nav-number">1.</span> <span class="nav-text">一、Native 方法的注册</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E9%9D%99%E6%80%81%E6%B3%A8%E5%86%8C"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 静态注册</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1-1-%E9%9D%99%E6%80%81%E6%B3%A8%E5%86%8C%E5%90%8E%E7%9A%84%E8%B0%83%E7%94%A8"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1.1 静态注册后的调用</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%8A%A8%E6%80%81%E6%B3%A8%E5%86%8C"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 动态注册</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E6%96%B9%E6%B3%95%E7%AD%BE%E5%90%8D"><span class="nav-number">1.3.</span> <span class="nav-text">1.3 方法签名</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E7%9A%84%E8%BD%AC%E6%8D%A2"><span class="nav-number">2.</span> <span class="nav-text">二、数据类型的转换</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E7%9A%84%E8%BD%AC%E6%8D%A2"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 基本数据类型的转换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%BC%95%E7%94%A8%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E7%9A%84%E8%BD%AC%E6%8D%A2"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 引用数据类型的转换</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E8%A7%A3%E6%9E%90-JNIEnv"><span class="nav-number">3.</span> <span class="nav-text">三、解析 JNIEnv</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%BC%95%E7%94%A8%E7%B1%BB%E5%9E%8B"><span class="nav-number">4.</span> <span class="nav-text">四、引用类型</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '738df6c9817a694e50cc4badc7fb1351',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

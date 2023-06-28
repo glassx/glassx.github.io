@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、ARouter 中 Path 和 Group 的关系ARouter 里面这二者的关系比较简单，但是单纯看代码可能会比较蒙。其实很简单，用最简单的图示就能说清楚：   Group：每个 Module 作为一个 Group 组  Path：每个 Module 中所有的 Activity （还可以拓展 Fragment）都放在 Path 里面   体现在代码里面就是生成的2种类（Group 和 Pa">
+<meta property="og:type" content="article">
+<meta property="og:title" content="02-组件化-第三节">
+<meta property="og:url" content="https://glassx.github.io/2023/06/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%89%E8%8A%82/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、ARouter 中 Path 和 Group 的关系ARouter 里面这二者的关系比较简单，但是单纯看代码可能会比较蒙。其实很简单，用最简单的图示就能说清楚：   Group：每个 Module 作为一个 Group 组  Path：每个 Module 中所有的 Activity （还可以拓展 Fragment）都放在 Path 里面   体现在代码里面就是生成的2种类（Group 和 Pa">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Group%E4%B8%8EPath%E5%85%B3%E7%B3%BB.jpg">
+<meta property="article:published_time" content="2023-06-26T01:42:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T14:19:30.825Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Group%E4%B8%8EPath%E5%85%B3%E7%B3%BB.jpg">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%89%E8%8A%82/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>02-组件化-第三节 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%89%E8%8A%82/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          02-组件化-第三节
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-26 09:42:00" itemprop="dateCreated datePublished" datetime="2023-06-26T09:42:00+08:00">2023-06-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 22:19:30" itemprop="dateModified" datetime="2023-06-28T22:19:30+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、ARouter-中-Path-和-Group-的关系"><a href="#一、ARouter-中-Path-和-Group-的关系" class="headerlink" title="一、ARouter 中 Path 和 Group 的关系"></a>一、ARouter 中 Path 和 Group 的关系</h2><p>ARouter 里面这二者的关系比较简单，但是单纯看代码可能会比较蒙。其实很简单，用最简单的图示就能说清楚：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Group%E4%B8%8EPath%E5%85%B3%E7%B3%BB.jpg" alt="Group和Path的关系"></p>
+<ul>
+<li><p>Group：每个 Module 作为一个 Group 组</p>
+</li>
+<li><p>Path：每个 Module 中所有的 Activity （还可以拓展 Fragment）都放在 Path 里面</p>
+</li>
+</ul>
+<p>体现在代码里面就是生成的2种类（Group 和 Path）：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">public class ARouter$$Group$$personal implements ARouterGroup {</span><br><span class="line">  @Overrideag-0-1h3qlcbapag-1-1h3qlcbap</span><br><span class="line">  public Map&lt;String, Class&lt;? extends ARouterPath&gt;&gt; getGroupMap() {</span><br><span class="line">    Map&lt;String, Class&lt;? extends ARouterPath&gt;&gt; groupMap = new HashMap&lt;&gt;();</span><br><span class="line">    groupMap.put("personal", ARouter$$Path$$personal.class);</span><br><span class="line">    return groupMap;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ARouter</span>$$<span class="title">Path</span>$$<span class="title">personal</span> <span class="keyword">implements</span> <span class="title">ARouterPath</span> </span>{</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> Map&lt;String, RouterBean&gt; <span class="title">getPathMap</span><span class="params">()</span> </span>{</span><br><span class="line">    Map&lt;String, RouterBean&gt; pathMap = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">    pathMap.put(<span class="string">"/personal/Personal_Main2Activity"</span>, RouterBean.create();</span><br><span class="line">    pathMap.put(<span class="string">"/personal/Personal_MainActivity"</span>, RouterBean.create());</span><br><span class="line">    <span class="keyword">return</span> pathMap;</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看到，在Group 类中 Map 是添加了 Path 的： </p>
+<blockquote>
+<p>groupMap.put(“personal”, ARouter$$Path$$personal.class);</p>
+</blockquote>
+<p>然后Path 里面的 pathMap 存放的key 是 path （如：”/personal/Personal_MainActivity”），value 是 Mainactivity.class （只不过被封装成 RouterBean 了）。</p>
+<blockquote>
+<p>思考下，Path 类和 Group 类哪个先生成？肯定是 Path ，因为 Group 需要依赖 Path </p>
+</blockquote>
+<p>使用JavaPoet 的时候，生成类型的时候，可以用 $T 来代替这个类型，再后面写上类型，类似于Android 中的 %1$s 的写法，比如构建 Map&lt;String, Class&lt;? extends ARouterPath&gt;&gt; groupMap = new HashMap&lt;&gt;(); 这行代码的时候：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">methodBuidler.addStatement(<span class="string">"$T&lt;$T, $T&gt; $N = new $T&lt;&gt;()"</span>,</span><br><span class="line">        ClassName.get(Map.class),</span><br><span class="line">        ClassName.get(String.class),</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Class&lt;? extends ARouterPath&gt; 难度</span></span><br><span class="line">        ParameterizedTypeName.get(ClassName.get(Class.class),</span><br><span class="line">                WildcardTypeName.subtypeOf(ClassName.get(pathType))), <span class="comment">// ? extends ARouterPath</span></span><br><span class="line">                ProcessorConfig.GROUP_VAR1,</span><br><span class="line">                ClassName.get(HashMap.class));</span><br></pre></td></tr></tbody></table></figure>
+
+<p>看了代码，感觉太复杂的情况还不如直接不使用 Javapoet ，使用字符串去做还好点。</p>
+<p>在自动生成 Group 和 Path 相关的类之后，我们可以使用如下方式去实现页面跳转了：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">jumpPersonal</span><span class="params">(View view)</span> </span>{</span><br><span class="line">    <span class="comment">// 以前是这样跳转</span></span><br><span class="line">    <span class="comment">/*Intent intent = new Intent(this, Personal_MainActivity.class);</span></span><br><span class="line"><span class="comment">    intent.putExtra("name", "derry");</span></span><br><span class="line"><span class="comment">    startActivity(intent);*/</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 现在是这样跳转  目前还要写这么多代码，是不是非常累</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// TODO 最终的成效：用户 一行代码搞定，同时还可以传递参数，同时还可以懒加载</span></span><br><span class="line"></span><br><span class="line">    ARouter$$Group$$personal group$$personal = <span class="keyword">new</span> ARouter$$Group$$personal();</span><br><span class="line">    Map&lt;String, Class&lt;? extends ARouterPath&gt;&gt; groupMap = group$$personal.getGroupMap();</span><br><span class="line">    Class&lt;? extends ARouterPath&gt; myClass = groupMap.get(<span class="string">"personal"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        ARouter$$Path$$personal path = (ARouter$$Path$$personal) myClass.newInstance();</span><br><span class="line">        Map&lt;String, RouterBean&gt; pathMap = path.getPathMap();</span><br><span class="line">        RouterBean bean = pathMap.get(<span class="string">"/personal/Personal_MainActivity"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (bean != <span class="keyword">null</span>) {</span><br><span class="line">            Intent intent = <span class="keyword">new</span> Intent(<span class="keyword">this</span>, bean.getMyClass());</span><br><span class="line">            startActivity(intent);</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">    } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们先 new 出特定的 Group 对象，再获取其 Map 对象（这是缓存仓库，存储了其所有的 Path），然后根据 path 的name 获取到 Path 类的 Class 文件，之后使用这个 class 文件就能 newInstance 得出 path 对象，从path 对象中再得到其 Map 对象，最后，根据路径，从这个 Map 对象获得 RouterBean （也就是目标Activity 的Class ）。</p>
+<p>可见，到目前这一步还是很麻烦的，所以ARouter 再生成的代码上再一次生成代码，进一步封装。</p>
+<p>注：</p>
+<p>JavaPoet API：</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/square/javapoet">https://github.com/square/javapoet</a></p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/25/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%BA%8C%E8%8A%82/" rel="next" title="02-组件化-第二节">
+                  <i class="fa fa-chevron-left"></i> 02-组件化-第二节
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/03-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E5%9B%9B%E4%BA%94%E8%8A%82/" rel="prev" title="02-组件化-第四五节">
+                  02-组件化-第四五节 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81ARouter-%E4%B8%AD-Path-%E5%92%8C-Group-%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="nav-number">1.</span> <span class="nav-text">一、ARouter 中 Path 和 Group 的关系</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '4b312be5eebf8804fe17eaa81252b767',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

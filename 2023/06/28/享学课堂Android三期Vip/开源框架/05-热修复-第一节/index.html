@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="热修复这块知识，对于常用的解决方案（开源框架）需要了解，尤其是 类替换与即时生效 这 2 个维度。  二、Robust 热修复原理美团开源的，抖音也是用这个。它是 Java 开发的，但是它是怎么实现的即时生效？不是说只能在 NDK 去替换有问题的方法吗？其原理是：Robust的 gradle 插件对每个产品代码的每个函数在编译打包阶段自动插入了一段代码，示例如下： 1234567891011121">
+<meta property="og:type" content="article">
+<meta property="og:title" content="05-热修复-第一节">
+<meta property="og:url" content="https://glassx.github.io/2023/06/28/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/05-%E7%83%AD%E4%BF%AE%E5%A4%8D-%E7%AC%AC%E4%B8%80%E8%8A%82/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="热修复这块知识，对于常用的解决方案（开源框架）需要了解，尤其是 类替换与即时生效 这 2 个维度。  二、Robust 热修复原理美团开源的，抖音也是用这个。它是 Java 开发的，但是它是怎么实现的即时生效？不是说只能在 NDK 去替换有问题的方法吗？其原理是：Robust的 gradle 插件对每个产品代码的每个函数在编译打包阶段自动插入了一段代码，示例如下： 1234567891011121">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E5%B8%B8%E8%A7%81%E7%83%AD%E4%BF%AE%E5%A4%8D%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94.jpg">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Android%E4%B8%AD%E7%B1%BB%E5%8A%A0%E8%BD%BD.webp">
+<meta property="article:published_time" content="2023-06-28T01:43:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T14:32:50.192Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E5%B8%B8%E8%A7%81%E7%83%AD%E4%BF%AE%E5%A4%8D%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94.jpg">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/28/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/05-%E7%83%AD%E4%BF%AE%E5%A4%8D-%E7%AC%AC%E4%B8%80%E8%8A%82/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>05-热修复-第一节 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/28/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/05-%E7%83%AD%E4%BF%AE%E5%A4%8D-%E7%AC%AC%E4%B8%80%E8%8A%82/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          05-热修复-第一节
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-06-28 09:43:00 / 修改时间：22:32:50" itemprop="dateCreated datePublished" datetime="2023-06-28T09:43:00+08:00">2023-06-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>热修复这块知识，对于常用的解决方案（开源框架）需要了解，尤其是 <strong>类替换</strong>与<strong>即时生效</strong> 这 2 个维度。</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E5%B8%B8%E8%A7%81%E7%83%AD%E4%BF%AE%E5%A4%8D%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94.jpg" alt="常见热修复框架对比"></p>
+<h2 id="二、Robust-热修复原理"><a href="#二、Robust-热修复原理" class="headerlink" title="二、Robust 热修复原理"></a>二、Robust 热修复原理</h2><p>美团开源的，抖音也是用这个。它是 Java 开发的，但是它是怎么实现的即时生效？不是说只能在 NDK 去替换有问题的方法吗？其原理是：<strong>Robust的 gradle 插件对每个产品代码的每个函数在编译打包阶段自动插入了一段代码</strong>，示例如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//原始代码</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">getIndex</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">return</span> <span class="number">100</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//处理之后的代码</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">getIndex</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">if</span>(changeQuickRedirect != <span class="keyword">null</span>) {</span><br><span class="line">            <span class="comment">//PatchProxy中封装了获取当前className和methodName的逻辑，并在其内部最终调用了changeQuickRedirect的对应函数</span></span><br><span class="line">            <span class="keyword">if</span>(PatchProxy.isSupport(<span class="keyword">new</span> Object[<span class="number">0</span>], <span class="keyword">this</span>, changeQuickRedirect, <span class="keyword">false</span>)) {</span><br><span class="line">                <span class="keyword">return</span> ((Long)PatchProxy.accessDispatch(<span class="keyword">new</span> Object[<span class="number">0</span>], <span class="keyword">this</span>, changeQuickRedirect, <span class="keyword">false</span>)).longValue();</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="number">100L</span>;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>而修复后的patch包里面是这样的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StatePatch</span> <span class="keyword">implements</span> <span class="title">ChangeQuickRedirect</span> </span>{</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">accessDispatch</span><span class="params">(String methodSignature, Object[] paramArrayOfObject)</span> </span>{</span><br><span class="line">        String[] signature = methodSignature.split(<span class="string">":"</span>);</span><br><span class="line">        <span class="keyword">if</span> (TextUtils.equals(signature[<span class="number">1</span>], <span class="string">"a"</span>)) {<span class="comment">//long getIndex() -&gt; a</span></span><br><span class="line">            <span class="keyword">return</span> <span class="number">106</span>;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以呢，Robust 的实现也就是，打一个 补丁包，在本地利用类加载技术，将补丁加载进来。补丁是实现了 changeQuickRedirect 接口的，这样，当实例化补丁之后，可以通过反射的方式将补丁的实例赋值给类的 changeQuickRedirect 对象，所以，当有补丁包的时候 (changeQuickRedirect 就不会为 null 了，因此就不再执行原有逻辑，而是执行 changeQuickRedirect 的逻辑了 。</p>
+<blockquote>
+<p>按照RoBust 官方的说法，这个方案规避了需要针对虚拟机、指令集的 Native 方案，在 Java 层就实现了热修复。它其实参考的还是 <strong>Instant Run</strong> ！</p>
+</blockquote>
+<p>详细可以参考<a target="_blank" rel="noopener" href="https://tech.meituan.com/2016/09/14/android-robust.html">Android热更新方案Robust - 美团技术团队 (meituan.com)</a></p>
+<h2 id="Tinker"><a href="#Tinker" class="headerlink" title="Tinker"></a>Tinker</h2><p>光从代码上讲（不考虑资源）Tinker 是打出差量包 patch ，然后在 App 端将 old.dex + patch包 = 修复bug的 dex。</p>
+<p>在 ActivityThread 中（handleApplication 这个方法中），会创建出用于加载我们所写的项目代码的 PathClassLoader ，关于 classLoader ，有以下几个需要注意：</p>
+<ul>
+<li><p>AppcompatActivity 是用 PathClassLoader 加载的，因为我们需要在gradle 里面引入 appcompat ，所以它和okhttp之类的引用没什么区别，都是属于项目代码</p>
+</li>
+<li><p>Activity 是用 BootClassLoader， 这个没问题，因为它是 sdk 的</p>
+</li>
+<li><p>Application.class.getClassLoader 肯定也是 BootClassLoader</p>
+</li>
+<li><p>在 我们自己写的 MyApplication 中我们直接 getClassLoader() 获得的<strong>是我们整个程序所属的 ClassLoader，所以也是 PathClassLoader</strong></p>
+</li>
+</ul>
+<p>一定要理解 Android 的类加载机制，然后才能知道 dexElements[] 那些dex 数组是怎么存放的，图片如下：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Android%E4%B8%AD%E7%B1%BB%E5%8A%A0%E8%BD%BD.webp" alt="Android类加载机制"></p>
+<h3 id="同学提问"><a href="#同学提问" class="headerlink" title="同学提问"></a>同学提问</h3><p>有同学提问，补丁包下发之后，之前的 dex 能不能删掉？因为 补丁的dex 已经在 dexElements[] 数组最前面了。答案是肯定不能删除，我老的 dex 中可能有 A 类和 B 类， 但是补丁包只是为了修复 有bug 的A 类，所以补丁中没有 B 类的，如果把老的 Dex 删除了，那么后续要用到 B 类就没有了。 </p>
+<h2 id="制作补丁包"><a href="#制作补丁包" class="headerlink" title="制作补丁包"></a>制作补丁包</h2><p>如何制作补丁包呢？其实还是利用Android自己的打包工具，<strong>dx 命令</strong>，具体流程如下：</p>
+<ol>
+<li><p>修复Bug ，然后编译，将有问题的类（比如是 com.test.Utils.java）生成 .class 文件</p>
+</li>
+<li><p>执行命令打包成 dex 或者 jar ：</p>
+<blockquote>
+<p>dex –dex –output=patch.dex com/test/Utils.class</p>
+</blockquote>
+<p>注意，如果是想打包成 jar ，就将 patch.dex 改成 patch.jar 即可。</p>
+</li>
+</ol>
+<h2 id="如何使用补丁包？"><a href="#如何使用补丁包？" class="headerlink" title="如何使用补丁包？"></a>如何使用补丁包？</h2><p>下载下来补丁包之后，其使用方法与诸如插件化之类的就很像了，都是涉及类加载，反射等，具体步骤有以下 6 步：</p>
+<ol>
+<li><p>获取程序（当前应用）的 PathClassLoader 对象</p>
+</li>
+<li><p>反射获得 PathClassLoader 的 parent 的 BaseDexClassLoader 的 DexPathList 类型的 pathList 对象</p>
+</li>
+<li><p>反射获取 pathList 中Element[] 类型的 dexElements 对象（这是 oldElements 集合）</p>
+</li>
+<li><p>把补丁包变成 Element 数组 patchElements（反射执行 DexPathList 类中的 makePathElements 方法）</p>
+</li>
+<li><p>合并两个 Element 数组  oldElements + patchElements = newElements （Array.newInstance() 方式即可合并2个数组）</p>
+</li>
+<li><p>反射把 pathList 中的 dexElements 赋值成 newElements</p>
+</li>
+</ol>
+<blockquote>
+<p>注意，热修复补丁包一定要放在 dexElements 数组的最前面，需要先加载才能达到修复的目的！</p>
+</blockquote>
+<p>so的修复也差不多，他们也是放在一个 Element 数组里面。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/27/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/05-%E7%83%AD%E4%BF%AE%E5%A4%8D-%E7%AC%AC%E4%B8%89%E8%8A%82/" rel="next" title="05-热修复-第三节">
+                  <i class="fa fa-chevron-left"></i> 05-热修复-第三节
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/28/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/05-%E7%83%AD%E4%BF%AE%E5%A4%8D-%E7%AC%AC%E4%BA%8C%E8%8A%82/" rel="prev" title="05-热修复-第二节">
+                  05-热修复-第二节 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Robust-%E7%83%AD%E4%BF%AE%E5%A4%8D%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">二、Robust 热修复原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Tinker"><span class="nav-number">2.</span> <span class="nav-text">Tinker</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8C%E5%AD%A6%E6%8F%90%E9%97%AE"><span class="nav-number">2.1.</span> <span class="nav-text">同学提问</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%B6%E4%BD%9C%E8%A1%A5%E4%B8%81%E5%8C%85"><span class="nav-number">3.</span> <span class="nav-text">制作补丁包</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8%E8%A1%A5%E4%B8%81%E5%8C%85%EF%BC%9F"><span class="nav-number">4.</span> <span class="nav-text">如何使用补丁包？</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '810b3bd7c0262d0d201a809ab5560e12',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

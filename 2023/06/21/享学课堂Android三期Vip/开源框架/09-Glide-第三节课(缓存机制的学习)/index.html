@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="缓存和生命周期是 Glide 的精华。 一、资源封装Glide 总共有三级缓存，分别是：  活动缓存  LRU 内存缓存  磁盘缓存   整个资源的获取流程是比较复杂的，一张图来说就是这样：  具体而言就是：  加载图片的时候，首先从活动缓存中获取，如果没有，则去LRU 内存缓存中获取  如果LRU内存缓存中有的话，则将图片剪切（图片从内存缓存中移动到活动缓存中，LRU内存缓存自己就没有了）到活动">
+<meta property="og:type" content="article">
+<meta property="og:title" content="09-Glide-第三节课(缓存机制的学习)">
+<meta property="og:url" content="https://glassx.github.io/2023/06/21/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%B8%89%E8%8A%82%E8%AF%BE(%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6%E7%9A%84%E5%AD%A6%E4%B9%A0)/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="缓存和生命周期是 Glide 的精华。 一、资源封装Glide 总共有三级缓存，分别是：  活动缓存  LRU 内存缓存  磁盘缓存   整个资源的获取流程是比较复杂的，一张图来说就是这样：  具体而言就是：  加载图片的时候，首先从活动缓存中获取，如果没有，则去LRU 内存缓存中获取  如果LRU内存缓存中有的话，则将图片剪切（图片从内存缓存中移动到活动缓存中，LRU内存缓存自己就没有了）到活动">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Glide%E7%BC%93%E5%AD%98%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B.jpg">
+<meta property="article:published_time" content="2023-06-21T02:33:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T15:00:16.705Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Glide%E7%BC%93%E5%AD%98%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B.jpg">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/21/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%B8%89%E8%8A%82%E8%AF%BE(%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6%E7%9A%84%E5%AD%A6%E4%B9%A0)/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>09-Glide-第三节课(缓存机制的学习) | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/21/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/09-Glide-%E7%AC%AC%E4%B8%89%E8%8A%82%E8%AF%BE(%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6%E7%9A%84%E5%AD%A6%E4%B9%A0)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          09-Glide-第三节课(缓存机制的学习)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-21 10:33:00" itemprop="dateCreated datePublished" datetime="2023-06-21T10:33:00+08:00">2023-06-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 23:00:16" itemprop="dateModified" datetime="2023-06-28T23:00:16+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>缓存和生命周期是 Glide 的精华。</p>
+<h2 id="一、资源封装"><a href="#一、资源封装" class="headerlink" title="一、资源封装"></a>一、资源封装</h2><p>Glide 总共有三级缓存，分别是：</p>
+<ul>
+<li><p>活动缓存</p>
+</li>
+<li><p>LRU 内存缓存</p>
+</li>
+<li><p>磁盘缓存</p>
+</li>
+</ul>
+<p>整个资源的获取流程是比较复杂的，一张图来说就是这样：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Glide%E7%BC%93%E5%AD%98%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B.jpg" alt="Glide缓存加载过程"></p>
+<p>具体而言就是：</p>
+<ol>
+<li><p>加载图片的时候，<strong>首先从活动缓存中获取</strong>，如果没有，则去LRU 内存缓存中获取</p>
+</li>
+<li><p>如果LRU内存缓存中有的话，则将图片<strong>剪切</strong>（图片从内存缓存中<strong>移动</strong>到活动缓存中，LRU内存缓存自己就没有了）到活动缓存并且使用</p>
+</li>
+<li><p>如果 LRU 内存中没有的话，则会请求网络，请求成功后保存到磁盘缓存中，<strong>并且复制一份到活动缓存供马上使用</strong></p>
+</li>
+<li><p>当监听到生命周期执行 onDestroy （非 Application 生命周期情况下利用空白 Fragment 监听），则会将活动缓存中的图片<strong>移入LRU内存缓存中</strong></p>
+</li>
+</ol>
+<blockquote>
+<p>注意，LRU 内存缓存和 磁盘缓存都采用了 LRU 算法存储图片</p>
+</blockquote>
+<h2 id="资源封装"><a href="#资源封装" class="headerlink" title="资源封装"></a>资源封装</h2><p>Glide 的资源封装，是将图片 url 作为 key（需要处理下，比如是用sh256处理） ，Bitmap 作为 Value </p>
+<h2 id="活动缓存（ActiveCache-java）"><a href="#活动缓存（ActiveCache-java）" class="headerlink" title="活动缓存（ActiveCache.java）"></a>活动缓存（ActiveCache.java）</h2><p>提到缓存，肯定就涉及到：容器、put 、get 这三个</p>
+<p>活动缓存的容器就使用一个 普通的 HashMap 即可，因为只需要存储目前正在使用的图片，其中key 为 处理过的 url ，value 为封装的 Bitmap 即可。同时各个元素添加进来的时候实现接口 callback ，方便在生命周期变化的时候回收和移动封装的 Bitmap 。</p>
+<h2 id="内存缓存-MemoryCache-java"><a href="#内存缓存-MemoryCache-java" class="headerlink" title="内存缓存(MemoryCache.java)"></a>内存缓存(MemoryCache.java)</h2><p>LRUCache 的实现中，sizeOf 默认是返回 1 ，意味着，默认情况下每个元素的大小是 1 不是实际的图片大小。所以在 MemoryCache.java （继承了 LRUCache 类）需要重写其 sizeOf 方法。</p>
+<h3 id="Android-获取-Bitmap-的大小"><a href="#Android-获取-Bitmap-的大小" class="headerlink" title="Android 获取 Bitmap 的大小"></a>Android 获取 Bitmap 的大小</h3><p>在最开始的时候，使用 Bitmap.getRowBytes ，这个方法最终是在 native 层实现的。到了 API 12 也就是 3.0 的时候，开始更改方法，变成了  Bitmap.getByteCount() ，它是在 Java 层实现的。到了 API 19 也就是 4.4 的时候，又变成了 Bitmap.getAllocationByteCount 了，又放到 Native 层实现了。</p>
+<blockquote>
+<p>说一下，为什么我们设计的时候，需要将 url 进行处理后才能作为key ？这是因为我们磁盘存储文件的时候，命名不能包含斜杠和冒号等内容，会直接报错的的</p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/20/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8809%EF%BC%892021.12.28-PKMS%E6%9D%83%E9%99%90%E7%94%B3%E8%AF%B7%E5%AE%9E%E6%88%98---derry%E8%80%81%E5%B8%88/" rel="next" title="（09）2021.12.28-PKMS权限申请实战---derry老师">
+                  <i class="fa fa-chevron-left"></i> （09）2021.12.28-PKMS权限申请实战---derry老师
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/22/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/10-retrofit/" rel="prev" title="10-retrofit">
+                  10-retrofit <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E8%B5%84%E6%BA%90%E5%B0%81%E8%A3%85"><span class="nav-number">1.</span> <span class="nav-text">一、资源封装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B5%84%E6%BA%90%E5%B0%81%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">资源封装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B4%BB%E5%8A%A8%E7%BC%93%E5%AD%98%EF%BC%88ActiveCache-java%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">活动缓存（ActiveCache.java）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E7%BC%93%E5%AD%98-MemoryCache-java"><span class="nav-number">4.</span> <span class="nav-text">内存缓存(MemoryCache.java)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Android-%E8%8E%B7%E5%8F%96-Bitmap-%E7%9A%84%E5%A4%A7%E5%B0%8F"><span class="nav-number">4.1.</span> <span class="nav-text">Android 获取 Bitmap 的大小</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'e16608304af90022afa846b42ebe9756',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

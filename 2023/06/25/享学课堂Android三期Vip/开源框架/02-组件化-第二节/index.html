@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、前情回顾早期的 XUtil 框架是使用运行期注解，采用的是反射，后续都比较倾向于编译器框架 APT 了，因为运行期反射还是有点消耗性能，目前采用编译期注解的框架有：Dagger2、Room、ARouter、Buterkife、DataBinding 等。  如果想学 APT 的使用，怎么自己生成代码，可以去看EventBus 中的注解处理器  二、使用 JavaPoet但是上述EventBus">
+<meta property="og:type" content="article">
+<meta property="og:title" content="02-组件化-第二节">
+<meta property="og:url" content="https://glassx.github.io/2023/06/25/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%BA%8C%E8%8A%82/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、前情回顾早期的 XUtil 框架是使用运行期注解，采用的是反射，后续都比较倾向于编译器框架 APT 了，因为运行期反射还是有点消耗性能，目前采用编译期注解的框架有：Dagger2、Room、ARouter、Buterkife、DataBinding 等。  如果想学 APT 的使用，怎么自己生成代码，可以去看EventBus 中的注解处理器  二、使用 JavaPoet但是上述EventBus">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E4%BD%BF%E7%94%A8APT.png">
+<meta property="article:published_time" content="2023-06-25T03:11:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T14:17:20.631Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E4%BD%BF%E7%94%A8APT.png">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/25/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%BA%8C%E8%8A%82/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>02-组件化-第二节 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/25/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%BA%8C%E8%8A%82/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          02-组件化-第二节
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-25 11:11:00" itemprop="dateCreated datePublished" datetime="2023-06-25T11:11:00+08:00">2023-06-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 22:17:20" itemprop="dateModified" datetime="2023-06-28T22:17:20+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、前情回顾"><a href="#一、前情回顾" class="headerlink" title="一、前情回顾"></a>一、前情回顾</h2><p>早期的 XUtil 框架是使用<strong>运行期注解，采用的是反射</strong>，后续都比较倾向于编译器框架 APT 了，因为运行期反射还是有点消耗性能，目前采用编译期注解的框架有：Dagger2、Room、ARouter、Buterkife、DataBinding 等。</p>
+<blockquote>
+<p>如果想学 APT 的使用，怎么自己生成代码，可以去看EventBus 中的注解处理器</p>
+</blockquote>
+<h2 id="二、使用-JavaPoet"><a href="#二、使用-JavaPoet" class="headerlink" title="二、使用 JavaPoet"></a>二、使用 JavaPoet</h2><p>但是上述EventBus 那种生成代码的方式有点 Low ，需要一行一行地写，从 import 写到最后一行，手抖写错一个标点符号就崩了。因此，我们可以看 ARouter 的，它里面使用了 JavaPoet 框架。但是传统方式看起来更直观，JavaPoet 看起来比较难。</p>
+<h3 id="2-1-如何去使用APT"><a href="#2-1-如何去使用APT" class="headerlink" title="2.1 如何去使用APT"></a>2.1 如何去使用APT</h3><p>新建 Android工程，在其中 new 一个 Lib 出来，用于存放所有的注解代码，再new 一个Lib ，作为注解处理器，项目结构如下所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E4%BD%BF%E7%94%A8APT.png" alt="APT使用时工程目录"></p>
+<p>这样划分是为了能够隔离项目代码和 APT 代码。需要把compiler 变为一个服务，监听 项目中关注的注解，所以就需要google 的 autoservice 以及生成代码需要用 JavaPoet ，所以 compiler 这个 Module 的 build.gradle 的文件如下：</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">apply <span class="attr">plugin:</span> <span class="string">'java-library'</span></span><br><span class="line"></span><br><span class="line">dependencies {</span><br><span class="line">    implementation fileTree(<span class="attr">dir:</span> <span class="string">'libs'</span>, <span class="attr">include:</span> [<span class="string">'*.jar'</span>])</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 背后的服务 能够监听 你是否在编译中.....</span></span><br><span class="line">    <span class="comment">// AS3.4.1 + Gradle 5.1.1 + auto-service:1.0-rc4</span></span><br><span class="line">    compileOnly<span class="string">'com.google.auto.service:auto-service:1.0-rc4'</span></span><br><span class="line">    annotationProcessor<span class="string">'com.google.auto.service:auto-service:1.0-rc4'</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 帮助我们通过类调用的形式来生成Java代码 [JavaPoet]</span></span><br><span class="line">    implementation <span class="string">"com.squareup:javapoet:1.9.0"</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 依赖注解</span></span><br><span class="line">    implementation project(<span class="string">":arouter-annotations"</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">sourceCompatibility = <span class="string">"1.7"</span></span><br><span class="line">targetCompatibility = <span class="string">"1.7"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们的项目也需要依赖我们的注解工程，所以需要在其 build.gradle 中添加注解和注解处理器的依赖，以及一些参数的传递，所以代码是这样的：</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">apply <span class="attr">plugin:</span> <span class="string">'com.android.application'</span></span><br><span class="line"></span><br><span class="line">android {</span><br><span class="line">    compileSdkVersion <span class="number">30</span></span><br><span class="line">    buildToolsVersion <span class="string">"30.0.1"</span></span><br><span class="line"></span><br><span class="line">    defaultConfig {</span><br><span class="line">        applicationId <span class="string">"com.derry.new_modular_javapoet"</span></span><br><span class="line">        minSdkVersion <span class="number">16</span></span><br><span class="line">        targetSdkVersion <span class="number">30</span></span><br><span class="line">        versionCode <span class="number">1</span></span><br><span class="line">        versionName <span class="string">"1.0"</span></span><br><span class="line"></span><br><span class="line">        testInstrumentationRunner <span class="string">"androidx.test.runner.AndroidJUnitRunner"</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// 传递参数</span></span><br><span class="line">        javaCompileOptions {</span><br><span class="line">            annotationProcessorOptions {</span><br><span class="line">                arguments = [<span class="attr">student:</span> <span class="string">'hello ni hao student javapoet'</span>]</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    buildTypes {</span><br><span class="line">        release {</span><br><span class="line">            minifyEnabled <span class="literal">false</span></span><br><span class="line">            proguardFiles getDefaultProguardFile(<span class="string">'proguard-android-optimize.txt'</span>), <span class="string">'proguard-rules.pro'</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">dependencies {</span><br><span class="line">    implementation fileTree(<span class="attr">dir:</span> <span class="string">"libs"</span>, <span class="attr">include:</span> [<span class="string">"*.jar"</span>])</span><br><span class="line">    implementation <span class="string">'androidx.appcompat:appcompat:1.2.0'</span></span><br><span class="line">    implementation <span class="string">'androidx.constraintlayout:constraintlayout:2.0.4'</span></span><br><span class="line">    implementation project(<span class="attr">path:</span> <span class="string">':arouter-annotations'</span>)</span><br><span class="line">    implementation project(<span class="attr">path:</span> <span class="string">':arouter-annotations'</span>)</span><br><span class="line">    testImplementation <span class="string">'junit:junit:4.12'</span></span><br><span class="line">    androidTestImplementation <span class="string">'androidx.test.ext:junit:1.1.2'</span></span><br><span class="line">    androidTestImplementation <span class="string">'androidx.test.espresso:espresso-core:3.3.0'</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 依赖注解</span></span><br><span class="line">    implementation project(<span class="string">":arouter-annotations"</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 依赖注解处理器 注解处理器才能工作</span></span><br><span class="line">    annotationProcessor project(<span class="string">":compiler"</span>)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>接下来就是写compiler 这个 module 中的代码里，它是真正的处理器：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.derry.compiler;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.derry.arouter_annotations.ARouter;</span><br><span class="line"><span class="keyword">import</span> com.google.auto.service.AutoService;</span><br><span class="line"><span class="keyword">import</span> com.squareup.javapoet.ClassName;</span><br><span class="line"><span class="keyword">import</span> com.squareup.javapoet.JavaFile;</span><br><span class="line"><span class="keyword">import</span> com.squareup.javapoet.MethodSpec;</span><br><span class="line"><span class="keyword">import</span> com.squareup.javapoet.TypeSpec;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Type;</span><br><span class="line"><span class="keyword">import</span> java.util.Set;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.AbstractProcessor;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.Filer;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.Messager;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.ProcessingEnvironment;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.Processor;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.RoundEnvironment;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.SupportedAnnotationTypes;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.SupportedOptions;</span><br><span class="line"><span class="keyword">import</span> javax.annotation.processing.SupportedSourceVersion;</span><br><span class="line"><span class="keyword">import</span> javax.lang.model.SourceVersion;</span><br><span class="line"><span class="keyword">import</span> javax.lang.model.element.Element;</span><br><span class="line"><span class="keyword">import</span> javax.lang.model.element.Modifier;</span><br><span class="line"><span class="keyword">import</span> javax.lang.model.element.TypeElement;</span><br><span class="line"><span class="keyword">import</span> javax.lang.model.util.Elements;</span><br><span class="line"><span class="keyword">import</span> javax.lang.model.util.Types;</span><br><span class="line"><span class="keyword">import</span> javax.tools.Diagnostic;</span><br><span class="line"></span><br><span class="line"><span class="meta">@AutoService(Processor.class)</span> <span class="comment">// 启用google提供的 autoservice 服务</span></span><br><span class="line"><span class="meta">@SupportedAnnotationTypes({"com.derry.arouter_annotations.ARouter"})</span> <span class="comment">// 你自己写的注解位置，包名+类名</span></span><br><span class="line"><span class="meta">@SupportedSourceVersion(SourceVersion.RELEASE_7)</span> <span class="comment">// 环境的版本</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">// 接收 安卓工程传递过来的参数</span></span><br><span class="line"><span class="meta">@SupportedOptions("student")</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ARouterProcessor</span> <span class="keyword">extends</span> <span class="title">AbstractProcessor</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 操作Element的工具类（类，函数，属性，其实都是Element）</span></span><br><span class="line">    <span class="keyword">private</span> Elements elementTool;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// type(类信息)的工具类，包含用于操作TypeMirror的工具方法</span></span><br><span class="line">    <span class="keyword">private</span> Types typeTool;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Message用来打印 日志相关信息，在编译期间不能使用Android的Log工具</span></span><br><span class="line">    <span class="keyword">private</span> Messager messager;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 文件生成器， 类 资源 等，就是最终要生成的文件 是需要Filer来完成的，此时还不能使用Java的File</span></span><br><span class="line">    <span class="keyword">private</span> Filer filer;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(ProcessingEnvironment processingEnvironment)</span> </span>{</span><br><span class="line">        <span class="keyword">super</span>.init(processingEnvironment);</span><br><span class="line"></span><br><span class="line">        elementTool = processingEnvironment.getElementUtils();</span><br><span class="line">        messager = processingEnvironment.getMessager();</span><br><span class="line">        filer = processingEnvironment.getFiler();</span><br><span class="line"></span><br><span class="line">        String value = processingEnvironment.getOptions().get(<span class="string">"student"</span>);</span><br><span class="line">        <span class="comment">// 这个代码已经下毒了</span></span><br><span class="line">        <span class="comment">// 如果我想在注解处理器里面抛出异常 可以使用Diagnostic.Kind.ERROR</span></span><br><span class="line">        messager.printMessage(Diagnostic.Kind.NOTE, <span class="string">"&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;"</span>+value);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 服务：在编译的时候干活</span></span><br><span class="line">    <span class="comment">// 坑：如果没有在任何地方使用，次函数是不会工作的</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(Set&lt;? extends TypeElement&gt; set, RoundEnvironment roundEnvironment)</span> </span>{</span><br><span class="line">        <span class="comment">// 这个代码已经下毒了</span></span><br><span class="line">        messager.printMessage(Diagnostic.Kind.NOTE, <span class="string">"&gt;&gt;&gt;&gt;&gt;&gt;&gt; Derry run..."</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (set.isEmpty()) {</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>; <span class="comment">// 不干活</span></span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 循环？</span></span><br><span class="line">        <span class="comment">// 获取被 ARouter注解的 "类节点信息"</span></span><br><span class="line">        Set&lt;? extends Element&gt; elements = roundEnvironment.getElementsAnnotatedWith(ARouter.class);</span><br><span class="line">        <span class="keyword">for</span> (Element element : elements) { <span class="comment">// for 3    // 1 element == MainActivity    2 element == MainActivity2</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">/**</span></span><br><span class="line"><span class="comment">             模块一</span></span><br><span class="line"><span class="comment">             package com.example.helloworld;</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">             public final class HelloWorld {</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">             public static void main(String[] args) {</span></span><br><span class="line"><span class="comment">                 System.out.println("Hello, JavaPoet!");</span></span><br><span class="line"><span class="comment">             }</span></span><br><span class="line"><span class="comment">             }</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">            <span class="comment">// Java 万物皆对象</span></span><br><span class="line">            <span class="comment">// C  万物皆指针</span></span><br><span class="line">            <span class="comment">/*// 1.方法</span></span><br><span class="line"><span class="comment">            MethodSpec mainMethod = MethodSpec.methodBuilder("main")</span></span><br><span class="line"><span class="comment">                    .addModifiers(Modifier.PUBLIC, Modifier.STATIC)</span></span><br><span class="line"><span class="comment">                    .returns(void.class)</span></span><br><span class="line"><span class="comment">                    .addParameter(String[].class, "args")</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">                    // 增加main方法里面的内容</span></span><br><span class="line"><span class="comment">                    .addStatement("$T.out.println($S)", System.class, "Hello, JavaPoet!")</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">                    .build();</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">            // 2.类</span></span><br><span class="line"><span class="comment">            TypeSpec testClass = TypeSpec.classBuilder("DerryTest")</span></span><br><span class="line"><span class="comment">                    .addMethod(mainMethod)</span></span><br><span class="line"><span class="comment">                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)</span></span><br><span class="line"><span class="comment">                    .build();</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">            // 3.包</span></span><br><span class="line"><span class="comment">            JavaFile packagef = JavaFile.builder("com.xiangxue.test", testClass).build();</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">            // 生成文件</span></span><br><span class="line"><span class="comment">            try {</span></span><br><span class="line"><span class="comment">                packagef.writeTo(filer);</span></span><br><span class="line"><span class="comment">            } catch (IOException e) {</span></span><br><span class="line"><span class="comment">                e.printStackTrace();</span></span><br><span class="line"><span class="comment">                messager.printMessage(Diagnostic.Kind.NOTE, "生成Test文件时失败，异常:" + e.getMessage());</span></span><br><span class="line"><span class="comment">            }*/</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">// 包信息</span></span><br><span class="line">            String packageName = elementTool.getPackageOf(element).getQualifiedName().toString();</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 获取简单类名，例如：MainActivity  MainActivity2  MainActivity3</span></span><br><span class="line">            String className = element.getSimpleName().toString();</span><br><span class="line">            messager.printMessage(Diagnostic.Kind.NOTE, <span class="string">"被@ARetuer注解的类有："</span> + className);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// String className = element.getSimpleName().toString();</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">// 目标：要生成的文件名称  MainActivity$$$$$$$$$ARouter</span></span><br><span class="line">            String finalClassName = className + <span class="string">"$$$$$$$$$ARouter"</span>;</span><br><span class="line"></span><br><span class="line">            <span class="comment">/**</span></span><br><span class="line"><span class="comment">             模板：</span></span><br><span class="line"><span class="comment">             public class MainActivity3$$$$$$$$$ARouter {</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">                public static Class findTargetClass(String path) {</span></span><br><span class="line"><span class="comment">                    return path.equals("/app/MainActivity3") ? MainActivity3.class : null;</span></span><br><span class="line"><span class="comment">                }</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">             }</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line"></span><br><span class="line">            ARouter aRouter = element.getAnnotation(ARouter.class);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 1.方法</span></span><br><span class="line">            MethodSpec findTargetClass = MethodSpec.methodBuilder(<span class="string">"findTargetClass"</span>)</span><br><span class="line">                    .addModifiers(Modifier.PUBLIC, Modifier.STATIC)</span><br><span class="line">                    .returns(Class.class)</span><br><span class="line">                    .addParameter(String.class, <span class="string">"path"</span>)</span><br><span class="line">                    <span class="comment">// 方法里面的内容 return path.equals("/app/MainActivity3") ? MainActivity3.class : null;</span></span><br><span class="line"></span><br><span class="line">                    <span class="comment">// 需要JavaPoet包装转型</span></span><br><span class="line">                    .addStatement(<span class="string">"return path.equals($S) ? $T.class : null"</span>,</span><br><span class="line">                            aRouter.path(),</span><br><span class="line">                            ClassName.get((TypeElement) element))</span><br><span class="line">                    .build();</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 2.类</span></span><br><span class="line">            TypeSpec myClass = TypeSpec.classBuilder(finalClassName)</span><br><span class="line">                    .addMethod(findTargetClass)</span><br><span class="line">                    .addModifiers(Modifier.PUBLIC)</span><br><span class="line">                    .build();</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 3.包</span></span><br><span class="line">            JavaFile packagef = JavaFile.builder(packageName, myClass).build();</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 开始生成</span></span><br><span class="line">            <span class="keyword">try</span> {</span><br><span class="line">                packagef.writeTo(filer);</span><br><span class="line">            } <span class="keyword">catch</span> (IOException e) {</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">                messager.printMessage(Diagnostic.Kind.NOTE, <span class="string">"生成"</span> + finalClassName + <span class="string">"文件时失败，异常:"</span> + e.getMessage());</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>; <span class="comment">// false不干活了      true干完了</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在编译的时候，如果要从 Android 端传入参数到 APT 中来的话，怎么操作呢？因为这 2 者肯定是不能直接通信的，我们可以从 gradle 中来中转，在应用module 的 build.gradle 中采用 javaCompileOptions 来解决：</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 传递参数</span></span><br><span class="line">javaCompileOptions {</span><br><span class="line">    annotationProcessorOptions {</span><br><span class="line">        arguments = [<span class="attr">student:</span> <span class="string">'hello ni hao student javapoet'</span>]</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 APT 中接收这个参数，就在 APT 代码上面加上注解：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 接收 安卓工程传递过来的参数</span></span><br><span class="line"><span class="meta">@SupportedOptions("student")</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="三、JavaPoet高级用法"><a href="#三、JavaPoet高级用法" class="headerlink" title="三、JavaPoet高级用法"></a>三、JavaPoet高级用法</h2><p>最后，如果要在 Android 中使用这个注解处理器，还需要在 Android 工程中的 build.gradle 中依赖它，加上之前加入的依赖注解代码，就是这样的：</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 依赖注解</span></span><br><span class="line">implementation project(<span class="string">":arouter-annotations"</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 依赖注解处理器 注解处理器才能工作</span></span><br><span class="line">annotationProcessor project(<span class="string">":compiler"</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以，这个 annotationProcessor 声明 是要注意的。</p>
+<p>javapoet 主要需要注意的是步骤：</p>
+<ol>
+<li><p>生成方法</p>
+</li>
+<li><p>生成类</p>
+</li>
+<li><p>生成包</p>
+</li>
+</ol>
+<p>老师说这个可以去讲一下：EventBus 使用的是普通的写的方式，所以很困难，整个类就是一个字符串，写得非常难。但是 ARouter 使用 javapoet 使用就很简单。</p>
+<h2 id="四、路由分组设计"><a href="#四、路由分组设计" class="headerlink" title="四、路由分组设计"></a>四、路由分组设计</h2><p>很多开源框架的注解设计是这种思想：</p>
+<ul>
+<li><p>在 compiler 这个 Module 中是正儿八经的注解处理器</p>
+</li>
+<li><p>在 xx_annotation 这个目录下写我们的注解（比如 ARouter 中这里就写 ARouter 这个注解类，并标明这个注解是修饰类，编译时注解）</p>
+</li>
+<li><p>xx_api 这个目录写的是注解相关的逻辑（用于与业务逻辑区分，比如 ARouter 中是ARouterGroup、ARouterPath 类，以及将 Activity 等放入相应的 Map 等逻辑）</p>
+</li>
+</ul>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/23/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%80%E8%8A%82/" rel="next" title="02-组件化-第一节">
+                  <i class="fa fa-chevron-left"></i> 02-组件化-第一节
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/02-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E4%B8%89%E8%8A%82/" rel="prev" title="02-组件化-第三节">
+                  02-组件化-第三节 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%89%8D%E6%83%85%E5%9B%9E%E9%A1%BE"><span class="nav-number">1.</span> <span class="nav-text">一、前情回顾</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%BD%BF%E7%94%A8-JavaPoet"><span class="nav-number">2.</span> <span class="nav-text">二、使用 JavaPoet</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%A6%82%E4%BD%95%E5%8E%BB%E4%BD%BF%E7%94%A8APT"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 如何去使用APT</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81JavaPoet%E9%AB%98%E7%BA%A7%E7%94%A8%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">三、JavaPoet高级用法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E8%B7%AF%E7%94%B1%E5%88%86%E7%BB%84%E8%AE%BE%E8%AE%A1"><span class="nav-number">4.</span> <span class="nav-text">四、路由分组设计</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '6726a692a59d58de574a6ced7431b034',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

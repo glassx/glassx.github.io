@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="一、Okhttp介绍okhttp 4 的源码(4.9.3版本，它的包名还是 okhttp3，还是要注意下) Retrofit 只是封装 Okhttp ，让其更容易使用 http 2.0 的特性：头部压缩、server push、多路复用  关于多路复用，其实Http 1.1 也有 keep-alive 这样的标记位来重复使用这条连接，但是这种保持连接只能第一个消息发送完收到 ack 之后，才能发送">
+<meta property="og:type" content="article">
+<meta property="og:title" content="08-Okhttp-【上】">
+<meta property="og:url" content="https://glassx.github.io/2023/06/15/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8A%E3%80%91/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="一、Okhttp介绍okhttp 4 的源码(4.9.3版本，它的包名还是 okhttp3，还是要注意下) Retrofit 只是封装 Okhttp ，让其更容易使用 http 2.0 的特性：头部压缩、server push、多路复用  关于多路复用，其实Http 1.1 也有 keep-alive 这样的标记位来重复使用这条连接，但是这种保持连接只能第一个消息发送完收到 ack 之后，才能发送">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Okhttp%E7%9A%84%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B.jpg">
+<meta property="og:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.jpg">
+<meta property="article:published_time" content="2023-06-15T10:57:00.000Z">
+<meta property="article:modified_time" content="2023-06-28T14:49:49.271Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-开源框架">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Okhttp%E7%9A%84%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B.jpg">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/15/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8A%E3%80%91/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>08-Okhttp-【上】 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/15/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8A%E3%80%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          08-Okhttp-【上】
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-15 18:57:00" itemprop="dateCreated datePublished" datetime="2023-06-15T18:57:00+08:00">2023-06-15</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 22:49:49" itemprop="dateModified" datetime="2023-06-28T22:49:49+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="一、Okhttp介绍"><a href="#一、Okhttp介绍" class="headerlink" title="一、Okhttp介绍"></a>一、Okhttp介绍</h2><p>okhttp 4 的源码(4.9.3版本，它的包名还是 okhttp3，还是要注意下)</p>
+<p>Retrofit 只是封装 Okhttp ，让其更容易使用</p>
+<p>http 2.0 的特性：头部压缩、server push、多路复用</p>
+<blockquote>
+<p>关于多路复用，其实Http 1.1 也有 keep-alive 这样的标记位来重复使用这条连接，但是这种保持连接只能第一个消息发送完收到 ack 之后，才能发送第二条数据，这种就是串行的；而 http 2.0 可以在第一条还未返回结果的时候就发送第二条，这种才是真正的多路复用。</p>
+</blockquote>
+<blockquote>
+<p>因为 http1.1 用的是文本，必须要按照顺序， hello world，必须要按顺序，但是 http2.0 可以先传 r 再传h再传 d 等，它是基于 fragment 的，fragment 有顺序标识。 </p>
+</blockquote>
+<p>okhttp 支持 http2.0 可以复用连接，避免每次去连接都要三次握手之类的。Http2 还有个连接池，池子里面有各种连接，比如baidu.com 的连接、taobao.com 的连接，下次需要请求相关域名的时候，直接使用这个池子里面的连接即可。</p>
+<p>okhttp 的 post 请求的缓存默认是关闭的，只有 get 请求的缓存开启。如果post 请求想开启缓存，只需要做如下 cache 配置就可以了：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">OkhttpClient.Builder().cache(Cache(File(<span class="string">"/xxx"</span>), <span class="number">1024</span>))</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="二、Okhttp-的基本使用与请求流程"><a href="#二、Okhttp-的基本使用与请求流程" class="headerlink" title="二、Okhttp 的基本使用与请求流程"></a>二、Okhttp 的基本使用与请求流程</h2><p>Okhttp 的大体流程如下：</p>
+<ol>
+<li><p>创建一个 OkhttpClient（不管是自己Builder 还是直接new 都可以）</p>
+</li>
+<li><p>创建一个 Request ，封装请求数据</p>
+</li>
+<li><p>Request 交给 OkhttpClient  的 newCall 操作得到一个RealCall </p>
+</li>
+<li><p>之后，不管是通过 execute 还是 enqueue 方法，反正最终是将这个call 交给 Dispatcher 去调度</p>
+</li>
+<li><p>被调度的时候，经过各种 interceptor 拦截器拦截后，最终可以得到 Response ，流程如下图所示：</p>
+</li>
+</ol>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/Okhttp%E7%9A%84%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B.jpg" alt="Okhttp的执行流程"></p>
+<h2 id="三、分发器异步分发限制"><a href="#三、分发器异步分发限制" class="headerlink" title="三、分发器异步分发限制"></a>三、分发器异步分发限制</h2><p>Dispatchers 里面维护了 3 个队列：</p>
+<ul>
+<li><p>准备执行的异步请求队列</p>
+</li>
+<li><p>正在执行的异步请求队列</p>
+</li>
+<li><p>正在执行的同步请求队列</p>
+</li>
+</ul>
+<p>AsyncCall 在 enqueue 的时候，会判断队列里面（不管是准备执行的还是正在执行的）有没有 call 和目前这个 AsyncCall 的host 是一样的，如果是一样的，那就将自己的 callsPerHost 的属性替换成队列中 Call 的 callsPerHost 属性（我个人理解的是，这样方便计数，所有的 Call 都用这一个AtomicInteger 变量来统计数量，这样，后续判断同一个 Host 最多只能5个来同时请求就比较好判断了，只需要取这个值）</p>
+<blockquote>
+<p>所以， callsPerHost 表示的是同一个host 有多少个请求在执行</p>
+</blockquote>
+<p>异步总连接不能超过64个，然后 同一个 host 的请求不能超过5个。</p>
+<h2 id="四、分发器异步请求分发流程"><a href="#四、分发器异步请求分发流程" class="headerlink" title="四、分发器异步请求分发流程"></a>四、分发器异步请求分发流程</h2><p>如果所有异步请求数超过 64 个 （或者同一个 host 的请求数超过 5个）的情况下，那么 call 将不会被执行，那么他们在什么时候会被触发去执行呢？其实，在 RealCall 里面的 run 方法里面，会在 try-catch 块去获取请求的 response ：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//获取response 结果</span></span><br><span class="line">response = getResponseWithInterceptorChain()</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在最终的 finally 中，会执行 client.dispatcher.finished(this) ，告知 Dispatcher 当前 Call 已经结束。之后在 Dispatcher 中会再次激活这个等待队列：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">internal</span> <span class="function"><span class="keyword">fun</span> <span class="title">finished</span><span class="params">(call: <span class="type">AsyncCall</span>)</span></span> {</span><br><span class="line">    call.callsPerHost.decrementAndGet()</span><br><span class="line">    finished(runningAsyncCalls, call)</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看出，首先将 callsPerHost 减1 ，意味着这个 host 在执行的请求数减少一个。在里面还会执行重载的 finished 方法，再次去执行 promoteAndExecute 方法去从队列中获取 Call 去分发执行。所以，整个异步任务执行的工作流程如下所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.jpg" alt="异步请求执行的流程"></p>
+<h3 id="线程池"><a href="#线程池" class="headerlink" title="线程池"></a>线程池</h3><p>Okhttp 异步连接的线程池初始化很有意思：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">executorServiceOrNull = ThreadPoolExecutor(<span class="number">0</span>, <span class="built_in">Int</span>.MAX_VALUE, <span class="number">60</span>, TimeUnit.SECONDS,</span><br><span class="line">           SynchronousQueue(), threadFactory(<span class="string">"<span class="variable">$okHttpName</span> Dispatcher"</span>, <span class="literal">false</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>它指定 corePollSize 为 0，Keep Alive 的时长是 60s ，无界队列，这其实和我们使用 Executors.newCachedThreadPool 是一样的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ExecutorService <span class="title">newCachedThreadPool</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> ThreadPoolExecutor(<span class="number">0</span>, Integer.MAX_VALUE,</span><br><span class="line">                                  <span class="number">60L</span>, TimeUnit.SECONDS,</span><br><span class="line">                                  <span class="keyword">new</span> SynchronousQueue&lt;Runnable&gt;());</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这种线程池有什么特点呢？</p>
+<ul>
+<li><p>核心线程数为 0 ：线程池有个例外的情况，哪怕核心线程数设置为 0 ，在第一个任务的时候，还是会开启线程让执行。</p>
+</li>
+<li><p>最大线程数设置为 Integer.MAX_VALUE ，几乎不限制任务数量</p>
+</li>
+<li><p>使用 SynchronousQueue 队列提交任务。提交肯定失败！因为它不存储元素的。那既然提交任务肯定失败，那我们为什么还用这个呢？我们考虑下线程池，如果队列有容量的话，在线程数大于等于corePoolSize 的时候，<strong>新的任务会被添加到等待队列</strong>，只有在往 队列中添加失败的时候，才会去判断如果小于 maximumPoolSize 的时候，新建线程任务。所以，这种线程池可以让任务马上执行，而不是在那里等待。</p>
+</li>
+</ul>
+<p>所以上述线程池，如果设置corePoolSize 为 0 ，再设置个 LinkedBlockingQueue 的话，第一个任务会执行，第二个任务会放在 LinkedBlockingQueue 中。1 完成后，执行2,2执行后才能3等等。</p>
+<h2 id="五、分发器处理同步请求"><a href="#五、分发器处理同步请求" class="headerlink" title="五、分发器处理同步请求"></a>五、分发器处理同步请求</h2><p>只需要注意，同步请求执行完成后（finnaly 中也是调用 finish），也会去执行 promoteAndExecute 方法，去重新从等待队列中获取 Call 执行任务。有个细节注意，**同步任务执行完成后，会触发异步任务队列的重新获取！</p>
+<h2 id="六、Okhttp拦截器责任链设计模式"><a href="#六、Okhttp拦截器责任链设计模式" class="headerlink" title="六、Okhttp拦截器责任链设计模式"></a>六、Okhttp拦截器责任链设计模式</h2><p>Okhttp 里面会有5个默认的拦截器，并且我们也能通过addInterceptor 和 addNetworkInterceptor 方法添加拦截器，代码如下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">internal</span> <span class="function"><span class="keyword">fun</span> <span class="title">getResponseWithInterceptorChain</span><span class="params">()</span></span>: Response {</span><br><span class="line">    <span class="comment">// Build a full stack of interceptors.</span></span><br><span class="line">    <span class="keyword">val</span> interceptors = mutableListOf&lt;Interceptor&gt;()</span><br><span class="line">    <span class="comment">//添加我们通过 addInterceptor 方法添加的拦截器</span></span><br><span class="line">    interceptors += client.interceptors</span><br><span class="line">    interceptors += RetryAndFollowUpInterceptor(client)</span><br><span class="line">    interceptors += BridgeInterceptor(client.cookieJar)</span><br><span class="line">    interceptors += CacheInterceptor(client.cache)</span><br><span class="line">    interceptors += ConnectInterceptor</span><br><span class="line">    <span class="keyword">if</span> (!forWebSocket) {</span><br><span class="line">        <span class="comment">//添加我们通过 addNetworkInterceptor 添加的拦截器</span></span><br><span class="line">        interceptors += client.networkInterceptors</span><br><span class="line">    }</span><br><span class="line">    interceptors += CallServerInterceptor(forWebSocket)</span><br><span class="line">    <span class="comment">//省略无关代码。。。。。</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>从代码可以看出，通过 addInterceptor 添加的拦截器会首先被 add 进 interceptors 列表中，之后依次添加充实、桥、缓存、连接 拦截器，然后如果不是 websocket 的话，就添加通过 addNetworkInterceptor 添加的拦截器，最后添加的是 CallServerInterceptor 拦截器。</p>
+<blockquote>
+<p>所以，addInterceptor 和 addNetworkInterceptor 方法添加拦截器的区别是什么？在代码中的体现是在 interceptors 数组中的位置不一样，一个是在最开始，一个是在倒是第二个。</p>
+</blockquote>
+<p>但是这个顺序到底会有什么影响？Okhttp 使用责任链设计模式，在发起请求的时候，是从上往下经过这些 Interceptor ，这样就先经过我们 addInterceptor 添加的拦截器，后续才经过 addNetworkInterceptor 添加的拦截器。但是结果返回的时候，是从后面往前面返回的。</p>
+<p>老师在课程里面讲了下如果自己去实现责任链的 Demo ，这个可以模拟下。</p>
+<h2 id="七、Okhttp-拦截器功能概述"><a href="#七、Okhttp-拦截器功能概述" class="headerlink" title="七、Okhttp 拦截器功能概述"></a>七、Okhttp 拦截器功能概述</h2><p>首先总体概述一下各种拦截器的含义：</p>
+<ul>
+<li><p>重试定向拦截器。在交给下一个拦截器之前，判断用户是否取消了请求，如果已经取消了，就不需要将结果交回给用户了。并且，在返回结果之后，根据响应码判断是否需要重定向，如果满足条件就会重启执行所有的拦截器。</p>
+</li>
+<li><p>桥接拦截器。在交出之前，负责将 HTTP 协议必备的请求头加入（比如host 等），并添加一些默认行为（比如 GZIP 压缩），在获得结果后，调用保存cookie 接口并解析GZIP 数据</p>
+</li>
+<li><p>缓存拦截器。顾名思义就是交出之前读取并判断是否使用缓存；获得结果后判断是否需要缓存</p>
+</li>
+<li><p>连接拦截器。从连接池中寻找一个连接，如果没有则创建一个连接，并获得对应的 Socket 流；在获得结果后不进行额外处理</p>
+</li>
+<li><p>请求服务拦截器。进行真正的服务器通信，向服务器发送数据，解析读取响应数据。</p>
+</li>
+</ul>
+<h3 id="刨根究底-addInterceptor-和-addNetworkInterceptor"><a href="#刨根究底-addInterceptor-和-addNetworkInterceptor" class="headerlink" title="刨根究底 addInterceptor 和 addNetworkInterceptor"></a>刨根究底 addInterceptor 和 addNetworkInterceptor</h3><p>当我们只是需要在请求参数里面添加字段，比如 sign 字段，或者在 response 里面修改一点数据，那么我们使用 addInterceptor 和 addNetworkInterceptor 都是可以的。</p>
+<p>但是如果我们打印日志，使用了 httpLogingInterceptor 这个拦截器，打印请求数据和返回数据，<strong>如果你用 addInterceptor 添加拦截器，那么打印出来的是用户写的请求参数，如果使用的是 addNetworkInterceptor ，那么这个请求参数就还包括 Okhttp 自动补全的一些参数</strong> 。</p>
+<h2 id="八、Okhttp-相关的面试题"><a href="#八、Okhttp-相关的面试题" class="headerlink" title="八、Okhttp 相关的面试题"></a>八、Okhttp 相关的面试题</h2><p>1、Okhttp 的分发器是如何工作的？</p>
+<p>对于同步请求，只是记录一下；对于异步任务，首先添加到 ready 队列中，然后检查所有请求数小于64，以及同 host 请求数小于 5 是否满足，满足执行并添加到 running 队列中。</p>
+<p>应用拦截器和网络拦截器有什么区别？</p>
+<p>在 interceptors 中的顺序不同。导致接收到的数据完整性是不一样的。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/" rel="tag"># 享学Android三期-开源框架</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/15/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/07-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E7%AC%AC%E4%BA%8C%E8%8A%82/" rel="next" title="07-网络编程-第二节">
+                  <i class="fa fa-chevron-left"></i> 07-网络编程-第二节
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/16/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8B%E3%80%91/" rel="prev" title="08-Okhttp-【下】">
+                  08-Okhttp-【下】 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Okhttp%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.</span> <span class="nav-text">一、Okhttp介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Okhttp-%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E4%B8%8E%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">二、Okhttp 的基本使用与请求流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%88%86%E5%8F%91%E5%99%A8%E5%BC%82%E6%AD%A5%E5%88%86%E5%8F%91%E9%99%90%E5%88%B6"><span class="nav-number">3.</span> <span class="nav-text">三、分发器异步分发限制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%88%86%E5%8F%91%E5%99%A8%E5%BC%82%E6%AD%A5%E8%AF%B7%E6%B1%82%E5%88%86%E5%8F%91%E6%B5%81%E7%A8%8B"><span class="nav-number">4.</span> <span class="nav-text">四、分发器异步请求分发流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="nav-number">4.1.</span> <span class="nav-text">线程池</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E5%88%86%E5%8F%91%E5%99%A8%E5%A4%84%E7%90%86%E5%90%8C%E6%AD%A5%E8%AF%B7%E6%B1%82"><span class="nav-number">5.</span> <span class="nav-text">五、分发器处理同步请求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Okhttp%E6%8B%A6%E6%88%AA%E5%99%A8%E8%B4%A3%E4%BB%BB%E9%93%BE%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F"><span class="nav-number">6.</span> <span class="nav-text">六、Okhttp拦截器责任链设计模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81Okhttp-%E6%8B%A6%E6%88%AA%E5%99%A8%E5%8A%9F%E8%83%BD%E6%A6%82%E8%BF%B0"><span class="nav-number">7.</span> <span class="nav-text">七、Okhttp 拦截器功能概述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A8%E6%A0%B9%E7%A9%B6%E5%BA%95-addInterceptor-%E5%92%8C-addNetworkInterceptor"><span class="nav-number">7.1.</span> <span class="nav-text">刨根究底 addInterceptor 和 addNetworkInterceptor</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81Okhttp-%E7%9B%B8%E5%85%B3%E7%9A%84%E9%9D%A2%E8%AF%95%E9%A2%98"><span class="nav-number">8.</span> <span class="nav-text">八、Okhttp 相关的面试题</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共389.9k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: 'd8492a5a72df293526b9c0ef1b016577',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
