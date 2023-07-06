@@ -154,7 +154,7 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">35</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">36</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">208</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">210</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,342 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/05/23/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8804%EF%BC%892022.1.20-Android%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87Application%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E8%80%97%E6%97%B6%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/05/23/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8804%EF%BC%892022.1.20-Android%E9%9D%A2%E8%AF%95%E5%BF%85%E5%A4%87Application%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E8%80%97%E6%97%B6%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">性能优化-：（04）2022.1.20-Android面试必备Application启动过程与耗时分析</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-05-23 09:13:00" itemprop="dateCreated datePublished" datetime="2023-05-23T09:13:00+08:00">2023-05-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-05-24 23:07:41" itemprop="dateModified" datetime="2023-05-24T23:07:41+08:00">2023-05-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="一、概述"><a href="#一、概述" class="headerlink" title="一、概述"></a>一、概述</h2><p>分为三个步骤：</p>
+<ol>
+<li><p>通过源码分析，知道启动流程（便于启动监控——哪些地方耗时）</p>
+</li>
+<li><p>阿里的启动优化方案</p>
+</li>
+<li><p>如何实现高效的 SplashActivity </p>
+</li>
+</ol>
+<h2 id="二、启动流程"><a href="#二、启动流程" class="headerlink" title="二、启动流程"></a>二、启动流程</h2><p>分为三个流程，如下图所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%90%AF%E5%8A%A8%E4%B8%89%E6%B5%81%E7%A8%8B.png" alt="App启动的3个流程"></p>
+<p>在第二个阶段中，Application 的启动很关键，其中 Application 中的 attachBaseContext 方法比较关键，很多时候我们会在里面做一些比较前置的任务，诸如：</p>
+<ul>
+<li><p>对于加固的 App ，这里会做解密的操作</p>
+</li>
+<li><p>对于热修复而言，第一时间将修复的 dex 给生效</p>
+</li>
+</ul>
+<p>只需要在执行类之前，dex 中包括这个类。所以，理论上我们可以无需一次性将所有的 dex 文件在 attachBaseContext 的时候加载进去。第一个 Activity 启动之后，再将其他的 dex 加载进去。attachBaseContext 阶段可以使用字节的 BoostMultiDex 方案去优化。</p>
+<p>只有 window 才能展示出来看到，而目前在 Android 里面就一个 PhoneWindow ，所以，我们看到的第一屏肯定只能是 第一个 Activity 的 PhoneWindow。</p>
+<p>那么，在用户点击Launcher 到第一个 Activity 显示出来之前，我们要显示内容，显示什么内容呢？其实显示的是Application 的主题，这个主题里面有个属性：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">application</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:theme</span>=<span class="string">"@style/Theme.AndroidDemo"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">activity</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:name</span>=<span class="string">".MainActivity"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:exported</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"android.intent.action.MAIN"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">            <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"android.intent.category.LAUNCHER"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">application</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>application 的 theme 是 @style/Theme.AndroidDemo ，然后我们可以在theme 里面设置  android:windowSplashscreenContent 值：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resources</span> <span class="attr">xmlns:tools</span>=<span class="string">"http://schemas.android.com/tools"</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- Base application theme. --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">style</span> <span class="attr">name</span>=<span class="string">"Theme.AndroidDemo"</span> <span class="attr">parent</span>=<span class="string">"Theme.MaterialComponents.DayNight.DarkActionBar"</span>&gt;</span><span class="xml"></span></span><br><span class="line"><span class="xml">        <span class="tag">&lt;<span class="name">item</span> <span class="attr">name</span>=<span class="string">"android:windowSplashscreenContent"</span>&gt;</span>@drawable/ic_launcher_background<span class="tag">&lt;/<span class="name">item</span>&gt;</span></span></span><br><span class="line"><span class="xml">    </span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>当然，以上操作要求 API 版本是 26 ，如果要兼容低的版本，就要设置 background 属性，但是这二者还是有区别的：</p>
+<ul>
+<li><p>background 只能是图片</p>
+</li>
+<li><p>windowSplashscreenContent 可以做动画</p>
+</li>
+</ul>
+<p>这是怎么实现的呢？Application 里面压根就没有 Window 啊，其实在startActivity 的时候，Activity 真正启动之前，add 了一个 SplashWindow，WindowManager 通过 addView 的方式将 window 交给 WMS 去展示这个闪屏页了，这个闪屏window 会去解析 windowSplashscreenContent 字段。在第一个 Activity 初始化完，Activity 的 window 也通过 vm.addView 展示的时候，就会覆盖 SplashWindow 。</p>
+<p>以上就是黑白屏优化，这其实就是欺骗用户，实际上也没加快启动速度。</p>
+<p>所以，我们优化启动速度，优化在哪里呢？其实就是 vm.addView 添加 SplashWindow 和 vm.addView 第一个 Activity 的 window 之间的过程，将这个过程尽量缩短。并且，<strong>这个过程里面会执行 Application.onCreate()</strong>，所以我们需要减少 onCreate 的耗时。</p>
+<h2 id="优化方法"><a href="#优化方法" class="headerlink" title="优化方法"></a>优化方法</h2><p>线程数，有些 SDK 会启动线程，你自己可能压根没创建线程。所以如何控制这个线程数呢？后续再讲，基本上可以通过阿里的 Alpha 。（老师说Android 的 startUp 比较垃圾），这就是 Application 的 onCreate 方法优化方法。</p>
+<p>上述的过程还会经历第一个 Activity 的onCreate、onStart、onResume 这些流程</p>
+<p>perfomStartActivity 的过程中， Activity.attach 的时候会为Activity创建 Context 、创建 window ，并未 window 设置 WindowManager。为什么这么设计？因为单一职责问题，Activity 是管理生命周期的，Window 是管理 View 的。</p>
+<p>我们在 Activity 的 onCreate 中只应该去做 view 的操作，其他的诸如数据库初始化之类的应该放在子线程中异步操作。</p>
+<blockquote>
+<p>装饰模式是功能增强；代理模式只是代理，没有增强。</p>
+</blockquote>
+<p>有可能面试官会问，为什么采用 inflater 解析的view ，要比自定义的 view 效率低？这里我们可以看 setContentView 方法，最底层就是使用 inflater 实现的，如果能看到后面就会发现，大量使用反射创建出来 View 。而反射又是比较耗时的，所以总结如下：</p>
+<ul>
+<li><p>解析 xml 耗时</p>
+</li>
+<li><p>根据 xml 反射 view 的反射操作耗时</p>
+</li>
+</ul>
+<p>所以，Activity 的 onCreate 怎么优化？如果采用的还是 xml 就没法优化；只能通过减少 xml 中的布局的层级，减少 view 个数，就减少时间；还有就是从上面的原理来说，可以自己去 new 这些view 。不过也可以用 compose ，它没有 xml 了，通过 new 之类的创建出来的。固定测量方式，避免过度渲染，多次测量问题。</p>
+<p>onCreate 执行完成后，只是解析完成了 xml ，在 setContentView 的时候会创建 decorView，然后创建了 window ，但是还没有 显示出来，还要在 wm.addView() 才能显示在硬件上。而 handleResume 的时候，先执行了 onResume 回调之后，然后再执行Activity 的wm.addView() 。</p>
+<p>所以，Activity 怎么优化，就得onResume() 以及之前的所有方法（onCreate、onStart） 。所以，在 onResume 这里面如果有耗时操作，就要上前面说的阿里的策略了（Alpha）。以及相应的<strong>懒加载</strong>思想（ViewStub、Viewpaget+fragment 等）。</p>
+<p>层级，深度遍历，多一层 2的次幂</p>
+<p>尽量使用 ConstraintLayout 而不是 Linelayout 这些，会增加嵌套。从观法的数据来看，其渲染速度比 RelativeLayout 要提升 40% 。</p>
+<p>Activity 中所有的回调都是在 handler 里面执行的。handler 机制体系里面会有MessageQueue ，message 按照时间排序，如果最开始的那个msg 都要 10ms 后执行，那么线程就会通过 epoll 机制睡眠了。所以我们还是利用 IdelHandler 去让主线程空闲的时候去做。比如说，后台 Service 有些内容是没有必要那么及时的，可以考虑在IdleHandler 中执行。</p>
+<blockquote>
+<p>GC 会 STW ，所以，我们也能在 IdleHandler 中取做 GC ，这样就不会影响主线程，LeakCanary里面就是这么做的（老师展示的代码是这样的，AndroidWatchExecutor.waitForIdle()  方法。还需要自己确认下）。要注意一点，IdleHandler 中不要做耗时操作，因为它也是个 msg</p>
+</blockquote>
+<p>当 App 第一个 Activity 的 window 展示将 SplashWindow 覆盖的时候，是在 windowFocusChange 中实现切换的。所以我们一般用 windowFocusChange 来标记新的 window 启动。</p>
+<p>每一个 Activity 都会有一个独一无二的 Window </p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>启动优化分为几个点：</p>
+<ul>
+<li><p>黑白屏阶段，使用 manifest 中 theme 的 windowSplashscreenContent 属性</p>
+</li>
+<li><p>Application 的 attachBaseContext() 回调中，可以用 字节的 BoostMultiDex 方案</p>
+</li>
+<li><p>Application 的 onCreate 阶段，采用图论原理，将各个任务依次执行，例如阿里的 Alpha 框架</p>
+</li>
+<li><p>接着就到了Activity 阶段，由于要遭 onResume 之后才会执行 vm.addView 最终展示 window ，所以在 onCreate、onStart 、onResume 这些回调里面都不要执行耗时操作</p>
+</li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/05/22/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8803%EF%BC%892022.1.18-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E7%AC%AC%E4%B8%89%E6%AC%A1%E8%AF%BE%EF%BC%88%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%20%E5%86%85%E5%AD%98%E7%AF%87%EF%BC%89/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/05/22/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%EF%BC%8803%EF%BC%892022.1.18-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E7%AC%AC%E4%B8%89%E6%AC%A1%E8%AF%BE%EF%BC%88%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%20%E5%86%85%E5%AD%98%E7%AF%87%EF%BC%89/" class="post-title-link" itemprop="url">性能优化-：（03）2022.1.18-性能优化第三次课（性能优化 内存篇）</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-05-22 18:50:00" itemprop="dateCreated datePublished" datetime="2023-05-22T18:50:00+08:00">2023-05-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-05-24 23:09:16" itemprop="dateModified" datetime="2023-05-24T23:09:16+08:00">2023-05-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>USS 很重要，因为这是 Uniq 的，每个进程独占的。</p>
+<p>USS、PSS、VSS 等波动用来监测内存抖动</p>
+<p>oom_adj 相当于进程的优先级，数值越大越容易被回收</p>
+<p>GC Roots 有：</p>
+<ul>
+<li><p>在线程栈中的局部变量（正在被调用的方法的参数和局部变量）</p>
+</li>
+<li><p>存活的线程对象</p>
+</li>
+<li><p>JNI引用</p>
+</li>
+<li><p>Class 对象（在 Android 中 Class 被加载后不会被卸载的）</p>
+</li>
+<li><p>引用类型的静态变量</p>
+</li>
+</ul>
+<p>自动化监测流程目标</p>
+<ul>
+<li><p>自动且较为准确监测 Activity 泄漏</p>
+</li>
+<li><p>自动获取泄漏的 Actiivty 和 冗余Bitmap 对象的引用链</p>
+</li>
+<li><p>能灵活地扩展 Hprof 的分析逻辑，必要时允许提取 Hprof 文件人工分析</p>
+</li>
+</ul>
+<p>在监测阶段，需要 2 个问题：</p>
+<ul>
+<li><p>activity 在执行销毁的时候，我们如何得知</p>
+</li>
+<li><p>如何判断一个 Activity 无法被 GC 机制回收</p>
+</li>
+</ul>
+<blockquote>
+<p>可以写自己写过 APM ，或者带几个人做过</p>
+</blockquote>
+<p>我们之前说在 Activity 的 destroy 时触发GC，但是这样不怎么好，我们需要手动触发 GC ，会导致卡顿。所以，一般不使用 registerActivityCallback ，而是通过 阈值触发（如 count 计数），达到阈值时就触发GC （Koom 就是这么做的）。</p>
+<h2 id="常见内存泄漏原因"><a href="#常见内存泄漏原因" class="headerlink" title="常见内存泄漏原因"></a>常见内存泄漏原因</h2><ul>
+<li><p>动画问题（在activity销毁时，调用动画的cancel 方法）</p>
+</li>
+<li><p>匿名内部类</p>
+</li>
+<li><p>InputStream/OutputStream 、cursor 等没有 close </p>
+</li>
+<li><p>xxx未完，后续看老师的笔记</p>
+</li>
+</ul>
+<h2 id="Koom-的分析"><a href="#Koom-的分析" class="headerlink" title="Koom 的分析"></a>Koom 的分析</h2><p>如何将 APM 写入简历？</p>
+<blockquote>
+<p>如果自己做过 APM 就更好，如果没有做过就将 APM 接入自己的项目中，然后收集数据，记住那些数据就OK了——路哥</p>
+</blockquote>
+<h3 id="1、Native-Heap-泄漏监控："><a href="#1、Native-Heap-泄漏监控：" class="headerlink" title="1、Native Heap 泄漏监控："></a>1、Native Heap 泄漏监控：</h3><p>主要思路是借助 <strong>Tracing Garbage Collection</strong>（一种垃圾回收算法）来进行监控，GC 回收器的 G1 回收器就是基于这个理论。</p>
+<p>google 提供了一个 libmemunreachable 库，我们可以把所有的代码拷贝到 NDK 里面，自己打包成 so 库，就能调用这个库发现 Native 的内存泄漏了。它会告知有哪些地址可达和不可达（reachable）。</p>
+<p>Koom 的核心监控代码都在各种 monitor 中，比如 LeakMonitor.kt 等。</p>
+<p>爱奇艺的 xHook 能够Hook Native 代码，hook 诸如 malloc 等方法，替换成自己的 malloc 函数，这样就能监测Native 的代码行为。一旦调用了 malloc 等函数，就回调出去。</p>
+<p>ida 这个工具可以查看某个 so 里面有哪些 api，这样就能查看它所有的方法。 </p>
+<p>koom Native 内存泄漏分析的思路：</p>
+<ul>
+<li><p>hook malloc/free 等内存分配器方法，用于记录 Native 内存分配元数据（大小、堆栈、地址等）</p>
+</li>
+<li><p>周期性地使用 mark and sweep 分析整个进程 Native Heap，获取不可达的内存块信息（地址、大小）</p>
+</li>
+<li><p>利用不可达的内存块地址、大小等，从我们之前记录的元数据中获取其分配堆栈，产出泄漏数据（不可达内存地址、分配堆栈、大小等）</p>
+</li>
+</ul>
+<p>APM 在大厂都只会说原理，没法谈实战的。Android 只有APM 这个知识点可以这样。面试官问你 Koom Native层面 怎样 hook ，用 xhook，怎么知道内存泄漏的，google 官方提供的 libmemunreachable 库</p>
+<p>profiler 里面也可以选择当前的进程，然后能看到 Leaks 就可以知道哪些泄漏的。</p>
+<h3 id="2、Java-内存监测思路"><a href="#2、Java-内存监测思路" class="headerlink" title="2、Java 内存监测思路"></a>2、Java 内存监测思路</h3><p>LeakCanary 采用了弱引用的特性，为Activity 创建了弱引用，但是会在 Activity 的 onDestroy 之后连续触发 2 次 GC，并检查引用队列。但是 GC 会引起用户可感知的卡顿，所以 Koom 采用了<strong>无性能损耗的内存阈值监控</strong>来触发镜像采集。</p>
+<p>Koom 的整体流程如下图所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/Koom%E6%B5%81%E7%A8%8B%E5%9B%BE.png" alt="Koom整体流程"></p>
+<h3 id="3、hprof-文件"><a href="#3、hprof-文件" class="headerlink" title="3、hprof 文件"></a>3、hprof 文件</h3><p>使用以下的命令可以导出 hprof 文件：</p>
+<blockquote>
+<p>adb shell am dumpheap <processname> <filename></filename></processname></p>
+</blockquote>
+<p>或者在Android 中采用如下代码（会暂时挂起所有线程）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Debug.dumpHprofData(fileName)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>由于会暂时挂起所有的线程，所以 LeakCanary 在这个时候会非常非常卡，这也是为什么不能用于线上的一个原因。这个时候面试官可能会问，那怎么解决这个问题呢？开子线程行不行？</p>
+<blockquote>
+<p>肯定是不行的，因为这时候挂起了所有线程，包括你的这个子线程。</p>
+</blockquote>
+<p>解决方案：</p>
+<ul>
+<li><p>fork 子进程去执行 dumpHprofData 方法</p>
+</li>
+<li><p>fork 进程采用的是 “copy On Write” 技术，只有在进行写入操作时，才会为子进程拷贝分配独立的内存空间。默认情况下，子进程可以和父进程共享同个内存空间。所以，当我们要执行dumpProfData 方法时，可以 fork 一个子进程，它拥有父进程的内存副本，然后在子进程中取执行 dumpProfData 方法，而父进程可以正常继续运行。</p>
+</li>
+</ul>
+<p>这个过程的流程图如下所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/fork%E5%AD%90%E8%BF%9B%E7%A8%8B%E8%8E%B7%E5%8F%96dump%E4%BF%A1%E6%81%AF.png" alt="fork子进程获取内存镜像"></p>
+<p>hprof 文件很大，一般可达 1G 的规模，所以不可能直接丢给后台去分析，一般会做以下裁剪。这时候就看你具体要什么，可能不同的公司需要的不一样，但是大体上需要看 bitmap、byte 数组 byte[] 等。有个 shark 工具可以用来分析这个 hprof ，便于后续的裁剪。 我们关注的主要是 三类 信息：</p>
+<ul>
+<li><p>字符串信息，保存着所有的字符串，在解析时可以通过索引id引用</p>
+</li>
+<li><p>类的结构信息：包括类内部的变量布局、父类信息等</p>
+</li>
+<li><p>堆信息：内存占用与对象引用的详细信息</p>
+</li>
+</ul>
+<p>裁剪的主要思路如下：</p>
+<ol>
+<li><p>读取 Hprof 文件</p>
+</li>
+<li><p>记录 Bitmap 和 String 类信息</p>
+</li>
+<li><p>移除 Bitmap buffer 和 String value 之外的基础类型数组</p>
+</li>
+<li><p>将同一个图片的 Bitmap buffer 指向同一个  buffer id，移除重复的 Bitmap buffer</p>
+</li>
+<li><p>其他数据原封不动地输出到新文件中</p>
+</li>
+</ol>
+<p>性能优化里面最难的就是 内存，后续的 FPS 之类的就比较简单了。</p>
+<h2 id="落脚点"><a href="#落脚点" class="headerlink" title="落脚点"></a>落脚点</h2><p>启动优化</p>
+<p>apm 的 demo</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1380,255 +1716,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/04/12/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(09)%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%90%86%E8%AE%BA%E7%9F%A5%E8%AF%86%E5%85%A5%E9%97%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/04/12/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(09)%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%90%86%E8%AE%BA%E7%9F%A5%E8%AF%86%E5%85%A5%E9%97%A8/" class="post-title-link" itemprop="url">Java筑基-：(09)线程与进程理论知识入门</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-04-12 20:00:00" itemprop="dateCreated datePublished" datetime="2023-04-12T20:00:00+08:00">2023-04-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-04-14 22:13:08" itemprop="dateModified" datetime="2023-04-14T22:13:08+08:00">2023-04-14</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">听课笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>进程是申请资源的基本单位，线程是cpu 时间片的基本单位。</p>
-<h2 id="一、cpu-核心与线程数"><a href="#一、cpu-核心与线程数" class="headerlink" title="一、cpu 核心与线程数"></a>一、cpu 核心与线程数</h2><p>目前一个 cpu 上可以有多个核心，cpu 上一个核心可以对应一个线程。</p>
-<p>Intel 的 <strong>超线程技术</strong>，可以实现 1 个cpu 核心对应 2 个逻辑处理器。所以在 windows上你查看性能的时候，发现只有 4 核心，但是有 8 个逻辑处理器。</p>
-<h2 id="二、线程轮转"><a href="#二、线程轮转" class="headerlink" title="二、线程轮转"></a>二、线程轮转</h2><p>1.6G 的 CPU 执行一条指令一般在 0.6ns （0.6纳秒）级别，所以是非常快的。但是线程的上下文切换时非常耗时的，一般耗时在 2W 个 CPU 周期级别。</p>
-<h2 id="三、并行-和-并发"><a href="#三、并行-和-并发" class="headerlink" title="三、并行 和 并发"></a>三、并行 和 并发</h2><ul>
-<li><p>并行就是同时进行，比如，有 2 个咖啡机，就可以同时 2 个人并行打咖啡</p>
-</li>
-<li><p>并发：说并发，一定是有时间单位的，会有并发量的说法。所以基于上面的例子来说，只有一台咖啡机，大家轮着来，这时候就有类似 这个咖啡机每小时的并发量是 10，就是给10个人提供服务。</p>
-</li>
-</ul>
-<h2 id="四、高并发的意义"><a href="#四、高并发的意义" class="headerlink" title="四、高并发的意义"></a>四、高并发的意义</h2><ul>
-<li><p>充分利用硬件资源。比如有四核，但是你只有一个线程</p>
-</li>
-<li><p>用户响应。比如商城 App ，下单之后，会给快递发送消息，给用户发送短信等等，这些其实都是互相独立的，不用单线程进行</p>
-</li>
-</ul>
-<p>但是，多线程不一定快，因为有竞争锁的过程，可能比单线程还慢</p>
-<p>OS 对线程数总数是有限制的，比如 Linux 1000个，windows 2000 个</p>
-<p>线程都会有栈空间的，所以线程数量太多的话，空间占用都很可观</p>
-<p>句柄和文件描述符也都有数量上限</p>
-<p>Java 程序天生就是多线程的，比如，你写个main方法，简单写几行代码，比如下面的代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception</span>{</span><br><span class="line">    <span class="comment">//Java 虚拟机线程系统的管理接口</span></span><br><span class="line">    ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();</span><br><span class="line">    <span class="comment">//不需要获取同步的monitor 和 synchronizer 信息，仅仅获取线程堆栈信息</span></span><br><span class="line">    ThreadInfo[] threadInfos = threadMXBean.dumpAllThreads(<span class="keyword">false</span>, <span class="keyword">false</span>);</span><br><span class="line">    <span class="keyword">for</span> (ThreadInfo threadInfo: threadInfos) {</span><br><span class="line">        System.out.println(<span class="string">"["</span> + threadInfo.getThreadId() + <span class="string">"]"</span> + threadInfo.getThreadName());</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
-
-<p>上面的 ThreadMXBean就是用来查看当前虚拟机所有的线程的，我们可以看到有多个线程在运行，运行的结果可能会如下所示：</p>
-<blockquote>
-<p>[1]main<br>[8]Reference Handler<br>[9]Finalizer<br>[10]Signal Dispatcher<br>[11]Attach Listener<br>[17]Common-Cleaner<br>[18]Monitor Ctrl-Break<br>[19]Notification Thread</p>
-</blockquote>
-<p>其中 main 线程我们能理解，就是我们的主线程； Finalizer 方法也好理解，因为 Object 类中有个 finalize() 方法，我们在学习 GC 的时候了解过，如果对象不可达，但是重写了 finalize() 方法还没执行的话，会交给一个 低优先级（守护）线程去执行，但是不保证 finalize() 方法执行完成。说的就是这个 Finalizer 线程。</p>
-<h2 id="五、开启新线程的方式"><a href="#五、开启新线程的方式" class="headerlink" title="五、开启新线程的方式"></a>五、开启新线程的方式</h2><p>到底有几种方式，其实挺纠结的，那么我们就以 Java 的 Thread.java 类的官方文档来看：</p>
-<blockquote>
-<p> There are two ways to create a new thread of execution</p>
-</blockquote>
-<p>上面说的就是 2 种：</p>
-<ul>
-<li><p>扩展 Thread 类（继承一下Thread），重写 run 方法。</p>
-</li>
-<li><p>Runnable 接口。比如： UserRunnable implements Runnable，之后，在 new Thread的时候，将这个 UserRunnable 作为参数传进去</p>
-</li>
-</ul>
-<blockquote>
-<p>类似 Callable 之类的其实就是 Runnable 接口来实现新线程的。</p>
-</blockquote>
-<h3 id="Thread-和-Runnable-二者的区别"><a href="#Thread-和-Runnable-二者的区别" class="headerlink" title="Thread 和 Runnable 二者的区别"></a>Thread 和 Runnable 二者的区别</h3><p>Thread 是 Java 对线程的抽象，而 Runnable 是对任务的抽象</p>
-<h2 id="六、线程的停止"><a href="#六、线程的停止" class="headerlink" title="六、线程的停止"></a>六、线程的停止</h2><p>stop 、destroy suspend 、resume 等线程方法已经被废弃了，因为他们停止的时候，不一定<strong>正常</strong>释放资源。比如要写文件 10k ，但是才写了 4k，就stop 了。</p>
-<p>但是 interrupt 方法可以作为我们停止线程的一个方法。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/04/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(08)FileIO%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98%E2%80%94dex%E6%96%87%E4%BB%B6%E6%94%B9%E9%80%A0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/04/10/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/java%E7%AD%91%E5%9F%BA/Java%E7%AD%91%E5%9F%BA-%EF%BC%9A(08)FileIO%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98%E2%80%94dex%E6%96%87%E4%BB%B6%E6%94%B9%E9%80%A0/" class="post-title-link" itemprop="url">Java筑基-：(08)FileIO项目实战—dex文件改造</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-04-10 19:29:00" itemprop="dateCreated datePublished" datetime="2023-04-10T19:29:00+08:00">2023-04-10</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-05-17 22:23:58" itemprop="dateModified" datetime="2023-05-17T22:23:58+08:00">2023-05-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">听课笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>自己编译的模拟器，它可以在源码上打log，做到可控。并且，所有的行为都会经过模拟器，比如后面你的url请求</p>
-<h2 id="二、常用的思路"><a href="#二、常用的思路" class="headerlink" title="二、常用的思路"></a>二、常用的思路</h2><p>加固思路有以下几种：</p>
-<ul>
-<li><p>反模拟器，一旦发现模拟器，就停止核心代码运行</p>
-</li>
-<li><p>代码虚拟化，自己写的代码先运行在自己写的虚拟机上，后续再运行到系统的虚拟机上<br>加密，核心代码是以压缩或者加密形式存在的，被分割成一段一段的，需要的时候，再把目标段加载到内存。</p>
-</li>
-<li><p>加壳方案，分为壳dex和源dex，壳不加密，源加密</p>
-</li>
-</ul>
-<p>关于第 3 种加固方案的总体示意图如下：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/%E5%8A%A0%E5%9B%BA%E6%96%B9%E6%A1%88%E6%A6%82%E8%A7%88.png" alt="加固方案概览"></p>
-<p>最后为什么有个签名，因为加固过程会修改 APK，必然破坏了 APK ，因此需要重新签名。以上方案值得我们的思考的有几点：</p>
-<ul>
-<li><p>壳dex 与 源 dex 可以随意拼凑吗？</p>
-</li>
-<li><p>壳 dex 怎么生成？</p>
-</li>
-<li><p>如何签名？</p>
-</li>
-<li><p>如果运行新的 apk（如何脱壳）？</p>
-</li>
-</ul>
-<h2 id="四、Apk打包过程"><a href="#四、Apk打包过程" class="headerlink" title="四、Apk打包过程"></a>四、Apk打包过程</h2><p>简单说一下 APK 的打包过程，整体流程如下图所示：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/01-java%E7%AD%91%E5%9F%BA/apk%E6%89%93%E5%8C%85%E8%BF%87%E7%A8%8B.png" alt="Android打包流程"></p>
-<p>几个重要的过程：</p>
-<ol>
-<li><p>首先 aapt 工具将资源文件生成 R.java 文件</p>
-</li>
-<li><p>aidl 工具将 aidl 文件生成 Java 文件</p>
-</li>
-<li><p>将上述的 java 文件、项目自己的 java 文件，通过 Java compiler 一起生成 .class 文件</p>
-</li>
-<li><p>.class 文件通过 dx 工具生成 dex 文件</p>
-</li>
-<li><p>将 dex 文件和那些资源文件一起压缩生成 apk</p>
-</li>
-<li><p>签名</p>
-</li>
-</ol>
-<h2 id="加壳"><a href="#加壳" class="headerlink" title="加壳"></a>加壳</h2><p>生成原始 apk ，然后解压到目录 unzip 中文件夹中，当然，要把之前的签名文件给剔除；之后，找到所 unzip 中所有的 dex 文件，进行加密。</p>
-<p>接下来，将项目中的一个 lib 生成的 aar 转成 dex 文件， dx 工具可以将 jar 转成 dex，当然，这个 lib 有自己的 Application ，在正式使用的时候，上述 原始 apk 中的 Application 在最开始的时候要通过反射的方式调用这个 lib 的 Application ，让其形式上作为 App 的默认 Application ，以便后续的解密。</p>
-<p>将加密的 dex 和 aar 转成的 dex 一起放入 unzip 中，这样 ，unzip 文件夹中有了 加密的 dex 和 lib 的dex ，以及原始 apk 中所有的 资源，这时候通过 zip 压缩，就能将 unzip 中所有的内容压缩起来，改名 apk （这个打包apk 的过程需要确认）</p>
-<p>最后，对这个 apk 进行签名，就形成了正式的apk 。</p>
-<h2 id="脱壳"><a href="#脱壳" class="headerlink" title="脱壳"></a>脱壳</h2><p>上述打包的 APK 最终需要安装使用，安装成功后，</p>
-<p>我们的安装包都会安装在 </p>
-<blockquote>
-<p>/data/data/包名/files/fake_apk/  </p>
-</blockquote>
-<p>这种目录下，在壳的 Application （那个lib 中的 Application）的 attachBaseContext 的时候，我们可以将这个apk加载进来，然后过滤出所有加密的 dex 文件，之后解密，然后将这些解密后的文件存入到指定的目录，后续就使用这些已经解密的dex 。当然，我们不需要每次都去解密这个 dex ，将其存起来就好了，下次直接使用。</p>
-<h2 id="对称加密、非对称加密"><a href="#对称加密、非对称加密" class="headerlink" title="对称加密、非对称加密"></a>对称加密、非对称加密</h2><p>看了，但是笔记略</p>
-<blockquote>
-<p>后续要根据视频内容自己写一下整个的加壳、脱壳的过程</p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1679,7 +1766,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">208</span>
+          <span class="site-state-item-count">210</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1692,7 +1779,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-count">36</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -1765,7 +1852,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共389.9k字</span>
+  <span class="post-count">博客全站共392.4k字</span>
 </div>
 
 

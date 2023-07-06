@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="首先，setContentView 的主要目的有 2 个：  创建 DecorView： installDecor()  获取到 Content ： mLayoutInflater.inflate(xx, xx)   继承 Activity 的情况如果继承 Activity ，setContentView 的时候源码点进去发现是 getWindow.setContentView() ，我们知道这个">
+<meta property="og:type" content="article">
+<meta property="og:title" content="高级UI-：（01）2021.9.12-setContentView流程分析---leo老师">
+<meta property="og:url" content="https://glassx.github.io/2023/06/29/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/%E9%AB%98%E7%BA%A7UI-%EF%BC%9A%EF%BC%8801%EF%BC%892021.9.12-setContentView%E6%B5%81%E7%A8%8B%E5%88%86%E6%9E%90---leo%E8%80%81%E5%B8%88/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="首先，setContentView 的主要目的有 2 个：  创建 DecorView： installDecor()  获取到 Content ： mLayoutInflater.inflate(xx, xx)   继承 Activity 的情况如果继承 Activity ，setContentView 的时候源码点进去发现是 getWindow.setContentView() ，我们知道这个">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-06-29T01:28:00.000Z">
+<meta property="article:modified_time" content="2023-07-06T07:15:31.440Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="享学Android三期-高级UI">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2023/06/29/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/%E9%AB%98%E7%BA%A7UI-%EF%BC%9A%EF%BC%8801%EF%BC%892021.9.12-setContentView%E6%B5%81%E7%A8%8B%E5%88%86%E6%9E%90---leo%E8%80%81%E5%B8%88/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>高级UI-：（01）2021.9.12-setContentView流程分析---leo老师 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">36</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">210</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/29/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/%E9%AB%98%E7%BA%A7UI-%EF%BC%9A%EF%BC%8801%EF%BC%892021.9.12-setContentView%E6%B5%81%E7%A8%8B%E5%88%86%E6%9E%90---leo%E8%80%81%E5%B8%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          高级UI-：（01）2021.9.12-setContentView流程分析---leo老师
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-29 09:28:00" itemprop="dateCreated datePublished" datetime="2023-06-29T09:28:00+08:00">2023-06-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-07-06 15:15:31" itemprop="dateModified" datetime="2023-07-06T15:15:31+08:00">2023-07-06</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><p>首先，setContentView 的主要目的有 2 个：</p>
+<ul>
+<li><p>创建 DecorView： installDecor()</p>
+</li>
+<li><p>获取到 Content ： mLayoutInflater.inflate(xx, xx)</p>
+</li>
+</ul>
+<h2 id="继承-Activity-的情况"><a href="#继承-Activity-的情况" class="headerlink" title="继承 Activity 的情况"></a>继承 Activity 的情况</h2><p>如果继承 Activity ，setContentView 的时候源码点进去发现是 getWindow.setContentView() ，我们知道这个getWindow 就是 PhoneWindow 。在 ActivityThread.performActivity 启动 Activity 过程中，会调用 activity.attach ，在 attach 中 会创建 PhoneWindow 对象。之后才会有Activity 的 onCreate 回调。</p>
+<p>在 PhoneWindow 的 installDecor 中会调用 generateDecor，其实最终就是直接 new 一个 DecorView：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> DecorView <span class="title">generateDecor</span><span class="params">(<span class="keyword">int</span> featureId)</span> </span>{</span><br><span class="line">    <span class="comment">//省略无关代码</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> DecorView(context, featureId, <span class="keyword">this</span>, getAttributes());</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>DecorView 实际上就是一个 FrameLayout 。</p>
+<p>在 PhoneWindow 的 installDecor 还会生成 contentParent：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mContentParent = generateLayout(mDecor);</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在里面会根据各种标记位 Flag 来选择不同的 layout xml布局文件作为 contentParent 的布局文件</p>
+<p>面试题： 我在 setContentView 之后，再去设置   requestWindowFeature () 方法，为什么会报错？</p>
+<p>直接原因：在 setContentView 方法执行完成之后，会将一个标志位置为 true， 等 requestWindowFeature方法调用的时候会判断这个标志位为true则报错。间接原因：为什么这么设计呢？这是因为在 generateLayout 的代码中， requestWindowFeature 设置的值也会作为 Flag 来选择 不同的layoutResource ，比如是否有 title (Window.FEATURE_NO_TITLE)等，所以需要这样 。</p>
+<p>状态栏不在 setContentView 中，它是属于系统的。</p>
+<h2 id="继承-AppcompatActivity-情况"><a href="#继承-AppcompatActivity-情况" class="headerlink" title="继承 AppcompatActivity 情况"></a>继承 AppcompatActivity 情况</h2><p>继承 Activity 的时候，可以使用 requestWindowFeature 来更改一些 Window 属性；但是如果继承  AppcompatActivity ，<strong>直接使用 requestWindowFeature 是没作用的，需要使用 supportRequestWindowFeature 方法。</strong></p>
+<p>将原始的 windowContentView 的 id 置为 NO_ID ，将自己的 subDecorView 的id 设置成原来的 windowContentView 的 id ，实现了个替换。后来就通过 PhoneWindow 的 setContentView 将 subDecorView 设置进去了。</p>
+<p>所以，这个步骤相当于将 DecorView 中的内容完全替换了。</p>
+<h2 id="View-是如何根据xml创建的"><a href="#View-是如何根据xml创建的" class="headerlink" title="View 是如何根据xml创建的"></a>View 是如何根据xml创建的</h2><p>上述会执行到：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LayoutInflater.from(mContext).inflate(resId, contentParent)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>那么如何根据 resId 布局文件创建出布局中的哪些 View 呢？</p>
+<p>再 createView 中，通过 clazz = Class.forName() 获得这些 View 的 class 对象，之后，通过 newInstance 的形式将 View 创建出来。</p>
+<p>需要注意一点，如果 LayoutInflater.from(mContext).inflate 的时候，layout 是一个 merge 的，一定要 有parent 并且 attach 为 true：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>ViewStub 继承的是 View ，首先它是 Gone 的，在显示的时候将自己的 id 设置为 NO_ID </p>
+<h2 id="面试题"><a href="#面试题" class="headerlink" title="## 面试题"></a>## 面试题</h2><ol start="2">
+<li>为什么requestWindowFeature()要在setContentView()之前调用<br>requestWindowFeature 实际调用的是 PhoneWindow.requestFeature,<br>在这个方法里面会判断如果变量 mContentParentExplicitlySet 为true则报错，<br>而这个变量会在 <code>PhoneWindow.setContentView</code> 调用的时候设置为true。  <ol start="2">
+<li>为什么这么设计呢？<br>DecorView的xml布局是通过设置的窗口特征进行选择的。  </li>
+<li>为什么 requestWindowFeature(Window.FEATURE_NO_TITLE);设置无效？<br>需要用 supportRequestWindowFeature(Window.FEATURE_NO_TITLE);，因为继承的是AppCompatActivity，这个类里面会覆盖设置。</li>
+</ol>
+</li>
+</ol>
+<p>2.LayoutInflate几个参数的作用？  </p>
+<p>LayoutInflater inflater = LayoutInflater.from(this);<br>// 方式一:布局添加成功，里面执行了 ll.addView(view)View view = inflater.inflate(R.layout.inflate_layout, ll, true);  </p>
+<p>// 方式二：报错，一个View只能有一个父亲（The specified child already has a parent.）<br>View view = inflater.inflate(R.layout.inflate_layout, ll, true);<br>ll.addView(view);  </p>
+<p>// 方式三：布局成功，第三个参数为false<br>// 目的：想要 inflate_layout 的根节点的属性（宽高）有效，又不想让其处于某一个容器中<br>View view = inflater.inflate(R.layout.inflate_layout, ll, false);<br>ll.addView(view);  </p>
+<p>// 方式四：root = null，这个时候不管第三个参数是什么，显示效果一样<br>// inflate_layout 的根节点的属性（宽高）设置无效，只是包裹子View，<br>// 但是子View（Button）有效，因为Button是处于容器下的<br>View view = inflater.inflate(R.layout.inflate_layout, null, false);<br>ll.addView(view);</p>
+<p>3.描述下merge、include、ViewStub标签的特点<br>include:  </p>
+<ol>
+<li>不能作为根元素，需要放在 ViewGroup中  </li>
+<li>findViewById查找不到目标控件，这个问题出现的前提是在使用include时设置了id，而在findViewById时却用了被include进来的布局的根元素id。  </li>
+<li>为什么会报空指针呢？<br>如果使用include标签时设置了id，这个id就会覆盖 layout根view中设置的id，从而找不到这个id<br>代码：LayoutInflate.parseInclude<br>–》final int id = a.getResourceId(R.styleable.Include_id, View.NO_ID);<br>–》if (id != View.NO_ID) {<br>view.setId(id);<br>}  </li>
+</ol>
+<p>merge:  </p>
+<ol>
+<li>merge标签必须使用在根布局  </li>
+<li>因为merge标签并不是View,所以在通过LayoutInflate.inflate()方法渲染的时候,第二个参数必须指定一个父容器,<br>且第三个参数必须为true,也就是必须为merge下的视图指定一个父亲节点.  </li>
+<li>由于merge不是View所以对merge标签设置的所有属性都是无效的.  </li>
+</ol>
+<p>ViewStub:就是一个宽高都为0的一个View，它默认是不可见的  </p>
+<ol>
+<li>类似include，但是一个不可见的View类，用于在运行时按需懒加载资源，只有在代码中调用了viewStub.inflate()<br>或者viewStub.setVisible(View.visible)方法时才内容才变得可见。  </li>
+<li>这里需要注意的一点是，当ViewStub被inflate到parent时，ViewStub就被remove掉了，即当前view hierarchy中不再存在ViewStub，<br>而是使用对应的layout视图代替。</li>
+</ol>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%BA%AB%E5%AD%A6Android%E4%B8%89%E6%9C%9F-%E9%AB%98%E7%BA%A7UI/" rel="tag"># 享学Android三期-高级UI</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/06/28/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E7%AC%AC9%E7%AB%A0/" rel="next" title="第9章：JNI原理">
+                  <i class="fa fa-chevron-left"></i> 第9章：JNI原理
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2023/06/29/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/%E9%AB%98%E7%BA%A7UI-%EF%BC%8802%EF%BC%892021.9.14-%E9%AB%98%E6%80%A7%E8%83%BD%E6%8D%A2%E8%82%A4%E6%A1%86%E6%9E%B6%E5%8E%9F%E7%90%86%E8%A7%A3%E6%9E%90--leo%E8%80%81%E5%B8%88/" rel="prev" title="高级UI-（02）2021.9.14-高性能换肤框架原理解析--leo老师">
+                  高级UI-（02）2021.9.14-高性能换肤框架原理解析--leo老师 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%A7%E6%89%BF-Activity-%E7%9A%84%E6%83%85%E5%86%B5"><span class="nav-number">1.</span> <span class="nav-text">继承 Activity 的情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%A7%E6%89%BF-AppcompatActivity-%E6%83%85%E5%86%B5"><span class="nav-number">2.</span> <span class="nav-text">继承 AppcompatActivity 情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#View-%E6%98%AF%E5%A6%82%E4%BD%95%E6%A0%B9%E6%8D%AExml%E5%88%9B%E5%BB%BA%E7%9A%84"><span class="nav-number">3.</span> <span class="nav-text">View 是如何根据xml创建的</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9D%A2%E8%AF%95%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">## 面试题</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共392.4k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '7f3ee308df05f0b6eb15abf07042fd6e',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
