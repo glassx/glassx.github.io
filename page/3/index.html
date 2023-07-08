@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">210</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">211</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,172 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/16/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8B%E3%80%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/06/16/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/08-Okhttp-%E3%80%90%E4%B8%8B%E3%80%91/" class="post-title-link" itemprop="url">08-Okhttp-【下】</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-06-16 16:03:00" itemprop="dateCreated datePublished" datetime="2023-06-16T16:03:00+08:00">2023-06-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-28 22:50:30" itemprop="dateModified" datetime="2023-06-28T22:50:30+08:00">2023-06-28</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="一、重试重定向拦截器-重试限制"><a href="#一、重试重定向拦截器-重试限制" class="headerlink" title="一、重试重定向拦截器-重试限制"></a>一、重试重定向拦截器-重试限制</h2><p>首先判断是否取消了，取消了直接抛出异常</p>
+<p>之后在 try-catch 代码块里面执行责任链获取 response，并且捕捉 RouteException （路线异常，比如 socket 连接失败）和 IOException （IO 异常），在这 2 种 异常中判断是否需要重试，调用的是 recover 函数：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//检查是否需要重试</span></span><br><span class="line"><span class="keyword">if</span> (!recover(e.lastConnectException, call, request, requestSendStarted = <span class="literal">false</span>)) {</span><br><span class="line">    <span class="keyword">throw</span> e.firstConnectException.withSuppressed(recoveredFailures)</span><br><span class="line">} <span class="keyword">else</span> {</span><br><span class="line">    <span class="comment">//。。。。</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以看出，检查是否需要重试，如果不需要，直接抛出异常就终止了，否则才继续往后面走重试。那么是否需要重试的条件是什么呢？ 有以下几点：</p>
+<ul>
+<li><p>OkHttpClient 可以配置是否允许重试，设置为 false 直接不能重试</p>
+</li>
+<li><p>request body 不允许复用，那就不能重试</p>
+</li>
+<li><p>产生了 FileNotFoundException 异常，也不用重试了</p>
+</li>
+<li><p>产生了不允许重试的异常（协议异常-如返回204代表无响应体，但是Content-Lenth 不为0，二者产生冲突，就是协议异常了、证书异常、除连接超时之外的 IO 中断异常）</p>
+</li>
+<li><p>最后一关，是否有拥有更多路线（设置了代理，DNS 返回了多个 ip -应该重试其他ip），即使上面的判断都通过，只要没有更多路线，都不能重试</p>
+</li>
+</ul>
+<p>重定向限制次数，<strong>20 次</strong></p>
+<h2 id="二、重试重定向拦截器-重定向规则"><a href="#二、重试重定向拦截器-重定向规则" class="headerlink" title="二、重试重定向拦截器-重定向规则"></a>二、重试重定向拦截器-重定向规则</h2><p>次数超出 20 次，也抛出异常。</p>
+<p>代码中是通过 followUpRequest 方法来确定重定向的，同过 response 的响应码来判断响应码，这个重定向看起来不只是重定向功能，如果只是重定向，可能只需要判断 3xx 这个码就可以了，实际上，这里面判断多个码，包括：</p>
+<ul>
+<li><p>3xx：重定向</p>
+</li>
+<li><p>401：服务器需要授权，比如某些接口需要登录</p>
+</li>
+<li><p>407：代理需要授权，比如付费代理，验证身份</p>
+</li>
+<li><p>408：请求超时</p>
+</li>
+<li><p>421：当前客户端所在的ip到服务器的连接数超了</p>
+</li>
+<li><p>503：服务不可用</p>
+</li>
+</ul>
+<p>个人觉得准备面试的话就记住 3xx、需要授权、连接数超了这几个基本上就可以了</p>
+<blockquote>
+<p>代理有 2 种，HTTP 代理和 Socket 代理，Http代理代理的是 Http，Socket 代理它代理的是 TCP/IP </p>
+</blockquote>
+<h2 id="三、桥接拦截器"><a href="#三、桥接拦截器" class="headerlink" title="三、桥接拦截器"></a>三、桥接拦截器</h2><p>桥接拦截器主要功能就是在请求前和请求后做一些通用繁琐处理：</p>
+<ul>
+<li><p>请求前补全请求头（设置cookie、设置UA、设置Host字段、content-Length 、Content-Type 、Gzip 压缩等）</p>
+</li>
+<li><p>得到响应后：接收 Cookies 并回调给用户，在下次请求的时候读取相应 cookies 数据设置到请求头；如果有设置 gzip ，则解析 gzip 数据</p>
+</li>
+</ul>
+<h2 id="四、缓存拦截器"><a href="#四、缓存拦截器" class="headerlink" title="四、缓存拦截器"></a>四、缓存拦截器</h2><p>关于缓存的请求头和响应头非常多，所以这里很复杂，Http 的缓存我们可以按照行为分为： <strong>强缓存</strong> 和 <strong>协商缓存</strong>。</p>
+<ul>
+<li><p>强缓存： 有缓存的时候，直接将缓存给用户，不会发送请求给服务端，可以通过 Cache-Control 和 Expires 来判断缓存过期时间。</p>
+</li>
+<li><p>协商缓存：请求还是会发给服务端，但是服务端可能会返回 304 （此时没有请求体的），意味着服务端在这段时间没有修改，使用本地的缓存就好。</p>
+</li>
+</ul>
+<p>如果 networkReqeust 存在，则优先发起网络请求，否则使用 cacheResponse 缓存，若都不存在则请求失败。</p>
+<h2 id="五、连接拦截器-新建连接"><a href="#五、连接拦截器-新建连接" class="headerlink" title="五、连接拦截器-新建连接"></a>五、连接拦截器-新建连接</h2><p>代码很少，总共就 4 行代码</p>
+<p>在这里来判断是 http1 还是 http2。找到连接之后，还需要连接是否健康（未关闭，正常工作），</p>
+<p>普通代理：可以想象 Fiddler，它是可以更改你的数据再发送出去的</p>
+<p>隧道代理：是无法更改客户端的请求的，将客户端的数据无脑地发送给服务端</p>
+<p>Okhttp 支持你创建代理，可以选择是 Http 代理还是 Sockets 代理。老师有写这些代理使用的方式，有现成代码，这里就不贴出来了。</p>
+<p>ALPN 是 TLS 的扩展协议，从 与 服务端的 hello 里面可以协商到使用哪一种协议。会存储在 sslSocket 中</p>
+<h2 id="六、连接拦截器-连接池"><a href="#六、连接拦截器-连接池" class="headerlink" title="六、连接拦截器-连接池"></a>六、连接拦截器-连接池</h2><p>首先从连接池中获取连接，如果没有，才去做上述的新建连接。</p>
+<p>每次put 新的连接到池子里面的时候，都会扔进去一个定时执行的 Task，用于执行 clean 任务，清除不可用的连接，无效的连接。不移走会占用内存。比如，你刚创建的连接，那么5分钟后肯定会过期，如果没有使用的话</p>
+<p>连接池最多允许 5 个空闲连接；连接池中闲置的连接最多允许闲置 5 分钟。比如，某个连接 baidu.com 只使用了一次，这样就能将其清理掉。清理的时候，将闲置时长最长的清理掉。 </p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/%E8%BF%9E%E6%8E%A5%E6%B5%81%E8%BD%AC%E8%BF%87%E7%A8%8B.png" alt="连接执行流程"></p>
+<h2 id="七、请求服务拦截器与面试总结"><a href="#七、请求服务拦截器与面试总结" class="headerlink" title="七、请求服务拦截器与面试总结"></a>七、请求服务拦截器与面试总结</h2><p>发送很简单，这里就不写了，有个点需要注意下，如果是发送个比较大的文件，是需要与服务端协商的，Okhttp 是这样做的：</p>
+<ol>
+<li><p>如果服务器允许则返回 100 ，则客户端继续发送请求体</p>
+</li>
+<li><p>如果服务器不允许就直接返回给用户</p>
+</li>
+<li><p>如果服务器忽略这个问询的请求头，一直无法读取应答，此时会抛出超时异常</p>
+</li>
+</ol>
+<h3 id="7-1-面试题"><a href="#7-1-面试题" class="headerlink" title="7.1 面试题"></a>7.1 面试题</h3><p>Okhttp 的请求过程</p>
+<p>构建 Request ，通过 OkhttpClient 获得 Call （RealCall对象）如果：</p>
+<ul>
+<li><p>是同步请求，则在发起请求的线程中直接获取结果（调用5个Interceptor）</p>
+</li>
+<li><p>如果是异步请求，则通过 Dispatcher 分发到线程池中进行请求获取结果（也是调用5个Interceptor）</p>
+</li>
+</ul>
+<p>拦截器如何工作的？</p>
+<p>责任链模式将请求者与执行者解耦，请求者只需将请求发送给责任链即可</p>
+<p>应用拦截器与网络拦截器的区别？</p>
+<ul>
+<li><p>他们在 interceptors 中的顺序不一样</p>
+</li>
+<li><p>网络拦截器不一定执行，因为有可能直接拿了缓存，不需要后续的执行了</p>
+</li>
+</ul>
+<p>Okhttp 如何复用连接？</p>
+<p>host 验证规则一样、dns 一样等等，这些属性都一样。当然，也会清理垃圾连接，超过 5 分钟没有使用的连接，超过5个闲置连接后，清理闲置最久的连接</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1213,181 +1379,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/12/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8806%EF%BC%892021.12.21-WindowManager%E5%AF%B9%E7%AA%97%E5%8F%A3%E7%9A%84%E6%93%8D%E4%BD%9C---Colin%E8%80%81%E5%B8%88/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/06/12/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/Framework%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%EF%BC%8806%EF%BC%892021.12.21-WindowManager%E5%AF%B9%E7%AA%97%E5%8F%A3%E7%9A%84%E6%93%8D%E4%BD%9C---Colin%E8%80%81%E5%B8%88/" class="post-title-link" itemprop="url">（06）2021.12.21-WindowManager对窗口的操作---Colin老师</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-06-12 09:55:00" itemprop="dateCreated datePublished" datetime="2023-06-12T09:55:00+08:00">2023-06-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-06-28 21:59:33" itemprop="dateModified" datetime="2023-06-28T21:59:33+08:00">2023-06-28</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">听课笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="一、Window-总览"><a href="#一、Window-总览" class="headerlink" title="一、Window 总览"></a>一、Window 总览</h2><p>window 是屏幕上一块区域，但不是实实在在的，实际显示的是 View 。WMS、WindowManager 以及 Window 之间的关系如下：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-FrameWork%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/window%E7%9B%B8%E5%85%B3%E6%96%B9%E7%9A%84%E5%85%B3%E7%B3%BB.png" alt="Window相关方的关系"></p>
-<ul>
-<li><p>Window： 窗口的概念，Android 中所有的师徒都依赖于 Window 显示</p>
-</li>
-<li><p>WindowManager ： 管理 Window ，包括 增、删、更新 等操作，类似一个代理的概念，最终要丢给 WMS 去实际操作。</p>
-</li>
-<li><p>WMS ： Window 最终管理者，负责 window 的启动、添加、删除，Window 的大小和层级也是 WMS 管理的</p>
-</li>
-</ul>
-<h3 id="1-1-Window-分类"><a href="#1-1-Window-分类" class="headerlink" title="1.1 Window 分类"></a>1.1 Window 分类</h3><p>Application Window</p>
-<p>xxxx</p>
-<p>statusBar 和 searchBar 等居然也都是 System Window 。</p>
-<p>打电话时，脸靠近手机的时候，黑屏 以及 脸不能按屏幕上的按钮，这些都是 Window 的标记来实现的。</p>
-<h2 id="二、WindowManager"><a href="#二、WindowManager" class="headerlink" title="二、WindowManager"></a>二、WindowManager</h2><p>WindowManager 在应用层。WindowManager 是继承了 ViewManager 的，这里发散以下， ViewGroup 也是实现了 ViewManager ，联动一下。</p>
-<p>Activity 的 attach 方法里面，会创建 Window ，以及 绑定到 WindowManager 。</p>
-<p>Activity 中 Window 下最直接管理的 View 是 DecorView ，示意图如下：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-FrameWork%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/DecorView.png" alt="DecorView"></p>
-<p>注意，我们平时在代码中调用 setContentView 是我们上图蓝色部分的 ContentView 吗？答案不是的，我们 setContentView 的 View 到时候会作为上述 蓝色 ContentView 的子 View 。</p>
-<p>我们都说onResume 的时候，是可见可操作的。这里其实应该是Activity 可见 ，就是 Activity 已经创建好了！但其实里面的元素还是不可见的，因为 performResume 之后，才会执行 window.addView 将 View 添加进去，所以，要注意区分。</p>
-<p>WindowManagerGlobal 主要的职责是：</p>
-<ul>
-<li><p>设置view的参数（layoutparams）</p>
-</li>
-<li><p>创建 ViewRootImpl </p>
-</li>
-</ul>
-<p>其中，WindowManagerGlobal 的 addView 方法中会创建 ViewRootImpl 的对象。</p>
-<p>总结一下各方关系就是：每个 Activity 都有一个 PhoneWindow ，每个 PhoneWindow 中有个根 View——DecorView ，并且PhoneWindow 中有个 WindowManagerImpl 用于管理 Activity 中 VIew 的细节，然后 WindowManagerGlobal 用于全局管理所有的 WindowManagerImpl ，示意图如下所示：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-FrameWork%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/WindowManagerGlobal.png" alt="Window各方关系如下"></p>
-<h2 id="三、绘制流程"><a href="#三、绘制流程" class="headerlink" title="三、绘制流程"></a>三、绘制流程</h2><p>在 ViewRootImpl 中，接收到同步信号的时候，就会触发 performTraversalses() 方法，在里面会执行 performMeasure、performLayout、performDraw 等，</p>
-<h3 id="ViewRootImpl"><a href="#ViewRootImpl" class="headerlink" title="ViewRootImpl"></a>ViewRootImpl</h3><p>ViewRootImpl 的功能主要体现在如下几个方面：</p>
-<ul>
-<li><p>作为 View 树的树根（注意，它自己并不是View，只是树根的意思而已）并管理 View 树</p>
-</li>
-<li><p>触发 View的测量、布局和绘制</p>
-</li>
-<li><p>输入响应的中转站</p>
-</li>
-<li><p>负责与 WMS 进行进程间通信</p>
-</li>
-</ul>
-<p>关于输入响应的中转站，我们可以看如下图：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-FrameWork%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/%E4%BA%8B%E4%BB%B6%E6%B5%81%E7%A8%8B.png" alt="ViewRootImpl是输入的中转站"></p>
-<p>事件产生后，会传递到 ViewRootImpl 中，之后被传递给 DecorView ，我们根据这个步骤可以看到，这里面传递很弯弯绕绕，DecorView 传递给Acitivty ，第 3 步的时候，又回到了 DecorView 中。</p>
-<p>为什么要这么设计呢？省略中间商赚差价直接到 ViewGroup 行不行？答案是不行。因为诸如打电话脸贴到屏幕上时需要黑屏，点击操作不能响应等操作， View 和 ViewGroup 上面没有相关的处理机制的，都在 PhoneWindow 里面，所以必须经过 PhoneWindow 。</p>
-<p>view 或者 Window 的刷新都依赖于 ViewRootImpl 中的 scheduleTraversals 方法。</p>
-<h3 id="UI刷新"><a href="#UI刷新" class="headerlink" title="UI刷新"></a>UI刷新</h3><p>以 2 个问题开始：</p>
-<ul>
-<li><p>TextView 连续 2 次setTextView ，那么会触发几次重绘？</p>
-</li>
-<li><p>Android 为什么要求帧率是 60？</p>
-</li>
-</ul>
-<p>答案：UI必须等待 16ms 的间隔才会绘制下一帧，所以连续2次 setTextView 只会触发一次重绘。同时必须每秒 60 帧（电影是 24 帧）用户才不会感觉卡顿，所以就 16ms 就要一帧。</p>
-<p>关于刷新的整体流程我们可以参考如下图：</p>
-<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/06-FrameWork%E5%B1%82%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/UI%E5%88%B7%E6%96%B0.png" alt="刷新整体流程"></p>
-<p>从图可以看出，setText 之后，就会触发 invalidate ，由于 View 自己不能刷新，需要向上请示老大，一直到 ViewRootImpl ，而 ViewRootImpl 自己也不能刷新，只能插入同步栅栏，等待下一次的 Vsync 信号（通过编舞者postcallback）来了之后再绘制。<strong>等到 Vsync 信号来了之后，我们会把同步栅栏给移除掉</strong>。</p>
-<h4 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h4><p>总结一下主要有几点需要注意：</p>
-<ul>
-<li><p>Android 一般是 60FPS ，是 VSYNC 决定的，每 16ms 最多一帧</p>
-</li>
-<li><p>VSYNC 要客户端主动申请，才又 VSYNC 到来才会刷新</p>
-</li>
-<li><p>UI没有更改的话，不会请求 VSYNC 也就不会有刷新</p>
-</li>
-<li><p>UI局部重绘其实只会去重绘有更新的 View</p>
-</li>
-</ul>
-<h3 id="SurfaceFlinger"><a href="#SurfaceFlinger" class="headerlink" title="SurfaceFlinger"></a>SurfaceFlinger</h3><p>SurfaceFlinger 是整个 Android 系统渲染的核心进程，整个流程是这样的：每个 DecorView 对应一个 Surface ，每个 Surface 里面包含一个 canvas ，每个 surface 对应一个 layer（图层）， SurfaceFlinger 将各类的图层合成。</p>
-<p>SurfaceFlinger 的整体流程如下图所示：</p>
-<p><img src="" alt="SurfaceFlinger整体流程"></p>
-<h4 id="面试题"><a href="#面试题" class="headerlink" title="面试题"></a>面试题</h4><p>onResume 里面度量的宽高有效吗？</p>
-<p>分情况。Activity 第一次调用 onResume 的时候是无效的，从 Activity A 跳转到 B 再返回来，这时候 A 的onResume 中是有效的。因为 onResume 的时候，还没有 执行 window.addView 呢。</p>
-<p>Activity 、Window、view 三者的联系和区别。</p>
-<p>先整体，再细节。所以先讲这3个是啥，Activity 是xxx，window 是xxx，View 是xxx。Activity 没有界面，委托给 Window 展示，</p>
-<p>首次 View 的绘制流程是什么时候触发的？</p>
-<p>WindowManagerImpl.addView -&gt; WindowManagerGlobal.addView</p>
-<p>ViewRootImpl.setView -&gt; ViewRootImpl.requestLayout</p>
-<p>ViewRootImpl.scheduleTraversals  </p>
-<p>这时候就触发了首次绘制</p>
-<p>我们调用 invalidate() 之后会马上进行屏幕刷新吗？</p>
-<p>一定不。需要等到下一个 Vsync 信号来了才会</p>
-<p>我们说丢帧是因为主线程做了耗时操作，为什么做了耗时操作就会引起丢帧？</p>
-<p>一言以蔽之：主线程的耗时操作会影响下一帧的绘制。我们知道有以下信息：</p>
-<ul>
-<li><p>在 ViewRootImpl 的 scheduleTravesals 方法中会去发送同步屏障，接着发送异步 Message，用于处理 UI 更新</p>
-</li>
-<li><p>在Handler 机制中碰到 target == null 这种 Message 的时候，就知道这是同步屏障了，此后，就只执行异步 Message</p>
-</li>
-<li><p>我们知道主线程耗时操作的体现形式也是 Message</p>
-</li>
-<li><p>如果有耗时操作之前的消息有耗时操作，那么可能耗时导致推迟执行 同步屏障那个 Message ，也就推迟了后续的 异步 Message的执行，也就影响了下一帧的绘制</p>
-</li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/21/">21</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/22/">22</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1433,7 +1429,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-count">211</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1519,7 +1515,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共392.4k字</span>
+  <span class="post-count">博客全站共393.6k字</span>
 </div>
 
 

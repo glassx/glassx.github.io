@@ -164,7 +164,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">210</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">211</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,157 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/07/04/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/%E9%AB%98%E7%BA%A7UI-%EF%BC%8803%EF%BC%892021.9.16-View%E7%9A%84%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B--leo%E8%80%81%E5%B8%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/07/04/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/%E9%AB%98%E7%BA%A7UI-%EF%BC%8803%EF%BC%892021.9.16-View%E7%9A%84%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B--leo%E8%80%81%E5%B8%88/" class="post-title-link" itemprop="url">高级UI-（03）2021.9.16-View的绘制流程--leo老师</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-07-04 15:39:00" itemprop="dateCreated datePublished" datetime="2023-07-04T15:39:00+08:00">2023-07-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-07-08 09:40:04" itemprop="dateModified" datetime="2023-07-08T09:40:04+08:00">2023-07-08</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">听课笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="View-是什么时候被添加进去的？"><a href="#View-是什么时候被添加进去的？" class="headerlink" title="View 是什么时候被添加进去的？"></a>View 是什么时候被添加进去的？</h2><p>我们 setContentView 只是创建了 DecorView ，并且解析 xml 将 View 添加到 DecorView 中了。</p>
+<p>为什么在 Activity 的 onCreate 方法中通过 view.post 中就能获取到 各个元素的宽高呢？这是因为所有的 View 操作都是 Handler 的 msg ，在之前的 msg 已经在 layout了，而我们 post 过去的 msg 必然是在 layout 这个 msg 之后。因为高是通过 bottom - top 得到的，所以，还没layout 之前是没有的。</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getHeight</span><span class="params">()</span></span>{</span><br><span class="line">    <span class="keyword">return</span> mBottom - mTop;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们 window.addView 是在 performResume 之后，add 进去之后才会测量，所以我们执行 onResume 的时候，实际上也拿不到 元素的宽高的。</p>
+<p>window 相关的各个类的功能：</p>
+<ul>
+<li><p>WindowManagerImpl： 确定 view 属于哪个 window，哪个父窗口</p>
+</li>
+<li><p>WindowManagerGlobal ： 管理整个进程、所有的 窗口信息，它是进程唯一的。</p>
+</li>
+<li><p>ViewRootImpl 是 WindowManagerGlobal 的实际操作者，只不过ViewRootImpl 只操作自己的 window </p>
+</li>
+</ul>
+<p>DecorView 是什么时候添加到 Window 上的？</p>
+<p>handleResumeActivity<br>–&gt; performResumeActivity<br>    –&gt; r.activity.performResume<br>        –&gt; mInstrumentation.callActivityOnResume<br>–&gt; wm.addView(decor, l); (WindowManagerImpl.java)<br> –&gt; WindowManagerGlobal.addView<br>     –&gt; root = new ViewRootImpl(view.getContext(), display);<br>     –&gt; mViews.add(view); // DecorView<br>        mRoots.add(root); // ViewRootImpl<br>        mParams.add(wparams); // WindowManager.LayoutParams<br>    –&gt; root.setView(view, wparams, panelParentView, userId);</p>
+<p>接下来执行的过程：</p>
+<p>ViewRootImpl.setView<br>    –&gt; requestLayout(); // 请求遍历<br>        –&gt; scheduleTraversals<br>            –&gt; mChoreographer.postCallback(<br>                    Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);<br>                –&gt; 上面的 mTraversalRunnable 中会执行到 doTraversal<br>                    –&gt; performTraversals(); // 绘制View ，measure、layout、draw</p>
+<p>将 window 添加到 WMS 上之后， DecorView 就会设置自己的 parent 为这个 ViewRootImpl ，所以，其实我们的 view 只需要getParent  得到 mParent ，之后 mParent 再次 getParent ，如此循环（往上遍历 View 树 ），最后肯定会到最顶部的 ViewRootImpl ：</p>
+<pre><code>--&gt; res = mWindowSession.addToDisplayAsUser // 将窗口添加到WMS上面  WindowManagerService
+--&gt; 事件处理
+--&gt; view.assignParent(this); //DecorView 设置自己的 parent 为 ViewRootImpl</code></pre><p>ViewRootImpl 的构造函数里面有几行代码需要注意：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">mThread = Thread.currentThread();<span class="comment">//创建它的线程</span></span><br><span class="line"></span><br><span class="line">mDirty = <span class="keyword">new</span> Rect();<span class="comment">//脏区域</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">mAttachInfo = <span class="keyword">new</span> View.AttachInfo(xxxx);<span class="comment">//保存当前 Window 的信息</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="预测量"><a href="#预测量" class="headerlink" title="预测量"></a>预测量</h2><p>当前View 的 onMeasure 最多会执行多少次？ 4 次，因为还可能（只有子 View 是 WrapContent的情况才有）有预测量（measureHierarchy 方法）过程，所以，我们也可以说 wrapContent 就是这样影响性能。预测量过程：</p>
+<ol>
+<li><p>设置一个值，<strong>进行第一次测量</strong></p>
+</li>
+<li><p>获取一个状态值，看看是否已经合适了</p>
+</li>
+<li><p>如果不合适，更改大小为某个值，<strong>进行第二次测量</strong></p>
+</li>
+<li><p>如果还是不满意，<strong>直接给自己的最大值，进行第3次测量</strong></p>
+</li>
+</ol>
+<p>第 4 步之后，如果还有问题，在预测量之后，还有一次 performMeasure ，所以最后，<strong>预测量里面可能最多有 3 次测量，当前 View 可能最多有 4次测量</strong>（当然，performMeasure 之后还可能引起父 view 的重新 measure ，这个另说）。</p>
+<p>LayoutInflater.inflate ()  的时候，如果 没有设置 parent 的话，那么xml 根部布局设置的布局参数无效（宽度、高度等）。因为会根据 parent.generateParams 来确定 xml 的 layoutParams 的，所以如果没有 parent ，inflate 出来就不会 setParams 。 generateLayoutParams 的例子如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> LayoutParams <span class="title">generateLayoutParams</span><span class="params">(AttributeSet attrs)</span> </span>{</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> RelativeLayout.LayoutParams(getContext(), attrs);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>MeasureSpec 是个 32 位的 int 型，低 30 是值，高 2 位是 mode 模式（AT_MOST、EXACTLY、UNSPECIFIED）</p>
+<h2 id="performLayout"><a href="#performLayout" class="headerlink" title="performLayout"></a>performLayout</h2><p>child.layout</p>
+<h2 id="performDraw"><a href="#performDraw" class="headerlink" title="performDraw"></a>performDraw</h2><p>我们有个输入框，当点击弹出输入法的时候，这个输入框可能会移动，这是怎么做到的呢？其实就是在 draw() 方法里面执行的 scrollxxx 某个方法实现的。</p>
+<p>在 draw 方法里面，会判断是否开启硬件绘制，用 if-else 来分别使用 硬件绘制和软件绘制。</p>
+<p>canvas 也是有软硬件绘制区分的。</p>
+<p>绘制熟顺序： drawBackground 、onDraw、 drawForground</p>
+<p>一般来说，ViewGroup 的 onDraw 是不执行的，只会执行 dispatchDraw ，而 view 则相反； 但是，如果我想让 ViewGroup 的 onDraw 方法执行，有几种方法？</p>
+<ul>
+<li><p>setWillNotDraw(false) 设置为false</p>
+</li>
+<li><p>setBackground 设置背景 </p>
+</li>
+<li><p>通过反射改变标志位</p>
+</li>
+</ul>
+<h2 id="面试题？"><a href="#面试题？" class="headerlink" title="面试题？"></a>面试题？</h2><p>UI 刷新只能在主线程进行吗？</p>
+<p>我们知道出现报错是在 ViewRootImpl 的  requestLayout 的时候，会执行 checkThread ，而这个代码是：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">checkThread</span><span class="params">()</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (mThread != Thread.currentThread()) {</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> CalledFromWrongThreadException(</span><br><span class="line">                <span class="string">"Only the original thread that created a view hierarchy can touch its views."</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>意思是，如果 requestLayout 线程和 当初创建 ViewRootImpl 的线程不是同一个，则报错。所以，<strong>并不是说只有主线程才能刷新 UI ，而是只有在创建 ViewRootImpl 的线程才能刷新 UI</strong>。</p>
+<p>那如何在子线程刷新UI 呢？</p>
+<ul>
+<li><p>在 ViewRootImpl 创建之前调用，比如在onCreate 中创建线程 然后调用 textview.setText()</p>
+</li>
+<li><p>利用 Handler</p>
+</li>
+<li><p>在子线程中创建 ViewRootImpl：可以在子线程创建一个 WindowManager ，然后 addView ，比如我们页面上要有一个悬浮的按钮</p>
+</li>
+</ul>
+<blockquote>
+<p>在 WindowManager 的 addView 的时候，就会创建 ViewRootImpl 了</p>
+</blockquote>
+<p>最后，放上2 张老师在ppt 上的图片：</p>
+<p>requestLayout 的时序图：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/requestLayout%E6%97%B6%E5%BA%8F%E5%9B%BE.jpg" alt="requestLayout 的时序图"></p>
+<p>invalidate 时序图：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/%E9%AB%98%E7%BA%A7UI/invalidate%E6%97%B6%E5%BA%8F%E5%9B%BE.jpg" alt="invalidate 时序图"></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1372,87 +1523,11 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/06/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/03-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E5%9B%9B%E4%BA%94%E8%8A%82/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/06/26/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/%E5%BC%80%E6%BA%90%E6%A1%86%E6%9E%B6/03-%E7%BB%84%E4%BB%B6%E5%8C%96-%E7%AC%AC%E5%9B%9B%E4%BA%94%E8%8A%82/" class="post-title-link" itemprop="url">03-组件化-第四五节</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-06-26 15:22:00" itemprop="dateCreated datePublished" datetime="2023-06-26T15:22:00+08:00">2023-06-26</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-06-30 15:03:27" itemprop="dateModified" datetime="2023-06-30T15:03:27+08:00">2023-06-30</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">听课笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>个人理解，组件化的精华在于组件之间的通信，到这里基本上了解得差不多了，后续有空再详细来看。</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/21/">21</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/22/">22</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1498,7 +1573,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">210</span>
+          <span class="site-state-item-count">211</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1584,7 +1659,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共392.4k字</span>
+  <span class="post-count">博客全站共393.6k字</span>
 </div>
 
 
