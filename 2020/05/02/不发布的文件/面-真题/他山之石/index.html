@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="GUOBINGUOBIN-1 项目，做了什么优化 如果有一个首页 横向有很多东西、纵向也有很多东西  你怎么处理？（ViewPager2 + RecyclerView） 我讲了500的首页动态化方案给他听 浏览器输入地址到显示干了什么 https 项目网络框架（视频传输用什么？我说udp，并且给出了原因跟说了下http3） 二叉搜索树的删除 背书 死锁、多线程访问临界资源问题 有一个Button有">
+<meta property="og:type" content="article">
+<meta property="og:title" content="他山之石">
+<meta property="og:url" content="https://glassx.github.io/2020/05/02/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="GUOBINGUOBIN-1 项目，做了什么优化 如果有一个首页 横向有很多东西、纵向也有很多东西  你怎么处理？（ViewPager2 + RecyclerView） 我讲了500的首页动态化方案给他听 浏览器输入地址到显示干了什么 https 项目网络框架（视频传输用什么？我说udp，并且给出了原因跟说了下http3） 二叉搜索树的删除 背书 死锁、多线程访问临界资源问题 有一个Button有">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-05-02T13:33:00.000Z">
+<meta property="article:modified_time" content="2023-04-16T08:09:25.899Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="攻玉">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://glassx.github.io/2020/05/02/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>他山之石 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">37</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">11</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">215</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2020/05/02/%E4%B8%8D%E5%8F%91%E5%B8%83%E7%9A%84%E6%96%87%E4%BB%B6/%E9%9D%A2-%E7%9C%9F%E9%A2%98/%E4%BB%96%E5%B1%B1%E4%B9%8B%E7%9F%B3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          他山之石
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-05-02 21:33:00" itemprop="dateCreated datePublished" datetime="2020-05-02T21:33:00+08:00">2020-05-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-16 16:09:25" itemprop="dateModified" datetime="2023-04-16T16:09:25+08:00">2023-04-16</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="GUOBIN"><a href="#GUOBIN" class="headerlink" title="GUOBIN"></a>GUOBIN</h2><h3 id="GUOBIN-1"><a href="#GUOBIN-1" class="headerlink" title="GUOBIN-1"></a>GUOBIN-1</h3><ol>
+<li>项目，做了什么优化</li>
+<li>如果有一个首页 横向有很多东西、纵向也有很多东西  你怎么处理？（ViewPager2 + RecyclerView） 我讲了500的首页动态化方案给他听</li>
+<li>浏览器输入地址到显示干了什么</li>
+<li>https</li>
+<li>项目网络框架（视频传输用什么？我说udp，并且给出了原因跟说了下http3）</li>
+<li>二叉搜索树的删除</li>
+<li>背书 死锁、多线程访问临界资源问题</li>
+<li>有一个Button有ABC三种样式 然后屏蔽View的其他方法怎么做（我说了三种方法1. 编译时发现访问了View方法报错  2. 继承并且复写方法为空实现，内部提供super访问方法 3.面向对象思想 返回一个只有ABC三个方法的接口）</li>
+<li>逻辑题 烧绳子 1小时得出45分钟     有桶里有3种无限的球 一次拿两个 问至少拿多少次才能出现重复的方案  排列组合共6种  所以至少7次</li>
+</ol>
+<h3 id="GUOBIN-2"><a href="#GUOBIN-2" class="headerlink" title="GUOBIN-2"></a>GUOBIN-2</h3><ol>
+<li>voliate关键字的作用，加上是否能保证原子操作的原子性？如何保证原子性</li>
+<li>recyclerview缓存机制</li>
+<li>tcp三次握手、项目网络库实现，为什么要用上udp？</li>
+<li>hashmap插入操作、什么时候转红黑树，为什么要转？线程安全么？ConcurrentHashMap如何保证安全</li>
+<li>binder优点、对比其他IPC机制，为什么要引入binder？</li>
+<li>OSI模型，每层作用跟有什么协议</li>
+<li>概率题：一个家庭有三个孩子，已知其中一个为男，求另外两个至少有一个女的概率</li>
+<li>算法：旋转链表LeetCode 61</li>
+</ol>
+<h3 id="GUOBIN-3"><a href="#GUOBIN-3" class="headerlink" title="GUOBIN-3"></a>GUOBIN-3</h3><p>https相关<br>项目的mvvm，redux等、为什么不用databinding？（难找问题、编译慢）<br>jni如何获取JNIEnv、Jvm结构体、native如何保持jobject的引用  local  reference需要每次都delete么？<br>项目网络库的实现 为何不用http？对比优缺点、除了C2S 有S2C功能么（push功能）怎么实现的。 保活链接呢，断了怎么办？（我们项目是自研的网络库，使用一个tcp socket、两个udp socket链接，tcp socket使用类似http2<br>的方式发送请求）<br>有没搞过windows开发？<br>有没搞过音频开发？<br>kotlin特点、优缺点、协程怎么实现？为什么不在java实现？协程的含义？dart的协程大致是怎么实现的（跟kotlin差不多）？（java原本是用在服务上的，不是搞移动的）</p>
+<h3 id="GUOBIN-4"><a href="#GUOBIN-4" class="headerlink" title="GUOBIN-4"></a>GUOBIN-4</h3><p>（1）自我介绍<br>（2）你主要负责什么模块、奖金优化是什么东西（奖金优化的前提是如果能中奖，中奖金额要怎么样）、如何将所有组合列出来、如何将注数分配出去、奖金范围怎么算的<br>（3）APP的架构是怎么样的，为什么要这样子架构？MVP每块你们是怎么分工的<br>（3）首屏怎么调优的、加快启动速度的，内存泄漏怎么检测，LeakCanary原理是什么<br>（4）HashMap源码相关、为什么要将链转红黑树？红黑树特点、插入删除<br>（5）消息循环源码、如何做到任务切换线程、想要提交一个任务有几种方式<br>（6）Kotlin协程原理，怎么切换线程的，为什么要换Kotlin及其优缺点<br>（6）一个无序、实际上是逆序的数组排序用什么算法好 我说的是快排、实际上应该用归并排序能获得最好的时间复杂度</p>
+<h3 id="GUOBIN-5"><a href="#GUOBIN-5" class="headerlink" title="GUOBIN-5"></a>GUOBIN-5</h3><p>（1）还是奖金优化<br>（2）还是性能调优、怎么瘦身、打包流程、模块化<br>（3）开发者GPUInfo中的每条柱状图颜色代表含义、命令dumpsys meminfo中VSS、PSS、GSS、USS代表什么意思<br>（4）Android绘制三部曲、Canvas是怎么最终显示在屏幕中的、是以什么样子的数据结构传输的<br>（5）物理内存与虚拟内存的关系、Android Heap的结构是怎么样的、如果要进行垃圾回收，会收集那些区域<br>（6）binder源码、其原理是什么，发起一次请求的过程，如何根据文件描述符找到对应的binder实体<br>（7）广度、深度搜索，拓朴排序、最短路径算法<br>（8）ELF文件格式、反编译器原理<br>（9）Kotlin优缺点</p>
+<h3 id="GUOBIN-6"><a href="#GUOBIN-6" class="headerlink" title="GUOBIN-6"></a>GUOBIN-6</h3><p>（1）项目架构是怎么样的<br>（2）画一下结构图<br>（3）为什么要迁移项目到Kotlin<br>（4）线程 协程 为什么需要线程池 他的状态变化是怎么样的 在Android中的应用<br>（5）如何设计一个App的架构 该考虑什么<br>（6）Flutter怎么从平台到Dart的 如何渲染的<br>（7）你觉得面得怎么样</p>
+<h3 id="GUOBIN-7"><a href="#GUOBIN-7" class="headerlink" title="GUOBIN-7"></a>GUOBIN-7</h3><p>讲个项目你负责的模块<br>多个Fragment在销毁后重建之后重叠怎么办<br>设计一个图片缓存框架<br>缓存算法用什么<br>有个ListView快速滑动 如何优化Bitmap的显示<br>Bitmap的复用听过没有<br>如何进行内存优化 减少内存消耗</p>
+<h3 id="GUOBIN-8"><a href="#GUOBIN-8" class="headerlink" title="GUOBIN-8"></a>GUOBIN-8</h3><p>讲下项目的架构<br>负责的模块<br>算法 最大子序和<br>try catch finally关于return的执行结果<br>hashmap源码 treemap如何对两个元素进行比较 非compareble对象比较<br>hashcode equals区别<br>object有什么方法<br>讲讲Android存在的设计模式<br>android的消息机制<br>android的事件分发<br>讲个android的源码 自选<br>LeakCanary</p>
+<h3 id="GUOBIN-9"><a href="#GUOBIN-9" class="headerlink" title="GUOBIN-9"></a>GUOBIN-9</h3><p>android消息机制<br>android事件分发<br>设计模式讲讲有什么认识的 代理模式优缺点<br>图片 缓存机制<br>首屏调优 内存调优</p>
+<h3 id="GUOBIN-SHOPEE"><a href="#GUOBIN-SHOPEE" class="headerlink" title="GUOBIN-SHOPEE"></a>GUOBIN-SHOPEE</h3><p>用https本地证书验证，基于这个点描述下。为什么做？技术方案？业界的技术方案？</p>
+<p>新证书放在sp里面，sp在使用的过程中会有什么问题？新证书存进去要进行简单的对称加密？</p>
+<p>插件化方案描述一下</p>
+<p>React 的原理讲一下？</p>
+<p>工作这么长时间，觉得哪些方面对自己挑战比较大？</p>
+<p>在团队里面是什么样的角色</p>
+<p>除了工作以外，还会接触哪些框架原理之类的，对 Fresco 比较熟是吧，它是怎么做的图片缓存的？</p>
+<h4 id="GUOBIN-FUTU"><a href="#GUOBIN-FUTU" class="headerlink" title="GUOBIN-FUTU"></a>GUOBIN-FUTU</h4><p>富途有一个概率问题，3个人去打天上的飞机，每个人打中的概率都是0.6，一起打，飞机被打中的概率是多少</p>
+<p>超大图片加载到app预览，占用内存很大，实现方案上需要注意什么，怎么解决这个问题</p>
+<p>微信朋友圈刷列表卡顿，让你定位你如何入手，怎么安排怎么开展工作</p>
+<p>还一个，一堆钻石，每个大小可能不一样，你一次只能看一个，看完拿了就结束了，没拿就看下一个，不能回头。怎么保证能拿到一个比较大的钻石，钻石数量无限，可以认为是百万级</p>
+<p>笔试（1h）:</p>
+<p>笔试主要是做一些基础题，主要涉及基础数学、操作系统、算法等基本知识</p>
+<p>1：数独游戏，在9*9的数独上填充数字</p>
+<p>2：逻辑电路的概率题</p>
+<p>3：猴子吃桃问题</p>
+<p>4：页面置换算法为FIFO，求缺页中断的次数</p>
+<p>5：有7g和2g砝码，如果利用砝码和天平在3次之内将140g的面粉分为90g和50g</p>
+<p>第一次：将140g面粉分为70g和70g<br>第二次：将70g面粉分为35g和35g<br>第三次：利用砝码将35g面粉分为20g和15g。由此35+15 = 50g； 35+35+20 = 90g<br>6：编程题 : 根据中序遍历结果和先序遍历结果建树</p>
+<p>7:? 编程题：将字符串“l.am.happy”反转为“yapph.ma.I”</p>
+<pre><code>/**
+ * 两次翻转，先对每个单词进行翻转，再对整体进行翻转 
+ */
+public String reverseString(String str){
+
+    if(str == null || str.length() == 0){
+        return null;
+    }
+    // 分割单词
+    String []wordList = str.split("/.");
+    for(int i = 0; i &lt; wordList.length; i++){
+        // 对每个单词进行翻转
+        wordList[i] = convert(wordList[i]);
+    }
+
+    int low = 0;
+    int high = wordList.length - 1;
+    while(low &lt; high){
+        String tmp = wordList[low];
+        wordList[low] = wordList[high];
+        wordList[high] = tmp;
+        low++;
+        high--;
+    }
+
+    StringBuffer sb = new StringBuffer();
+    for(int i = 0; i &lt; wordList.length - 1; i++){
+        sb.append(wordList[i]).append(".");
+    }
+    sb.append(wordList[wordList.length - 1]);
+    return sb.toString();
+}
+
+// 对单个单词进行翻转
+public String convert(String str){
+    int low = 0;
+    int high = str.length() - 1;
+    char[]tmpStr = str.toCharArray();
+    while(low &lt; high){
+        char temp = tmpStr[low];
+        tmpStr[low] = tmpStr[high];
+        tmpStr[high] = temp;
+        low++;
+        high--;
+    }
+    return String.valueOf(tmpStr);
+}</code></pre><p>8:? 编程题：不能使用系统函数，计算任意两个日期的天数差</p>
+<p>9:? 推导题：A、B、C、D四个人分别带着一顶帽子。共两顶黑帽子，两顶白帽子。其中D和A、B、C三个隔了一堵不透明的墙。A可以看到B、C帽子的颜色。B可以看到C帽子的颜色。只要能判断自己的帽子颜色，就可以立刻说出来。他们四人沉默了几分钟，这时候一个人说到，它知道自己帽子的颜色是什么了，请问这个人是谁？</p>
+<p>答案：应该是B。A能看到B、C两人的帽子。如果B、C两个人的帽子颜色相同，那么A立刻就能说出来自己帽子的颜色。否则，如果A沉默，我们就能断定B、C带了不同颜色的帽子。因为B能看到C帽子的颜色，B和C帽子的颜色不同，所以，我们能够推断出B。</p>
+<p>?</p>
+<p>一面：</p>
+<p>一面主要是针对刚才的笔试题进行提问，以及抓着简历和项目经历来问</p>
+<p>1：解释一下MVC、MVP、MVVM架构模式</p>
+<p>2：解释一下Android组件化（LiveData + ViewModel）</p>
+<p>3:? ?对ios架构有了解吗？(只了解过Viper)</p>
+<p>4：Kotlin的特点、优点和缺点</p>
+<p>优点:</p>
+<p>完全兼容Java<br>Null safe<br>支持lambda表达式（比Java8更好）<br>支持扩展<br>支持高阶函数<br>体验一致的开发工具链<br>代码简洁<br>缺点：</p>
+<p>可读性差<br>编译速度慢<br>操作不当容易引出大错误<br>学习资料少<br>IDEA 自动转换工具，把 Java 转换成 Kotlin，转换质量比人工转的要差的多。<br>5:? 抓项目细节，问项目的实现</p>
+<p>6：Android如何进行优化，如内存优化、布局优化、性能优化</p>
+<p>布局优化：</p>
+<p>尽量减少布局文件的层级<br><include>标签，主要用于布局重用，提高布局的复用性<br><merge>标签，一般和<include>标签配合使用，可以减少布局的层级<br><viewstub>标签，提供了按需加载的功能，当需要时才会将ViewStub中的布局加载到内存，这提高了程序的初始化效率<br>绘制优化：</viewstub></include></merge></include></p>
+<p>避免在View的onDraw方法中执行大量的操作</p>
+<p>onDraw中不要创建新的局部变量，这是因为onDraw方法可能会被频繁的调用，这样就会在一瞬间产生大量的临时对象<br>onDraw方法中不要做耗时的任务，也不能执行成千上万次的循环操作。否则这回导致View的绘制流程不流畅<br>内存优化：</p>
+<p>尽量使用Android特有的数据容器。如SparseArray、SparseBooleanArray<br>不要使用过多的枚举类，枚举占用的内存空间比整形大<br>适当使用软引用和弱引用<br>尽量采用静态内部类，这样可以避免潜在的由于内部类而导致的内存泄露</p>
+<p>二面：</p>
+<p>1:? 重载和重写的区别</p>
+<p>方法的重写(Overriding)和重载(Overloading)是java多态性的不同表现，重写是父类与子类之间多态性的一种表现，重载是一类中多态性的一种表现。</p>
+<p>override（重写）：</p>
+<p>　　 1、方法名、参数、返回值相同。</p>
+<p>　　 2、子类方法不能缩小父类方法的访问权限。</p>
+<p>　　?3、子类方法不能抛出比父类方法更多的异常(但子类方法可以不抛出异常)。</p>
+<p>　　 4、存在于父类和子类之间。</p>
+<p>　　 5、方法被定义为final不能被重写。</p>
+<p>　overload（重载）：</p>
+<p>　　1、参数类型、个数、顺序至少有一个不相同。?</p>
+<p>　　2、不能重载只有返回值不同的方法名。</p>
+<p>　　3、存在于父类和子类、同类中。</p>
+<p>2：Android应用的启动过程</p>
+<p>时序图</p>
+<p>3：TCP建立连接的过程</p>
+<p>建立连接：</p>
+<p>TCP/IP协议中，TCP协议提供可靠的连接服务，采用三次握手建立一个连接。</p>
+<p>（1）第一次握手：建立连接时，客户端A发送SYN包（SYN=j）到服务器B，并进入SYN_SEND状态，等待服务器B确认。</p>
+<p>（2）第二次握手：服务器B收到SYN包，必须确认客户A的SYN（ACK=j+1），同时自己也发送一个SYN包（SYN=k），即SYN+ACK包，此时服务器B进入SYN_RECV状态。</p>
+<p>（3）第三次握手：客户端A收到服务器B的SYN＋ACK包，向服务器B发送确认包ACK（ACK=k+1），此包发送完毕，客户端A和服务器B进入ESTABLISHED状态，完成三次握手。</p>
+<p>完成三次握手，客户端与服务器开始传送数据</p>
+<p>释放链接：</p>
+<p>由于TCP连接是全双工的，因此每个方向都必须单独进行关闭。这个原则是当一方完成它的数据发送任务后就能发送一个FIN来终止这个方向的连接。收到一个?FIN只意味着这一方向上没有数据流动，一个TCP连接在收到一个FIN后仍能发送数据。首先进行关闭的一方将执行主动关闭，而另一方执行被动关闭。</p>
+<p>?CP的连接的拆除需要发送四个包，因此称为四次挥手(four-way handshake)。客户端或服务器均可主动发起挥手动作，在socket编程中，任何一方执行close()操作即可产生挥手操作。</p>
+<p>（1）客户端A发送一个FIN，用来关闭客户A到服务器B的数据传送。?</p>
+<p>（2）服务器B收到这个FIN，它发回一个ACK，确认序号为收到的序号加1。和SYN一样，一个FIN将占用一个序号。?</p>
+<p>（3）服务器B关闭与客户端A的连接，发送一个FIN给客户端A。?</p>
+<p>（4）客户端A发回ACK报文确认，并将确认序号设置为收到序号加1。</p>
+<p>4：传输层和网络层的联系</p>
+<p>网络层负责ip数据报的产生以及ip数据包在逻辑网络上的路由转发。</p>
+<p>传输层提供端到端通信服务层次,提供可靠及非可靠连接。</p>
+<p>网络层只是根据网络地址将源结点发出的数据包传送到目的结点（点到点），其主要任务是：通过路由选择算法，为报文或分组通过通信子网选择最适当的路径。该层控制数据链路层与传输层之间的信息转发，建立、维持和终止网络的连接。具体地说，数据链路层的数据在这一层被转换为数据包，然后通过路径选择、分段组合、顺序、进/出路由等控制，将信息从一个网络设备传送到另一个网络设备。</p>
+<p>而传输层则负责将数据可靠地传送到相应的端口（端到端），传输层提供了主机应用程序进程之间的端到端的服务。传输层利用网络层提供的服务，并通过传输层地址提供给高层用户传输数据的通信端口，使高层用户看到的只是在两个传输实体间的一条端到端的、可由用户控制和设定的、可靠的数据通路。</p>
+<p>5：25匹马，5条跑道。要选出最快的前三名，最少要跑几次？</p>
+<p>7次。将25匹马分成五批，跑五次，决胜出每批马的第一名。再让每批第一名的马跑一次，决定前三名，设为A,B,C。此时可确认跑得最快的为A，但是第二名和第三名不确定。于是可以让A1,A2, B，B1，C跑一次。（A1代表A组的第二名），决胜出前二名。就是最快的第二和第三名的马。</p>
+<p>6：老王卖鞋，一双进价30元，老王赔本卖，只卖20元。有个骗子来买，给老王50元假钞。老王未能识别，又没有零钱，把这假钞拿到隔壁铺子的老李换了50元零钱，回来找了骗子30。隔壁很快发现问题，拿假钞来换，老王只好把自己的家底真钞50元换给隔壁。问老王损失了多少钱？</p>
+<p>损失了60元，由题目可知老李没有任何损失。老王找了骗子30元，同时又得到了一双价值30的鞋子。赚了60元，因此可以得出老李亏了60元。</p>
+<p>7：死锁产生的必要条件</p>
+<p>互斥条件：请求的资源为临界资源<br>请求和保持条件：申请新资源，保持旧资源<br>不剥夺条件：已获得的资源，在使用完之前，不被外力剥夺<br>环路等待条件：互相等待资源<br>8：多少个进程竞争多少个临界资源会产生死锁？</p>
+<p>两个或以上进程需要两个或以上资源</p>
+<p>9：你怎么规划你以后的发展？</p>
+<p>（接下来巴拉巴拉一大堆产品的问题，产品的优势、竞争力等等）</p>
+<p>?</p>
+<p>Hr面（20min）</p>
+<h2 id="cici"><a href="#cici" class="headerlink" title="cici"></a>cici</h2><p>1、数组实现队列</p>
+<p>2、gc的流程</p>
+<p>点击看答案</p>
+<p>可以查看 <a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/23/%E9%9D%A2%E8%AF%95%E9%A2%98-%E8%99%9A%E6%8B%9F%E6%9C%BA/">虚拟机</a> 第5题</p>
+<p>3、java软引用与弱引用区别</p>
+<p>点击看答案</p>
+<p>参考以前的<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/04/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA-%E7%AC%AC3%E7%AB%A0/">读书笔记</a></p>
+<p>4、java中的this编译时的原理</p>
+<p>点击看答案</p>
+<p>我们知道，this关键字主要有三个用途：</p>
+<ul>
+<li>调用本类中的属性</li>
+<li>调用本类中的其他方法</li>
+<li>调用本类中的其他构造函数</li>
+</ul>
+<p>this编译时的原理：</p>
+<ol>
+<li>this指代的一定是对象(所以静态方法不能使用this)，且该对象的静态类型就是就是当前类</li>
+<li>实例方法以及 <strong>构造方法</strong>的第一个参数都是this（在构造方法之前，jvm其实已经给对象在堆中分配好了内存了，构造方法的作用是对类<strong>初始化</strong>）</li>
+<li>this一般出现在方法中；如果this出现在方法体外部，如：在类A中定义了成员变量 A a = this;最终这行代码仍然会<strong>被放入 A 类的构造函数中执行</strong>。</li>
+</ol>
+<p>参考<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_41920291/article/details/98118035">他人的博客</a></p>
+<p>5、final变量用反射修改</p>
+<p>6、HashMap的内部结构，给定一个key，如何找到对应的value，使用equal</p>
+<p>7、volatile</p>
+<p>8、Java线程池有什么作用</p>
+<p>9、Java动态代理</p>
+<p>10、handler机制</p>
+<p>点击看答案</p>
+<p>查看<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/11/09/%E9%9D%A2%E8%AF%95%E9%A2%98-Android%E5%9F%BA%E7%A1%80/">Android基础</a> 第4题即可</p>
+<p>11、android跨进程通信的方式</p>
+<p>点击看答案</p>
+<p>阅读<a target="_blank" rel="noopener" href="https://glassx.gitee.io/2019/05/11/Android%20%E5%BC%80%E5%8F%91%E8%89%BA%E6%9C%AF%E6%8E%A2%E7%B4%A2-%E7%AC%AC2%E7%AB%A0/">以前的读书笔记</a></p>
+<p>12、自定义控件方式</p>
+<p>13、Canvas绘制过什么 手写功能</p>
+<p>14、断点续传的实现</p>
+<p>15、如何设计图片加载库</p>
+<p>16、有看过哪些安卓的源码</p>
+<ul>
+<li>Activity启动</li>
+<li>handler</li>
+<li>ThreadHandler</li>
+<li>IntentThread</li>
+</ul>
+<p>17、看过哪些开源项目</p>
+<ul>
+<li>LeakCanary</li>
+<li>Alpha</li>
+<li>okhttp</li>
+</ul>
+<p>18、app 启动速度的优化做过哪些</p>
+<p>19、fresco加载图片原理 优势是什么</p>
+<p>20、写程序时，堆和栈有什么优化点 内存回收时机 如何判断对象可被回收</p>
+<p>21、引用计数法和gc root法</p>
+<p>22、事件分发 cancel事件一般在什么时候被触发</p>
+<p>点击看答案</p>
+<p>参考源码理解中的12、13题</p>
+<p>23、touchdelagate 一个父view只能设置一个delegate，如何解决设置多个</p>
+<p>24、App整个架构了解么</p>
+<p>25、mvvm data binding</p>
+<p>26、webview</p>
+<p>27、fragment startactivity</p>
+<p>28、动画的原理</p>
+<p>黄油计划 vsync</p>
+<p>设计一个离线视频下载功能</p>
+<p>Activity 启动流程</p>
+<p>android app签名原理</p>
+<p>Android查询资源文件layout原理</p>
+<p>设计一个decode bitmap方法</p>
+<p>启动Activity A后，按home键，再从桌面启动activity A ， Activity A的生命周期</p>
+<p>handler原理</p>
+<p>onSaveInstanceState调用时机</p>
+<p>Fragment View区别</p>
+<p>Java内存管理和内存回收</p>
+<p>Android scheme</p>
+<p>Activity怎么管理自己的生命周期，ActivityThread怎么运作</p>
+<p>消息事件分发</p>
+<p>进程之间通讯</p>
+<p>线程锁</p>
+<p>touch事件分发原理scrollview和viewpager之间的滑动如何防止冲突，里面listitem也需要支持滑动怎么办</p>
+<p>插件化的了解情况动态代理实现（自由发挥的）</p>
+<p>如何实现一个拥有取出最小值方法的堆栈，要求算法的事件复杂度是O(E)如何算</p>
+<p>二叉树节点之间的最小距离</p>
+<p>两个链表，可能很长，实现求和（大数求和），结果也是单向链表</p>
+<p>ActivityTask的使用</p>
+<p>onNewIntent的调用时机</p>
+<p>checkbox，up事件和down事件的区别</p>
+<p>怎么用Standard方式来实现一个SingleTop启动的Activity</p>
+<p>Http文件上传的具体过程</p>
+<h2 id="杂"><a href="#杂" class="headerlink" title="杂"></a>杂</h2><p>其实证书的本地校验还有一个步骤就是，将获取的新证书与老证书对比下，对比新旧证书</p>
+<p>在kotlin中各个部分的执行顺序：</p>
+<p>companion &gt; init &gt; constructor</p>
+<p>自己写代码如下：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">KotlinTest</span> </span>{</span><br><span class="line">    <span class="keyword">init</span> {</span><br><span class="line">        println(<span class="string">"init"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">constructor</span>(){</span><br><span class="line">        println(<span class="string">"constructor init"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> {</span><br><span class="line">        <span class="keyword">init</span>{</span><br><span class="line">            println(<span class="string">"companion init"</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>会输出：</p>
+<blockquote>
+<p>companion init    </p>
+<p>init    </p>
+<p>constructor init</p>
+</blockquote>
+<p>对称加密哪些</p>
+<p>三次、四次握手</p>
+<p>注意postInvalidate的使用</p>
+<h2 id="关于如何排查ANR"><a href="#关于如何排查ANR" class="headerlink" title="关于如何排查ANR"></a>关于如何排查ANR</h2><h3 id="获取日志文件"><a href="#获取日志文件" class="headerlink" title="获取日志文件"></a>获取日志文件</h3><p>首先，获取日志文件：</p>
+<blockquote>
+<p>adb bugreport buglog</p>
+</blockquote>
+<p>之后，就会显示进度生成，有个时候会生成不成功，没关系，再来一次</p>
+<p>生成之后，这个文件被导入到当前项目的路径下，解压这个 buglog.zip 文件即可，打开 [机型]xxx.txt 查看里面的日志。</p>
+<h3 id="ANR类型和日志关键字"><a href="#ANR类型和日志关键字" class="headerlink" title="ANR类型和日志关键字"></a>ANR类型和日志关键字</h3><p>KeyDispatchTimeout-主要类型按键或触摸事件,input事件在5S内没有处理完成发生ANR</p>
+<p>日志关键字：Reason: Input dispatching timed out xxxx</p>
+<p>ServiceTimeout-bind，create，start，unbind等在主线程处理耗时，前台Service在20s内，后台Service在200s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout executing <a href="https://links.jianshu.com/go?to=http%3A%2F%2Fservice%2Fexecuting%2520service" target="_blank">service:/executing service</a> XXX</p>
+<p>3）BroadcastTimeout- BroadcastReceiver onReceiver处理事务时前台广播在10S内，后台广播在60s内没有处理完成发生ANR</p>
+<p>日志关键字：Timeout of broadcast XXX/Receiver during timeout:XXX/Broadcast of XXX</p>
+<p>4）ProcessContentProviderPublishTimedOutLocked-ContentProvider publish在10s内没有处理完成发生ANR<br>日志关键字：timeout publishing content providers</p>
+<h3 id="造成ANR的常见原因"><a href="#造成ANR的常见原因" class="headerlink" title="造成ANR的常见原因"></a>造成ANR的常见原因</h3><ul>
+<li>主线程耗时操作，如复杂的layout，庞大的for循环，IO等。    </li>
+<li>主线程被子线程同步锁block    </li>
+<li>主线程被Binder 对端block    </li>
+<li>Binder被占满导致主线程无法和SystemServer通信    </li>
+<li>得不到系统资源（CPU/Memory/IO）</li>
+</ul>
+<blockquote>
+<p>以上内容参考自<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/33d5e48e4a13">简书上的博客</a>、<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/082045769443">简书博客二</a></p>
+</blockquote>
+<h3 id="dayuwuxian"><a href="#dayuwuxian" class="headerlink" title="dayuwuxian"></a>dayuwuxian</h3><p>在目前所在公司主要负责什么？</p>
+<p>为什么要重构网络框架？重构后有什么亮点？</p>
+<p>OkHttp 里面有哪些比较关键的设计让你觉得挺好的？线程池为什么要这样设计？它有哪些 intercetor ，分别是什么含义 ？这些 interceptor 执行的顺序是什么？</p>
+<p>网络防劫持是怎么做的？</p>
+<p>设计一个类，有add、remove、dispatch 这 3 个方法，其中add 表示将 listener 添加进来， remove 表示将 listener 移除，dispatch 方法表示遍历目前的listener ，然后调用每个 listener 的 invoke 方法，请问这个类怎么设计？</p>
+<p>设计的APM上线了吗，完成度怎么样？为什么要设计这么个APM ？怎么收集卡顿、ANR 呢？</p>
+<p>有用kotlin吗？kotlin的 lazy 是怎么实现的？-有很多中模式。这些模式的原理是什么，比如Synchronize 模式的原理是什么？用过协程吗？</p>
+<p>有用过 JetPack 吗？用过哪些？</p>
+<p>https证书防抓包的原理是什么？证书是双向验证还是单向验证？破解包了替换掉证书还能不能行？怎么更新从后台下载来的证书？怎么做的？</p>
+<p>https的请求过程是什么样的，与http有什么区别？</p>
+<p>一大堆无序的数字，取出前k个最小的数字</p>
+<h2 id="频繁GC、OOM-的排查"><a href="#频繁GC、OOM-的排查" class="headerlink" title="频繁GC、OOM 的排查"></a>频繁GC、OOM 的排查</h2><p>Android 的profile 功能-&gt;memory -&gt; dump ，得到 hprof 文件</p>
+<p>AS 现在直接能看到各个对象了，或者按照以前的，将 hprof 文件转一道，使用 MAT 打开</p>
+<h2 id="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"><a href="#两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛" class="headerlink" title="两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛"></a>两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛</h2><p>设先抛先吃的概率为p1， 后抛先吃的概率为p2</p>
+<p>那么有：</p>
+<p>p1 = 1/2 + 1/2 * p2</p>
+<p>p1 + p2 = 1</p>
+<p>解方程可得，</p>
+<p>p1 = 2/3</p>
+<blockquote>
+<p>参考自<a target="_blank" rel="noopener" href="https://www.nowcoder.com/questionTerminal/6f11c63cb97a4e0884bb40985cf95393?toCommentId=474963">牛客网</a></p>
+</blockquote>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%94%BB%E7%8E%89/" rel="tag"># 攻玉</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2020/05/01/%E9%9D%A2-%E9%A1%B9%E7%9B%AE/Android%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/" rel="next" title="Android开发技巧">
+                  <i class="fa fa-chevron-left"></i> Android开发技巧
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+                <a href="/2020/05/27/%E8%AF%BE-Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/Android%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE-3,4%E8%AF%BE/" rel="prev" title="第3、4课-内存优化">
+                  第3、4课-内存优化 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#GUOBIN"><span class="nav-number">1.</span> <span class="nav-text">GUOBIN</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-1"><span class="nav-number">1.1.</span> <span class="nav-text">GUOBIN-1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-2"><span class="nav-number">1.2.</span> <span class="nav-text">GUOBIN-2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-3"><span class="nav-number">1.3.</span> <span class="nav-text">GUOBIN-3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-4"><span class="nav-number">1.4.</span> <span class="nav-text">GUOBIN-4</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-5"><span class="nav-number">1.5.</span> <span class="nav-text">GUOBIN-5</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-6"><span class="nav-number">1.6.</span> <span class="nav-text">GUOBIN-6</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-7"><span class="nav-number">1.7.</span> <span class="nav-text">GUOBIN-7</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-8"><span class="nav-number">1.8.</span> <span class="nav-text">GUOBIN-8</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-9"><span class="nav-number">1.9.</span> <span class="nav-text">GUOBIN-9</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUOBIN-SHOPEE"><span class="nav-number">1.10.</span> <span class="nav-text">GUOBIN-SHOPEE</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#GUOBIN-FUTU"><span class="nav-number">1.10.1.</span> <span class="nav-text">GUOBIN-FUTU</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cici"><span class="nav-number">2.</span> <span class="nav-text">cici</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9D%82"><span class="nav-number">3.</span> <span class="nav-text">杂</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E5%A6%82%E4%BD%95%E6%8E%92%E6%9F%A5ANR"><span class="nav-number">4.</span> <span class="nav-text">关于如何排查ANR</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6"><span class="nav-number">4.1.</span> <span class="nav-text">获取日志文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ANR%E7%B1%BB%E5%9E%8B%E5%92%8C%E6%97%A5%E5%BF%97%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-number">4.2.</span> <span class="nav-text">ANR类型和日志关键字</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%A0%E6%88%90ANR%E7%9A%84%E5%B8%B8%E8%A7%81%E5%8E%9F%E5%9B%A0"><span class="nav-number">4.3.</span> <span class="nav-text">造成ANR的常见原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#dayuwuxian"><span class="nav-number">4.4.</span> <span class="nav-text">dayuwuxian</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%91%E7%B9%81GC%E3%80%81OOM-%E7%9A%84%E6%8E%92%E6%9F%A5"><span class="nav-number">5.</span> <span class="nav-text">频繁GC、OOM 的排查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%A4%E4%B8%AA%E4%BA%BA%E8%BD%AE%E6%B5%81%E6%8A%9B%E7%A1%AC%E5%B8%81%EF%BC%8C%E6%AD%A3%E9%9D%A2%E6%9C%9D%E4%B8%8A%E7%9A%84%E8%B5%A2%EF%BC%8C%E6%AD%A3%E5%8F%8D%E9%9D%A2%E6%A6%82%E7%8E%87%E4%B8%80%E6%A0%B7%EF%BC%8C%E4%BD%A0%E5%BA%94%E8%AF%A5%E5%85%88%E6%8A%9B%E8%BF%98%E6%98%AF%E5%90%8E%E6%8A%9B"><span class="nav-number">6.</span> <span class="nav-text">两个人轮流抛硬币，正面朝上的赢，正反面概率一样，你应该先抛还是后抛</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">215</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共433.2k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '8e2e32061310209c79ea28163843959e',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>
