@@ -154,17 +154,17 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">37</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">38</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">11</span></a>
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">12</span></a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">215</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">218</span></a>
 
   </li>
       <li class="menu-item menu-item-search">
@@ -216,6 +216,410 @@
             
 
   <div class="posts-expand">
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/22/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC6%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/22/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC6%E7%AB%A0/" class="post-title-link" itemprop="url">第6章：AQS 抽象同步器的核心原理</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-02-22 22:24:00 / 修改时间：22:30:29" itemprop="dateCreated datePublished" datetime="2023-02-22T22:24:00+08:00">2023-02-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><p>前面介绍在激烈争用的情况下，CAS 自旋实现的轻量级锁会有<strong>两大问题：</strong></p>
+<ul>
+<li>CAS 恶性空自旋会浪费大量 CPU 资源</li>
+<li>某些架构 CPU 上可能会导致 “总线风暴“</li>
+</ul>
+<p>解决这些问题的常见方案有 2 种： </p>
+<ul>
+<li>分散操作热点</li>
+<li>使用队列削峰</li>
+</ul>
+<p>JUC 使用队列削峰方案解决 CAS 性能问题，提供了一个<strong>基于双向队列的削峰基类——抽象基础类 AbstractQueuedSynchronizer（抽象同步器类，简称 AQS）</strong> 。JUC 中许多类都是基于AQS构建：例如ReentrantLock、Semaphore、CountDownLatch、ReentrantReadWriteLock、FutureTask等。</p>
+<h2 id="6-1-锁与队列的关系"><a href="#6-1-锁与队列的关系" class="headerlink" title="6.1 锁与队列的关系"></a>6.1 锁与队列的关系</h2><p>第5章介绍了 CLH ，它用了FIFO的单项队列；AQS 是 CLH 的一个变种，主要原理差不多，用的是 FIFO 的双向链表，<strong>这样做的好处就是可以从任意一个节点开始很方便地访问前驱和后继节点</strong>。</p>
+<h2 id="6-2-AQS-的核心成员"><a href="#6-2-AQS-的核心成员" class="headerlink" title="6.2 AQS 的核心成员"></a>6.2 AQS 的核心成员</h2><h3 id="6-2-1-状态标志位"><a href="#6-2-1-状态标志位" class="headerlink" title="6.2.1 状态标志位"></a>6.2.1 状态标志位</h3><p>AQS 中维持了一个单一的 volatile 修饰 int 类型的状态信息 state ，它标记了锁的状态，默认初始状态 0 为未锁定状态。同时，提供了 <strong>compareAndSetState</strong> 原子设置方法来设置 state 的值。</p>
+<p>当线程 A 通过 tryAcquire() 获取到独占锁并将 state 加一后，其他线程通过 tryAcquire 获取锁就会失败(执行compareAndSet(0,1)会失败)，直到 A 释放了锁为止，其他线程才能获取锁。</p>
+<p>AQS 继承了 AbstractOwnableSynchronizer ，父类中有个当前占用该锁的线程的变量  exclusiveOwnerThread：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//表示当前占用该锁的线程</span></span><br><span class="line"> <span class="keyword">private</span> <span class="keyword">transient</span> Thread exclusiveOwnerThread;</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="6-2-2-队列节点类-Node"><a href="#6-2-2-队列节点类-Node" class="headerlink" title="6.2.2 队列节点类 Node"></a>6.2.2 队列节点类 Node</h3><p>AQS 是一个虚拟队列，不存在队列实例，仅存在节点之间的前后关系，Node 的主要成员如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="comment">//节点状态：值为SIGNAL、CANCELLED、CONDITION、PROPAGATE、0 </span></span><br><span class="line">    <span class="comment">//普通的同步节点的初始值为0，条件等待节点的初始值为CONDITION（-2）</span></span><br><span class="line">    <span class="keyword">volatile</span> <span class="keyword">int</span> waitStatus;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//节点所对应的线程，为抢锁线程或者条件等待线程</span></span><br><span class="line">    <span class="keyword">volatile</span> Thread thread;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//前驱节点，当前节点会在前驱节点上自旋，循环检查前驱节点的waitStatus状态</span></span><br><span class="line">    <span class="keyword">volatile</span> Node prev;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//后继节点</span></span><br><span class="line">    <span class="keyword">volatile</span> Node next;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//若当前Node不是普通节点而是条件等待节点，则节点处于某个条件的等待队列上</span></span><br><span class="line">    <span class="comment">//此属性指向下一个条件等待节点，即其条件队列上的后继节点</span></span><br><span class="line">    Node nextWaiter;</span><br><span class="line">    ...</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>解释一下 waitStatus 变量中的几个值：</p>
+<ul>
+<li>CONDITION ：waitStatus 取这个值时，表示该线程（调用了Condition 的 awati 方法后）在条件队列中阻塞(Condition 有使用)，当持有锁的线程调用了 Condition 的 signal() 方法后，节点会从该 Condition 的等待队列转移到该锁的同步队（也就是AQS的FIFO双向队列）列中去竞争锁。</li>
+<li>PROPAGATE：waitStatus 取这个值时，表示下一个线程获取共享锁后，自己的共享状态会被无条件传播下去，因为共享锁可能出现有N个锁可用，这时直接让后面 N 个节点都来工作。这种状态在 CountDownLatch 中用到了</li>
+</ul>
+<h3 id="6-3-1-模板模式"><a href="#6-3-1-模板模式" class="headerlink" title="6.3.1 模板模式"></a>6.3.1 模板模式</h3><p>这种模式值得看下，AQS 也使用这种模式</p>
+<h2 id="6-4-通过-AQS-实现一把简单的独占锁"><a href="#6-4-通过-AQS-实现一把简单的独占锁" class="headerlink" title="6.4 通过 AQS 实现一把简单的独占锁"></a>6.4 通过 AQS 实现一把简单的独占锁</h2><p>基于 AQS 实现一个简单的<strong>非公平的独占锁</strong> SimpleMockLock：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleMockLock</span> <span class="keyword">implements</span> <span class="title">Lock</span> </span>{</span><br><span class="line">    <span class="comment">//同步器实例</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Sync sync = <span class="keyword">new</span> Sync();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 自定义的内部类：同步器</span></span><br><span class="line">    <span class="comment">// 直接使用 AbstractQueuedSynchronizer.state 值表示锁的状态</span></span><br><span class="line">    <span class="comment">// AbstractQueuedSynchronizer.state=1 表示锁没有被占用</span></span><br><span class="line">    <span class="comment">// AbstractQueuedSynchronizer.state=0 表示锁没已经被占用</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Sync</span> <span class="keyword">extends</span> <span class="title">AbstractQueuedSynchronizer</span> </span>{</span><br><span class="line">        <span class="comment">//钩子方法</span></span><br><span class="line">        <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>{</span><br><span class="line">            <span class="comment">//CAS更新状态值为1</span></span><br><span class="line">            <span class="keyword">if</span> (compareAndSetState(<span class="number">0</span>, <span class="number">1</span>)) {</span><br><span class="line">                setExclusiveOwnerThread(Thread.currentThread());</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            }</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="comment">//钩子方法</span></span><br><span class="line">        <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">tryRelease</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>{</span><br><span class="line">            <span class="comment">//如果当前线程不是占用锁的线程</span></span><br><span class="line">            <span class="keyword">if</span> (Thread.currentThread() != getExclusiveOwnerThread()) {</span><br><span class="line">                <span class="comment">//抛出非法状态的异常</span></span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException();</span><br><span class="line">            }</span><br><span class="line"></span><br><span class="line">            <span class="comment">//如果锁的状态为没有占用</span></span><br><span class="line">            <span class="keyword">if</span> (getState() == <span class="number">0</span>) {</span><br><span class="line">                <span class="comment">//抛出非法状态的异常</span></span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException();</span><br><span class="line">            }</span><br><span class="line">            <span class="comment">//接下来不需要使用CAS操作，因为下面的操作不存在并发场景</span></span><br><span class="line">            setExclusiveOwnerThread(<span class="keyword">null</span>);</span><br><span class="line">            <span class="comment">//设置状态</span></span><br><span class="line">            setState(<span class="number">0</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="comment">//显式锁的抢占方法</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="comment">//委托给同步器的acquire()抢占方法</span></span><br><span class="line">            sync.acquire(<span class="number">1</span>);</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="comment">//显式锁的释放方法</span></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span> </span>{</span><br><span class="line">            <span class="comment">//委托给同步器的release()释放方法</span></span><br><span class="line">            sync.release(<span class="number">1</span>);</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">// 省略其他未实现的方法</span></span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="6-5-AQS-锁抢占的原理"><a href="#6-5-AQS-锁抢占的原理" class="headerlink" title="6.5 AQS 锁抢占的原理"></a>6.5 AQS 锁抢占的原理</h2><p>文中前面讲了一大堆，实在没法梳理各个章节的联系，云里雾里的，直到用 ReentrantLock 来讲这个过程，就清晰了，所以前面一些内容略过。</p>
+<p>直接以 ReentrantLock 抢锁来说明整个抢锁流程，ReentrantLock 有2种模式：公平锁 和 非公平锁。</p>
+<h3 id="6-8-1-ReentrantLock-非公平锁的抢占流程"><a href="#6-8-1-ReentrantLock-非公平锁的抢占流程" class="headerlink" title="6.8.1 ReentrantLock 非公平锁的抢占流程"></a>6.8.1 ReentrantLock 非公平锁的抢占流程</h3><p>ReentrantLock 为非公平所实现了一个内部的同步器——NonfairSync ，其显式锁获取方法 lock() 源码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//非公平抢占</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">NonfairSync</span> <span class="keyword">extends</span> <span class="title">Sync</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">if</span> (compareAndSetState(<span class="number">0</span>, <span class="number">1</span>)) {</span><br><span class="line">            setExclusiveOwnerThread(Thread.currentThread());</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            acquire(<span class="number">1</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>非公平性就体现在这里：<strong>如果占用锁的线程刚释放锁，state 为 0，而队列中排队等待锁的线程还未唤醒，新来的线程就直接抢占了该锁，那么就插队了</strong>。举个例子：假设 A、B 线程在排队等锁，但是此时不在队列中的 C 直接进行 CAS 操作成功了，拿到锁开开心心返回了，那么 A、 B 只能乖乖看着。</p>
+<h3 id="6-8-4-ReentrantLock-公平锁的抢占流程"><a href="#6-8-4-ReentrantLock-公平锁的抢占流程" class="headerlink" title="6.8.4 ReentrantLock 公平锁的抢占流程"></a>6.8.4 ReentrantLock 公平锁的抢占流程</h3><p>ReentrantLock 为公平所实现了一个内部的同步器——FairSync ，其显式锁获取方法 lock() 源码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FairSync</span> <span class="keyword">extends</span> <span class="title">Sync</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>{</span><br><span class="line">        acquire(<span class="number">1</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>其核心思想是通过 AQS 模板方法 acquire 进行队列入队操作。</p>
+<h3 id="6-8-5-AQS模板方法-acquire-arg"><a href="#6-8-5-AQS模板方法-acquire-arg" class="headerlink" title="6.8.5 AQS模板方法 acquire(arg)"></a>6.8.5 AQS模板方法 acquire(arg)</h3><p>自己调整的章节，本来这节在前面，但是放前面又看不懂，用意也不太明确。</p>
+<p>acquire(arg) 方法是 AQS 提供的<strong>利用独占的方式获取资源的方法</strong>，源码实现如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">acquire</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>{</span><br><span class="line"><span class="keyword">if</span> (!tryAcquire(arg) &amp;&amp; acquireQueued(addWaiter(Node.EXCLUSIVE), arg))</span><br><span class="line">    selfInterrupt();</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>它的含义是：<strong>如果通过 tryAcquire(arg)方法尝试成功，则直接返回，表示已经抢到锁；否则，将线程加入等待队列。</strong></p>
+<h3 id="6-8-6-AQS模板方法-tryAcquire-arg"><a href="#6-8-6-AQS模板方法-tryAcquire-arg" class="headerlink" title="6.8.6 AQS模板方法 tryAcquire(arg)"></a>6.8.6 AQS模板方法 tryAcquire(arg)</h3><p>在 ReentrantLock 中，在公平锁状态和非公平锁状态下， tryAcquire 的实现是不一样的。</p>
+<ul>
+<li>公平锁状态下会判断是否是队头，是队头就允许CAS获取锁；如果不是就判断是否是重入，重入允许进入；否则就返回了false了（自己看代码总结的）；</li>
+<li>非公平状态下还是会直接 CAS 抢锁了，不管队头这些了，这也是非公平锁的行为体现</li>
+</ul>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/18/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC5%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/18/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC5%E7%AB%A0/" class="post-title-link" itemprop="url">第5章：JUC显式锁的原理与实战</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-18 15:54:00" itemprop="dateCreated datePublished" datetime="2023-02-18T15:54:00+08:00">2023-02-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-22 22:36:01" itemprop="dateModified" datetime="2023-02-22T22:36:01+08:00">2023-02-22</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="5-1-显式锁"><a href="#5-1-显式锁" class="headerlink" title="5.1 显式锁"></a>5.1 显式锁</h2><p>使用 Java内置锁 时，无需通过 Java 代码显式地对同步对象的监视器进行抢占和释放，使用起来非常方便。但是不具备一些比较高级的锁功能：</p>
+<ul>
+<li><p>限时抢锁：设置超时时长，不至于无限等下去</p>
+</li>
+<li><p>可中断抢锁：抢锁时，外部线程给抢锁线程发一个中断信号，就能唤起等待锁的线程，并终止抢占过程</p>
+</li>
+<li><p>多个等待队列：为锁维持多个等待队列，以提高锁的效率。比如生产者-消费者模式中，生产者和消费者公用一把锁，锁上维持2个队列：一个生产队列和一个消费者队列</p>
+</li>
+</ul>
+<h3 id="5-1-3-使用显式锁的模板代码"><a href="#5-1-3-使用显式锁的模板代码" class="headerlink" title="5.1.3 使用显式锁的模板代码"></a>5.1.3 使用显式锁的模板代码</h3><p>因为 JUC 中的显式锁都实现了 Lock 接口，所以不同类型的显式锁对象使用的方法都是模板化的、套路化的，模板代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//创建锁对象，SomeLock 为 Lock 的某个实现类，如 ReentrantLock</span></span><br><span class="line">Lock lock = <span class="keyword">new</span> SomeLock();</span><br><span class="line"><span class="comment">//step 1： 抢占锁</span></span><br><span class="line">lock.lock;</span><br><span class="line"><span class="keyword">try</span> {</span><br><span class="line">    <span class="comment">//step2 ： 抢锁成功，执行临界区代码</span></span><br><span class="line">    doSomething();</span><br><span class="line">} <span class="keyword">finally</span> {</span><br><span class="line">    lock.unlock(); <span class="comment">//step3： 释放锁</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>模板代码有几个需要注意的点：</p>
+<ul>
+<li><p>释放锁操作 unlock 必须在 try-catch 的finally 中执行，否则如果临界区代码抛出异常，锁就可能永远也得不到释放了</p>
+</li>
+<li><p>抢占锁的操作<strong>lock 必须在 try 语句之外</strong>，原因：lock 方法不一定能够抢锁成功（我猜测作者是想说 tryLock() 之类的方法不一定会获取成功），如果没有抢占到锁，也肯定不需要释放锁，<strong>在没有占有锁的情况下释放锁可能导致异常</strong>。</p>
+</li>
+<li><p>在抢占锁操作 lock 和 try 语句之间不要插入任何代码，避免抛出异常而无法执行到 try，进而无法释放锁。</p>
+</li>
+</ul>
+<h3 id="5-1-4-基于显式锁进行“等待-通知”方式的线程间通信"><a href="#5-1-4-基于显式锁进行“等待-通知”方式的线程间通信" class="headerlink" title="5.1.4 基于显式锁进行“等待-通知”方式的线程间通信"></a>5.1.4 基于显式锁进行“等待-通知”方式的线程间通信</h3><p>Java 内置锁可以通过 Object 的 wait 和 notify 方法来实现简单的线程间通信，与此类似的是，基于 Lock 显式锁，JUC 也提供了一个用于线程间通信的接口 Condition</p>
+<p>Condition 接口有2类主要方法：</p>
+<ul>
+<li>await() ： 在功能上与 Object.wait() 语意等效，线程会加入 await() 等待队列，<strong>并释放当前锁</strong></li>
+<li>signal() ： 在功能上与 Object.notify() 语意等效，唤醒 await() 等待队列中的线程</li>
+</ul>
+<blockquote>
+<p>为了避免与 Object 中的 wait/notify 2类方法在使用时发生混淆，JUC 对 Condition 接口方法改了名称，成为了 await/signal。Condition 对象的 signal 和<strong>同一个对象的 await 是一一配对使用的</strong>。</p>
+</blockquote>
+<p><strong>Condition 对象是基于显式锁的，所以不能独立创建 Condition 对象，可以通过 lock.newCondition() 方法获取</strong>一个与当前显式锁绑定的 Condition 对象。用法举例如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Lock lock = <span class="keyword">new</span> ReentrantLock();</span><br><span class="line"><span class="keyword">private</span> Condition condition = lock.newCondition();</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WaitTarget</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>{</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        lock.lock();<span class="comment">//抢锁</span></span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            print(<span class="string">"开始等待"</span>);</span><br><span class="line">            condition.await();<span class="comment">//开始等待，并且释放锁</span></span><br><span class="line">            print(<span class="string">"收到通知，开始继续执行"</span>);</span><br><span class="line">        } <span class="keyword">finally</span> {</span><br><span class="line">            lock.unlock();<span class="comment">//释放锁</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>使用 await 方法前必须要先获取锁，await 方法会让当前线程加入 Condition 的等待队列，同理， signal 方法也要在获取锁之后才能调用，调用 signal 之后一定要释放锁，只有这样被唤醒的等待线程才能抢锁。</p>
+<h3 id="5-1-5-LockSupport"><a href="#5-1-5-LockSupport" class="headerlink" title="5.1.5 LockSupport"></a>5.1.5 LockSupport</h3><p>LockSupport 是JUC 提供的一个 <strong>线程阻塞与唤醒的工具类</strong>。大体有2类方法(阻塞和唤醒)：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 无限期阻塞当前线程</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">park</span><span class="params">()</span></span>; </span><br><span class="line"> </span><br><span class="line"> <span class="comment">// 唤醒某个被阻塞的线程</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">unpark</span><span class="params">(Thread thread)</span></span>;</span><br><span class="line"></span><br></pre></td></tr></tbody></table></figure>
+
+<p>一个简单的演示的实例：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WaitTarget</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>{</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            print(<span class="string">"即将进入阻塞"</span>);</span><br><span class="line">            LockSupport.park();<span class="comment">//阻塞当前线程</span></span><br><span class="line">            <span class="keyword">if</span> (Thread.currentThread().isInterrupted()) {</span><br><span class="line">                print(<span class="string">"被中断了"</span>);</span><br><span class="line">            } <span class="keyword">else</span> {</span><br><span class="line">                print(<span class="string">"被重新唤醒"</span>);</span><br><span class="line">            }</span><br><span class="line">            </span><br><span class="line">        } <span class="keyword">finally</span> {</span><br><span class="line">            lock.unlock();<span class="comment">//释放锁</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="5-1-5-1-LockSupport-park-的对比（自己改的标题）"><a href="#5-1-5-1-LockSupport-park-的对比（自己改的标题）" class="headerlink" title="5.1.5.1 LockSupport.park() 的对比（自己改的标题）"></a>5.1.5.1 LockSupport.park() 的对比（自己改的标题）</h4><p>1、与 Thread.sleep() 的区别</p>
+<ul>
+<li>Thread.sleep() 只能自己醒来，没法外部唤醒；LockSupport.park() 可以通过 unpark 唤醒</li>
+<li>Thread.sleep() 声明了中断异常(InterruptedException) ，而LockSupport.park() 没有</li>
+<li>被中断的时候，虽然线程都会被设置中断标记，但是线程表现不同：sleep 会抛异常，park 不会</li>
+</ul>
+<p>2、与 Object.wait() 的区别</p>
+<ul>
+<li>wait 需要在同步块中执行，park 可以在任意地方执行</li>
+<li>当阻塞线程被中断时，wait 方法抛出中断异常；而park 不会抛出异常</li>
+<li>如果没有调用过 wait 而直接执行 notify 会导致 IllegalMonitorStateException异常；而未做park 直接做 unpark 不会有任何异常</li>
+</ul>
+<blockquote>
+<p>自己看了下 LockSupport 的源码，发现 park 和 unpark 都是 native 方法，所以在代码层面就没对比了</p>
+</blockquote>
+<h3 id="5-1-6-显式锁分类"><a href="#5-1-6-显式锁分类" class="headerlink" title="5.1.6 显式锁分类"></a>5.1.6 显式锁分类</h3><p>从多个维度分类： 可重入、悲观/乐观、公平、共享/独占、可中断/不可中断</p>
+<h3 id="5-2-2-通过-CAS-实现乐观锁"><a href="#5-2-2-通过-CAS-实现乐观锁" class="headerlink" title="5.2.2 通过 CAS 实现乐观锁"></a>5.2.2 通过 CAS 实现乐观锁</h3><p>乐观锁通过 CAS 实现主要就是两个步骤：</p>
+<ol>
+<li>冲突检测 （CAS 检测内存位置 V 的值是否为 A）</li>
+<li>数据更新 (CAS 上述检测如果是，则将位置 V 更新为 B 值，否则不更改)</li>
+</ol>
+<p>在实际使用中，仅仅进行一次 CAS 是不够的，一般情况下需要不断循环重试直到CAS 操作成功，也即<strong>自旋</strong></p>
+<blockquote>
+<p>乐观锁是一种思想，CAS 是这种思想的一种实现</p>
+</blockquote>
+<p>作为演示，这里设计一个简单版本的不可重入（如果需要重入就count计数，这里不贴例子了）的自旋锁：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyLock</span> <span class="keyword">implements</span> <span class="title">Lock</span> </span>{</span><br><span class="line"></span><br><span class="line">    <span class="comment">//当前锁的拥有者</span></span><br><span class="line">    <span class="keyword">private</span> AtomicReference&lt;Thread&gt; owner = <span class="keyword">new</span> AtomicReference&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>{</span><br><span class="line">        Thread t = Thread.currentThread();</span><br><span class="line">        <span class="comment">//书中的例子这里是写错了，它写成 while(owner.compareAndSet(null, t))</span></span><br><span class="line">        <span class="keyword">while</span>(!owner.compareAndSet(<span class="keyword">null</span>, t)) {<span class="comment">//循环竞争锁</span></span><br><span class="line">            <span class="comment">//没获取到锁，让出cpu</span></span><br><span class="line">            Thread.yield();</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span> </span>{</span><br><span class="line">        Thread t = Thread.currentThread();</span><br><span class="line">        <span class="keyword">if</span>(t == owner.get()) {</span><br><span class="line">            owner.set(<span class="keyword">null</span>);</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="5-2-5-CAS-可能导致“总线风暴”"><a href="#5-2-5-CAS-可能导致“总线风暴”" class="headerlink" title="5.2.5 CAS 可能导致“总线风暴”"></a>5.2.5 CAS 可能导致“总线风暴”</h3><p>为了保障“缓存一致性”，不同的内核需要通过总线来回通信，使用 lock 前缀（用于内存屏障）指令的 Java 操作（比如CAS、volatile）会产生缓存一致性流量，很多线程同时执行lock前缀操作时，会在总线上产生过多的流量，也就是 “总线风暴”。</p>
+<p>那么，基于 JUC 实现的轻量级锁怎么避免总线风暴？答案是：使用队列对抢锁线程进行排队。</p>
+<h3 id="5-2-6-CLH自旋锁"><a href="#5-2-6-CLH自旋锁" class="headerlink" title="5.2.6 CLH自旋锁"></a>5.2.6 CLH自旋锁</h3><p>CLH锁就是一种基于队列排队的自旋锁（由3个发明人的名字命名的），AQS 也是基于这种原理，为了说明其原理，这里实现一个 CLH 锁的学习版本，并不是真正的源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CLHLock</span> <span class="keyword">implements</span> <span class="title">Lock</span> </span>{</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 当前节点的线程本地变量</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> ThreadLocal&lt;Node&gt; curNodeLocal = <span class="keyword">new</span> ThreadLocal();</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * CLHLock队列的尾部指针，使用AtomicReference，方便进行</span></span><br><span class="line"><span class="comment">     * CAS操作</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> AtomicReference&lt;Node&gt; tail = <span class="keyword">new</span> AtomicReference&lt;&gt;(<span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">CLHLock</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="comment">//设置尾部节点</span></span><br><span class="line">        tail.getAndSet(Node.EMPTY);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//加锁操作：将节点添加到等待队列的尾部</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>{</span><br><span class="line">        Node curNode = <span class="keyword">new</span> Node(<span class="keyword">true</span>, <span class="keyword">null</span>);</span><br><span class="line">        Node preNode = tail.get();</span><br><span class="line">        <span class="comment">//CAS自旋：将当前节点插入队列的尾部</span></span><br><span class="line">        <span class="keyword">while</span> (!tail.compareAndSet(preNode, curNode)) {</span><br><span class="line">            preNode = tail.get();</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//设置前驱节点</span></span><br><span class="line">        curNode.setPrevNode(preNode);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 自旋，监听前驱节点的locked变量，直到其值为false</span></span><br><span class="line">        <span class="comment">// 若前驱节点的locked状态为true，则表示前一个线程还在抢占或者占有锁</span></span><br><span class="line">        <span class="keyword">while</span> (curNode.getPrevNode().isLocked()) {</span><br><span class="line">            <span class="comment">//让出CPU时间片，提高性能</span></span><br><span class="line">            Thread.yield();</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">// 能执行到这里，说明当前线程获取到了锁</span></span><br><span class="line">        <span class="comment">// Print.tcfo("获取到了锁！！！");</span></span><br><span class="line">        <span class="comment">//将当前节点缓存在线程本地变量中，释放锁会用到</span></span><br><span class="line">        curNodeLocal.set(curNode);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//释放锁</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span> </span>{</span><br><span class="line">        Node curNode = curNodeLocal.get();</span><br><span class="line">        curNode.setLocked(<span class="keyword">false</span>);</span><br><span class="line">        curNode.setPrevNode(<span class="keyword">null</span>); <span class="comment">//help for GC</span></span><br><span class="line">        curNodeLocal.set(<span class="keyword">null</span>); <span class="comment">//方便下一次抢锁</span></span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//虚拟等待队列的节点</span></span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span> </span>{</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Node</span><span class="params">(<span class="keyword">boolean</span> locked, Node prevNode)</span> </span>{</span><br><span class="line">            <span class="keyword">this</span>.locked = locked;</span><br><span class="line">            <span class="keyword">this</span>.prevNode = prevNode;</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line">        <span class="comment">// true：当前线程正在抢占锁，或者已经占有锁</span></span><br><span class="line">        <span class="comment">// false：当前线程已经释放锁，下一个线程可以占有锁了</span></span><br><span class="line">        <span class="keyword">volatile</span> <span class="keyword">boolean</span> locked;</span><br><span class="line">        <span class="comment">// 前一个节点，需要监听其locked字段</span></span><br><span class="line">        Node prevNode;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 空节点</span></span><br><span class="line">        <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> Node EMPTY = <span class="keyword">new</span> Node(<span class="keyword">false</span>, <span class="keyword">null</span>);</span><br><span class="line">    }</span><br><span class="line">    <span class="comment">// 省略其他代码</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>CLH 算法的几个要点就是（我理解的是，这种步骤就是公平锁环境下弄的，非公平锁不会每次头节点获得锁）：</p>
+<ol>
+<li>初始状态队列尾部(tail)指向一个 EMPTY节点，tail 节点使用 AtomicReference 类型是为了让多线程并发操作时安全</li>
+<li>Thread 在抢锁时会创建一个 Node 加入等待队列尾部（默认lock 属性为true），同时自己作为新的尾部，这些操作通过 CAS 自旋操作</li>
+<li>Node 加入之后，会循环判断前去节点的 lock 属性是否为false，如果为false，即前驱节点释放了锁，当前节点获得了锁</li>
+<li>当前node 获得锁之后，将locked 属性设置为true</li>
+<li>临界区代码执行完毕后，当前节点的 locked 置为 false，方便后续节点获取锁</li>
+</ol>
+<h3 id="5-4-2-死锁的监测与中断"><a href="#5-4-2-死锁的监测与中断" class="headerlink" title="5.4.2 死锁的监测与中断"></a>5.4.2 死锁的监测与中断</h3><p>JDK 8 中包含一个 ThreadMXBean 接口，提供多种监视线程的方法：</p>
+<ul>
+<li>findDeadlockedThreads ：用于检测由于抢占JUC显式锁、Java内置锁引起死锁的线程。</li>
+<li>findMonitorDeadlockedThreads：仅仅用于检测由于抢占Java内置锁引起死锁的线程。</li>
+</ul>
+<h2 id="5-5-共享锁与独占锁"><a href="#5-5-共享锁与独占锁" class="headerlink" title="5.5 共享锁与独占锁"></a>5.5 共享锁与独占锁</h2><p>JUC 中的共享锁包括 Semaphore（信号量）、ReadLock（读写锁中的读锁）、CountDownLatch 倒数闩</p>
+<h3 id="5-5-2-共享锁-Semaphore"><a href="#5-5-2-共享锁-Semaphore" class="headerlink" title="5.5.2 共享锁 Semaphore"></a>5.5.2 共享锁 Semaphore</h3><p>Semaphore 可以用来控制在同一时刻共享资源的线程数量，维护了一组虚拟许可。<strong>将 Semaphore 称为一个许可管理器 更形象。</strong></p>
+<h4 id="5-5-2-1-Semaphore-使用示例"><a href="#5-5-2-1-Semaphore-使用示例" class="headerlink" title="5.5.2.1 Semaphore 使用示例"></a>5.5.2.1 Semaphore 使用示例</h4><p>Semaphore 使用一个很形象的场景是银行排队办理业务，只有 N 个窗口，M 个人在排队，那么其实相当于有 N 个许可：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> Semaphore semaphore = <span class="keyword">new</span> Semaphore(N);</span><br><span class="line"></span><br><span class="line">Runnable r = () -&gt; {</span><br><span class="line">    <span class="keyword">try</span> {</span><br><span class="line">        <span class="comment">//阻塞开始获取许可</span></span><br><span class="line">        semaphore.acquire(<span class="number">1</span>);</span><br><span class="line">        <span class="comment">//获取了一个许可</span></span><br><span class="line">        print(<span class="string">"业务办理中"</span>);</span><br><span class="line">        <span class="comment">//模拟业务操作: 处理排队业务</span></span><br><span class="line">        Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">        <span class="comment">//用完了释放许可</span></span><br><span class="line">        semaphore.release(<span class="number">1</span>);</span><br><span class="line">    } <span class="keyword">catch</span>(Exception e) {</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="5-5-3-共享锁-CountDownLatch"><a href="#5-5-3-共享锁-CountDownLatch" class="headerlink" title="5.5.3 共享锁 CountDownLatch"></a>5.5.3 共享锁 CountDownLatch</h3><p>CountDownLatch 功能相当于一个多线程环境下的倒数门闩，它可以指定一个计数值，在并发环境下由线程进行减1操作，当计数变为 0 之后，被 await 阻塞的线程将会唤醒。</p>
+<p>它的一个经典示例就是，司机开车之前需要每个人报数，报数到 100 后说明人到齐发车：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">CountDownLatch doneSignal = <span class="keyword">new</span> CountDownLatch(N);</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= N; ++i) {<span class="comment">// 启动报数任务</span></span><br><span class="line">    threadPoll.execute(<span class="keyword">new</span> Runable() {</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">            print(<span class="string">"第"</span> + i + <span class="string">"个人已到"</span>);</span><br><span class="line">            <span class="comment">//倒数闩减1</span></span><br><span class="line">            doneSignal.countDown();</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">}</span><br><span class="line"> doneSignal.await(); <span class="comment">//step2：等待报数完成，倒数闩计数值为0</span></span><br><span class="line"> print(<span class="string">"人到齐，开车"</span>); </span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="5-6-读写锁"><a href="#5-6-读写锁" class="headerlink" title="5.6 读写锁"></a>5.6 读写锁</h2><p>读写锁的读和写操作的互斥原则如下：</p>
+<ul>
+<li>读读能共存</li>
+<li>读写不能共存</li>
+<li>写写不能共存</li>
+</ul>
+<p>JUC 包中的读写锁接口为 ReadWriteLock ，主要有2个方法： </p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ReadWriteLock</span> </span>{</span><br><span class="line"> <span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 返回读锁</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="function">Lock <span class="title">readLock</span><span class="params">()</span></span>;</span><br><span class="line"> </span><br><span class="line"> <span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 返回写锁</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="function">Lock <span class="title">writeLock</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>其主要实现类为 ReentrantReadWriteLock ，与 ReentrantLock 相比，<strong>前者更适合 读多写少 的场景，而 ReentrantLock 适合 读写比例相差不大 的场景</strong>。</p>
+<h3 id="5-6-3-StampedLock-印戳锁"><a href="#5-6-3-StampedLock-印戳锁" class="headerlink" title="5.6.3 StampedLock 印戳锁"></a>5.6.3 StampedLock 印戳锁</h3><p>StampedLock 是对 ReentrantReadWriteLock 读写所的一种改进，主要改进为： 在没有写只有读的场景，<strong>StampedLock 支持不用加读锁而是直接进行读操作，最大限度提升读的效率，只有发生过写操作后，再加读锁才能进行读操作。</strong></p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/17/%E4%B9%A6-Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)/Java%E9%AB%98%E5%B9%B6%E5%8F%91%E6%A0%B8%E5%BF%83%E7%BC%96%E7%A8%8B(%E5%8D%B72)-%E7%AC%AC4%E7%AB%A0/" class="post-title-link" itemprop="url">第4章：可见性与有序性的原理</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-02-17 14:20:00" itemprop="dateCreated datePublished" datetime="2023-02-17T14:20:00+08:00">2023-02-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-02-18 15:53:19" itemprop="dateModified" datetime="2023-02-18T15:53:19+08:00">2023-02-18</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <html><head></head><body></body></html><html><head></head><body><h2 id="4-1-CPU物理缓存结构"><a href="#4-1-CPU物理缓存结构" class="headerlink" title="4.1 CPU物理缓存结构"></a>4.1 CPU物理缓存结构</h2><p>L1缓存离 CPU 最近也最快，一般就 32k/64k水平；L2 缓存速度次之，容量一般比L1大；L3级缓存最大，比前面二者都大，速度也最慢，大小可能 12M 的水平。</p>
+<h2 id="4-2-并发编程的三大问题"><a href="#4-2-并发编程的三大问题" class="headerlink" title="4.2 并发编程的三大问题"></a>4.2 并发编程的三大问题</h2><p>三大问题分别是： 原子性、可见性、有序性 问题。必须要保证这 3 个，只要有一个没保证，在多线程情况下就可能不正确。</p>
+<p>后续的略。</p>
+<h2 id="4-3-硬件层的MESI协议原理"><a href="#4-3-硬件层的MESI协议原理" class="headerlink" title="4.3 硬件层的MESI协议原理"></a>4.3 硬件层的MESI协议原理</h2><p>为了缓解内存速度和CPU速度差问题，现在计算机都会为CPU添加高速缓存，每个CPU内核都有自己的一级、二级高速缓存，同一个CPU多个内核之间共享一个三级高速缓存。</p>
+<h3 id="4-3-1-总线锁和缓存锁"><a href="#4-3-1-总线锁和缓存锁" class="headerlink" title="4.3.1 总线锁和缓存锁"></a>4.3.1 总线锁和缓存锁</h3><p>CPU的处理流程为：现将计算需要用到的数据缓存到CPU的高速缓存中，CPU计算时，直接从高速缓存获取数据并在计算完成后写会高速缓存，整个运算完成后再把高速缓存的数据同步回主存。由于每个线程可能运行在不同的CPU内核中，因此<strong>同一份数据可能被缓存到多个CPU内核中，就会发生内存可见性问题</strong>。</p>
+<p>后续的略。</p>
+<h3 id="4-4-1-重排序"><a href="#4-4-1-重排序" class="headerlink" title="4.4.1 重排序"></a>4.4.1 重排序</h3><p><strong>编译器</strong>为什么要重排序？其目的为： <strong>与其等待阻塞指令（如等待缓存刷入），不如先去执行其他指令。</strong>另外，CPU层面也有重排序。</p>
+<h2 id="4-5-JMM-详解"><a href="#4-5-JMM-详解" class="headerlink" title="4.5 JMM 详解"></a>4.5 JMM 详解</h2><p>JMM (Java Memory Model ，Java 内存模型) 并不像JVM 内存结构一样是真实存在的运行实体，更多体现为一种规范和规则。</p>
+<p>JMM 定义了一组规则或规范，该规范定义了<strong>一个线程对共享变量写入时，如何确保对另一个线程是可见的</strong>，实际上 JMM 提供了合理的禁用缓存以及禁止重排序的方法，所以其核心价值在于<strong>解决可见性和有序性</strong>。它的另一大价值在于：<strong>屏蔽各大硬件和操作系统差异，保证 Java 程序在各大平台堆内存访问是一致的。</strong></p>
+<p>JMM 规定所有的变量都存储在主存（类似于物理内存，但是有区别）中，每个 Java 线程都有自己的工作内存（类似于CPU高速缓存，但有区别）。</p>
+<p>JMM 提供了一套自己的方案解决可见性和有序性问题，包括 volatile、synchronized、final 等。</p>
+<h2 id="4-7-volatile-不具备原子性"><a href="#4-7-volatile-不具备原子性" class="headerlink" title="4.7 volatile 不具备原子性"></a>4.7 volatile 不具备原子性</h2><p>对于关键字 volatile 修饰的内存可见变量而言，具有2个重要的语义：</p>
+<ul>
+<li><p>使用 volatile 修饰的变量在变量的值发生改变时，会立刻同步到主存，并使其他线程的变量副本失效</p>
+</li>
+<li><p>禁止指令重排序</p>
+</li>
+</ul>
+<p>使用++操作说明volatile不具备重排序功能：</p>
+<ol>
+<li><p>A、B线程分别运行在Core1 和 Core2 核上，假设此时共享value 的值为 0，现在线程 A、B 都读取value值到自己的工作内存上</p>
+</li>
+<li><p>线程 A 将 value 的值变为 1，完成了 assign、store 操作，假设在执行 write 指令前 A 的时间片用完，线程 A 被空闲但是 write 操作还没达到主存，但是呢， store 操作触发了写的信号，导致了 B 缓存过期</p>
+</li>
+<li><p>B重新从主存读到 value，可想而知这时候还是 0</p>
+</li>
+<li><p>线程 B 执行完所有操作，将 value 值变成 1 写入主存</p>
+</li>
+<li><p>线程 A 重新拿到时间片，将过期了的 1 写入主存</p>
+</li>
+</ol>
+<p>所以，<strong>对于复合操作，volatile无法保障原子性，如果要保证复合操作的原子性，就需要用到锁</strong>。</p>
+</body></html>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
         
   
   
@@ -1882,477 +2286,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2022/12/12/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%AC%AC3%E7%AB%A0%20%E5%86%B7%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/12/12/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%AC%AC3%E7%AB%A0%20%E5%86%B7%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/" class="post-title-link" itemprop="url">第3章 冷启动代码修复</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-12-12 16:35:00" itemprop="dateCreated datePublished" datetime="2022-12-12T16:35:00+08:00">2022-12-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-02-04 16:39:03" itemprop="dateModified" datetime="2023-02-04T16:39:03+08:00">2023-02-04</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><p>第3章： 冷启动代码修复</p>
-<p>热修复的根本原理是Native层方法替换，所以当类结构变化（如增减method/field）时热部署模式会受限。但冷部署可以突破这种约束，可以作为热部署的补充。</p>
-<h2 id="冷启动类加载原理"><a href="#冷启动类加载原理" class="headerlink" title="冷启动类加载原理"></a>冷启动类加载原理</h2><h3 id="冷启动方案概述"><a href="#冷启动方案概述" class="headerlink" title="冷启动方案概述"></a>冷启动方案概述</h3><table>
-<thead>
-<tr>
-<th>项目</th>
-<th>QQ空间</th>
-<th>Tinker</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>原理</td>
-<td>为解决Dalvik情况下 unexpected dex problem 异常而采用插桩，单独放一个帮助类在独立的dex让其他类调用，防止类被打上 CLASS_ISPREVERIFIED。 最后加载补丁dex得到一个Element对象插入到 dexElements数组的最前面</td>
-<td>提供差量包patch.dex，然后将patch.dex与应用的 classes.dex 合并成一个完整的 dex，完整的dex加载构建Element 然后整体替换掉旧的 Elements 数组</td>
-</tr>
-<tr>
-<td>优点</td>
-<td>产物小，灵活</td>
-<td>补丁包小，Dalvik情况下不影响性能，ART环境下也不存在必须包含父类/引用类的情况</td>
-</tr>
-<tr>
-<td>缺点</td>
-<td>Dalvik 下影响类加载性能</td>
-<td>dex合并内存消耗在 vm heap 上，容易导致 OOM</td>
-</tr>
-</tbody></table>
-<h4 id="插桩实现的前因后果"><a href="#插桩实现的前因后果" class="headerlink" title="插桩实现的前因后果"></a>插桩实现的前因后果</h4><p>如果直接把补丁类打入补丁包中而不做任何处理的话，在类加载的时候会产生异常并退出，来分析下异常产生的原因：</p>
-<p>加载一个dex文件时如果不存在 odex 文件，那么就会执行 dexopt 操作，这个操作里面会调用到 verifyAndOptimizeClass 执行真正的 verify/optimize 操作：</p>
-<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(doVerify) {</span><br><span class="line">    <span class="keyword">if</span>(dvmVerifyClass(clazz)) {<span class="comment">//执行类的verify</span></span><br><span class="line">        <span class="comment">//类被打上 CLASS_ISPREVERIFIED 标志</span></span><br><span class="line">        ((DexClassDef*)pClassDef)-&gt;accessFlags |= CLASS_ISPREVERIFIED;</span><br><span class="line">        ...</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(doOpt) {</span><br><span class="line">    <span class="keyword">if</span>(...) {</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        ...</span><br><span class="line">        dvmOptmizeClass(clazz, <span class="literal">false</span>);</span><br><span class="line">        <span class="comment">//类被打上 CLASS_ISOPTIMIZED 标志</span></span><br><span class="line">        ((DexClassDef*)pClassDef)-&gt;accessFlags |= CLASS_ISOPTIMIZED;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>第一次安装 APK 时，会对原dex做 dexopt ，假如APK只有一个dex，dvmVerifyClass(clazz) 返回true，然后 APK 中所有的类都会被打上 CLASS_ISPREVERIFIED 标记。接下来执行 dvmOptimizeClass ，类接着被打上 CLASS_ISOPTIMIZED 标志。</p>
-<ul>
-<li><p>上述的 dvmVerifyClass 目的是防止校验类合法性被篡改，此时会对类的每个方法进行校验，这里只需要知道如果类所引用到的类和当前类都在同一个dex中的话，就会返回为true</p>
-</li>
-<li><p>dvmOptmizeClass : 类优化，这过程会将部分指令优化成虚拟机内部指令，提升了方法的执行效率。</p>
-</li>
-</ul>
-<p>现在假定 A 是补丁中的类，所以 A 肯定在一个单独的 dex 中，这时候类B 引用到补丁类 A，所以会尝试解析类 A。但是由于 B 是已经被打上了 CLASS_ISPREVERIFIED，调用的类 A 又与 B 不在同一个 dex ，因此会报 dvmThrowIllegalAccessError 异常。</p>
-<p>为了解决这个问题，一个单独的无关类被放在一个单独的dex中，原 dex 中所有的类构造函数都引用这个类，一般的解决方案是侵入dex打包流程，利用 .class 字节码修改技术。插桩由此而来，根据前面的介绍，原dex 所有的类都没有 CLASS_ISPREVERIFIED 标志，因此不会报这个异常。</p>
-<p>但是，插桩会给类加载效率带来比较严重的影响，如果没有打上 CLASS_CLASS_ISPREVERIFIED / CLASS_ISOPTIMIZED 标志，那么累的校验和优化都将在类初始化阶段进行。正常情况下类的校验和优化都仅在APK 第一次安装执行 dexopt 阶段进行，单个类加载耗时并不多，但是同一时间加载大量类的情况下，这种耗时就会放大。因此启动的时候容易白屏，这是没法容忍的。</p>
-<h4 id="避免插桩的-QFix-方案"><a href="#避免插桩的-QFix-方案" class="headerlink" title="避免插桩的 QFix 方案"></a>避免插桩的 QFix 方案</h4><p>它的思路是，在dexopt 后，反编译 dex 为 smali 修改代码避免异常，但是由于是在 dexopt 后绕过的，dexopt 会改变原有的很多逻辑，这可能会导致比较严重的bug。因此，最终会采用自研的全量 dex 方案。</p>
-<h4 id="Art下冷启动实现"><a href="#Art下冷启动实现" class="headerlink" title="Art下冷启动实现"></a>Art下冷启动实现</h4><p><strong>为了解决 Art 下类地址写死的问题，Tinker 通过 dex merge 成一个全新的 dex 整体替换掉旧的 dexElements 数组。</strong></p>
-<p>Dalvik 虚拟机尝试加载一个压缩文件的时候，只会加载 classes.dex ，如果压缩文件中有多个 dex， 其他 dex 文件会被直接忽略掉；而 Art 虚拟机则不一样，优先加载 primary dex （也就是 classes.dex），后续会加载其他 dex 。<strong>所以，在 Art 环境下，补丁类只需要放到 classes.dex 中即可！后续出现在其他 dex 中的 “补丁类”是不会被重复加载的</strong>，所以 Art 下冷启动解决方案：</p>
-<blockquote>
-<p>将补丁 dex 命名为 classes.dex ，原来的dex依次命名为 classes(2,3,4…)，然后一起打包为一个压缩文件，通过 DexFile.loadDex 得到 DexFile 对象，最后整体替换老旧的 dexElements 数组即可。</p>
-</blockquote>
-<p>该方案和Tinker 的方案对比如下：</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-3-Art%E5%86%B7%E5%90%AF%E5%8A%A8%E6%96%B9%E6%A1%88%E4%B8%8ETinker%E5%AF%B9%E6%AF%94.png" alt="Art冷启动方案与Tinker对比"></p>
-<h4 id="其他方面"><a href="#其他方面" class="headerlink" title="其他方面"></a>其他方面</h4><p>DexFile.loadDex 把 dex 文件解析并加载到 native 内存的时候，如果dex 不存在 odex ，则会生成一个优化的 odex （Dalvik 和 Art 都会），所以虚拟机最后执行的是 odex。现在假如补丁 dex 足够大，那么 生成 odex 是很耗时的。不过上面的冷启动方案，在 Dalvik 下影响比较小，因为 loadDex 只是操作补丁包；但是在Art 环境下影响比较大了，因为 loadDex 是补丁 dex 和原有 dex 合并的完整包，所以是比较耗时的。</p>
-<p>为了解决这个问题，要把 loadDex 当做一个事务，如果中途被打断，那就删除 odex 文件，重启的时候时候如果发现 odex ，loadDex 完之后 ，反射注入/替换 dexElements 数组，实现打包。如果不存在 odex 文件，那么重启一个子线程 loadDex ，重启后再生效。</p>
-<p>为了补丁包安全，要对补丁包进行签名校验，防止整个补丁包被篡改，但是虚拟机执行的是 odex ，因此还需要对 odex 文件进行 MD5 校验，如果匹配，则直接加载，否则，重新生成 odex 文件，防止 odex 文件被篡改。</p>
-<h3 id="完整的方案考虑"><a href="#完整的方案考虑" class="headerlink" title="完整的方案考虑"></a>完整的方案考虑</h3><p>冷启动修复方案机会可以修复任何场景下的代码缺陷，但是注入前被加载的类（如： Application 类）肯定是不能修复的。所以我们将其作为保底方案，<strong>在没法应用热部署或者热部署失败的情况下，最后都会应用代码冷启动方案，所以我们的补丁是同一套的。</strong>具体实施方案对 Dalvik 和 Art 下分别做了处理：</p>
-<ul>
-<li><p>在Dalvik 下采用自研的全量 dex 方案</p>
-</li>
-<li><p>Art 本身支持多 dex，我们仅仅把补丁dex 作为主dex （classes.dex） 加载而已</p>
-</li>
-</ul>
-<h3 id="冷启动方案限制"><a href="#冷启动方案限制" class="headerlink" title="冷启动方案限制"></a>冷启动方案限制</h3><h4 id="重新认识多态"><a href="#重新认识多态" class="headerlink" title="重新认识多态"></a>重新认识多态</h4><p>实现多态的技术一般叫做动态绑定，是指在执行期间判断所引用对象的实际类型，根据实际类型调用相应方法。多态一般指的是非静态非私有方法的多态，field 和 静态方法都不具有多态性。</p>
-<p>虚拟机在加载类时回味其生成一张 vtable 表，里面存放当前类所有 virtual 方法的一个数组，当前类和所有继承父类的 public/protected/default 方法就是 virtual 方法，因为 public/protected/default 方法是可以被继承的， private/static 不再这个范畴，因为不能继承。具体操作：</p>
-<ul>
-<li><p>整体复制父类 vtable 到子类的 vtable</p>
-</li>
-<li><p>遍历子类的 virtual 方法集合，如果方法圆形一致，说明是重写父类方法，那么在相同索引位置处，子类重写方法覆盖掉 vtable 中父类的方法</p>
-</li>
-<li><p>若方法原型不一致，那么把该方法添加到 vtable 末尾</p>
-</li>
-</ul>
-<p>所以就有：假如父类A的 vtable[0]=A.a_t1 ,vtable[1]=A.a_t2  方法，那么类B可能是： vtable[0]=B.a_t1, vtable[1]=A.a_t2, vtable[2]=B.b_t1  。</p>
-<p>至于为什么field 和 static 方法为什么不具多态性质，主要是因为： <strong>在这场景下，是从当前变量的引用类型而不是实际类型中查找，如果找不到，再去父类递归查找。</strong></p>
-<h4 id="限制"><a href="#限制" class="headerlink" title="限制"></a>限制</h4><p>预先储备多态知识，来看如下例子：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test_addMethod</span><span class="params">()</span> </span>{</span><br><span class="line">        A obj = <span class="keyword">new</span> A();</span><br><span class="line">        obj.a_t2();</span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span> </span>{</span><br><span class="line">    <span class="keyword">int</span> a = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">//补丁中新增 a_t1 方法</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">a_t1</span><span class="params">()</span> </span>{</span><br><span class="line">        Log.d(<span class="string">"Sophix"</span>, <span class="string">"A a_t1"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">a_t2</span><span class="params">()</span> </span>{</span><br><span class="line">        Log.d(<span class="string">"Sophix"</span>, <span class="string">"A a_t2"</span>);</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>也就是修复之后，A 类中新增了 a_t1 方法，Demo 类不做任何修复，测试发现应用补丁后，test_addMethod() 方法执行输出了 Sophix：A a_t1 ，表明在执行 t2 方法的时候，实际调用了 t1 方法！</p>
-<p>前面说了，dex 文件第一次加载的时候会有 verify 和 optimize 过程，优化过程会把 invoke-virtual 重写为 invoke-virtual-quick，<strong>后面跟的立即数就是该方法在类 vtable 中的索引值</strong>，这样执行更高效。所以我们知道了问题的根源了：<strong>打包前类A的 vtable 值为 vtable[0]=A.a_t2，打包后类 A 新增了 ,A.a_t1 方法，那么类A的vtable 变为了： vtable[0]=A.a_t1 ,vtable[1]=A.a_t2，但是 test_addMethod 中执行 obj.a_t2() 已经被优化为了 A.vtable[0]，所以修复前调用的是 a_t2方法，修复后变成了调用 a_t1 方法了，导致方法调用错乱！</strong></p>
-<h3 id="终极解决方案"><a href="#终极解决方案" class="headerlink" title="终极解决方案"></a>终极解决方案</h3><p>由上面可知，由于多态影响，QFix方案会遇到问题，我们最后的希望就只能依靠类似Tinker的完整dex解决方案，并且利用Google 已经开源的 DexMerge 方案，把补丁 dex 和原 dex 合并成一个完整的dex 似乎是可行的。但是，<strong>这样还是不够的，多dex下如果DexMerge抛出 65535 方法数异常，DexMerge 会导致内存风暴，内存不足的情况下容易更新失败，完整的 dex 合成需要在移动端进行，实现复杂。</strong></p>
-<h3 id="Dalvik-下完整dex方案的新探索"><a href="#Dalvik-下完整dex方案的新探索" class="headerlink" title="Dalvik 下完整dex方案的新探索"></a>Dalvik 下完整dex方案的新探索</h3><h4 id="冷启动类加载修复"><a href="#冷启动类加载修复" class="headerlink" title="冷启动类加载修复"></a>冷启动类加载修复</h4><p>冷启动类加载修复最早实现方案是 QQ空间提出的 dex 插入方案：把心dex插入到 ClassLoader 索引最前端，这样在加载一个类时，会优先查找补丁中的类。但是，这类插入dex的方案都会在 Dalvik 虚拟机下遇到 pre-verify问题。腾讯三大热修复方案解决该问题的思路如下：</p>
-<ul>
-<li><p>QQ空间插桩，每个类中插入一个来自其他 dex 的 hack.class ，使得所有类都无法满足 pre-verified 条件</p>
-</li>
-<li><p>Tinker 的方案是合成全量的 dex ，这样所有类都在全量 dex 中解决，从而消除类重复带来的冲突</p>
-</li>
-<li><p>QFix 的方式是获取虚拟机中的某些底层函数，提前解析所有补丁类，以此绕过 pre-verify 检查</p>
-</li>
-</ul>
-<p>以上三种方案，插桩会侵入打包流程，并且插桩添加臃肿的代码，不优雅；QFix 方案需要获取底层虚拟机的函数，不稳定可靠。并且，<strong>插桩和 QFix 方案都不能新增 public 函数，具体原因后续讲解。</strong> Tinker 需要从 dex 方法和指令维度全量合成dex ，虽然节省空间，但是性能消耗比较严重。</p>
-<h4 id="一种全新的全量-Dex-方案"><a href="#一种全新的全量-Dex-方案" class="headerlink" title="一种全新的全量 Dex 方案"></a>一种全新的全量 Dex 方案</h4><p>一般来说，合成完整dex，思路就是把原有 dex 和补丁包里的 dex 重新合并成一个，然而我们的思路是反过来的。<strong>可以这样考虑，既然补丁中已经有变动类了，那么只要在原先基线包里的dex中，去掉补丁中也有的类，这样，补丁+去除了补丁类的基线包，不就等于新 App 中所有类了吗？</strong></p>
-<blockquote>
-<p>参照Android原生的 multi-dex 理解： multi-dex 是把一个 APK 里用到的所有类拆分到 classes.dex、classes2.dex 、classes3.dex 等，每个dex 只包含了部分类定义，但是单个 dex 也是可以加载的，只要把所有dex 都加载进去，本 dex 中不存在的类就可以在运行期间在其他 dex 中找到。</p>
-</blockquote>
-<p>基线 dex 在去掉了补丁中的类后只包含不变的类了，这些不变的类在用到补丁中的新类时会自动找到补丁 dex ，补丁dex 中的心累在需要用到不变的类时也会找到基线 dex 的类。这样做的好处是： <strong>基线包里面不使用补丁中类的仍然可以按照原来的逻辑做 odex，最大限度地保证了 dexopt 效果</strong>。同时，避免了传统dex 合成遇到的 65535 方法数超了的问题、对dex破坏性重构的问题。</p>
-<p>现在，问题简化为<strong>如何在基线包中去掉补丁包中包含的所有类！</strong>。需要注意的是：<strong>并不是要把某个类的所有信息都从dex移除，因为这样做的话，会导致dex 的各个部分都要发生变化。我们只需移除定义的入口，解析这个dex的时候找不到这个类的定义即可。</strong>最大限度地减少修改。</p>
-<blockquote>
-<p>具体实现方案是：在 dex 的 pHeader-&gt;classDefOff 偏移处 ，把相应的 ClassDef 移除即可</p>
-</blockquote>
-<h4 id="对于-Application的处理"><a href="#对于-Application的处理" class="headerlink" title="对于 Application的处理"></a>对于 Application的处理</h4><p>Application 是整个App入口，在进入到替换的完整 dex 之前，一定会通过 Application 代码，所以，Application 一定是加载在原来的 dex 里面的，只有在补丁加载后使用的类，会在新的完整 dex 里面找到。在补丁加载后，如果 Application 类使用其他新 dex 里的类，由于不在同一个 dex 里， 而如果 Application 被打上了 pre-verify 标记，这时候就会抛出以前说的异常。</p>
-<blockquote>
-<p>解决方案：在 JNI 层清除掉它的 pre-verify 标记即可</p>
-</blockquote>
-<p>但这样还会引出问题：Dalvik 发现某个类没有 pre-verifid，就会在初始化这个类的时候做 verify 操作，对这个类使用到的类都要进行 opt操作。此时补丁还未进行加载，所以就会导致提前加载到原始dex中的类，当补丁加载完毕之后，当这些已经加载的类用到新dex 中的类，并且又是 pre-verified 时就会报错。这种问题在单 dex 情况下不会出现，但是多 dex 情形就会发生，解决办法如下：</p>
-<ul>
-<li><p>让 Application 用到的所有非系统类都和 Application 位于同一个 dex ，这样可以保证 pre-verified 被打上，而在补丁加载完成后，再清除 pre-verified 标志</p>
-</li>
-<li><p>把 Application 里面除了热修复框架代码外的其他代码都剥离到一个其他类中，这样使得Application 不会直接用到过多非系统类，这样，保证这个单独拿出来的类和Application  处于同一个 dex 的概率还是很大的。如果要更保险，Application 可以采用反射的方式访问这个单独的类，这样彻底把 Application 和 其他类隔绝。</p>
-</li>
-</ul>
-<p>其他方案针对 Application 的解决办法：</p>
-<ul>
-<li><p>Tinker 方案是在 AndroidManifest.xml 中要求开发者写Tinker 的 Application ，真正的 Application 在 初始化 TinkerApplication 时作为参数传入，这样，TinkerApplication 会接管真正的 Application。如果对 Application 有更多扩展的话，开发者接入成本也是比较高的。</p>
-</li>
-<li><p>Amigo 的方案是在编译过程中，用 Amigo 自定义的 gradle 插件将 App 的 Application 换成 Amigo 自己的 Application，并且保存真正的 Application 的name，在问题修复完成之后，再反射真正的 Application 之后调用其 attach(context) 方法。虽然开发者无感，但是这种系统反射本身是有一定风险的。</p>
-</li>
-</ul>
-<h3 id="入口类与初始化时机"><a href="#入口类与初始化时机" class="headerlink" title="入口类与初始化时机"></a>入口类与初始化时机</h3><p>如果要使热修类之前使用的其他类最少，只能放在Application中。那么，放在 Activity 中是不是也可以呢？当然，如果你没有 Application ，放到Activity中似乎没什么问题。但是，如果AndroidManifest 中注册了ContentProvider ，那么 ContentProvider 的 onCreate 方法是先于 Activity 的onCreate 调用的（事实上比Application的onCreate 都早）。这就可能导致某些类被提前引入了。</p>
-<p>如果放在Application中又有2中选择：</p>
-<ul>
-<li><p>放attachBaseContext中，这是 Application 中最早被执行的代码了，当然没问题，但是App申请的权限还没授予完成，会遇到无法访问网络之类的问题，因此无法下载新补丁</p>
-</li>
-<li><p>放在 onCreate 中，和Activity 一样，也会晚于 ContentProvider，这就需要自己保证没有 ContentProvider 以及第三方库也没有</p>
-</li>
-</ul>
-<blockquote>
-<p>注意：真实的启动顺序： Application.attachBaseContext-&gt;ContentProvider.onCreate-&gt;Application.onCreate-&gt; Activity.onCreate</p>
-</blockquote>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2022/12/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%83%AD%E6%9B%BF%E6%8D%A2%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/12/05/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC2%E7%AB%A0-%E7%83%AD%E6%9B%BF%E6%8D%A2%E4%BB%A3%E7%A0%81%E4%BF%AE%E5%A4%8D/" class="post-title-link" itemprop="url">第2章-热替换代码修复</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-12-05 14:02:00" itemprop="dateCreated datePublished" datetime="2022-12-05T14:02:00+08:00">2022-12-05</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-01-30 23:00:59" itemprop="dateModified" datetime="2023-01-30T23:00:59+08:00">2023-01-30</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h2 id="底层热替换的原理"><a href="#底层热替换的原理" class="headerlink" title="底层热替换的原理"></a>底层热替换的原理</h2><p>App 启动到一半的时候，所有需要发生变更的类已经被加载过了，<strong>Android 中无法对一个分类进行卸载的</strong>。腾讯系的方案是<strong>让 ClassLoader 去加载新类，因此只有在下次 App 重启的时候还没运行到业务逻辑之前抢先加载补丁中的新类</strong>。</p>
-<p>阿里系的 Andfix 采用的方法是<strong>直接在 Native 层替换了已经加载的类的方法</strong>。原理是：每一个 Java 方法在 Art 虚拟机中都对应一个 ArtMethod ，ArtMethod 记录了这个 Java 方法的所有信息，包括所属类、访问权限、代码执行地址等，<strong>可以获取 ArtMethod 的起始地址，然后强制转化为 ArtMethod 指针，从而对其包含的所有成员进行修改</strong>。</p>
-<p>但是，上述做法会导致兼容性问题，因为Android 是开源的，所以手机厂商可能对 ArtMethod 的结构体进行修改，举个例子：</p>
-<p>在 Andfix 中替换 declaring_class_ 的地方:</p>
-<blockquote>
-<p>smeth-&gt;declaring_class_ = dmeth-&gt;declaring_class_</p>
-</blockquote>
-<p>由于 declaring_class_ 是 官方 ArtMethod 的第一个成员，因此它和以下代码等价：</p>
-<blockquote>
-<p><em>(unit32_t</em>) (smeth + 0) = <em>(uit32_t</em>) (dmeth + 0)</p>
-</blockquote>
-<p>但如果手机厂商在 ArtMethod 的结构体 declaring_class_ 前面添加了 additional_ 字段，那么 additional_ 就成了第一个成员，所以 smeth + 0 在这台设备上实际就成了 additional_，代码含义就变化了。</p>
-<h3 id="突破底层差异"><a href="#突破底层差异" class="headerlink" title="突破底层差异"></a>突破底层差异</h3><p>起始，Native 层面替换思路，其实就是替换 ArtMethod 的所有成员。那么，如果不构造 ArtMethod 中的各个成员字段，只要把 ArtMethod 作为整体替换，这不就可以了吗？示意图如下：</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-%E7%B9%81%E7%90%90%E6%9B%BF%E6%8D%A2.png" alt="ArtMethod整体替换对比"></p>
-<p>所以，一系列繁琐替换：</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-ArtMethod%E7%9A%84%E6%95%B4%E4%BD%93%E6%9B%BF%E6%8D%A2%E5%AF%B9%E6%AF%94.png" alt="繁琐替换"></p>
-<p>都可以缩写为：</p>
-<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">memcpy</span>(smeth, dmeth, <span class="keyword">sizeof</span>(ArtMethod));</span><br></pre></td></tr></tbody></table></figure>
-
-<p>即使手机厂商把 ArtMethod 改得面目全非都无所谓，<strong>但是 sizeof(ArtMethod) 获取 ArtMethod 的 size 大小不容易，很容易导致替换区域超出边界或者没替换到</strong>。</p>
-<p>由于 ArtMethod 存在一个 ArtMethodArray 中，并且多个 ArtMethod 紧密排列，所以一个 ArtMethod 的大小刚好就是两个相邻 ArtMethod 的起始地址的差值，就这样巧妙获取到了 ArtMethod 的大小。所以，后续不管 ArtMethod 结构怎么变化，只要他们在 ArtMethodArray 中还是以线性排列，就能直接适配。</p>
-<h3 id="访问权限问题"><a href="#访问权限问题" class="headerlink" title="访问权限问题"></a>访问权限问题</h3><p>看到这里可能会疑惑，我们只是替换了 ArtMethod 的内容，但是**补丁方法所属的类和原有方法所属的类，是不同的类型，被替换的方法有权限访问这个类的其他 private 方法吗？</p>
-<p>需要注意的是，在构造函数调用同一个类的私有方法 func 时，没有做任何权限检查，也就是说，这时即使把 func 方法偷梁换柱，也能直接跳过去正常执行而不报错。可以推测在dex2oat 生成 AOT 代码的时候是有做一些检查和优化了，由于在 dex2oat 编译机器码时确认了两个方法同属一个类，所以机器码中就不存在权限检查。</p>
-<h4 id="相同包名的问题"><a href="#相同包名的问题" class="headerlink" title="相同包名的问题"></a>相同包名的问题</h4><p>但是，你会发现<strong>补丁中的类在访问同包名下的类时，会爆出访问权限异常</strong>。这个问题是如何产生的呢？</p>
-<p><strong>虽然 com.path.demo.BaseBug 和 com.path.demo.MyClass 是同一个包 com.path.demo 下的，但是由于我们替换了 com.path.demo.BaseBug.test 方法，而用于替换的 BaseBug.test 方法是从补丁包 Classloader 中加载的，与原有的 base 包就不是同一个 Classloader 了，就这样，导致两个类无法被判别为同包名。</strong></p>
-<p>解决办法就是设置新类的 Classloader 为原来类的就可以了，代码如下：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Field classloaderField = Class.class.getDeclaredField(<span class="string">"classLoader"</span>);</span><br><span class="line">classloaderField.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">classloaderField.set(newClass, oldClass.getClassLoader());</span><br></pre></td></tr></tbody></table></figure>
-
-<h4 id="反射调用非静态方法产生的问题"><a href="#反射调用非静态方法产生的问题" class="headerlink" title="反射调用非静态方法产生的问题"></a>反射调用非静态方法产生的问题</h4><p>当一个非静态的方法被热替换后，在反射调用这个方法时，会抛出异常。例子如下：</p>
-<p><img src="/assets/Book-Notes/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86-2-%E5%8F%8D%E5%B0%84%E9%9D%9E%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95%E6%8A%9B%E5%87%BA%E5%BC%82%E5%B8%B8.png" alt="反射非静态方法抛出异常"></p>
-<p>这里面，expected receiver 的 BaseBug 和 got 的 BaseBug 不是同一个类，虽然路径名字都一样，前者是被热替换的方法所属的类，后者是作为被调用的实例对象 bb 所属的类，是原有的 BaseBug，二者是不同的。因为在执行 invoke 的时候会检查调用对象是否是类的一个实例，只有是它的实例才能调用。<strong>具体的解决办法我们采用另一种冷启动机制应对</strong>。</p>
-<p>为什么静态方法不会有问题呢？因为如果是静态方法，是在类级别直接调用的，就不需要接受对象实例作为参数，所以就没有这方面的检查。</p>
-<h2 id="即时生效带来的限制"><a href="#即时生效带来的限制" class="headerlink" title="即时生效带来的限制"></a>即时生效带来的限制</h2><p>这种直接在运行时修改底层结构的热修复方案，都存在一个限制：只能支持方法的<strong>替换</strong>，新增/减少方法或者增加/减少成员字段，都是不适用的。因为一旦补丁类中出现了方法的增加或者减少，就会导致这个类以及整个 Dex 的方法数变化，方法数的变化会伴随方法索引的变化，这样，在访问方法时无法正常地索引正确的方法。</p>
-<p>字段的变化也是一样的，所有字段的索引都会发生变化。更严重的是，如果程序运行中某个类突然增加了一个字段，那么对于原有这个类的实例，他们还是原来的结构，这是无法改变的；而新方法使用这些旧的实例对象时，访问新增字段就会产生不可预期的结果。<strong>不过，新增一个完整的、原有包里面不存在的新类是可以的</strong>。</p>
-<h2 id="编译期与语言特性的影响"><a href="#编译期与语言特性的影响" class="headerlink" title="编译期与语言特性的影响"></a>编译期与语言特性的影响</h2><h3 id="内部类编译"><a href="#内部类编译" class="headerlink" title="内部类编译"></a>内部类编译</h3><p>在修改外部类的某个方法时，最后打出的补丁竟然提示新增了一个方法！所以有必要了解内部类在编译期是怎么工作的，首先要知道<strong>内部类在编译期间会被编译为外部类一样的顶级类</strong>。</p>
-<h4 id="内部类和外部类互相访问"><a href="#内部类和外部类互相访问" class="headerlink" title="内部类和外部类互相访问"></a>内部类和外部类互相访问</h4><p>既然内部类实际上和外部类一样都是顶级类，那应该私有的 method/field 是无法被访问到的，事实上外部类为了访问内部类私有 域/方法 ，编译期间会为内部类自动生成 access$ 数字编号相关方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseBug</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">        InnerClass inner = <span class="keyword">new</span> InnerClass(<span class="string">"old apk"</span>);</span><br><span class="line">        Toast.makeText(context, inner.s, Toast.LENGTH_SHORT).show();</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">InnerClass</span> </span>{</span><br><span class="line">        <span class="keyword">private</span> String s;</span><br><span class="line">        <span class="function"><span class="keyword">private</span> <span class="title">InnerClass</span><span class="params">(String s)</span> </span>{</span><br><span class="line">            <span class="keyword">this</span>.s = s;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p><strong>为了能在外部类实现 inner.s 这种调用，编译器会自动为 InnerClass 类合成 access$100 方法，这个方法简单返回私有域 s 的值。同样，如果此时匿名内部类需要访问外部类的私有属性/方法时，外部类也会自动生成access$</strong> 相关方法供内部类访问**。</p>
-<p>所以，出现问题的时候应该是出现了这样一种场景：打补丁前test方法没访问 inner.s 打补丁后访问了，那么补丁包中就会新增 access$100 方法！</p>
-<h4 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h4><p>既然知道是因为产生了自动生成的方法导致的，那么我们阻止方法的自动生成就好了：</p>
-<p><strong>把外部类、内部类的所有 method/field 的私有访问权限改为 protected 或者 public 或者默认访问权限</strong>。</p>
-<h3 id="匿名内部类特殊情形"><a href="#匿名内部类特殊情形" class="headerlink" title="匿名内部类特殊情形"></a>匿名内部类特殊情形</h3><p><strong>匿名内部类其实也是个内部类，所以也会有上面内部类的影响</strong>，但是新增一个匿名类（补丁热修复模式允许新增类），并且符合上述内部类解决方案的要求，但是还会提示 method 新增，所以接着了解匿名内部类。</p>
-<p>匿名内部类名称格式一般是： <strong>外部类$数字编号</strong>，后面的数字编号是编译期根据匿名内部类在外部类出现的先后关系，依次累加命名的。看如下代码：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DexFixDemo</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">        <span class="comment">/*new DialogInterface.OnlickListener() {</span></span><br><span class="line"><span class="comment">            @Override</span></span><br><span class="line"><span class="comment">            public void onClick(){</span></span><br><span class="line"><span class="comment">                Log.d("aa", "bb");</span></span><br><span class="line"><span class="comment">            }</span></span><br><span class="line"><span class="comment">        }*/</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">new</span> Thread(<span class="string">"thread-1"</span>) {</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>{</span><br><span class="line">                Log.d(<span class="string">"xx"</span>, <span class="string">"yy"</span>);</span><br><span class="line">            }</span><br><span class="line">        }.start();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>修复后新增 DialogInterface.OnlickListener 这个匿名内部类，但是最后补丁工具发现新增 onClick 方法！具体原因：<strong>修复之前只有一个 Thread 匿名内部类，此时它的名称应该是 DexFixDemo$1 ，然后打补丁后在 test 方法中新增了 DialogInterface.OnlickListener 匿名内部类，由于位置关系，它的名称变成了 DexFixDemo$1，而 Thread 的匿名内部类的名称变为 DexFixDemo$2 了 ！</strong>所以，前后2个 DexFixDemo$1 类进行对比差异，就会完全乱套。<strong>同理，减少一个匿名内部类也存在同样的情况</strong>。</p>
-<h4 id="匿名内部类解决方案"><a href="#匿名内部类解决方案" class="headerlink" title="匿名内部类解决方案"></a>匿名内部类解决方案</h4><p>新增或者减少匿名内部类，实际上是无解的，因为补丁工具拿到的是已经编译后的 .class 文件，根本没法区分 DexFixDemo$1 或者 DexFixDemo$1 类。所以，应当避免插入一个新的匿名内部类。<strong>当然，如果匿名内部类是插入到外部类的末尾，那么是允许的！</strong></p>
-<h3 id="有趣的域编译"><a href="#有趣的域编译" class="headerlink" title="有趣的域编译"></a>有趣的域编译</h3><p>热部署中也不支持 <clinit> 的修复，这个方法会在 Dalvik 虚拟机中<strong>类加载的时候</strong>进行初始化调用，Java中本身没有这个方法，是编译器自动生成的。<strong>静态的 field 的初始化和静态代码块实际上就会被编译在 <clinit> 方法中</clinit></strong>。也就是<strong>热修复不支持静态代码块和静态field **。顺便说一下，</strong>静态代码块和静态域初始化在 <clinit> 中的先后关系就是二者出现在源码中的先后关系**。</clinit></clinit></p>
-<p><strong>非静态域与非静态代码块被编译器翻译在 <init> 默认无参构造函数中</init></strong>，域 和 代码块出现在 <init> 的顺序也和源码中的顺序一致。<init> 是在对象初始化的时候被调用的，简单来说就是创建一个对象就会对这个对象进行初始化。</init></init></p>
-<h4 id="域编译热部署解决方案"><a href="#域编译热部署解决方案" class="headerlink" title="域编译热部署解决方案"></a>域编译热部署解决方案</h4><p>前面说了，<clinit> 方法不支持热部署，即静态 field 和静态代码块都不支持热部署。非静态的 field 和 代码块的变更会被编译到 <init> 中，热部署模式下会被视为一个普通方法的变更，因此热部署是不受影响的。</init></clinit></p>
-<h3 id="final-static-域编译"><a href="#final-static-域编译" class="headerlink" title="final static 域编译"></a>final static 域编译</h3><p>开始很自然地认为 final static 是一个静态域，因此自然认为会被编译到 <clinit> 方法中，所以热部署也是不支持的，<strong>但是测试发现，final static 修饰的基本类型或者 String 常量类型不会被编译到 <clinit> 中！</clinit></strong>static 和 final static 修饰的 field 的区别如下：</clinit></p>
-<ul>
-<li>final static 修饰的原始类型和String类型域（非引用类型,如： “haha”），并不会被编译在 <clinit> 方法中，而是在类初始化执行 initSFields 方法时初始化赋值</clinit></li>
-<li>final static 修饰的引用类型（如： new String(“haha)），仍然在 <clinit> 中初始化</clinit></li>
-</ul>
-<p>所以我们平时看到的说<em>如果一个field是常量，那么尽量推荐使用 static final 作为修饰符</em>，这句话应该是不完全正确的，得到优化的仅仅只是<strong>原始类型和String类型域（非引用类型）</strong>，如果是引用类型不会有任何优化。那到底这个优化过程是怎样的呢？如果只是 static ，那在获取 field 之前，还需要判断是否有解析所属的类，如果没有还要解析这个类，之后才能获得；但是 static final 就可以通过立即数就能获得（注意，对于字符串来说，获取的立即数只是字符串常量的索引，还需要去通常说的“字符串常量“区获取）。</p>
-<h4 id="final-static-热部署方案"><a href="#final-static-热部署方案" class="headerlink" title="final static 热部署方案"></a>final static 热部署方案</h4><ul>
-<li>对于 final static 修饰的基本类型或者非引用类型的 String 域，由于**在编译期间引用到基本类型的地方被立即数替换，所以在热部署模式下，最终所有引用到该 final static 域的方法都会被替换，所以是可以做热部署方案的。</li>
-<li>修改final static 引用类型域，是不允许的</li>
-</ul>
-<h3 id="有趣的方法编译"><a href="#有趣的方法编译" class="headerlink" title="有趣的方法编译"></a>有趣的方法编译</h3><p>除了以上内部类和匿名内部类可能造成 method 新增外，还有使用了混淆方法编译导致的<strong>内联和裁剪</strong>，也会导致最终 method 的新增或者减少。</p>
-<h4 id="方法内联"><a href="#方法内联" class="headerlink" title="方法内联"></a>方法内联</h4><p>实际上好几种情况会导致方法被内联：</p>
-<ul>
-<li>方法没有被任何地方引用，会被内联掉</li>
-<li>方法足够简单，比如方法只有一行代码，那么任何调用该方法的地方斗殴会被该方法的实现替换掉</li>
-<li>方法只被一个地方引用，就会被内联</li>
-</ul>
-<h4 id="方法裁剪"><a href="#方法裁剪" class="headerlink" title="方法裁剪"></a>方法裁剪</h4><p>比如如下方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseBug</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test</span> <span class="params">(Context context)</span> </span>{</span><br><span class="line">        Log.d(<span class="string">"aa"</span>, <span class="string">"bb"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>但是查看混淆 mapping.txt 映射文件：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">com.demo.BaseBug -&gt; com.demo.a;</span><br><span class="line">    <span class="keyword">void</span> test$faab20d() -&gt; a</span><br></pre></td></tr></tbody></table></figure>
-
-<p>因为context 没有被使用，所以 test 方法的 context 参数被裁剪，混淆任务首先生成 test$faab20d() 裁剪后的无参方法，然后再混淆。那怎么才能不发生裁剪呢？<strong>不让编译器在优化的时候认为引用了一个无用的参数就好了</strong>，方法很多，介绍一个最有效的方法：</p>
-<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">(Context context)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (Boolean.FALSE.booleanValue()) {</span><br><span class="line">        context.getApplicationContext();</span><br><span class="line">    }</span><br><span class="line">    Log.d(<span class="string">"aa"</span>, <span class="string">"bb"</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>注意，这里不能用基本类型 false，必须用包装类 Boolean，否则if语句也会被优化掉！</p>
-</blockquote>
-<h4 id="内联裁剪的热部署解决方案"><a href="#内联裁剪的热部署解决方案" class="headerlink" title="内联裁剪的热部署解决方案"></a>内联裁剪的热部署解决方案</h4><p>实际上只要在混淆配置文件中加上 -dontoptimize 项，就不会做方法的裁剪和内联。</p>
-<h3 id="switch-case语句编译"><a href="#switch-case语句编译" class="headerlink" title="switch-case语句编译"></a>switch-case语句编译</h3><p>在switch-case情况下，case 后面的id 可能替换不掉的情况。因为switch-case编译时会做优化，比如，case后面的值是连续的 1,3,5 ，那就会编译成 packed-switch 指令；如果是 1,3,10 这种没什么规律连续的，就编译为 sparse-switch。编译器会自行确定怎样才是连续的。</p>
-<h4 id="热部署方案"><a href="#热部署方案" class="headerlink" title="热部署方案"></a>热部署方案</h4><p>如果 case 被编译成 packed-switch 指令，那么如果不做任何处理的话，就会遇到资源id替换不完全的问题。解决方案也很简单，修改 smali 反编译流程，碰到 packed-switch 指令就强转为 sparse-switch指令，然后做资源ID的暴力替换，最后再回编译 smali 为 dex 。但是这也会导致打补丁变得慢了些。</p>
-<h3 id="泛型编译"><a href="#泛型编译" class="headerlink" title="泛型编译"></a>泛型编译</h3><p>泛型的使用也会导致 method 的新增。Java 语言的泛型基本完全在编译器中实现，由编译器执行类型检查和类型推断，然后生成普通的非泛型字节码。虚拟机是完全无感知的。</p>
-<p>有泛型的情况下，子类真正重写基类方法的是通过编译器<strong>桥接</strong>实现的。<strong>桥接方法的内部实现就是调用子类重写的方法。</strong></p>
-<h4 id="泛型的热部署方案"><a href="#泛型的热部署方案" class="headerlink" title="泛型的热部署方案"></a>泛型的热部署方案</h4><p>如果我们的代码由 class B extends A 变成了 B extends A<number> ，那么就可能增加对应的桥接方法，此时新增了方法，就只能通过冷部署修复。</number></p>
-<h3 id="Lambda表达式编译"><a href="#Lambda表达式编译" class="headerlink" title="Lambda表达式编译"></a>Lambda表达式编译</h3><p>Lambda 表达在编译期间会为外部类生成一个static 类型的辅助方法，该方法内部实现 Lambda 的逻辑。所以导致方法的新增。在这个过程中会在外部类中生成一个非静态的内部类。</p>
-<h4 id="Lambda-表达式热部署"><a href="#Lambda-表达式热部署" class="headerlink" title="Lambda 表达式热部署"></a>Lambda 表达式热部署</h4><p>由上面可知，修改源代码中的Lambda 也会出问题：</p>
-<ul>
-<li>如果基线包Lambda没有访问非静态field/method ，那么它就不会持有对外部类的引用；</li>
-<li>如果后续补丁包访问外部类非静态 field/method，则会持有外部类引用，会新增field，热修复失败</li>
-</ul>
-<p>所以总结如下：</p>
-<ul>
-<li>增加或者减少Lambda 表达式会导致类方法错乱，导致热部署失败</li>
-<li>修改Lambda 表达式可能导致新增 field ，导致热修复失败</li>
-</ul>
-<h3 id="访问权限检查对热修复的影响"><a href="#访问权限检查对热修复的影响" class="headerlink" title="访问权限检查对热修复的影响"></a>访问权限检查对热修复的影响</h3><p>如果当前类和实现接口（父类）是非 public 时，同时负责二者的 ClassLoader 不一样的情况下，直接检查失败；所以热修复如果不处理这里，会导致类加载阶段报错，因为我们当前的代码热修复方案是基于新的 ClassLoader 加载补丁类。</p>
-<p>如果补丁类中存在非 public 类的访问或非 public 方法或域的调用，那么会加载失败，并且在补丁加载阶段是检测不出来的，只有在运行阶段才会报错。</p>
-<h4 id="热修复方案"><a href="#热修复方案" class="headerlink" title="热修复方案"></a>热修复方案</h4><p>如果出现这种情况只能冷启动重启生效，因为类已经加载过了。</p>
-<h2 id="引申"><a href="#引申" class="headerlink" title="引申"></a>引申</h2><h3 id="关于内部类"><a href="#关于内部类" class="headerlink" title="关于内部类"></a>关于内部类</h3><p>静态内部类/非静态内部类的区别： 后者会持有外部类的引用，前者不会。<strong>在 smali 中的表现就是非静态内部类会在编译期间自动合成 this$0 域，这个 this$0 就是外部类的引用。</strong></p>
-<h3 id="关于proguard"><a href="#关于proguard" class="headerlink" title="关于proguard"></a>关于proguard</h3><p>preverification step ： 针对 .class 文件的预校验，在 .class 文件中添加 StackMa/StackMapTable 信息，这样在执行类校验阶段会省去一些步骤，这样类加载更快一些。但是Android 虚拟机执行的是 .dex 文件，会把所有的 .class 转为 .dex ，所以这个选项是没有任何意义的，反而降低打包速度。所以一般禁止这个选项： -dontpreverify 这一项</p>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2022/12/01/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC1%E7%AB%A0-%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E4%BB%8B%E7%BB%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-      <meta itemprop="name" content="glassx">
-      <meta itemprop="description" content="生活是天籁，需要凝神静听">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="glassx的小黑屋">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/12/01/%E4%B9%A6-%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2Android%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/%E7%AC%AC1%E7%AB%A0-%E7%83%AD%E4%BF%AE%E5%A4%8D%E6%8A%80%E6%9C%AF%E4%BB%8B%E7%BB%8D/" class="post-title-link" itemprop="url">热修复技术介绍</a>
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-12-01 10:12:00" itemprop="dateCreated datePublished" datetime="2022-12-01T10:12:00+08:00">2022-12-01</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-01-30 12:13:07" itemprop="dateModified" datetime="2023-01-30T12:13:07+08:00">2023-01-30</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
-                    <span itemprop="name">读书笔记</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <html><head></head><body></body></html><html><head></head><body><h3 id="为什么需要热修复？"><a href="#为什么需要热修复？" class="headerlink" title="为什么需要热修复？"></a>为什么需要热修复？</h3><ul>
-<li>重新发版代价太大，用户更新还不及时</li>
-<li>bug修复不及时，用户体验差</li>
-<li>插件化？那就很小的改动也要发布一个模块</li>
-<li>Hybrid方案？需要将经常变更的业务以H5独立出来，但是如果无法转为H5,bug还是无法修复，并且需要开发人员新增技术栈</li>
-<li>热修复对用户的流量小，影响小，损失降到最低</li>
-</ul>
-<h3 id="从本质理解热修复的实现"><a href="#从本质理解热修复的实现" class="headerlink" title="从本质理解热修复的实现"></a>从本质理解热修复的实现</h3><p>AndroidManifest 出现bug是无法修复的，因为它是由系统进行解析的，解析过程不会访问补丁包，因此如果想要增加四大组件，通常来说是不可以直接添加的。<strong>通常的做法是预先在安装包AndroidManifest 中埋入代理的组件</strong>。</p>
-<p>代码如何修复，所有的java代码最终都编译为 class.dex 格式文件，因此，任何的热修复方案，都需要在补丁包中包含一个新逻辑的 dex 文件，并且改变执行流，引导执行到新 dex 文件。</p>
-<p>资源的修复，必须想办法把原油安装包替换为新的资源包，<strong>而有些资源，比如桌面图标、通知栏图标以及 RemoteView 之类的资源，是由系统直接解析安装包的资源得到的</strong>，对于这类资源，任何热修复方法都无法进行资源替换和修复。</p>
-<p>so的修复应该是最明确的，Android 系统中所有的 so 库都是由 System.load 进行加载，因此只要找到办法在加载的时候优先加载补丁包的 so，就能够进行底层代码替换了。</p>
-<h3 id="发展历程"><a href="#发展历程" class="headerlink" title="发展历程"></a>发展历程</h3><p>阿里最开始的 Dexposed 框架基于 Xposed 框架的 Java Method Hook 技术，但是对底层 Dalvik 结构过于依赖，最终无法继续兼容 Android 5.0 以后的 ART 虚拟机，后续作罢。</p>
-<p>后来提出的 Andfix 同样是底层结构替换的方案，做到了 Dalvik 和 ART 环境的兼容。再者，还有基于 Andfix 阿里百川 HotFix ，但是都是基于底层固定结构，使用有很多限制，只提供代码层修复，不支持资源和so层修复。</p>
-<p>行业内著名的还有： 腾讯空间超级补丁技术、微信的Tinker、饿了么的 Amigo、美团的 Robust等。</p>
-<p>最终，阿里推出了 Sophix 方案，支持 <strong>代码修复、资源修复、so修复</strong>。它的核心理念就是 <strong>非侵入性</strong>。不修改打包流程，也不插入任何 AOP 代码。唯一需要的就是 <strong>初始化和请求补丁</strong>两行代码。</p>
-<h3 id="代码修复"><a href="#代码修复" class="headerlink" title="代码修复"></a>代码修复</h3><p>代码修复主要有2大方案：</p>
-<ul>
-<li><strong>阿里的底层替换方案</strong>： 立即见效，加载也轻快，但是限制很多。</li>
-<li><strong>腾讯系的类加载方案</strong>：需要冷启动见效，修复范围广，限制少。</li>
-</ul>
-</body></html>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -2403,20 +2336,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">215</span>
+          <span class="site-state-item-count">218</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-count">12</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-count">38</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -2489,7 +2422,7 @@
 
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共433.2k字</span>
+  <span class="post-count">博客全站共437.3k字</span>
 </div>
 
 
