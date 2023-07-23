@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="alternate" href="/atom.xml" title="glassx的小黑屋" type="application/atom+xml">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.5.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},
+    path: 'search.xml',
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    },
+    sidebarPadding: 40
+  };
+</script>
+
+  <meta name="description" content="第二章-系统启动过程init 进程是用户空间第一个进程，进程号为 1  僵尸进程的危害主要是消耗进程表等资源，耗尽了就无法创建新的进程。 init 进程主要做了2件事：启动属性服务（类似Windows注册表，重启系统还能知道App以前的状态）, 启动 Zygote 进程 因为会有系统支持 32 位，有的系统支持 64 位，所以 Zygote 有 32 位的，也有 64 位的。 Zygote 通过">
+<meta property="og:type" content="article">
+<meta property="og:title" content="总结">
+<meta property="og:url" content="https://glassx.github.io/2023/07/23/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="glassx的小黑屋">
+<meta property="og:description" content="第二章-系统启动过程init 进程是用户空间第一个进程，进程号为 1  僵尸进程的危害主要是消耗进程表等资源，耗尽了就无法创建新的进程。 init 进程主要做了2件事：启动属性服务（类似Windows注册表，重启系统还能知道App以前的状态）, 启动 Zygote 进程 因为会有系统支持 32 位，有的系统支持 64 位，所以 Zygote 有 32 位的，也有 64 位的。 Zygote 通过">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/Activity%E6%A0%88%E6%A8%A1%E5%9E%8B.jpg">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/%E4%BB%BB%E5%8A%A1%E6%A0%88%E8%BD%AC%E7%A7%BB.jpg">
+<meta property="og:image" content="https://glassx.github.io/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/%E8%BD%AF%E9%94%AE%E7%9B%98%E7%9B%B8%E5%85%B3%E6%A8%A1%E5%BC%8F.jpg">
+<meta property="article:published_time" content="2023-07-23T09:43:00.000Z">
+<meta property="article:modified_time" content="2023-07-23T09:47:41.262Z">
+<meta property="article:author" content="glassx">
+<meta property="article:tag" content="Android进阶解密">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://glassx.github.io/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/Activity%E6%A0%88%E6%A8%A1%E5%9E%8B.jpg">
+
+<link rel="canonical" href="https://glassx.github.io/2023/07/23/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E6%80%BB%E7%BB%93/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>总结 | glassx的小黑屋</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">glassx的小黑屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">小黑屋</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">39</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">12</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">223</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input" id="search-input"></div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="algolia-results">
+  <div id="algolia-stats"></div>
+  <div id="algolia-hits"></div>
+  <div id="algolia-pagination" class="algolia-pagination"></div>
+</div>
+
+  
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://glassx.github.io/2023/07/23/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E6%80%BB%E7%BB%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="glassx">
+      <meta itemprop="description" content="生活是天籁，需要凝神静听">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="glassx的小黑屋">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          总结
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-07-23 17:43:00 / 修改时间：17:47:41" itemprop="dateCreated datePublished" datetime="2023-07-23T17:43:00+08:00">2023-07-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index">
+                    <span itemprop="name">读书笔记</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <html><head></head><body></body></html><html><head></head><body><h2 id="第二章-系统启动过程"><a href="#第二章-系统启动过程" class="headerlink" title="第二章-系统启动过程"></a>第二章-系统启动过程</h2><p>init 进程是<strong>用户空间</strong>第一个进程，进程号<strong>为 1</strong> </p>
+<p>僵尸进程的危害主要是消耗进程表等资源，耗尽了就无法创建新的进程。</p>
+<p>init 进程主要做了2件事：<strong>启动属性服务</strong>（类似Windows注册表，重启系统还能知道App以前的状态）, <strong>启动 Zygote 进程</strong></p>
+<p>因为会有系统支持 32 位，有的系统支持 64 位，所以 Zygote 有 32 位的，也有 64 位的。</p>
+<p>Zygote 通过 JNI 调用 ZygoteInit 的 main 方法后，就进入了 Java 世界</p>
+<p>Zygote 进程总共做了几件事情： <strong>启动虚拟机</strong>、<strong>为虚拟机注册JNI 方法</strong>、<strong>通过JNI调用进入Java 代码执行</strong>、<strong>注册 Server 类型的 Scoket（Java层）</strong>、<strong>创建SystemServer 进程</strong></p>
+<p>SystemServer 进程做的事情：<strong>关闭fork过来的Server Socket、启动Binder线程池、启动各种系统服务AMS、WMS等</strong></p>
+<p>Launcher 请求 PackageManagerService 获取所有的安装 APK 的信息 。</p>
+<p><strong>Launcher 的启动是在 SystemServer 的 startOtherService 中调用了  AMS.systemReady()  实现的</strong>，也就是直接通过 AMS 来启动的</p>
+<h2 id="第三章-启动应用程序进程"><a href="#第三章-启动应用程序进程" class="headerlink" title="第三章-启动应用程序进程"></a>第三章-启动应用程序进程</h2><p>如果要启动应用进程，会调用 AMS.startProcessLocked() 方法，在里面会获取到将要启动的进程的 uid （用户进程 id），最后，调用 Process.start() 启动进程，uid 也会传过去</p>
+<p>之后，与 Zygote 通过 Socket 进行连接通信， Zygote 处于 ronSlectLoop() 循环中 （while(true) 实现的死循环）一直监听消息</p>
+<p>在新创建的应用进程中，会创建 Binder 线程池，接下来Class.forName 获得 ActivityThread 的 Class 类，之后通过反射调用其 main 方法，到这里就完成了进程创建，并运行了主线程管理类 ActivityThread</p>
+<p>在 ActivityThread 的 main 方法里面，会prepareMainLooder 创建主线程的 Looper，创建 ActivityThread 自己的对象 thread，创建 H 类的对象、最后，开始 Looper.loop 死循环</p>
+<p>Binder 线程池会有 mThreadPoolStarted 变量，用于标记Binder 线程池是否已经启动过，默认 false  ，确保 Binder 线程池只启动一次。</p>
+<h2 id="第四章-四大组件工作过程"><a href="#第四章-四大组件工作过程" class="headerlink" title="第四章-四大组件工作过程"></a>第四章-四大组件工作过程</h2><p>根 Activity 的启动分为 3 个部分讲：<strong>Launcher 请求 AMS 、AMS 到 ApplicationThread 、ActivityThread 启动 Activity</strong> </p>
+<p><strong>Launcher 请求 AMS</strong> : （点击图标）Launcher.startActivitySafely -&gt; Activity.startActivityForResult -&gt; Instrumentation.execStartActivity -&gt; IActivityManager.startActivity -&gt; AMS.startActivity</p>
+<p><strong>由于是启动第一个Activity ，所以必须要有 NEW_TASK 标记分配一个新的任务栈</strong></p>
+<p>Instrumentation 是 应用程序和系统之间的一个边界，主要用来监控应用程序和系统的交互，在这里面会通过 ActivityManager.getService （<strong>8.0 以前是 ActivityManagerNative.getDefault</strong>）来获取 IActivityManager 接口去调用 startActivity ，getService 里面是通过 Singleton.get 返回的，意味着是个单例</p>
+<p>在 Singleton 中，通过 IBinder b = ServiceManager.getService(Context.ACTIVITY_SERVICE) 获取到 Binder 对象，后面再通过IActivityManager am = IActivityManager.Stub.asInterface(b)  将其转为 IActivityManager 类型</p>
+<p>在 ActivityStarter 中决定 Activity 的 Task 和 Stack </p>
+<p>调用到 ApplicationThread.scheduleLaunchActivity() 就准备启动Activity 了，在里面会执行 ActivityThread 的 sendMessage 方法切换到主线程，之后再 ActivityThread 里面执行 performLaunchActivity ，之后调用 Instrumentation.callActivityOnCreate ，在里面又会调用到 Activity 自己的 performCreate 之后 就是 onCreate </p>
+<p>在 Activity 对象创建后，会调用 Activity 的 attach 方法，在里面<strong>创建PhoneWindow对象并关联，之后才调用 Instrumentation 的 callActivityOnCreate</strong>，在 attach 方法里面也会创建 ComtextImpl 赋值给 ContextWrapper 的 mBase 变量。</p>
+<h2 id="第五章-上下文Context"><a href="#第五章-上下文Context" class="headerlink" title="第五章-上下文Context"></a>第五章-上下文Context</h2><p>Application Context 是在什么时候创建的？应该是 第一次 （后面就不空了）在performActivity 创建 Activity 对象的时候。同样也会创建一个 ContextImpl 作为 application 的 mBase ，也会 ContextImpl 的 outerContext 设置为这个 application 对象。</p>
+<p>Application 对象是通过 Instrumentation 的 newApplication 方法创建出来的，凑巧的是，Activity 的对象也是通过 Instrumentation 的 newActivity 创建出来的。</p>
+<p>Application 对象最后也会赋值给 LoadedApk 中的 mApplication 对象。所以我们获取 ApplicationContext 基本上也是从 LoadedApk 中去获取，获取不到再从 ActivityThread 获取。（<strong>应用已经启动， LoadedApk 不空，所以基本上是从 LoadedApk 中获取</strong>）</p>
+<p>同理，Activity 也是一样，在创建的时候，也会创建一个 ContextImpl 在 attach 的时候作为 Activity 的 mBase ，然后这个 ContextImpl 的 outContext 就是 Activity</p>
+<p>看起来，Activity 的创建（newActiity）和生命周期调用（onCreate 等）都会经过 Instrumentation ，难怪被定义为应用与系统的交互的桥梁</p>
+<h2 id="第六章-AMS"><a href="#第六章-AMS" class="headerlink" title="第六章-AMS"></a>第六章-AMS</h2><p>在 7.0 及以前，主要使用 AMP 和 AMN 来实现远程代理，AMP 是 AMN 的内部类，运行在不同进程，AMP 运行在客户端，AMN 运行在服务端。在 AMN 的 onTransact 方法中接受 AMP 发送过来的 Binder 数据，然后执行 startActivity 等操作</p>
+<p>启动应用程序的时候，AMS 会检查应用进程是否存在，不存在就通过 Zygote 创建。</p>
+<p>ActivityRecord 记录一个 Activity 的所有信息，TaskRecord 包含一个或者多个 ActivityRecord ，而 ActivityStack 又包含若干个 TaskRecord，如图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/Activity%E6%A0%88%E6%A8%A1%E5%9E%8B.jpg" alt="Activity任务栈关系"></p>
+<p>假如社交应用和系统 E-mail 中的 Activity 是处于不同的应用进程的，有了栈管理，就可以把邮件界面放到社交应用中所在的栈栈顶。</p>
+<p>在 ActivityStarter 中通过各种 Flag 计算出最终启动 Activity 的 FLAG</p>
+<p>taskAffinity 与 allowTaskReparenting 配合使用，如果 allowTaskReparenting 为 true ，说明Activity 具有转移能力。 拿前面社交应用和 E-mail 应用的例子继续：如果邮件 Activity 的 allowTaskReparenting 为 true ，<strong>此后E-mail应用所在的栈卫浴前台时，发送邮件的 Activity 就会由社交应用的栈转移到与它更亲近的邮件应用（taskAffinity相同）所在栈中。</strong></p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/%E4%BB%BB%E5%8A%A1%E6%A0%88%E8%BD%AC%E7%A7%BB.jpg" alt="任务栈转移图"></p>
+<h2 id="第7章-理解-WindowManager"><a href="#第7章-理解-WindowManager" class="headerlink" title="第7章-理解 WindowManager"></a>第7章-理解 WindowManager</h2><p>WindowManager 提供了 API 给调用管理 Window ，但是实际的操作是 WMS 来做的。</p>
+<p>Window 是在 Activity 实例创建出来后，attach 方法中创建的 PhoneWindow ，在 window 创建出来之后会 setWindowManager 来设置它的管理者。</p>
+<p>Window 中与应用开发关系最密切的三个属性有：Type（Window类型）、Flag（Window的标志）、SoftInputMode （软键盘相关模式,如 ADJUST_RESIZE），软键盘相关的模式可以看如下表格：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/%E8%BD%AF%E9%94%AE%E7%9B%98%E7%9B%B8%E5%85%B3%E6%A8%A1%E5%BC%8F.jpg" alt="软键盘相关模式"></p>
+<p>Window 分为三大类：Application Window（应用程序窗口，如 Activity）、Sub Window（子窗口，不能独立存在，如PopupWindow）、System Window（系统窗口）</p>
+<p>WindowManagerGlobal 中维护了 window 操作相关的 3 个列表，分别是：View 列表ArrayList<view> mViews、布局参数列表 ArrayList&lt;WindowManager.LayoutParams&gt; mParams 以及 <strong>ViewRootImpl列表</strong>ArrayList<viewrootimpl> mRoots</viewrootimpl></view></p>
+<p><strong>ViewRootImpl 是 View 树的根，并且管理 View 树。</strong> WindowManager 的 addView 操作，会交给 WindowManagerImpl，最终交给 WindowManagerGlobal  ，并且只是记录到上述数组中，最终还是通过 ViewRootImpl 的 setView 真正实现，最后添加到 WMS</p>
+<p>WindowManager -&gt;WindowManagerImpl-&gt;WindowManagerGlobal-&gt;ViewRootImpl-&gt;WMS</p>
+<p>StatusBar 也是个 Window。 Activity 调用 WindowManager.addView 实际上是 add 了 DecorView 进去</p>
+<p>Window 更新调用 ViewManager.updateViewLayout 方法，具体在 WindowManagerImpl ，具体流程和 addView 操作是一样的，值得注意的是，window 的更新会触发 ViewRootImpl 的 scheduleTraversals 方法执行刷新</p>
+<h2 id="第八章-WMS"><a href="#第八章-WMS" class="headerlink" title="第八章-WMS"></a>第八章-WMS</h2><p>WMS 的职责：</p>
+<ul>
+<li><p>Window管理：添加、启动、删除，大小和层级</p>
+</li>
+<li><p>window切换动画</p>
+</li>
+<li><p>Surface 管理，每个 Window 都有一个 Surface</p>
+</li>
+<li><p>输入中转站：触摸 Window 产生事件， IMS 寻找合适的窗口来处理</p>
+</li>
+</ul>
+<p>因为 WMS 创建是 SystemServer 进程在 system_server 线程中执行的 startOtherServices 方法中进行的，   使用了 Handler 在 android.display 线程，而 SystemServer 中主线逻辑都是执行都是在 system_server 线程，由于是使用 Handler 的 runWithScissors 方法，所以 system_server 会等待 WMS 创建完成。</p>
+<p>WindowToken 可以理解为窗口令牌，当应用程序向 WMS 申请创建新的 Window 时，必须出示有效的 WindowToken 。</p>
+</body></html>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>谢谢你的鼓励</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatReward.png" alt="glassx 微信支付">
+        <p>微信支付</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/" rel="tag"># Android进阶解密</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-next post-nav-item">
+                <a href="/2023/07/22/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/jeppack/RecyclerView%20%E7%9A%84%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6/" rel="next" title="RecyclerView 的缓存机制">
+                  <i class="fa fa-chevron-left"></i> RecyclerView 的缓存机制
+                </a>
+            </div>
+
+            <span class="post-nav-divider"></span>
+
+            <div class="post-nav-prev post-nav-item">
+            </div>
+          </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%BA%8C%E7%AB%A0-%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">第二章-系统启动过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%B8%89%E7%AB%A0-%E5%90%AF%E5%8A%A8%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E8%BF%9B%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">第三章-启动应用程序进程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E5%9B%9B%E7%AB%A0-%E5%9B%9B%E5%A4%A7%E7%BB%84%E4%BB%B6%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">第四章-四大组件工作过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%BA%94%E7%AB%A0-%E4%B8%8A%E4%B8%8B%E6%96%87Context"><span class="nav-number">4.</span> <span class="nav-text">第五章-上下文Context</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E5%85%AD%E7%AB%A0-AMS"><span class="nav-number">5.</span> <span class="nav-text">第六章-AMS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC7%E7%AB%A0-%E7%90%86%E8%A7%A3-WindowManager"><span class="nav-number">6.</span> <span class="nav-text">第7章-理解 WindowManager</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E5%85%AB%E7%AB%A0-WMS"><span class="nav-number">7.</span> <span class="nav-text">第八章-WMS</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="glassx"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">glassx</p>
+  <div class="site-description" itemprop="description">生活是天籁，需要凝神静听</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">223</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">39</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="feed-link motion-element">
+    <a href="/atom.xml" rel="alternate">
+      <i class="fa fa-rss"></i>RSS
+    </a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title">
+      <i class="fa fa-fw fa-link"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://atyxia.github.io/" title="https:&#x2F;&#x2F;atyxia.github.io&#x2F;" rel="noopener" target="_blank">传说中的伟哥</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://www.baidu.com/" title="https:&#x2F;&#x2F;www.baidu.com" rel="noopener" target="_blank">百度</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 2015 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">glassx</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v5.4.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.5.0
+  </div>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="powered-by">
+  <i class="fa fa-user-md"></i>
+  <span id="busuanzi_container_site_pv">
+    本站访问量:<span id="busuanzi_value_site_pv"></span>次
+  </span>
+  <span class="post-meta-divider">|</span>
+  <span id="busuanzi_container_site_uv">
+    本站总访客量：<span id="busuanzi_value_site_uv"></span>人
+  </span>
+</div>
+
+
+
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共442.5k字</span>
+</div>
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.css">
+<script src="//cdn.jsdelivr.net/npm/instantsearch.js@2/dist/instantsearch.min.js"></script>
+<script src="/js/algolia-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID: '014f25b646a6b4e4caf9',
+      clientSecret: '1874f37da4d837c5866039f706ec722ea42d790d',
+      repo: 'comments',
+      owner: 'glassx',
+      admin: ['glassx'],
+      id: '06b3f5729b07d11f78d346020a59911b',
+        language: 'zh-CN',
+      distractionFreeMode: 'true'
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+</script>
+
+</body>
+</html>

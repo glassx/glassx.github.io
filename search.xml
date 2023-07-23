@@ -20520,4 +20520,247 @@ public String convert(String str){
         <tag>Android知识</tag>
       </tags>
   </entry>
+  <entry>
+    <title>总结</title>
+    <url>/2023/07/23/%E4%B9%A6-Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86-%E6%80%BB%E7%BB%93/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><h2 id="第二章-系统启动过程"><a href="#第二章-系统启动过程" class="headerlink" title="第二章-系统启动过程"></a>第二章-系统启动过程</h2><p>init 进程是<strong>用户空间</strong>第一个进程，进程号<strong>为 1</strong> </p>
+<p>僵尸进程的危害主要是消耗进程表等资源，耗尽了就无法创建新的进程。</p>
+<p>init 进程主要做了2件事：<strong>启动属性服务</strong>（类似Windows注册表，重启系统还能知道App以前的状态）, <strong>启动 Zygote 进程</strong></p>
+<p>因为会有系统支持 32 位，有的系统支持 64 位，所以 Zygote 有 32 位的，也有 64 位的。</p>
+<p>Zygote 通过 JNI 调用 ZygoteInit 的 main 方法后，就进入了 Java 世界</p>
+<p>Zygote 进程总共做了几件事情： <strong>启动虚拟机</strong>、<strong>为虚拟机注册JNI 方法</strong>、<strong>通过JNI调用进入Java 代码执行</strong>、<strong>注册 Server 类型的 Scoket（Java层）</strong>、<strong>创建SystemServer 进程</strong></p>
+<p>SystemServer 进程做的事情：<strong>关闭fork过来的Server Socket、启动Binder线程池、启动各种系统服务AMS、WMS等</strong></p>
+<p>Launcher 请求 PackageManagerService 获取所有的安装 APK 的信息 。</p>
+<p><strong>Launcher 的启动是在 SystemServer 的 startOtherService 中调用了  AMS.systemReady()  实现的</strong>，也就是直接通过 AMS 来启动的</p>
+<h2 id="第三章-启动应用程序进程"><a href="#第三章-启动应用程序进程" class="headerlink" title="第三章-启动应用程序进程"></a>第三章-启动应用程序进程</h2><p>如果要启动应用进程，会调用 AMS.startProcessLocked() 方法，在里面会获取到将要启动的进程的 uid （用户进程 id），最后，调用 Process.start() 启动进程，uid 也会传过去</p>
+<p>之后，与 Zygote 通过 Socket 进行连接通信， Zygote 处于 ronSlectLoop() 循环中 （while(true) 实现的死循环）一直监听消息</p>
+<p>在新创建的应用进程中，会创建 Binder 线程池，接下来Class.forName 获得 ActivityThread 的 Class 类，之后通过反射调用其 main 方法，到这里就完成了进程创建，并运行了主线程管理类 ActivityThread</p>
+<p>在 ActivityThread 的 main 方法里面，会prepareMainLooder 创建主线程的 Looper，创建 ActivityThread 自己的对象 thread，创建 H 类的对象、最后，开始 Looper.loop 死循环</p>
+<p>Binder 线程池会有 mThreadPoolStarted 变量，用于标记Binder 线程池是否已经启动过，默认 false  ，确保 Binder 线程池只启动一次。</p>
+<h2 id="第四章-四大组件工作过程"><a href="#第四章-四大组件工作过程" class="headerlink" title="第四章-四大组件工作过程"></a>第四章-四大组件工作过程</h2><p>根 Activity 的启动分为 3 个部分讲：<strong>Launcher 请求 AMS 、AMS 到 ApplicationThread 、ActivityThread 启动 Activity</strong> </p>
+<p><strong>Launcher 请求 AMS</strong> : （点击图标）Launcher.startActivitySafely -&gt; Activity.startActivityForResult -&gt; Instrumentation.execStartActivity -&gt; IActivityManager.startActivity -&gt; AMS.startActivity</p>
+<p><strong>由于是启动第一个Activity ，所以必须要有 NEW_TASK 标记分配一个新的任务栈</strong></p>
+<p>Instrumentation 是 应用程序和系统之间的一个边界，主要用来监控应用程序和系统的交互，在这里面会通过 ActivityManager.getService （<strong>8.0 以前是 ActivityManagerNative.getDefault</strong>）来获取 IActivityManager 接口去调用 startActivity ，getService 里面是通过 Singleton.get 返回的，意味着是个单例</p>
+<p>在 Singleton 中，通过 IBinder b = ServiceManager.getService(Context.ACTIVITY_SERVICE) 获取到 Binder 对象，后面再通过IActivityManager am = IActivityManager.Stub.asInterface(b)  将其转为 IActivityManager 类型</p>
+<p>在 ActivityStarter 中决定 Activity 的 Task 和 Stack </p>
+<p>调用到 ApplicationThread.scheduleLaunchActivity() 就准备启动Activity 了，在里面会执行 ActivityThread 的 sendMessage 方法切换到主线程，之后再 ActivityThread 里面执行 performLaunchActivity ，之后调用 Instrumentation.callActivityOnCreate ，在里面又会调用到 Activity 自己的 performCreate 之后 就是 onCreate </p>
+<p>在 Activity 对象创建后，会调用 Activity 的 attach 方法，在里面<strong>创建PhoneWindow对象并关联，之后才调用 Instrumentation 的 callActivityOnCreate</strong>，在 attach 方法里面也会创建 ComtextImpl 赋值给 ContextWrapper 的 mBase 变量。</p>
+<h2 id="第五章-上下文Context"><a href="#第五章-上下文Context" class="headerlink" title="第五章-上下文Context"></a>第五章-上下文Context</h2><p>Application Context 是在什么时候创建的？应该是 第一次 （后面就不空了）在performActivity 创建 Activity 对象的时候。同样也会创建一个 ContextImpl 作为 application 的 mBase ，也会 ContextImpl 的 outerContext 设置为这个 application 对象。</p>
+<p>Application 对象是通过 Instrumentation 的 newApplication 方法创建出来的，凑巧的是，Activity 的对象也是通过 Instrumentation 的 newActivity 创建出来的。</p>
+<p>Application 对象最后也会赋值给 LoadedApk 中的 mApplication 对象。所以我们获取 ApplicationContext 基本上也是从 LoadedApk 中去获取，获取不到再从 ActivityThread 获取。（<strong>应用已经启动， LoadedApk 不空，所以基本上是从 LoadedApk 中获取</strong>）</p>
+<p>同理，Activity 也是一样，在创建的时候，也会创建一个 ContextImpl 在 attach 的时候作为 Activity 的 mBase ，然后这个 ContextImpl 的 outContext 就是 Activity</p>
+<p>看起来，Activity 的创建（newActiity）和生命周期调用（onCreate 等）都会经过 Instrumentation ，难怪被定义为应用与系统的交互的桥梁</p>
+<h2 id="第六章-AMS"><a href="#第六章-AMS" class="headerlink" title="第六章-AMS"></a>第六章-AMS</h2><p>在 7.0 及以前，主要使用 AMP 和 AMN 来实现远程代理，AMP 是 AMN 的内部类，运行在不同进程，AMP 运行在客户端，AMN 运行在服务端。在 AMN 的 onTransact 方法中接受 AMP 发送过来的 Binder 数据，然后执行 startActivity 等操作</p>
+<p>启动应用程序的时候，AMS 会检查应用进程是否存在，不存在就通过 Zygote 创建。</p>
+<p>ActivityRecord 记录一个 Activity 的所有信息，TaskRecord 包含一个或者多个 ActivityRecord ，而 ActivityStack 又包含若干个 TaskRecord，如图所示：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/Activity%E6%A0%88%E6%A8%A1%E5%9E%8B.jpg" alt="Activity任务栈关系"></p>
+<p>假如社交应用和系统 E-mail 中的 Activity 是处于不同的应用进程的，有了栈管理，就可以把邮件界面放到社交应用中所在的栈栈顶。</p>
+<p>在 ActivityStarter 中通过各种 Flag 计算出最终启动 Activity 的 FLAG</p>
+<p>taskAffinity 与 allowTaskReparenting 配合使用，如果 allowTaskReparenting 为 true ，说明Activity 具有转移能力。 拿前面社交应用和 E-mail 应用的例子继续：如果邮件 Activity 的 allowTaskReparenting 为 true ，<strong>此后E-mail应用所在的栈卫浴前台时，发送邮件的 Activity 就会由社交应用的栈转移到与它更亲近的邮件应用（taskAffinity相同）所在栈中。</strong></p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/%E4%BB%BB%E5%8A%A1%E6%A0%88%E8%BD%AC%E7%A7%BB.jpg" alt="任务栈转移图"></p>
+<h2 id="第7章-理解-WindowManager"><a href="#第7章-理解-WindowManager" class="headerlink" title="第7章-理解 WindowManager"></a>第7章-理解 WindowManager</h2><p>WindowManager 提供了 API 给调用管理 Window ，但是实际的操作是 WMS 来做的。</p>
+<p>Window 是在 Activity 实例创建出来后，attach 方法中创建的 PhoneWindow ，在 window 创建出来之后会 setWindowManager 来设置它的管理者。</p>
+<p>Window 中与应用开发关系最密切的三个属性有：Type（Window类型）、Flag（Window的标志）、SoftInputMode （软键盘相关模式,如 ADJUST_RESIZE），软键盘相关的模式可以看如下表格：</p>
+<p><img src="/assets/Book-Notes/Android%E8%BF%9B%E9%98%B6%E8%A7%A3%E5%AF%86/%E6%80%BB%E7%BB%93/%E8%BD%AF%E9%94%AE%E7%9B%98%E7%9B%B8%E5%85%B3%E6%A8%A1%E5%BC%8F.jpg" alt="软键盘相关模式"></p>
+<p>Window 分为三大类：Application Window（应用程序窗口，如 Activity）、Sub Window（子窗口，不能独立存在，如PopupWindow）、System Window（系统窗口）</p>
+<p>WindowManagerGlobal 中维护了 window 操作相关的 3 个列表，分别是：View 列表ArrayList<view> mViews、布局参数列表 ArrayList&lt;WindowManager.LayoutParams&gt; mParams 以及 <strong>ViewRootImpl列表</strong>ArrayList<viewrootimpl> mRoots</viewrootimpl></view></p>
+<p><strong>ViewRootImpl 是 View 树的根，并且管理 View 树。</strong> WindowManager 的 addView 操作，会交给 WindowManagerImpl，最终交给 WindowManagerGlobal  ，并且只是记录到上述数组中，最终还是通过 ViewRootImpl 的 setView 真正实现，最后添加到 WMS</p>
+<p>WindowManager -&gt;WindowManagerImpl-&gt;WindowManagerGlobal-&gt;ViewRootImpl-&gt;WMS</p>
+<p>StatusBar 也是个 Window。 Activity 调用 WindowManager.addView 实际上是 add 了 DecorView 进去</p>
+<p>Window 更新调用 ViewManager.updateViewLayout 方法，具体在 WindowManagerImpl ，具体流程和 addView 操作是一样的，值得注意的是，window 的更新会触发 ViewRootImpl 的 scheduleTraversals 方法执行刷新</p>
+<h2 id="第八章-WMS"><a href="#第八章-WMS" class="headerlink" title="第八章-WMS"></a>第八章-WMS</h2><p>WMS 的职责：</p>
+<ul>
+<li><p>Window管理：添加、启动、删除，大小和层级</p>
+</li>
+<li><p>window切换动画</p>
+</li>
+<li><p>Surface 管理，每个 Window 都有一个 Surface</p>
+</li>
+<li><p>输入中转站：触摸 Window 产生事件， IMS 寻找合适的窗口来处理</p>
+</li>
+</ul>
+<p>因为 WMS 创建是 SystemServer 进程在 system_server 线程中执行的 startOtherServices 方法中进行的，   使用了 Handler 在 android.display 线程，而 SystemServer 中主线逻辑都是执行都是在 system_server 线程，由于是使用 Handler 的 runWithScissors 方法，所以 system_server 会等待 WMS 创建完成。</p>
+<p>WindowToken 可以理解为窗口令牌，当应用程序向 WMS 申请创建新的 Window 时，必须出示有效的 WindowToken 。</p>
+</body></html>]]></content>
+      <categories>
+        <category>读书笔记</category>
+      </categories>
+      <tags>
+        <tag>Android进阶解密</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>lifecycle</title>
+    <url>/2023/07/19/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/jeppack/LifeCycle/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>监听 Activity 和 Fragment 的生命周期。</p>
+<p>我们使用 LifeCycle 必须要使用 AndroidX ，<strong>LifecycleOwner 是个 接口，官方称为宿主</strong>。</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">LifecycleOwner</span> </span>{</span><br><span class="line">    <span class="meta">@NonNull</span></span><br><span class="line">    <span class="function">Lifecycle <span class="title">getLifecycle</span><span class="params">()</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>而 Lifecycle 本身是个抽象类，因此不能直接使用：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Lifecycle</span> </span>{</span><br><span class="line">    <span class="comment">//省略很多代码</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@MainThread</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">addObserver</span><span class="params">(<span class="meta">@NonNull</span> LifecycleObserver observer)</span></span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@MainThread</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">removeObserver</span></span></span><br><span class="line"><span class="function"><span class="params">(<span class="meta">@NonNull</span> LifecycleObserver observer)</span></span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>因为不能直接使用 LifeCycle ，所以在必须要有实现类来实现，我们可以看 <strong>ComponentActivity 类，因为它实现了 LifecycleOwner 接口，必须要返回一个 Lifecycle 对象</strong>，从这里看是 LifecycleRegistry 对象:</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ComponentActivity</span> <span class="keyword">extends</span> <span class="title">androidx</span>.<span class="title">core</span>.<span class="title">app</span>.<span class="title">ComponentActivity</span> <span class="keyword">implements</span></span></span><br><span class="line"><span class="class">        <span class="title">ContextAware</span>,</span></span><br><span class="line"><span class="class">        <span class="title">LifecycleOwner</span>,...... </span>{</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 省略其他无关代码</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> LifecycleRegistry mLifecycleRegistry = <span class="keyword">new</span> LifecycleRegistry(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Lifecycle <span class="title">getLifecycle</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">return</span> mLifecycleRegistry;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>Lifecycle 使用一个没有 UI 的 名叫 ReportFragment 的 Fragment 来监听宿主的生命周期变化，因为 Fragment 的生命周期会随着宿主变化而变化。通过在 Activity/Fragment 里面 getLifecycle().addObserver(LifecycleObserver)  即可实现生命周期的监听。</p>
+<p>我们的 LifecycleObserver 在 add 进去之后，就会被当成成员变量保存，然后获取它的class 对象，获取 class 对象肯定就是要去通过反射。一般源码中，需要反射的地方会有 map 来缓存 Class 对象，比如 setContentView。</p>
+<p>哪怕你是在 onResume 中 去执行  getLifecycle().addObserver(LifecycleObserver) ，那么还是会给你从 create 、start 、resume 一样不落地执行，所以，在同步状态的时候，会有个 while 循环。通过状态来激活事件，这样由于宿主的状态是 onResume 了，但是你的 Observer 才注册进来，中间相差了  create 、start 、resume 这三个状态，就 while 循环一步步改状态，调事件。如果是在 onStop 中去做 addObserver ，则只会有 create 、destroy 状态。</p>
+<p>在 LifeCycle 里面，并不是说 Activity/Fragment  的 onStart ，然后就会通过接口调用观察者的 onStart ，它里面有个状态转换，被转成 5 种状态：INITIALIZED（刚添加进来）、CREATED、STARTED、RESUMED、DESTROYED ，之后，回调给观察者的方法是根据顺序（宿主Activity/Fragment 的状态在观察者前面，比如宿主是 STATED 了，观察者还在 CREATED）还是倒序来推断的，以下是转换代码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line">   <span class="comment">//androidx.lifecycle.Lifecycle.java</span></span><br><span class="line">    <span class="meta">@NonNull</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> State <span class="title">getTargetState</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">switch</span> (<span class="keyword">this</span>) {</span><br><span class="line">            <span class="keyword">case</span> ON_CREATE:</span><br><span class="line">            <span class="keyword">case</span> ON_STOP:</span><br><span class="line">                <span class="keyword">return</span> State.CREATED;</span><br><span class="line">            <span class="keyword">case</span> ON_START:</span><br><span class="line">            <span class="keyword">case</span> ON_PAUSE:</span><br><span class="line">                <span class="keyword">return</span> State.STARTED;</span><br><span class="line">            <span class="keyword">case</span> ON_RESUME:</span><br><span class="line">                <span class="keyword">return</span> State.RESUMED;</span><br><span class="line">            <span class="keyword">case</span> ON_DESTROY:</span><br><span class="line">                <span class="keyword">return</span> State.DESTROYED;</span><br><span class="line">            <span class="keyword">case</span> ON_ANY:</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="keyword">this</span> + <span class="string">" has no target state"</span>);</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>顺序和倒序的事件驱动过程如下图所示：</p>
+<p><img src="/assets/%E5%90%AC%E8%AF%BE%E7%AC%94%E8%AE%B0/%E4%BA%AB%E5%AD%A6Android%E7%AC%AC%E4%B8%89%E6%9C%9FVip/jetpack/Lifecycle%E4%BA%8B%E4%BB%B6%E9%A9%B1%E5%8A%A8%E5%9B%BE.jpg" alt="Lifecycle顺序倒序事件及状态变化"></p>
+<p>在宿主（Activity/Fragment）和观察者（Observer）同步状态的时候，就会发生顺序和倒序的路径判断，最终回调事件给观察者，代码如下：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//androidx.lifecycle.LifecycleRegistry</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">sync</span><span class="params">()</span> </span>{</span><br><span class="line">        LifecycleOwner lifecycleOwner = mLifecycleOwner.get();</span><br><span class="line">        <span class="keyword">if</span> (lifecycleOwner == <span class="keyword">null</span>) {</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"LifecycleOwner of this LifecycleRegistry is already"</span></span><br><span class="line">                    + <span class="string">"garbage collected. It is too late to change lifecycle state."</span>);</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">//有个 while 循环是因为可能你会在 onResume 里面添加观察者，这样要把</span></span><br><span class="line">        <span class="comment">//状态从前面CREATED 一直同步到 RESUME</span></span><br><span class="line">        <span class="keyword">while</span> (!isSynced()) {</span><br><span class="line">            mNewEventOccurred = <span class="keyword">false</span>;</span><br><span class="line">            <span class="comment">// no need to check eldest for nullability, because isSynced does it for us.</span></span><br><span class="line">            <span class="keyword">if</span> (mState.compareTo(mObserverMap.eldest().getValue().mState) &lt; <span class="number">0</span>) {</span><br><span class="line">                <span class="comment">//倒序</span></span><br><span class="line">                backwardPass(lifecycleOwner);</span><br><span class="line">            }</span><br><span class="line">            Map.Entry&lt;LifecycleObserver, ObserverWithState&gt; newest = mObserverMap.newest();</span><br><span class="line">            <span class="keyword">if</span> (!mNewEventOccurred &amp;&amp; newest != <span class="keyword">null</span></span><br><span class="line">                &amp;&amp; mState.compareTo(newest.getValue().mState) &gt; <span class="number">0</span>) {</span><br><span class="line">                <span class="comment">//顺序</span></span><br><span class="line">                forwardPass(lifecycleOwner);</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        mNewEventOccurred = <span class="keyword">false</span>;</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>里面的 while 循环是因为可能你会在 onResume 里面添加观察者，这样要把状态从前面CREATED 一直同步到 RESUME ，然后 里面的  backwardPass 和 forwardPass 分别代表倒序和顺序。</p>
+<p>那么，为什么要这么设计呢？这是因为 Lifecycle 不只是给我们在Activity 种监听生命周期这么简单，还会给很多诸如 LiveData 这类的框架使用，所以它还会衍生出其他内容，比如 LiveData 在使用 LifeCycle 就使用了 LifecycleBoundObserver ，它里面实现了一个 boolean 类型的判断宿主是否在活动状态：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//LiveData 内部类LifecycleBoundObserver</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">shouldBeActive</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">return</span> mOwner.getLifecycle().getCurrentState().isAtLeast(STARTED);</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>只有 STARTED 和 RESUME 才符合条件。</p>
+<p>因为前面存储了各个 add 进去的 Observer ，并获取了他们的 Class 对象，所以，在顺序或者倒序确定哪个生命周期之后，就会调用 Class.invoke 来调用对应的生命周期回调方法。</p>
+</body></html>]]></content>
+      <categories>
+        <category>听课笔记</category>
+      </categories>
+      <tags>
+        <tag>享学Android三期-jetpack</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LiveData</title>
+    <url>/2023/07/20/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/jeppack/LiveData/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>一般来说，这种观察者模式都是先订阅，后收到消息。但是 LiveData 有粘性效果，就是我先改变数据，后订阅，但是还能收到之前修改（只保存一个，就是最后那个数据的粘性）的数据。</p>
+<p>LiveData 就是利用 Lifecycle ，它的 Observer 是 如果发现状态是 DESTROY 状态，就会 remove 掉这个 Observer 观察者，所以我们在代码种都是  MyLiveData.info1.observe(this, MyObserver<string>())  添加 Observer ，但是并没有反注册移除 Observer 的操作，就是因为在 DESTROY 的时候，它自己会移除。首先来看 LiveData 的使用：</string></p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">object</span> MyLiveData { <span class="comment">// 单例</span></span><br><span class="line">    <span class="comment">// 懒加载</span></span><br><span class="line">    <span class="keyword">val</span> info1: MutableLiveData&lt;String&gt; <span class="keyword">by</span> lazy { MutableLiveData() }</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">MyLiveData.info1.observe(<span class="keyword">this</span>, <span class="keyword">object</span>: Observer&lt;String&gt; {</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">onChanged</span><span class="params">(t: <span class="type">String</span>?)</span></span> {</span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line">})</span><br></pre></td></tr></tbody></table></figure>
+
+<p>我们可以定义一个 MutableLiveData ，然后去 observe 它，当上面的 info1 有改变时，下面的 onChanged() 方法就会调用。看下 observe 的源码：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@MainThread</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">observe</span><span class="params">(<span class="meta">@NonNull</span> LifecycleOwner owner, <span class="meta">@NonNull</span> Observer&lt;? <span class="keyword">super</span> T&gt; observer)</span> </span>{</span><br><span class="line">    <span class="comment">//必须要再主线程</span></span><br><span class="line">    assertMainThread(<span class="string">"observe"</span>);</span><br><span class="line">    <span class="comment">//如果当前Lifecycle 已经到了 DESTROYED 状态了，就不理会</span></span><br><span class="line">    <span class="keyword">if</span> (owner.getLifecycle().getCurrentState() == DESTROYED) {</span><br><span class="line">        <span class="comment">// ignore</span></span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//将传入的 observer 包装成 LifecycleObserver</span></span><br><span class="line">    LifecycleBoundObserver wrapper = <span class="keyword">new</span> LifecycleBoundObserver(owner, observer);</span><br><span class="line">    <span class="comment">//observer 缓存到 Map 种</span></span><br><span class="line">    ObserverWrapper existing = mObservers.putIfAbsent(observer, wrapper);</span><br><span class="line">    <span class="keyword">if</span> (existing != <span class="keyword">null</span> &amp;&amp; !existing.isAttachedTo(owner)) {</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Cannot add the same observer"</span></span><br><span class="line">                + <span class="string">" with different lifecycles"</span>);</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">if</span> (existing != <span class="keyword">null</span>) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="comment">//包装的 Observer 添加到 Lifecycle 中</span></span><br><span class="line">    owner.getLifecycle().addObserver(wrapper);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>首先，<strong>observe 操作必须在主线程调用</strong>，否则会报错。其次，会将传入的 observer 保存在 Map 中，最后，将封装的 LifecycleObserver 添加到 Lifecycle 的监听中去。到这里貌似没有可以继续分析的代码了，我们来看值的改变，因为值的改变会触发传入的 observer ，有 postValue 和 setValue 两种方法：</p>
+<figure class="highlight kotlin"><table><tbody><tr><td class="code"><pre><span class="line">MyLiveData.info1.value = <span class="string">"初始化"</span></span><br><span class="line">MyLiveData.info1.postValue(<span class="string">"开始啦"</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>其实， postValue 最终也是使用 setValue 实现的：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">postValue</span><span class="params">(T value)</span> </span>{</span><br><span class="line">    <span class="keyword">boolean</span> postTask;</span><br><span class="line">    <span class="keyword">synchronized</span> (mDataLock) {</span><br><span class="line">        postTask = mPendingData == NOT_SET;</span><br><span class="line">        mPendingData = value;</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">if</span> (!postTask) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">    ArchTaskExecutor.getInstance().postToMainThread(mPostValueRunnable);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>首先经过线程同步，最后将操作 post 到主线程操作。这个 runnable 就是调用 setValue 的操作：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Runnable mPostValueRunnable = <span class="keyword">new</span> Runnable() {</span><br><span class="line">    <span class="meta">@SuppressWarnings("unchecked")</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>{</span><br><span class="line">        Object newValue;</span><br><span class="line">        <span class="keyword">synchronized</span> (mDataLock) {</span><br><span class="line">            newValue = mPendingData;</span><br><span class="line">            mPendingData = NOT_SET;</span><br><span class="line">        }</span><br><span class="line">        setValue((T) newValue);</span><br><span class="line">    }</span><br><span class="line">};</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以，我们可以猜测，<strong>setValue 应该是要在主线程调用的，使用 postValue 也是为了在子线程中调用能够 setValue</strong> ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">setValue</span><span class="params">(T value)</span> </span>{</span><br><span class="line">    assertMainThread(<span class="string">"setValue"</span>);</span><br><span class="line">    mVersion++;</span><br><span class="line">    mData = value;</span><br><span class="line">    dispatchingValue(<span class="keyword">null</span>);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>从代码可以看出，setValue 确实需要在主线程调用，并且，每次调用之后，就会 mVersion ++  ，在 setValue 之后，可以看到调用了 dispatchingValue 将这个 value 值分发给观察者了：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">dispatchingValue</span> <span class="params">(<span class="meta">@Nullable</span> ObserverWrapper initiator)</span> </span>{</span><br><span class="line">    <span class="comment">//省略其他代码</span></span><br><span class="line">    <span class="keyword">for</span> (Iterator&lt; Map.Entry &lt; Observer &lt; ? <span class="keyword">super</span> T &gt;, ObserverWrapper&gt;&gt; iterator =</span><br><span class="line">         mObservers.iteratorWithAdditions(); iterator.hasNext(); ) {</span><br><span class="line">        considerNotify(iterator.next().getValue());</span><br><span class="line">        <span class="keyword">if</span> (mDispatchInvalidated) {</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    <span class="comment">//省略其他代码</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>省略了其他代码，可以看到，不断从 mObservers 中（Map 类型，就是前面 observe 的时候，将 Observer 保存到的那个 Map）取出元素去做 considerNotify 操作：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">considerNotify</span><span class="params">(ObserverWrapper observer)</span> </span>{</span><br><span class="line">    <span class="keyword">if</span> (!observer.mActive) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">    <span class="comment">// Check latest state b4 dispatch. Maybe it changed state but we didn't get the event yet.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// we still first check observer.active to keep it as the entrance for events. So even if</span></span><br><span class="line">    <span class="comment">// the observer moved to an active state, if we've not received that event, we better not</span></span><br><span class="line">    <span class="comment">// notify for a more predictable notification order.</span></span><br><span class="line">    <span class="keyword">if</span> (!observer.shouldBeActive()) {</span><br><span class="line">        observer.activeStateChanged(<span class="keyword">false</span>);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">if</span> (observer.mLastVersion &gt;= mVersion) {</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">    observer.mLastVersion = mVersion;</span><br><span class="line">    observer.mObserver.onChanged((T) mData);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以，LiveData 中有很多 Active 的判断，其中下面的判断：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> (observer.mLastVersion &gt;= mVersion) {</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个地方决定了消息的粘性，也就是通过版本号来决定粘性，<strong>其实判断的就是是 setValue/postValue 和 observe 的先后关系</strong>，如果我们通过反射让他们的值相等，即： observer.mLastVersion == mVersion ，这样就会执行里面的 return ，if 后面的语句将不会执行，也就不会有粘性了（在订阅行为发生以前的改动都不会发送过来）。</p>
+<p>另外，我们看到，当生命周期状态改变时，就会调用 onStateChanged ：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onStateChanged</span><span class="params">(<span class="meta">@NonNull</span> LifecycleOwner source,</span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="meta">@NonNull</span> Lifecycle.Event event)</span> </span>{</span><br><span class="line">    Lifecycle.State currentState = mOwner.getLifecycle().getCurrentState();</span><br><span class="line">    <span class="keyword">if</span> (currentState == DESTROYED) {</span><br><span class="line">        removeObserver(mObserver);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    }</span><br><span class="line">    Lifecycle.State prevState = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">while</span> (prevState != currentState) {</span><br><span class="line">        prevState = currentState;</span><br><span class="line">        activeStateChanged(shouldBeActive());</span><br><span class="line">        currentState = mOwner.getLifecycle().getCurrentState();</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>从这里可以知道，当 状态变为 DESTROYED 的时候，就会执行 removeObserver(mObserver); 移除 Observer 的操作，所以，我们才不需要手动去 remove 。</p>
+</body></html>]]></content>
+      <categories>
+        <category>听课笔记</category>
+      </categories>
+      <tags>
+        <tag>享学Android三期-jetpack</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>RecyclerView 的缓存机制</title>
+    <url>/2023/07/22/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/jeppack/RecyclerView%20%E7%9A%84%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>RecyclerView 就是继承的 ViewGroup 自定义的 View。</p>
+<ul>
+<li><p>mChangeScrap （用于动画）与 mAttachedScrap（局部刷新） ： 用来缓存还在屏幕的ViewHolder </p>
+</li>
+<li><p>mCachedViews ： 屏幕之外的 ViewHolder，最多只能存 2 个，如果多了，则将 mCachedViews 中的一个移动到 RecycledViewPool中，然后把新的加进来（在复用的时候，连 onBinder 都不用调用，可以直接使用）</p>
+</li>
+<li><p>mViewCacheExtension： 开发者自己控制，系统未往里面添加数据</p>
+</li>
+<li><p>RecycledViewPool ： 也是屏幕之外ViewHolder 缓存池，用 SpaseArray&lt;viewType, ArrayList<viewholder>&gt; 这种数据结构保存，ArrayList 的大小是 5 ，超出 5 个就会丢掉（复用这里面的 ViewHolder 需要调用 onBinder）</viewholder></p>
+</li>
+</ul>
+<p>刷新的时候，可能 item 会闪一下，可以设置 stableId （设置为 true ）来避免闪烁</p>
+<p>如果上面几级缓存都没有拿到，那就 adapter 的 createViewHolder</p>
+<p>分析RecyclerView 的缓存，要从其 onTouchEvent 入手，从这里开始滑动，然后处理滑动事件，以及拿 View 出来复用</p>
+<h2 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h2><p>我们看它的 measure 、layout、draw</p>
+<p>我们 measure 的时候都是考虑 padding 和 margin ，而 RecyclerView 还需要考虑 inset ，这个inset 就是 分割线，里面会根据各种 offset 来定空间</p>
+<p>要确定自己绘制的分割线是在 itemView 的上层还是下层，这就有遮盖 itemView 或者被 itemView 遮盖的区别，如果是前者，就使用 onDrawOver， 如果是后者就在 onDraw 中绘制分割线</p>
+</body></html>]]></content>
+      <categories>
+        <category>听课笔记</category>
+      </categories>
+      <tags>
+        <tag>享学Android三期-jetpack</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>事件分发机制</title>
+    <url>/2023/07/21/%E4%BA%AB%E5%AD%A6%E8%AF%BE%E5%A0%82Android%E4%B8%89%E6%9C%9FVip/jeppack/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<html><head></head><body></body></html><html><head></head><body><p>ScrollView 继承的是 FrameLayout ，它的高的 mode 是 UNSPECIFIED 。 </p>
+<p>有个原则是：如果mode 是 UNSPECIFIED 但是值写为 match_parent ，那么 其实效果就相当于 wrap_content 。</p>
+<p>如果上面传过来的 mode 是 UNSPECIFIED ，但是在自己自定义View 的时候又想改掉，那就可以使用  MeasureSpec.makeMeasureSpec：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onMeasure</span><span class="params">(<span class="keyword">int</span> widthMeasureSpec, <span class="keyword">int</span> heightMeasureSpec)</span></span>{</span><br><span class="line">    <span class="keyword">int</span> heightSize = MeasureSpec.getSize(heightMeasureSpec);</span><br><span class="line">    heightMeasureSpec = MeasureSpec.makeMeasureSpec(heightMode, MeasureSpec.Exactly);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>自定义 View 的时候如果需要响应 Margin 的话，需要重写 generateParams 方法，重写的是哪个呢？是传入 AttributeSet 参数的那个，因为我们在 xml 解析的时候需要用到的是这个。</p>
+<p>View 的 dispatchTouchEvent 只有事件处理，ViewGroup 里面会有事件分发。</p>
+<p>在ViewRootImpl 中会创建 WindowInputEventReceiver 用于事件的接收，这里面有 onInputEvent 回调方法。</p>
+<p>在接收到Event 的时候，会交给 DecorView 去 dispatchTouchEvent ，这里面会通过 mWindow.getCallback ，记住，这个callback 是 Activity，这样，事件就到了 Activity 层面：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">dispatchTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>{</span><br><span class="line">    <span class="keyword">final</span> Window.Callback cb = mWindow.getCallback();</span><br><span class="line">    <span class="keyword">return</span> cb != <span class="keyword">null</span> &amp;&amp; !mWindow.isDestroyed() &amp;&amp; mFeatureId &lt; <span class="number">0</span></span><br><span class="line">            ? cb.dispatchTouchEvent(ev) : <span class="keyword">super</span>.dispatchTouchEvent(ev);</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以，整体流程是： ViewRootImpl -&gt; DecorView -&gt; Activity </p>
+<h2 id="事件的处理"><a href="#事件的处理" class="headerlink" title="事件的处理"></a>事件的处理</h2><p>Event 的处理只要搞清楚以下几个问题：</p>
+<ol>
+<li><p>onTouchEvent 在哪里执行</p>
+</li>
+<li><p>onTouch 和 onClick 执行的位置，关系</p>
+</li>
+<li><p>longClick</p>
+</li>
+<li><p>在 View 上按下，然后手指移动到 View 之外，然后抬起手指，为什么 onClick 不执行？</p>
+</li>
+</ol>
+<p>在 DOWN 事件中，会判断长按事件。在 UP 里面，会判断 onClick 事件。</p>
+<p>onTouch 如果执行人会 true ，后续就不会执行 onClick 了，因为这里面会涉及“与”操作的短路行为：! result &amp;&amp; onTouchEvent 这种操作，意味着，如果 result 是 true 的话，后续的 onTouchEvent 就不会执行了，而 onClick 在 onTouchEvent 里面</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment">//View.java  dispatchTouchEvent</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="number">9932</span>              ListenerInfo li = mListenerInfo;</span><br><span class="line"><span class="number">9933</span>              <span class="keyword">if</span> (li != <span class="keyword">null</span> &amp;&amp; li.mOnTouchListener != <span class="keyword">null</span></span><br><span class="line"><span class="number">9934</span>                      &amp;&amp; (mViewFlags &amp; ENABLED_MASK) == ENABLED</span><br><span class="line"><span class="number">9935</span>                      &amp;&amp; li.mOnTouchListener.onTouch(<span class="keyword">this</span>, event)) {</span><br><span class="line"><span class="number">9936</span>                  result = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">9937</span>              }</span><br><span class="line"><span class="number">9938</span>  </span><br><span class="line"><span class="number">9939</span>              <span class="keyword">if</span> (!result &amp;&amp; onTouchEvent(event)) {</span><br><span class="line"><span class="number">9940</span>                  result = <span class="keyword">true</span>;</span><br><span class="line"><span class="number">9941</span>              }</span><br></pre></td></tr></tbody></table></figure>
+
+
+
+<p>可以看出来，当判断用户有做 setOnTouchListener 以及其他的一些条件之后，才会做：  li.mOnTouchListener.onTouch(this, event) ，也就是调用 onTouch 方法，并且如果 onTouch 返回true ，则 if (!result &amp;&amp; onTouchEvent(event)) 就会短路，后续的 onTouchEvent 就不会执行。</p>
+<p>当收到move 的时候，判断区域是不是在这个 View 里面，如果不在，就将一系列的 callback 给 remove 掉，press 设置为 false ，后续的onclick 也就不触发。</p>
+<p>按压 500ms（29以后改成 400ms ） 内松手了，长按就取消了。</p>
+<p>响应多个手指，第一个手指按下去是 ACTION_DOWN，接着其他手指是 ACTION_POINT_DOWN 了</p>
+<p>当ViewGroup 分发事件的时候，会根据 Z 值对子 View 进行排序，如果大家都不设置 z 值，则默认为 0 ，按照默认顺序。可以用 FrameLayout 来体会一下，如果所有的 child 叠加的话，最后添加的那个 child 在最上面，也是优先响应事件的。</p>
+<p>ViewGroup 的 dispatch 在 DOWN 事件中确定了目标处理的 child ，如果某个 child 在 DOWN 的时候返回 true ，那么在就会 target.child 就会指向这个 child 。</p>
+<p>上下滑动，把事件给 ListView，当左右滑动给 ViewPager 处理。处理冲突：</p>
+<ul>
+<li>内部拦截，在 dispatchTouchEvent 的 ACTION_DOWN 的时候，getParent().requestDisallowInterceptTouchEvent(true); 来实现，并且父容器里面  onInterceptTouchEvent 的时候，要判断 ACTION_DOWN事件不能拦截 ！</li>
+</ul>
+<p>为什么父容器能够将事件从子View 中抢过来？</p>
+<p>子 View 需要出让的时候， requestDisallowInterceptTouchEvent(false) ，置为 false 了。</p>
+<p>第一个 MOVE 事件的时候，判断子 View 是响应了 DOWN事件的，这时候就会给子 View 发送过去 Cancel 事件。</p>
+<p>因为 MOVE 事件会触发多次，第二次 intercept 就会变为 true 了，就能自己处理这个 MOVE 行为。</p>
+<ul>
+<li>外部拦截</li>
+</ul>
+<p>处理事件冲突，就看看 onInterceptTouchEvent 、dispatchTouchEvent、onTouchEvent 三个方法，查看里面为什么会有冲突。</p>
+</body></html>]]></content>
+      <categories>
+        <category>听课笔记</category>
+      </categories>
+      <tags>
+        <tag>享学Android三期-jetpack</tag>
+      </tags>
+  </entry>
 </search>
